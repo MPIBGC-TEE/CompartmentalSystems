@@ -1,9 +1,2 @@
 -e git://github.com/goujou/sphinx-repaired#egg=Sphinx
 -e git://github.com/goujou/LAPM#egg=LAPM
-numpy
-scipy
-sympy
-matplotlib
-plotly
-tqdm
-
