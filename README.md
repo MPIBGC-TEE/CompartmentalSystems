@@ -2,15 +2,15 @@ This is a Python package for compartmental systems.
 
 Python package to deal with compartmental models of the form
 
-$$
-\frac{d}{dt}\,x(t) = A(x(t),t)\,x(t) + u(t).
-$$
+\begin{equation}
+    \frac{d}{dt}\,x(t) = A(x(t),t)\,x(t) + u(t).
+\end{equation}
 
 Since most computations are based on the state transition operator $\Phi$ that solves
 
-$$
-\frac{d}{dt}\,\Phi(t,s) = A(t)\,\Phi(t,s),\quad \Phi(s,s) = \bf{I},
-$$
+\begin{equation}
+    \frac{d}{dt}\,\Phi(t,s) = A(t)\,\Phi(t,s),\quad \Phi(s,s) = \bf{I},
+\end{equation}
 
 nonlinear models need to be linearized in the first step. Then the package provides numerical computation of
 
