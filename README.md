@@ -1,18 +1,12 @@
 This is a Python package for compartmental systems.
 
-Python package to deal with compartmental models of the form
-
-\begin{equation}
-    \frac{d}{dt}\,x(t) = A(x(t),t)\,x(t) + u(t).
-\end{equation}
-
-Since most computations are based on the state transition operator $\Phi$ that solves
-
-\begin{equation}
-    \frac{d}{dt}\,\Phi(t,s) = A(t)\,\Phi(t,s),\quad \Phi(s,s) = \bf{I},
-\end{equation}
-
-nonlinear models need to be linearized in the first step. Then the package provides numerical computation of
+Python package to deal with compartmental models. These models can
+be both nonlinear and nonautonomous. Consequently, this package can be seen
+as an extension of [LAPM](https://github.com/goujou/LAPM) which deals
+with linear autonomous models.
+While [LAPM](https://github.com/goujou/LAPM) also allows explicit symbolic compuations of age distributions 
+in compartmental systems, this package is mostly concerned with numerical
+computations of
 
 * age
 
@@ -36,6 +30,8 @@ nonlinear models need to be linearized in the first step. Then the package provi
 ---
 
 Installation simply via the install script `install.sh`.
+Be sure to have [LAPM](https://github.com/goujou/LAPM) installed.
+Further required packages can be found in the install script.
 
 ---
 
