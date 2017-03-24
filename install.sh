@@ -1,0 +1,17 @@
+# although the following packages are mentioned in setup.py of bgc_md as dependencies
+# the install in the order determined by setuptools seems to fail 
+
+pip3 install --upgrade pip
+
+pip3 install concurrencytest
+pip3 install jupyter
+pip3 install matplotlib
+pip3 install numpy
+pip3 install plotly
+pip3 install scipy
+pip3 install sympy
+pip3 install tqdm
+
+pip3 install git+https://github.com/goujou/LAPM
+
+python3 setup.py develop

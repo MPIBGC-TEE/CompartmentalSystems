@@ -1,0 +1,170 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Compartmental Systems &mdash; CompartmentalSystems 1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="CompartmentalSystems 1 documentation" href="#" />
+    <link rel="next" title="CompartmentalSystems.smooth_reservoir_model" href="_autosummary/CompartmentalSystems.smooth_reservoir_model.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="compartmental-systems">
+<h1>Compartmental Systems<a class="headerlink" href="#compartmental-systems" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="https://github.com/goujou/CompartmentalSystems">CompartmentalSystems</a> is a
+Python package to deal with compartmental models of the form</p>
+<div class="math">
+\[\frac{d}{dt}\,x(t) = A(x(t),t)\,x(t) + u(t).\]</div>
+<p>Since most computations are based on the state transition operator <span class="math">\(\Phi\)</span> that solves</p>
+<div class="math">
+\[\frac{d}{dt}\,\Phi(t,s) = A(t)\,\Phi(t,s),\quad \Phi(s,s) = \bf{I},\]</div>
+<p>nonlinear models need to be linearized in the first step. Then the package provides numerical computation of</p>
+<ul>
+<li><p class="first">age</p>
+<blockquote>
+<div><ul class="simple">
+<li>compartmental age densities</li>
+<li>system age densities</li>
+<li>compartmental age mean and higher order moments</li>
+<li>system age mean and higher order moments</li>
+<li>compartmental age quantiles</li>
+<li>system age quantiles</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">transit time</p>
+<blockquote>
+<div><ul class="simple">
+<li>forward and backward transit time densities</li>
+<li>backward transit time mean and higher order moments</li>
+<li>forward and backward transit time quantiles</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+<div class="section" id="table-of-contents">
+<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="_autosummary/CompartmentalSystems.smooth_reservoir_model.html#module-CompartmentalSystems.smooth_reservoir_model" title="CompartmentalSystems.smooth_reservoir_model"><code class="xref py py-obj docutils literal"><span class="pre">smooth_reservoir_model</span></code></a></td>
+<td>Module for symbolical treatment of smooth reservoir models.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="_autosummary/CompartmentalSystems.smooth_model_run.html#module-CompartmentalSystems.smooth_model_run" title="CompartmentalSystems.smooth_model_run"><code class="xref py py-obj docutils literal"><span class="pre">smooth_model_run</span></code></a></td>
+<td>Module for numerical treatment of smooth reservoir models.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="jupyter-notebook-example">
+<h2>Jupyter notebook example<a class="headerlink" href="#jupyter-notebook-example" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference download internal" href="_downloads/nonl_gcm_3p.html" download=""><code class="xref download docutils literal"><span class="pre">Nonlinear</span> <span class="pre">global</span> <span class="pre">carbon</span> <span class="pre">cycle</span> <span class="pre">model</span> <span class="pre">(html)</span></code></a></li>
+<li><a class="reference download internal" href="_downloads/nonl_gcm_3p.ipynb" download=""><code class="xref download docutils literal"><span class="pre">Nonlinear</span> <span class="pre">global</span> <span class="pre">carbon</span> <span class="pre">cycle</span> <span class="pre">model</span> <span class="pre">(ipynb)</span></code></a></li>
+</ul>
+</div>
+<div class="section" id="important-note">
+<h2>Important Note<a class="headerlink" href="#important-note" title="Permalink to this headline">¶</a></h2>
+<p><span class="math">\(A(t)=(a_{ij}(t))\)</span> is supposed to be a <em>compartmental matrix</em> for all times <span class="math">\(t\)</span>:</p>
+<ul class="simple">
+<li><span class="math">\(a_{ii}(t)\leq0\)</span> for all <span class="math">\(i\)</span></li>
+<li><span class="math">\(a_{ij}(t)\geq0\)</span> for <span class="math">\(i\neq j\)</span></li>
+<li><span class="math">\(\sum\limits_{i=1}^d a_{ij}(t)\leq 0\)</span> for all <span class="math">\(j\)</span></li>
+</ul>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="#">Table Of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/CompartmentalSystems.smooth_reservoir_model.html">CompartmentalSystems.smooth_reservoir_model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_autosummary/CompartmentalSystems.smooth_model_run.html">CompartmentalSystems.smooth_model_run</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="_autosummary/CompartmentalSystems.smooth_reservoir_model.html" title="next chapter">CompartmentalSystems.smooth_reservoir_model</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.5+</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/index.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
