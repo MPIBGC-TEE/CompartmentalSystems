@@ -6,8 +6,8 @@ It does not deal with numerical computations and model simulations,
 but rather defines the underlying structure of the respective model.
 
 All fluxes or matrix entries are supposed to be SymPy expressions.
-*Smooth* means that no `Piecewise` or `DiracDelta` functions should be involved
-in the model description.
+*Smooth* means that no ``Piecewise`` or ``DiracDelta`` functions should be 
+involved in the model description.
 
 Counting of compartment/pool/reservoir numbers starts at zero and the 
 total number of pools is :math:`d`.
@@ -38,16 +38,16 @@ class SmoothReservoirModel(object):
             Its entries are SymPy symbols.
         state_variables (list of str): 
             Names of the variables in the state vector.
-            Its entries are of type `str`.
+            Its entries are of type ``str``.
         time_symbol (SymPy symbol): The model's time symbol.
         input_fluxes (dict): The model's external input fluxes.
-            `{key1: flux1, key2: flux2}` with `key` the pool number and `flux` 
-            a SymPy expression for the influx.
+            ``{key1: flux1, key2: flux2}`` with ``key`` the pool number and 
+            ``flux`` a SymPy expression for the influx.
         output_fluxes (dict): The model's external output fluxes.
-            `{key1: flux1, key2: flux2}` with `key` the pool number and `flux` 
-            a SymPy expression for the outflux.
+            ``{key1: flux1, key2: flux2}`` with ``key`` the pool number and 
+            ``flux`` a SymPy expression for the outflux.
         internal_fluxes (dict): The model's internal_fluxes.
-            `{key1: flux1, key2: flux2}` with `key = (pool_from, pool_to)`
+            ``{key1: flux1, key2: flux2}`` with ``key = (pool_from, pool_to)``
             and *flux* a SymPy expression for the flux.
     """
 
@@ -62,17 +62,18 @@ class SmoothReservoirModel(object):
                 Its entries are SymPy symbols.
             time_symbol (SymPy symbol): The model's time symbol.
             input_fluxes (dict): The model's external input fluxes.
-                `{key1: flux1, key2: flux2}` with `key` the pool number 
-                and `flux` a SymPy expression for the influx.
+                ``{key1: flux1, key2: flux2}`` with ``key`` the pool number 
+                and ``flux`` a SymPy expression for the influx.
             output_fluxes (dict): The model's external output fluxes.
-                `{key1: flux1, key2: flux2}` with `key` the pool number 
-                and `flux` a SymPy expression for the outflux.
+                ``{key1: flux1, key2: flux2}`` with ``key`` the pool number 
+                and ``flux`` a SymPy expression for the outflux.
             internal_fluxes (dict): The model's internal_fluxes.
-                `{key1: flux1, key2: flux2}` with `key = (pool_from, pool_to)`
-                and `flux` a SymPy expression for the flux.
+                ``{key1: flux1, key2: flux2}`` with 
+                ``key = (pool_from, pool_to)`` and ``flux`` a SymPy expression 
+                for the flux.
     
         Returns:
-            :obj:`SmoothReservoirModel`
+            :class:`SmoothReservoirModel`
         """
         self.state_vector = state_vector
         self.state_variables = [sv.name for sv in state_vector]
@@ -96,7 +97,7 @@ class SmoothReservoirModel(object):
     # alternative constructor based on the formulation f=u+Ax
     @classmethod
     def from_A_u(cls, state_vector, time_symbol, A, u):
-        """Construct and return a :obj:`SmoothReservoirModel` instance from 
+        """Construct and return a :class:`SmoothReservoirModel` instance from 
            :math:`\\dot{x}=A\\,x+u`
     
         Args:
@@ -108,7 +109,7 @@ class SmoothReservoirModel(object):
             u (SymPy dx1-matrix): The model's external input vector.
     
         Returns:
-            :obj:`SmoothReservoirModel`
+            :class:`SmoothReservoirModel`
         """
 #        if not(u):
 #           # fixme mm:
@@ -218,8 +219,8 @@ class SmoothReservoirModel(object):
         Returns:
             tuple:
             - xi (SymPy number): Environmental coefficient.
-            - T (SymPy dxd-matrix): Internal fluxes. Main diagonal contains `-1`
-                entries.
+            - T (SymPy dxd-matrix): Internal fluxes. Main diagonal contains 
+                ``-1`` entries.
             - N (SymPy dxd-matrix): Diagonal matrix containing the decomposition
                 rates.
             - x (SymPy dx1-matrix): The model's state vector.

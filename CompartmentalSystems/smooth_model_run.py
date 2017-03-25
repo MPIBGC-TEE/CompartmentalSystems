@@ -1,7 +1,7 @@
 """Module for numerical treatment of smooth reservoir models.
 
 An abstract 
-:obj:`~.smooth_reservoir_model.SmoothReservoirModel` is 
+:class:`~.smooth_reservoir_model.SmoothReservoirModel` is 
 filled with live by giving initial values, a parameter set, a time grid, 
 and potentially additional involved functions to it.
 
@@ -51,21 +51,21 @@ class Error(Exception):
 
 class SmoothModelRun(object):
     """Class for a model run based on a 
-    :obj:`~.smooth_reservoir_model.SmoothReservoirModel`.
+    :class:`~.smooth_reservoir_model.SmoothReservoirModel`.
 
     Attributes:
-        model (:obj:`~.smooth_reservoir_model.SmoothReservoirModel`): 
+        model (:class:`~.smooth_reservoir_model.SmoothReservoirModel`): 
             The reservoir model on which the model run bases.
-        parameter set (dict): `{x: y}` with `x` being a SymPy symbol 
-            and `y` being a numerical value.
+        parameter set (dict): ``{x: y}`` with ``x`` being a SymPy symbol 
+            and ``y`` being a numerical value.
         start_values (numpy.array): The vector of start values.
         times (numpy.array): The time grid used for the simulation.
-            Typically created by `numpy.linspace`.
-        func_set (dict): `{f: func}` with `f` being a SymPy symbol and 
-            `func` being a Python function. Defaults to `dict()`.
+            Typically created by ``numpy.linspace``.
+        func_set (dict): ``{f: func}`` with ``f`` being a SymPy symbol and 
+            ``func`` being a Python function. Defaults to ``dict()``.
 
-    Pool counting starts with `0`. In combined structures for pools and system, 
-    the system is at the position of a `(d+1)` st pool.
+    Pool counting starts with ``0```. In combined structures for pools and 
+    system, the system is at the position of a ``(d+1)`` st pool.
     """
 
 
@@ -74,18 +74,18 @@ class SmoothModelRun(object):
         """Return a SmoothModelRun instance.
 
         Args:
-            model (:obj:`~.smooth_reservoir_model.SmoothReservoirModel`): 
+            model (:class:`~.smooth_reservoir_model.SmoothReservoirModel`): 
                 The reservoir model on which the model run bases.
-            parameter_set (dict): `{x: y}` with `x` being a SymPy symbol 
-                and `y` being a numerical value.
+            parameter_set (dict): ``{x: y}`` with ``x`` being a SymPy symbol 
+                and ``y`` being a numerical value.
             start_values (numpy.array): The vector of start values.
             times (numpy.array): The time grid used for the simulation.
-                Typically created by `numpy.linspace`.
-            func_set (dict): `{f: func}` with `f` being a SymPy symbol and 
-                `func` being a Python function. Defaults to `dict()`.
+                Typically created by ``numpy.linspace``.
+            func_set (dict): ``{f: func}`` with ``f`` being a SymPy symbol and 
+                ``func`` being a Python function. Defaults to ``dict()``.
 
         Raises:
-            Error: If `start_values` is not a `numpy.array`.
+            Error: If ``start_values`` is not a ``numpy.array``.
         """
         # we cannot use dict() as default because the test suite makes weird 
         # things with it! But that is bad style anyways
@@ -122,7 +122,7 @@ class SmoothModelRun(object):
             t (float): The time at which :math:`A` is to be evaluated.
 
         Returns:
-            numpy.ndarray: The compartmental matrix evaluated at time `t`.
+            numpy.ndarray: The compartmental matrix evaluated at time ``t``.
         """
         if not hasattr(self, '_A'):
             #fixme: what about a piecewise in the matrix?
@@ -157,9 +157,9 @@ class SmoothModelRun(object):
         this is why nonlinear systems should be linearized first.
 
         Returns:
-            :obj:`SmoothModelRun`: A linearized version of the original 
-            :obj:`SmoothModelRun`, with the solutions now being part 
-            of `func_set`.
+            :class:`SmoothModelRun`: A linearized version of the original 
+            :class:`SmoothModelRun`, with the solutions now being part 
+            of ``func_set``.
         """
         sol_funcs = self.sol_funcs()
         
@@ -252,11 +252,11 @@ class SmoothModelRun(object):
 
         Args:
             alternative_start_values (numpy.array, optional): If not given, the 
-                original `start_values` are used.
+                original ``start_values`` are used.
 
         Returns:
-            Python function `f`: `f(t)` is a numpy.array that containts the 
-            pool contents at time `t`.
+            Python function ``f``: ``f(t)`` is a numpy.array that containts the 
+            pool contents at time ``t``.
         """
         return self._solve_age_moment_system_single_value(0, None, 
                         alternative_start_values)
@@ -286,8 +286,8 @@ class SmoothModelRun(object):
         """Return linearly interpolated solution functions.
 
         Returns:
-            Python function `f`: `f(t)` returns a numpy.array containing the 
-            pool contents at time `t`.
+            Python function ``f``: ``f(t)`` returns a numpy.array containing the
+            pool contents at time ``t``.
         """
         times = self.times
 
@@ -305,8 +305,9 @@ class SmoothModelRun(object):
         The resulting functions base on sol_funcs and are linear interpolations.
 
         Returns:
-            dict: `{key: func}` with `key` representing the pool which receives 
-            the input and `func` a function of time that returns a `float`.
+            dict: ``{key: func}`` with ``key`` representing the pool which 
+            receives the input and ``func`` a function of time that returns 
+            a ``float``.
         """
         return self._flux_funcs(self.model.input_fluxes)
 
@@ -316,9 +317,9 @@ class SmoothModelRun(object):
         The resulting functions base on sol_funcs and are linear interpolations.
 
         Returns:
-            ditc: `{key: func}` with `key=(pool_from, pool_to)` representing the
-            pools involved and `func` a function of time that returns 
-            a float.
+            ditc: ``{key: func}`` with ``key=(pool_from, pool_to)`` representing
+            the pools involved and ``func`` a function of time that returns 
+            a ``float``.
         """
         return self._flux_funcs(self.model.internal_fluxes)
 
@@ -328,22 +329,23 @@ class SmoothModelRun(object):
         The resulting functions base on sol_funcs and are linear interpolations.
 
         Returns:
-            dict: `{key: func}` with `key` representing the pool from which the 
-            output comes and `func` a function of time that returns a float.
+            dict: ``{key: func}`` with ``key`` representing the pool from which
+            the output comes and ``func`` a function of time that returns a 
+            ``float``.
         """
         return self._flux_funcs(self.model.output_fluxes)
     
     #fixme: here _func indicated that this here is already a function of t
     # on other occasions _func indicated that a function is returned
     def output_vector_func(self, t):
-        """Return a vector of the external output fluxes at time `t`.
+        """Return a vector of the external output fluxes at time ``t``.
         
         The resulting values base on sol_funcs and come from  linear 
         interpolations.
 
         Returns:
-            numpy.array: The `i` th entry is the output from pool `i` at 
-            time `t`.
+            numpy.array: The ``i`` th entry is the output from pool ``i`` at 
+            time ``t``.
         """
         res = np.zeros((self.nr_pools,))
         for key, value in self.output_flux_funcs().items():
@@ -362,8 +364,8 @@ class SmoothModelRun(object):
         The resulting function bases on sol_funcs and is a linear interpolation.
 
         Returns:
-            Python function `u`: `u(t)` is a `numpy.array` containing the 
-            external inputs at time `t`.
+            Python function ``u``: ``u(t)`` is a ``numpy.array`` containing the 
+            external inputs at time ``t``.
         """
         t0 = self.times[0]
         # cut off inputs until t0
@@ -377,19 +379,19 @@ class SmoothModelRun(object):
                 input_fluxes.append(lambda t: 0)
         
         u = lambda t: (np.array([f(t) for f in input_fluxes], dtype=np.float) 
-                                   if t_valid(t) else np.zeros((self.nr_pools,)))
+                                  if t_valid(t) else np.zeros((self.nr_pools,)))
         return u
 
     # fixme: returns a vector
     def output_rate_vector_at_t(self, t):
-        """Return a vector of output rates at time `t`.
+        """Return a vector of output rates at time ``t``.
 
         Args:
             t (float): The time at which the output rates are computed.
 
         Returns:
-            numpy.array: The ith entry contains the output rate of pool `i` 
-            at time `t`.
+            numpy.array: The ith entry contains the output rate of pool ``i`` 
+            at time ``t``.
         """
         n = self.nr_pools
 
@@ -437,7 +439,7 @@ class SmoothModelRun(object):
         """Return the grid of output rate vectors.
 
         Returns:
-            numpy.ndarray: len(times) x nr_pools, `solution/output_vector`
+            numpy.ndarray: len(times) x nr_pools, ``solution/output_vector``
         """
         soln = self.solve()
         output_vec = self.external_output_vector
@@ -461,8 +463,8 @@ class SmoothModelRun(object):
                 initial mass is considered to have zero age.
 
         Returns:
-            Python function `p_sv`: `p_sv(a, t)` returns `a numpy.array` 
-            containing the pool contents with age `a` at time `t`.
+            Python function ``p_sv``: ``p_sv(a, t)`` returns ``a numpy.array`` 
+            containing the pool contents with age ``a`` at time ``t``.
         """
         p1_sv = self._age_densities_1_single_value(start_age_densities)
         p2_sv = self._age_densities_2_single_value()
@@ -487,10 +489,10 @@ class SmoothModelRun(object):
                 to have zero age.
         
         Returns:
-            Python function `p`: `p(ages)` returns a `numpy.ndarray` 
+            Python function ``p``: ``p(ages)`` returns a ``numpy.ndarray`` 
             len(ages) x len(times) x nr_pools containing the pool contents 
-            with the respective ages at the respective times, where `ages` 
-            is a `numpy.array`.
+            with the respective ages at the respective times, where ``ages`` 
+            is a ``numpy.array``.
         """
         p1 = self._age_densities_1(start_age_densities)
         p2 = self._age_densities_2()
@@ -529,8 +531,8 @@ class SmoothModelRun(object):
                 to have zero age.
 
         Returns:
-            Python function `sys_p_sv`: `sys_p_sv(a, t)` returns the system 
-            content with age `a` at time `t`.
+            Python function ``sys_p_sv``: ``sys_p_sv(a, t)`` returns the system 
+            content with age ``a`` at time ``t``.
         """
         p_sv = self.pool_age_densities_single_value(start_age_densities)
         sys_p_sv = lambda a, t: sum(p_sv(a,t))
@@ -566,7 +568,7 @@ class SmoothModelRun(object):
         Returns:
             numpy.ndarray: (len(ages) x len(times) x (nr_pools+1)).
             The system age density values are appended to the end of the 
-            pool density values (system = pool `d+1` with `d = nr_pools`).
+            pool density values (system = pool ``d+1`` with ``d = nr_pools``).
         """
         n = self.nr_pools
         nr_ages = pool_age_densities.shape[0]
@@ -583,7 +585,7 @@ class SmoothModelRun(object):
 
 
     def age_moment_vector_from_densities(self, order, start_age_densities):
-        """Compute the `order` th moment of the pool ages by integration.
+        """Compute the ``order`` th moment of the pool ages by integration.
 
         This function is extremely slow, since for each pool the integral over 
         the density is computed based on the singe-valued functions. It is 
@@ -598,7 +600,7 @@ class SmoothModelRun(object):
 
         Returns:
             numpy.ndarray: len(times) x nr_pools. 
-            Contains the `order` th moment 
+            Contains the ``order`` th moment 
             of the pool ages over the time grid.
         """
         p_sv = self.pool_age_densities_single_value(start_age_densities)
@@ -626,7 +628,7 @@ class SmoothModelRun(object):
 
     def age_moment_vector_semi_explicit(self, order, 
                                         start_age_moments=None, times=None):
-        """Compute the `order` th moment of the pool ages by a semi-explicit 
+        """Compute the ``order`` th moment of the pool ages by a semi-explicit 
         formula.
 
         This function bases on a semi-explicit formula such that no improper 
@@ -636,14 +638,14 @@ class SmoothModelRun(object):
             order (int): The order of the age moment to be computed.
             start_age_moments (numpy.ndarray order x nr_pools, optional): 
                 Given initial age moments up to the order of interest. 
-                Can possibly be computed by :func:`moments_from_densites`. 
+                Can possibly be computed by :func:`moments_from_densities`. 
                 Defaults to None assuming zero initial ages.
             times (numpy.array, optional): Time grid. 
                 Defaults to None and the original time grid is used.
 
         Returns:
             numpy.ndarray: len(times) x nr_pools.
-            The `order` th pool age moments over the time grid.
+            The ``order`` th pool age moments over the time grid.
         """
             
         if times is None: times = self.times
@@ -701,8 +703,8 @@ class SmoothModelRun(object):
         
 
     def age_moment_vector(self, order, start_age_moments = None):
-        """Compute the `order` th pool age moment vector over the time grid by 
-        an ODE system.
+        """Compute the ``order`` th pool age moment vector over the time grid 
+        by an ODE system.
 
         This function solves an ODE system to obtain the pool age moments very
         fast. If the system has empty pools at the beginning, the semi-explicit 
@@ -713,12 +715,12 @@ class SmoothModelRun(object):
             order (int): The order of the pool age moments to be computed.
             start_age_moments (numpy.ndarray order x nr_pools, optional): 
                 Given initial age moments up to the order of interest. 
-                Can possibly be computed by :func:`moments_from_densites`. 
+                Can possibly be computed by :func:`moments_from_densities`. 
                 Defaults to None assuming zero initial ages.
 
         Returns:
             numpy.ndarray: len(times) x nr_pools.
-            The `order` th pool age moments over the time grid.
+            The ``order`` th pool age moments over the time grid.
         """
         n = self.nr_pools
         times = self.times
@@ -774,8 +776,8 @@ class SmoothModelRun(object):
 
     # requires start moments <= order
     def system_age_moment(self, order, start_age_moments=None):
-        """Compute the `order` th system age moment vector over the time grid by
-        an ODE system.
+        """Compute the ``order`` th system age moment vector over the time grid 
+        by an ODE system.
 
         The pool age moments are computed by :func:`age_moment_vector` and then 
         weighted corresponding to the pool contents.
@@ -784,11 +786,11 @@ class SmoothModelRun(object):
             order (int): The order of the pool age moments to be computed.
             start_age_moments (numpy.ndarray order x nr_pools, optional): 
                 Given initial age moments up to the order of interest. 
-                Can possibly be computed by :func:`moments_from_densites`. 
+                Can possibly be computed by :func:`moments_from_densities`. 
                 Defaults to None assuming zero initial ages.
 
         Returns:
-            numpy.array: The `order` th system age moment over the time grid.
+            numpy.array: The ``order`` th system age moment over the time grid.
         """
         n = self.nr_pools
         age_moment_vector = self.age_moment_vector(order, start_age_moments)
@@ -816,8 +818,8 @@ class SmoothModelRun(object):
                 masses with the given age at time :math:`t_0`.
 
         Returns:
-            Python function `p_sv`: `p_sv(a, t)` returns the mass that leaves 
-            the system at time `t` with age `a`.
+            Python function ``p_sv``: ``p_sv(a, t)`` returns the mass that 
+            leaves the system at time ``t`` with age ``a``.
         """
         n = self.nr_pools
         p_age_sv = self.pool_age_densities_single_value(start_age_densities)
@@ -855,13 +857,13 @@ class SmoothModelRun(object):
 
         Args:
             cut_off (bool, optional): If True, no density values are going to 
-                be computed after the end of the time grid, instead numpy.nan 
-                will be returned. 
+                be computed after the end of the time grid, instead 
+                ``numpy.nan`` will be returned. 
                 Defaults to True and False might lead to unexpected behavior.
         
         Returns:
-            Python function `p_sv`: `p_sv(a, t)` returns how much mass will 
-            leave the system with age `a` when it came in at time `t`.
+            Python function ``p_sv``: ``p_sv(a, t)`` returns how much mass will 
+            leave the system with age ``a`` when it came in at time ``t``.
         """
         n = self.nr_pools
         times = self.times
@@ -897,15 +899,15 @@ class SmoothModelRun(object):
 
         Args:
             cut_off (bool, optional): If True, no density values are going to 
-                be computed after the end of the time grid, instead numpy.nan 
-                will be returned. 
+                be computed after the end of the time grid, instead 
+                ``numpy.nan`` will be returned. 
                 Defaults to True and False might lead to unexpected behavior.
         
         Returns:
-            Python function `p`: `p(ages)` is a `numpy.ndarray` 
+            Python function ``p``: ``p(ages)`` is a ``numpy.ndarray`` 
             len(ages) x len(times) that gives the mass that will leave the
-            system with the respective age when it came in at time `t`, 
-            where `ages` is a `numpy.array`.
+            system with the respective age when it came in at time ``t``, 
+            where ``ages`` is a ``numpy.array``.
         """
         p_sv = self.forward_transit_time_density_single_value(cut_off)
         pp = lambda a: np.array([p_sv(a,t) for t in self.times], np.float)
@@ -927,7 +929,7 @@ class SmoothModelRun(object):
     
     def backward_transit_time_moment_from_density(self, 
             order, start_age_densities):
-        """Compute the `order` th backward transit time moment based on an 
+        """Compute the ``order`` th backward transit time moment based on an 
         improper integral over the density.
 
         This function is extremely slow and implemented only for the sake of 
@@ -941,7 +943,7 @@ class SmoothModelRun(object):
                 age at time :math:`t_0`.
         
         Returns:
-            numpy.array: The `order` th backward transit time moment over the 
+            numpy.array: The ``order`` th backward transit time moment over the 
             time grid.
         """
         p_sv = self.backward_transit_time_density_single_value(
@@ -964,7 +966,7 @@ class SmoothModelRun(object):
 
 
     def backward_transit_time_moment(self, order, start_age_moments):
-        """Compute the `order` th backward transit time moment based on the 
+        """Compute the ``order`` th backward transit time moment based on the 
         :func:`age_moment_vector`.
 
         Args:
@@ -972,11 +974,11 @@ class SmoothModelRun(object):
                 to be computed.
             start_age_moments (numpy.ndarray order x nr_pools, optional): 
                 Given initial age moments up to the order of interest. 
-                Can possibly be computed by :func:`moments_from_densites`. 
+                Can possibly be computed by :func:`moments_from_densities`. 
                 Defaults to None assuming zero initial ages.
        
         Returns:
-            numpy.array: The `order` th backward transit time moment over the 
+            numpy.array: The ``order`` th backward transit time moment over the 
             time grid.
         """ 
         times = self.times
@@ -988,7 +990,7 @@ class SmoothModelRun(object):
 
 
     def forward_transit_time_moment(self, order):
-        """Compute the `order` th forward transit time moment.
+        """Compute the ``order`` th forward transit time moment.
 
         Attention! This function integrates over the state transition operator 
         until infinite time.
@@ -1000,7 +1002,7 @@ class SmoothModelRun(object):
                 computed.
 
         Returns:
-            numpy.array: The `order` th forward transit time moment over the 
+            numpy.array: The ``order`` th forward transit time moment over the 
             time grid.
         """
         k = order
@@ -1274,7 +1276,7 @@ class SmoothModelRun(object):
 
         Args:
             pool_age_densites_sv (Python function): A function that takes 
-                `a`, `t` as arguments and returns a vector of pool contents 
+                ``a``, ``t`` as arguments and returns a vector of pool contents 
                 with mass a at time t. Potentially coming from 
                 :func:`pool_age_densities_single_value`.
             pool_age_values (numpy.ndarray len(times) x nr_pools): The ages over
@@ -1314,8 +1316,8 @@ class SmoothModelRun(object):
         is now implemented in a much faster way based on the surface itself.
 
         Args:
-            density_sv (Python function): A function that takes `a`, `t` 
-                as arguments and returns density value with age a at time `t`. 
+            density_sv (Python function): A function that takes ``a``, ``t`` 
+                as arguments and returns density value with age a at time ``t``.
                 Potentially coming from :func:`system_age_density_single_value`.
             values (numpy.array): The ages over the time grid at which the 
                 density values are to be computed.
@@ -1501,7 +1503,7 @@ class SmoothModelRun(object):
     
         Returns:
             None.
-            Instead `fig` is changed in place.
+            Instead ``fig`` is changed in place.
         """
     #fixme:
     # since time units and units are related to those
@@ -1548,7 +1550,7 @@ class SmoothModelRun(object):
 
         Returns:
             None.
-            Instead `ax` is changed in place.
+            Instead ``ax`` is changed in place.
         """
         times = self.times
         soln = self.solve()
@@ -1582,7 +1584,7 @@ class SmoothModelRun(object):
     
         Returns:
             None.
-            Instead `fig` is changed in place.
+            Instead ``fig`` is changed in place.
         """
         n = len(self.model.state_vector)
         planes = [(i,j) for i in range(n) for j in range(i)]
@@ -1612,7 +1614,7 @@ class SmoothModelRun(object):
     
         Returns:
             None.
-            Instead `fig` is changed in place.
+            Instead ``fig`` is changed in place.
         """
         internal_flux_funcs = self.internal_flux_funcs()
         n = len(internal_flux_funcs.keys())
@@ -1649,7 +1651,7 @@ class SmoothModelRun(object):
     
         Returns:
             None.
-            Instead `fig` is changed in place.
+            Instead ``fig`` is changed in place.
         """
         times = self.times
         output_flux_funcs = self.output_flux_funcs()
@@ -1684,7 +1686,7 @@ class SmoothModelRun(object):
     
         Returns:
             None.
-            Instead `fig` is changed in place.
+            Instead ``fig`` is changed in place.
         """
         times = self.times
         input_flux_funcs = self.external_input_flux_funcs()
@@ -1723,7 +1725,7 @@ class SmoothModelRun(object):
     
         Returns:
             None.
-            Instead `fig` is changed in place.
+            Instead ``fig`` is changed in place.
         """
         times = self.times
         n = self.nr_pools
@@ -1766,7 +1768,7 @@ class SmoothModelRun(object):
     
         Returns:
             None.
-            Instead `ax` is changed in place.
+            Instead ``ax`` is changed in place.
         """
         times = self.times
         n = self.nr_pools
@@ -1823,7 +1825,7 @@ class SmoothModelRun(object):
 
         Returns:
             None.
-            Instead `fig` is changed in place.
+            Instead ``fig`` is changed in place.
         """
         times = self.times
         strided_data = stride(data, time_stride)
@@ -1950,7 +1952,7 @@ class SmoothModelRun(object):
     
         Returns:
             None.
-            Instead `fig` is changed in place.
+            Instead ``fig`` is changed in place.
         """
         data = fig['data'][0]
         x = data['x']
@@ -1983,14 +1985,15 @@ class SmoothModelRun(object):
                 time :math:`t_0`. Defaults to None.
 
         Raises:
-            Error: If both `start_age_densities` and `F0` are `None`. 
+            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
                 One must be given.
-                It is fastest to provide `F0`, otherwise `F0` will be computed 
-                by numerical integration of `start_age_densities`.
+                It is fastest to provide ``F0``, otherwise ``F0`` will be 
+                computed by numerical integration of ``start_age_densities``.
 
         Returns:
-            Python function `F_sv`: `F_sv(a,t)` is the vector of pool masses 
-            (numpy.array) with age less than or equal to `a` at time `t`.
+            Python function ``F_sv``: ``F_sv(a,t)`` is the vector of pool 
+            masses (``numpy.array``) with age less than or equal to ``a`` at 
+            time ``t``.
         """
         n = self.nr_pools
         soln = self.solve()
@@ -2052,14 +2055,14 @@ class SmoothModelRun(object):
                 time :math:`t_0`. Defaults to None.
 
         Raises:
-            Error: If both `start_age_densities` and `F0` are None. 
+            Error: If both ``start_age_densities`` and ``F0`` are None. 
                 One must be given.
-                It is fastest to provide `F0`, otherwise `F0` will be computed 
-                by numerical integration of `start_age_densities`.
+                It is fastest to provide ``F0``, otherwise ``F0`` will be 
+                computed by numerical integration of ``start_age_densities``.
 
         Returns:
-            Python function `F_sv`: `F_sv(a, t)` is the mass in the system with 
-            age less than or equal to `a` at time `t`.
+            Python function ``F_sv``: ``F_sv(a, t)`` is the mass in the system 
+            with age less than or equal to ``a`` at time ``t``.
         """
         n = self.nr_pools
         soln = self.solve()
@@ -2089,14 +2092,14 @@ class SmoothModelRun(object):
                 time :math:`t_0`. Defaults to None.
 
         Raises:
-            Error: If both `start_age_densities` and `F0` are `None`. 
+            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
                 One must be given.
-                It is fastest to provide `F0`, otherwise `F0` will be computed 
-                by numerical integration of `start_age_densities`.
+                It is fastest to provide ``F0``, otherwise ``F0`` will be 
+                computed by numerical integration of ``start_age_densities``.
 
         Returns:
-            Python function `F_sv`: `F_sv(a, t)` is the mass leaving the system
-            at time `t` with age less than or equal to `a`.
+            Python function ``F_sv``: ``F_sv(a, t)`` is the mass leaving the 
+            system at time ``t`` with age less than or equal to ``a``.
         """
         if F0 is None and start_age_densities is None:
             raise(Error('Either F0 or start_age_densities must be given.'))
@@ -2119,15 +2122,15 @@ class SmoothModelRun(object):
         distribution.
 
         Args:
-            cut_off (bool, optional): If `True`, no density values are going to 
-                be computed after the end of the time grid, instead `numpy.nan`
-                will be returned. 
-                Defaults to `True`.
-                `False` might lead to unexpected behavior.
+            cut_off (bool, optional): If ``True``, no density values are going 
+                to be computed after the end of the time grid, instead 
+                ``numpy.nan`` will be returned. 
+                Defaults to ``True``.
+                ``False`` might lead to unexpected behavior.
 
         Returns:
-            Python function `F_sv`: `F_sv(a, t)` is the mass leaving the system 
-            at time `t+a` with age less than or equal to `a`.
+            Python function ``F_sv``: ``F_sv(a, t)`` is the mass leaving the 
+            system at time ``t+a`` with age less than or equal to ``a``.
         """
         times = self.times
         t_max = times[-1]
@@ -2159,29 +2162,29 @@ class SmoothModelRun(object):
 
         Args:
             quantile (between 0 and 1): The relative share of mass that is 
-                considered to be left of the computed value. A value of `0.5` 
+                considered to be left of the computed value. A value of ``0.5`` 
                 leads to the computation of the median of the distribution.
             start_age_densities (Python function, optional): A function of age 
-                that returns a `numpy.array` containing the masses with the 
+                that returns a ``numpy.array`` containing the masses with the 
                 given age at time :math:`t_0`. 
-                Defaults to `None`.
-            F0 (Python function): A function of age that returns a `numpy.array`
-                containing the masses with age less than or equal to the age at
-                time :math:`t_0`. 
-                Defaults to `None`.
+                Defaults to ``None``.
+            F0 (Python function): A function of age that returns a 
+                ``numpy.array`` containing the masses with age less than or
+                equal to the age at time :math:`t_0`. 
+                Defaults to ``None``.
             method (str): The method that is used for finding the roots of a 
                 nonlinear function. Either 'brentq' or 'newton'. 
                 Defaults to 'brentq'.
             tol (float): The tolerance used in the numerical root search 
                 algorithm. A low tolerance decreases the computation speed 
-                tremendously, so a value of `1e-01` might already be fine. 
-                Defaults to `1e-08`.
+                tremendously, so a value of ``1e-01`` might already be fine. 
+                Defaults to ``1e-08``.
 
         Raises:
-            Error: If both `start_age_densities` and `F0` are `None`. 
+            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
                 One must be given.
-                It is fastest to provide `F0`, otherwise `F0` will be computed 
-                by numerical integration of `start_age_densities`.
+                It is fastest to provide ``F0``, otherwise ``F0`` will be 
+                computed by numerical integration of ``start_age_densities``.
 
         Returns:
             numpy.ndarray: (len(times) x nr_pools)
@@ -2228,29 +2231,29 @@ class SmoothModelRun(object):
 
         Args:
             quantile (between 0 and 1): The relative share of mass that is 
-                considered to be left of the computed value. A value of `0.5` 
+                considered to be left of the computed value. A value of ``0.5`` 
                 leads to the computation of the median of the distribution.
             start_age_densities (Python function, optional): A function of age 
-                that returns a `numpy.array` containing the masses with the 
+                that returns a ``numpy.array`` containing the masses with the 
                 given age at time :math:`t_0`. 
-                Defaults to `None`.
-            F0 (Python function): A function of age that returns a `numpy.array`
-                containing the masses with age less than or equal to the age at 
-                time :math:`t_0`. 
-                Defaults to `None`.
+                Defaults to ``None``.
+            F0 (Python function): A function of age that returns a 
+                ``numpy.array`` containing the masses with age less than or 
+                equal to the age at time :math:`t_0`. 
+                Defaults to ``None``.
             method (str): The method that is used for finding the roots of a 
                 nonlinear function. Either 'brentq' or 'newton'. 
                 Defaults to 'brentq'.
             tol (float): The tolerance used in the numerical root search 
                 algorithm. A low tolerance decreases the computation speed 
-                tremendously, so a value of `1e-01` might already be fide. 
-                Defaults to `1e-08`.
+                tremendously, so a value of ``1e-01`` might already be fide. 
+                Defaults to ``1e-08``.
 
         Raises:
-            Error: If both `start_age_densities` and `F0` are `None`. 
+            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
                 One must be given.
-                It is fastest to provide `F0`, otherwise `F0` will be computed 
-                by numerical integration of `start_age_densities`.
+                It is fastest to provide ``F0``, otherwise ``F0`` will be 
+                computed by numerical integration of ``start_age_densities``.
 
         Returns:
             numpy.array: The computed quantile values over the time grid.
@@ -2292,11 +2295,11 @@ class SmoothModelRun(object):
 
         Args:
             quantile (between 0 and 1): The relative share of mass that is 
-                considered to be left of the computed value. A value of `0.5` 
+                considered to be left of the computed value. A value of ``0.5`` 
                 leads to the computation of the median of the distribution.
-            F_sv (Python function): A function of age `a` and time `t` that 
-                returns the mass that is of age less than or equal to `a` at 
-                time `t`.
+            F_sv (Python function): A function of age ``a`` and time ``t`` that 
+                returns the mass that is of age less than or equal to ``a`` at 
+                time ``t``.
             norm_consts (numpy.array, optional): An array over the time grid of
                 total masses over all ages. 
                 Defaults to an array of ones assuming given probability 
@@ -2310,8 +2313,8 @@ class SmoothModelRun(object):
                 Defaults to 'brentq'.
             tol (float): The tolerance used in the numerical root search 
                 algorithm. A low tolerance decreases the computation speed 
-                tremendously, so a value of `1e-01` might already be fine. 
-                Defaults to `1e-08`.
+                tremendously, so a value of ``1e-01`` might already be fine. 
+                Defaults to ``1e-08``.
 
         Returns:
             numpy.array: The computed quantile values over the time grid.
@@ -2371,26 +2374,26 @@ class SmoothModelRun(object):
 
         Args:
             quantile (between 0 and 1): The relative share of mass that is 
-                considered to be left of the computed value. A value of `0.5` 
+                considered to be left of the computed value. A value of ``0.5`` 
                 leads to the computation of the median of the distribution.
             start_age_densities (Python function, optional): A function of age 
-                that returns a `numpy.array` containing the masses with the 
+                that returns a ``numpy.array`` containing the masses with the 
                 given age at time :math:`t_0`. 
-                Defaults to `None`.
-            F0 (Python function): A function of age that returns a `numpy.array`
-                containing the masses with age less than or equal to the age at
-                time :math:`t_0`. 
-                Defaults to `None`.
+                Defaults to ``None``.
+            F0 (Python function): A function of age that returns a 
+                ``numpy.array`` containing the masses with age less than or 
+                equal to the age at time :math:`t_0`. 
+                Defaults to ``None``.
             tol (float): The tolerance used in the numerical root search 
                 algorithm. A low tolerance decreases the computation speed 
-                tremendously, so a value of `1e-01` might already be fine. 
-                Defaults to `1e-08`.
+                tremendously, so a value of ``1e-01`` might already be fine. 
+                Defaults to ``1e-08``.
 
         Raises:
-            Error: If both `start_age_densities` and `F0` are `None`. 
+            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
                 One must be given.
-                It is fastest to provide `F0`, otherwise `F0` will be computed 
-                by numerical integration of `start_age_densities`.
+                It is fastest to provide ``F0``, otherwise ``F0`` will be 
+                computed by numerical integration of ``start_age_densities``.
 
         Returns:
             numpy.ndarray: (len(times) x nr_pools) The computed quantile values 
@@ -2420,28 +2423,28 @@ class SmoothModelRun(object):
 
         Args:
             quantile (between 0 and 1): The relative share of mass that is 
-                considered to be left of the computed value. A value of `0.5` 
+                considered to be left of the computed value. A value of ``0.5`` 
                 leads to the computation of the median of the distribution.
             pool (int): The number of the pool for which the age quantile is to 
                 be computed.
             start_age_densities (Python function, optional): A function of age 
-                that returns a `numpy.array` containing the masses with the 
+                that returns a ``numpy.array`` containing the masses with the 
                 given age at time :math:`t_0`. 
-                Defaults to `None`.
-            F0 (Python function): A function of age that returns a `numpy.array`
-                containing the masses with age less than or equal to the age at 
-                time :math:`t_0`. 
-                Defaults to `None`.
+                Defaults to ``None``.
+            F0 (Python function): A function of age that returns a 
+                ``numpy.array`` containing the masses with age less than or 
+                equal to the age at time :math:`t_0`. 
+                Defaults to ``None``.
             tol (float): The tolerance used in the numerical root search 
                 algorithm. A low tolerance decreases the computation speed 
-                tremendously, so a value of `1e-01` might already be fine. 
-                Defaults to `1e-08`.
+                tremendously, so a value of ``1e-01`` might already be fine. 
+                Defaults to ``1e-08``.
 
         Raises:
-            Error: If both `start_age_densities` and `F0` are `None`. 
+            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
                 One must be given.
-                It is fastest to provide `F0`, otherwise `F0` will be computed 
-                by numerical integration of `start_age_densities`.
+                It is fastest to provide ``F0``, otherwise ``F0`` will be 
+                computed by numerical integration of ``start_age_densities``.
 
         Returns:
             numpy.ndarray: (len(times)) The computed quantile values over the 
@@ -2568,28 +2571,28 @@ class SmoothModelRun(object):
 
         Args:
             quantile (between 0 and 1): The relative share of mass that is 
-                considered to be left of the computed value. A value of `0.5` 
+                considered to be left of the computed value. A value of ``0.5`` 
                 leads to the computation of the median of the distribution.
             pool (int): The number of the pool for which the age quantile is to 
                 be computed.
             start_age_densities (Python function, optional): A function of age 
-                that returns a `numpy.array` containing the masses with the 
+                that returns a ``numpy.array`` containing the masses with the 
                 given age at time :math:`t_0`. 
-                Defaults to `None`.
-            F0 (Python function): A function of age that returns a `numpy.array`
-                containing the masses with age less than or equal to the age at 
-                time :math:`t_0`. 
-                Defaults to `None`.
+                Defaults to ``None``.
+            F0 (Python function): A function of age that returns a 
+                ``numpy.array`` containing the masses with age less than or 
+                equal to the age at time :math:`t_0`. 
+                Defaults to ``None``.
             tol (float): The tolerance used in the numerical root search 
                 algorithm. A low tolerance decreases the computation speed 
-                tremendously, so a value of `1e-01` might already be fine. 
-                Defaults to `1e-08`.
+                tremendously, so a value of ``1e-01`` might already be fine. 
+                Defaults to ``1e-08``.
 
         Raises:
-            Error: If both `start_age_densities` and `F0` are `None`. 
+            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
                 One must be given.
-                It is fastest to provide `F0`, otherwise `F0` will be computed 
-                by numerical integration of `start_age_densities`.
+                It is fastest to provide ``F0``, otherwise ``F0`` will be 
+                computed by numerical integration of ``start_age_densities``.
 
         Returns:
             numpy.ndarray: The computed quantile values over the time grid.
@@ -2791,13 +2794,16 @@ class SmoothModelRun(object):
         # save all solutions for order <= max_order
         if store:
             for order in range(max_order+1):
-                shorter_start_age_moments_list = start_age_moments_list[:order*n]
+                shorter_start_age_moments_list = (
+                    start_age_moments_list[:order*n])
                 #print(start_age_moments_list)
                 #print(shorter_start_age_moments_list)
-                storage_key = tuple(shorter_start_age_moments_list) + ((order,),)
+                storage_key = (tuple(shorter_start_age_moments_list) 
+                                + ((order,),))
                 #print('saving', storage_key)
 
-                self._previously_computed_age_moment_sol[storage_key] = soln[:,:(order+1)*n]
+                self._previously_computed_age_moment_sol[storage_key] = (
+                    soln[:,:(order+1)*n])
                 #print(self._previously_computed_age_moment_sol[storage_key])
 
         return soln
@@ -2825,7 +2831,8 @@ class SmoothModelRun(object):
             def no_input_sol(times, start_vector):
                 #print('nos', times, start_vector)
                 # Start and end time too close together? Do not integrate!
-                if abs(times[0]-times[-1]) < 1e-14: return np.array(start_vector)
+                if abs(times[0]-times[-1]) < 1e-14: 
+                    return np.array(start_vector)
                 sv = np.array(start_vector).reshape((self.nr_pools,))
                 return odeint(no_inputs_num_rhs, sv, times, mxstep = 10000)[-1]
         
@@ -2985,7 +2992,12 @@ class SmoothModelRun(object):
                 return np.array(self.start_values)
 
         # cut off negative ages in start_age_densities
-        p0 = lambda a: start_age_densities(a) if a>=0 else np.zeros((self.nr_pools,))
+        def p0(a):
+            if a >= 0: 
+                return start_age_densities(a)
+            else:
+                return np.zeros((self.nr_pools,))
+
         Phi = self._state_transition_operator
  
         t0 = self.times[0]

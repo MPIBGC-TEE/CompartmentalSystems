@@ -2,14 +2,13 @@
 from __future__ import division
 
 import numpy as np 
-
-from sympy import flatten, gcd, lambdify, DiracDelta, solve
-from sympy.polys.polyerrors import PolynomialError
 from scipy.integrate import odeint
+from scipy.interpolate import lagrange
 from scipy.optimize import brentq
 from scipy.stats import norm
-from scipy.interpolate import lagrange
 from string import Template
+from sympy import flatten, gcd, lambdify, DiracDelta, solve
+from sympy.polys.polyerrors import PolynomialError
 
 
 #fixme: test
@@ -39,14 +38,14 @@ def is_DiracDelta(expr):
 
 
 def parse_input_function(u_i, time_symbol):
-#    """Return an ordered list of jumps in the input function u.
-#
-#    Args:
-#        u (SymPy expression): input function in :math:`\\dot{\\vec{x}} = \\tens{A}\\,\\vec{x} + \\vec{u}`
-#
-#    Returns:
-#        ascending list of jumps in u
-#    """
+    """Return an ordered list of jumps in the input function u.
+
+    Args:
+        u (SymPy expression): input function in :math:`\\dot{x} = A\\,x + u`
+
+    Returns:
+        ascending list of jumps in u
+    """
     impulse_times = []
     pieces = []
 
@@ -93,10 +92,11 @@ def factor_out_from_matrix(M):
         return 1
 
 
-def numerical_rhs(state_vector, time_symbol, rhs, parameter_set, func_set, times):
+def numerical_rhs(state_vector, time_symbol, rhs, 
+        parameter_set, func_set, times):
     rhs_par = rhs.subs(parameter_set)
 
-    # first check if the rhs is defined piecewise since lambdify does not work then
+    # first check if the rhs is defined piecewise since lambdify does not work
     if not has_pw(rhs):
     #if False:
         #https://www.python.org/dev/peps/pep-0008/ 
@@ -104,7 +104,8 @@ def numerical_rhs(state_vector, time_symbol, rhs, parameter_set, func_set, times
         # but the ode solver wants a function 
         # operating on lists.
         # We proceed in steps to construct this function:
-        # 1.)  Create a Matrix valued function from the Matrix valued expression Fpar
+        # 1.)  Create a Matrix valued function from the Matrix valued expression
+        #  Fpar
         #      which we can do  automatically with sympys lambdify function
         #      a) assemble tuple for lambdify 
         tup = tuple(state_vector) + (time_symbol,)
@@ -112,7 +113,8 @@ def numerical_rhs(state_vector, time_symbol, rhs, parameter_set, func_set, times
 
         # cut off the parentheses from the keys, because lamdify wants it
         #print('fs', func_set)
-        cut_func_set = {key[:key.index('(')]: val for key, val in func_set.items()}
+        cut_func_set = {key[:key.index('(')]: val 
+                            for key, val in func_set.items()}
         #print('cfs', cut_func_set)
         #print('rhs_par', [(a, type(a)) for a in rhs_par.atoms()])
         #print('rhs_par', rhs_par)
@@ -121,7 +123,8 @@ def numerical_rhs(state_vector, time_symbol, rhs, parameter_set, func_set, times
         #FL = lambdify(tup, rhs_par, modules=[cut_func_set, TRANSLATIONS])
         FL = lambdify(tup, rhs_par, modules=[cut_func_set, 'numpy'])
         
-        # 2.)  Write a wrapper that transformes Matrices to lists (or numpy.ndarrays)
+        # 2.) Write a wrapper that transformes Matrices to lists 
+        # (or numpy.ndarrays)
         # 
         def num_rhs(X,t):
             # the ode solver delivers X as numpy.ndarray 
@@ -138,11 +141,13 @@ def numerical_rhs(state_vector, time_symbol, rhs, parameter_set, func_set, times
     else:
         def funcmaker(expr, state_vector, time_symbol):
             # parse out the signatures of involved functions
-            name_tup = tuple([sv.name for sv in state_vector]) + (time_symbol.name,)
+            name_tup = (tuple([sv.name for sv in state_vector]) + 
+                            (time_symbol.name,))
             signature_indices = {}
             for key, func in func_set.items():
                 # find the signature of func
-                pars = [s.strip() for s in key[key.index('(')+1:key.index(')')].split(',')]
+                pars = [s.strip() 
+                    for s in key[key.index('(')+1:key.index(')')].split(',')]
                 signature_indices[key] = np.array([s in pars for s in name_tup])
 
             #print('expr', expr)
@@ -190,7 +195,8 @@ def numerical_rhs(state_vector, time_symbol, rhs, parameter_set, func_set, times
 
         #fixme: we should die hard here, because now we think we can compute the
         # state transition operator till any time in the future,
-        # but it is actually biased by the fact, that we use the last value over and over again
+        # but it is actually biased by the fact, that we use the last value over
+        # and over again
         # and hence assume some "constant" future
         if t > t_max:
             res = num_rhs(X, t_max)
@@ -280,7 +286,8 @@ def generalized_inverse_CDF(CDF, u, start_dist = 1e-4, tol = 1e-8):
 
     x1 = start_dist
  
-    # go so far to the right such that CDF(x1) > u, the bisect in interval [0, x1]
+    # go so far to the right such that CDF(x1) > u, the bisect in 
+    # interval [0, x1]
     y1 = f(x1)
     while y1 >= 0:
         x1 = x1*2 + 0.1
@@ -303,10 +310,11 @@ def draw_rv(CDF):
     return generalized_inverse_CDF(CDF, np.random.uniform())
 
 
-# return function g, such that g(normally distributed sv) is distributed according to CDF
+# return function g, such that g(normally distributed sv) is distributed 
+# according to CDF
 def stochastic_collocation_transform(M, CDF):
-    # collocation points for normal distribution, taken from Table 10 in Appendix 3
-    # of Grzelak2015SSRN
+    # collocation points for normal distribution, 
+    # taken from Table 10 in Appendix 3 of Grzelak2015SSRN
     cc_data = { 2: [1],
                 3: [0.0, 1.7321],
                 4: [0.7420, 2.3344],
@@ -323,7 +331,8 @@ def stochastic_collocation_transform(M, CDF):
     cc_points = [-x for x in reversed(cc_data[M]) if x != 0.0] + cc_data[M]
     cc_points = np.array(cc_points)
     #print('start computing collocation transform')
-    ys = np.array([generalized_inverse_CDF(CDF, norm.cdf(x)) for x in cc_points])
+    ys = np.array([generalized_inverse_CDF(CDF, norm.cdf(x)) 
+                    for x in cc_points])
     #print('ys', ys)
     #print('finished computing collocation transform')
 
@@ -360,7 +369,6 @@ def MH_sampling(N, PDF, start = 1.0):
 
 
 def save_csv(filename, melted, header):
-    #np.savetxt(filename, melted, header = header, delimiter=',', comments='', fmt="%10.8f")
     np.savetxt(filename, melted, header = header, delimiter=',', fmt="%10.8f")
 
 
@@ -375,7 +383,8 @@ def tup2str(tup):
     return(string)
 
 
-# use only every (k_1,k_2,...,k_n)th element of the n-dimensional numpy array data,
+# use only every (k_1,k_2,...,k_n)th element of the n-dimensional numpy array 
+# data,
 # strides is a list of k_j of length n
 # always inlcude first and last elements
 def stride(data, strides):

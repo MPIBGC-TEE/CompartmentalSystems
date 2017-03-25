@@ -45,7 +45,7 @@
 <span></span><span class="sd">&quot;&quot;&quot;Module for numerical treatment of smooth reservoir models.</span>
 
 <span class="sd">An abstract </span>
-<span class="sd">:obj:`~.smooth_reservoir_model.SmoothReservoirModel` is </span>
+<span class="sd">:class:`~.smooth_reservoir_model.SmoothReservoirModel` is </span>
 <span class="sd">filled with live by giving initial values, a parameter set, a time grid, </span>
 <span class="sd">and potentially additional involved functions to it.</span>
 
@@ -95,21 +95,21 @@
 
 <div class="viewcode-block" id="SmoothModelRun"><a class="viewcode-back" href="../../_autosummary/CompartmentalSystems.smooth_model_run.html#CompartmentalSystems.smooth_model_run.SmoothModelRun">[docs]</a><span class="k">class</span> <span class="nc">SmoothModelRun</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Class for a model run based on a </span>
-<span class="sd">    :obj:`~.smooth_reservoir_model.SmoothReservoirModel`.</span>
+<span class="sd">    :class:`~.smooth_reservoir_model.SmoothReservoirModel`.</span>
 
 <span class="sd">    Attributes:</span>
-<span class="sd">        model (:obj:`~.smooth_reservoir_model.SmoothReservoirModel`): </span>
+<span class="sd">        model (:class:`~.smooth_reservoir_model.SmoothReservoirModel`): </span>
 <span class="sd">            The reservoir model on which the model run bases.</span>
-<span class="sd">        parameter set (dict): `{x: y}` with `x` being a SymPy symbol </span>
-<span class="sd">            and `y` being a numerical value.</span>
+<span class="sd">        parameter set (dict): ``{x: y}`` with ``x`` being a SymPy symbol </span>
+<span class="sd">            and ``y`` being a numerical value.</span>
 <span class="sd">        start_values (numpy.array): The vector of start values.</span>
 <span class="sd">        times (numpy.array): The time grid used for the simulation.</span>
-<span class="sd">            Typically created by `numpy.linspace`.</span>
-<span class="sd">        func_set (dict): `{f: func}` with `f` being a SymPy symbol and </span>
-<span class="sd">            `func` being a Python function. Defaults to `dict()`.</span>
+<span class="sd">            Typically created by ``numpy.linspace``.</span>
+<span class="sd">        func_set (dict): ``{f: func}`` with ``f`` being a SymPy symbol and </span>
+<span class="sd">            ``func`` being a Python function. Defaults to ``dict()``.</span>
 
-<span class="sd">    Pool counting starts with `0`. In combined structures for pools and system, </span>
-<span class="sd">    the system is at the position of a `(d+1)` st pool.</span>
+<span class="sd">    Pool counting starts with ``0```. In combined structures for pools and </span>
+<span class="sd">    system, the system is at the position of a ``(d+1)`` st pool.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
 
@@ -118,18 +118,18 @@
         <span class="sd">&quot;&quot;&quot;Return a SmoothModelRun instance.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            model (:obj:`~.smooth_reservoir_model.SmoothReservoirModel`): </span>
+<span class="sd">            model (:class:`~.smooth_reservoir_model.SmoothReservoirModel`): </span>
 <span class="sd">                The reservoir model on which the model run bases.</span>
-<span class="sd">            parameter_set (dict): `{x: y}` with `x` being a SymPy symbol </span>
-<span class="sd">                and `y` being a numerical value.</span>
+<span class="sd">            parameter_set (dict): ``{x: y}`` with ``x`` being a SymPy symbol </span>
+<span class="sd">                and ``y`` being a numerical value.</span>
 <span class="sd">            start_values (numpy.array): The vector of start values.</span>
 <span class="sd">            times (numpy.array): The time grid used for the simulation.</span>
-<span class="sd">                Typically created by `numpy.linspace`.</span>
-<span class="sd">            func_set (dict): `{f: func}` with `f` being a SymPy symbol and </span>
-<span class="sd">                `func` being a Python function. Defaults to `dict()`.</span>
+<span class="sd">                Typically created by ``numpy.linspace``.</span>
+<span class="sd">            func_set (dict): ``{f: func}`` with ``f`` being a SymPy symbol and </span>
+<span class="sd">                ``func`` being a Python function. Defaults to ``dict()``.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            Error: If `start_values` is not a `numpy.array`.</span>
+<span class="sd">            Error: If ``start_values`` is not a ``numpy.array``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># we cannot use dict() as default because the test suite makes weird </span>
         <span class="c1"># things with it! But that is bad style anyways</span>
@@ -166,7 +166,7 @@
 <span class="sd">            t (float): The time at which :math:`A` is to be evaluated.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            numpy.ndarray: The compartmental matrix evaluated at time `t`.</span>
+<span class="sd">            numpy.ndarray: The compartmental matrix evaluated at time ``t``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_A&#39;</span><span class="p">):</span>
             <span class="c1">#fixme: what about a piecewise in the matrix?</span>
@@ -201,9 +201,9 @@
 <span class="sd">        this is why nonlinear systems should be linearized first.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            :obj:`SmoothModelRun`: A linearized version of the original </span>
-<span class="sd">            :obj:`SmoothModelRun`, with the solutions now being part </span>
-<span class="sd">            of `func_set`.</span>
+<span class="sd">            :class:`SmoothModelRun`: A linearized version of the original </span>
+<span class="sd">            :class:`SmoothModelRun`, with the solutions now being part </span>
+<span class="sd">            of ``func_set``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">sol_funcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_funcs</span><span class="p">()</span>
         
@@ -296,11 +296,11 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            alternative_start_values (numpy.array, optional): If not given, the </span>
-<span class="sd">                original `start_values` are used.</span>
+<span class="sd">                original ``start_values`` are used.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Python function `f`: `f(t)` is a numpy.array that containts the </span>
-<span class="sd">            pool contents at time `t`.</span>
+<span class="sd">            Python function ``f``: ``f(t)`` is a numpy.array that containts the </span>
+<span class="sd">            pool contents at time ``t``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solve_age_moment_system_single_value</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> 
                         <span class="n">alternative_start_values</span><span class="p">)</span></div>
@@ -330,8 +330,8 @@
         <span class="sd">&quot;&quot;&quot;Return linearly interpolated solution functions.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Python function `f`: `f(t)` returns a numpy.array containing the </span>
-<span class="sd">            pool contents at time `t`.</span>
+<span class="sd">            Python function ``f``: ``f(t)`` returns a numpy.array containing the</span>
+<span class="sd">            pool contents at time ``t``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
 
@@ -349,8 +349,9 @@
 <span class="sd">        The resulting functions base on sol_funcs and are linear interpolations.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            dict: `{key: func}` with `key` representing the pool which receives </span>
-<span class="sd">            the input and `func` a function of time that returns a `float`.</span>
+<span class="sd">            dict: ``{key: func}`` with ``key`` representing the pool which </span>
+<span class="sd">            receives the input and ``func`` a function of time that returns </span>
+<span class="sd">            a ``float``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_flux_funcs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">input_fluxes</span><span class="p">)</span></div>
 
@@ -360,9 +361,9 @@
 <span class="sd">        The resulting functions base on sol_funcs and are linear interpolations.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            ditc: `{key: func}` with `key=(pool_from, pool_to)` representing the</span>
-<span class="sd">            pools involved and `func` a function of time that returns </span>
-<span class="sd">            a float.</span>
+<span class="sd">            ditc: ``{key: func}`` with ``key=(pool_from, pool_to)`` representing</span>
+<span class="sd">            the pools involved and ``func`` a function of time that returns </span>
+<span class="sd">            a ``float``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_flux_funcs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">internal_fluxes</span><span class="p">)</span></div>
 
@@ -372,22 +373,23 @@
 <span class="sd">        The resulting functions base on sol_funcs and are linear interpolations.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            dict: `{key: func}` with `key` representing the pool from which the </span>
-<span class="sd">            output comes and `func` a function of time that returns a float.</span>
+<span class="sd">            dict: ``{key: func}`` with ``key`` representing the pool from which</span>
+<span class="sd">            the output comes and ``func`` a function of time that returns a </span>
+<span class="sd">            ``float``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_flux_funcs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">output_fluxes</span><span class="p">)</span></div>
     
     <span class="c1">#fixme: here _func indicated that this here is already a function of t</span>
     <span class="c1"># on other occasions _func indicated that a function is returned</span>
 <div class="viewcode-block" id="SmoothModelRun.output_vector_func"><a class="viewcode-back" href="../../_autosummary/CompartmentalSystems.smooth_model_run.html#CompartmentalSystems.smooth_model_run.SmoothModelRun.output_vector_func">[docs]</a>    <span class="k">def</span> <span class="nf">output_vector_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Return a vector of the external output fluxes at time `t`.</span>
+        <span class="sd">&quot;&quot;&quot;Return a vector of the external output fluxes at time ``t``.</span>
 <span class="sd">        </span>
 <span class="sd">        The resulting values base on sol_funcs and come from  linear </span>
 <span class="sd">        interpolations.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            numpy.array: The `i` th entry is the output from pool `i` at </span>
-<span class="sd">            time `t`.</span>
+<span class="sd">            numpy.array: The ``i`` th entry is the output from pool ``i`` at </span>
+<span class="sd">            time ``t``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">,))</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_flux_funcs</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -406,8 +408,8 @@
 <span class="sd">        The resulting function bases on sol_funcs and is a linear interpolation.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Python function `u`: `u(t)` is a `numpy.array` containing the </span>
-<span class="sd">            external inputs at time `t`.</span>
+<span class="sd">            Python function ``u``: ``u(t)`` is a ``numpy.array`` containing the </span>
+<span class="sd">            external inputs at time ``t``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">t0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="c1"># cut off inputs until t0</span>
@@ -421,19 +423,19 @@
                 <span class="n">input_fluxes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="mi">0</span><span class="p">)</span>
         
         <span class="n">u</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">f</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">input_fluxes</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">)</span> 
-                                   <span class="k">if</span> <span class="n">t_valid</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">,)))</span>
+                                  <span class="k">if</span> <span class="n">t_valid</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">,)))</span>
         <span class="k">return</span> <span class="n">u</span></div>
 
     <span class="c1"># fixme: returns a vector</span>
 <div class="viewcode-block" id="SmoothModelRun.output_rate_vector_at_t"><a class="viewcode-back" href="../../_autosummary/CompartmentalSystems.smooth_model_run.html#CompartmentalSystems.smooth_model_run.SmoothModelRun.output_rate_vector_at_t">[docs]</a>    <span class="k">def</span> <span class="nf">output_rate_vector_at_t</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Return a vector of output rates at time `t`.</span>
+        <span class="sd">&quot;&quot;&quot;Return a vector of output rates at time ``t``.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            t (float): The time at which the output rates are computed.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            numpy.array: The ith entry contains the output rate of pool `i` </span>
-<span class="sd">            at time `t`.</span>
+<span class="sd">            numpy.array: The ith entry contains the output rate of pool ``i`` </span>
+<span class="sd">            at time ``t``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
 
@@ -481,7 +483,7 @@
         <span class="sd">&quot;&quot;&quot;Return the grid of output rate vectors.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            numpy.ndarray: len(times) x nr_pools, `solution/output_vector`</span>
+<span class="sd">            numpy.ndarray: len(times) x nr_pools, ``solution/output_vector``</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">soln</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
         <span class="n">output_vec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_output_vector</span>
@@ -505,8 +507,8 @@
 <span class="sd">                initial mass is considered to have zero age.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Python function `p_sv`: `p_sv(a, t)` returns `a numpy.array` </span>
-<span class="sd">            containing the pool contents with age `a` at time `t`.</span>
+<span class="sd">            Python function ``p_sv``: ``p_sv(a, t)`` returns ``a numpy.array`` </span>
+<span class="sd">            containing the pool contents with age ``a`` at time ``t``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">p1_sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_age_densities_1_single_value</span><span class="p">(</span><span class="n">start_age_densities</span><span class="p">)</span>
         <span class="n">p2_sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_age_densities_2_single_value</span><span class="p">()</span>
@@ -531,10 +533,10 @@
 <span class="sd">                to have zero age.</span>
 <span class="sd">        </span>
 <span class="sd">        Returns:</span>
-<span class="sd">            Python function `p`: `p(ages)` returns a `numpy.ndarray` </span>
+<span class="sd">            Python function ``p``: ``p(ages)`` returns a ``numpy.ndarray`` </span>
 <span class="sd">            len(ages) x len(times) x nr_pools containing the pool contents </span>
-<span class="sd">            with the respective ages at the respective times, where `ages` </span>
-<span class="sd">            is a `numpy.array`.</span>
+<span class="sd">            with the respective ages at the respective times, where ``ages`` </span>
+<span class="sd">            is a ``numpy.array``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">p1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_age_densities_1</span><span class="p">(</span><span class="n">start_age_densities</span><span class="p">)</span>
         <span class="n">p2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_age_densities_2</span><span class="p">()</span>
@@ -573,8 +575,8 @@
 <span class="sd">                to have zero age.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Python function `sys_p_sv`: `sys_p_sv(a, t)` returns the system </span>
-<span class="sd">            content with age `a` at time `t`.</span>
+<span class="sd">            Python function ``sys_p_sv``: ``sys_p_sv(a, t)`` returns the system </span>
+<span class="sd">            content with age ``a`` at time ``t``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">p_sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_age_densities_single_value</span><span class="p">(</span><span class="n">start_age_densities</span><span class="p">)</span>
         <span class="n">sys_p_sv</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">p_sv</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">t</span><span class="p">))</span>
@@ -610,7 +612,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            numpy.ndarray: (len(ages) x len(times) x (nr_pools+1)).</span>
 <span class="sd">            The system age density values are appended to the end of the </span>
-<span class="sd">            pool density values (system = pool `d+1` with `d = nr_pools`).</span>
+<span class="sd">            pool density values (system = pool ``d+1`` with ``d = nr_pools``).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
         <span class="n">nr_ages</span> <span class="o">=</span> <span class="n">pool_age_densities</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -627,7 +629,7 @@
 
 
 <div class="viewcode-block" id="SmoothModelRun.age_moment_vector_from_densities"><a class="viewcode-back" href="../../_autosummary/CompartmentalSystems.smooth_model_run.html#CompartmentalSystems.smooth_model_run.SmoothModelRun.age_moment_vector_from_densities">[docs]</a>    <span class="k">def</span> <span class="nf">age_moment_vector_from_densities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">start_age_densities</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Compute the `order` th moment of the pool ages by integration.</span>
+        <span class="sd">&quot;&quot;&quot;Compute the ``order`` th moment of the pool ages by integration.</span>
 
 <span class="sd">        This function is extremely slow, since for each pool the integral over </span>
 <span class="sd">        the density is computed based on the singe-valued functions. It is </span>
@@ -642,7 +644,7 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            numpy.ndarray: len(times) x nr_pools. </span>
-<span class="sd">            Contains the `order` th moment </span>
+<span class="sd">            Contains the ``order`` th moment </span>
 <span class="sd">            of the pool ages over the time grid.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">p_sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_age_densities_single_value</span><span class="p">(</span><span class="n">start_age_densities</span><span class="p">)</span>
@@ -670,7 +672,7 @@
 
 <div class="viewcode-block" id="SmoothModelRun.age_moment_vector_semi_explicit"><a class="viewcode-back" href="../../_autosummary/CompartmentalSystems.smooth_model_run.html#CompartmentalSystems.smooth_model_run.SmoothModelRun.age_moment_vector_semi_explicit">[docs]</a>    <span class="k">def</span> <span class="nf">age_moment_vector_semi_explicit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> 
                                         <span class="n">start_age_moments</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">times</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Compute the `order` th moment of the pool ages by a semi-explicit </span>
+        <span class="sd">&quot;&quot;&quot;Compute the ``order`` th moment of the pool ages by a semi-explicit </span>
 <span class="sd">        formula.</span>
 
 <span class="sd">        This function bases on a semi-explicit formula such that no improper </span>
@@ -680,14 +682,14 @@
 <span class="sd">            order (int): The order of the age moment to be computed.</span>
 <span class="sd">            start_age_moments (numpy.ndarray order x nr_pools, optional): </span>
 <span class="sd">                Given initial age moments up to the order of interest. </span>
-<span class="sd">                Can possibly be computed by :func:`moments_from_densites`. </span>
+<span class="sd">                Can possibly be computed by :func:`moments_from_densities`. </span>
 <span class="sd">                Defaults to None assuming zero initial ages.</span>
 <span class="sd">            times (numpy.array, optional): Time grid. </span>
 <span class="sd">                Defaults to None and the original time grid is used.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            numpy.ndarray: len(times) x nr_pools.</span>
-<span class="sd">            The `order` th pool age moments over the time grid.</span>
+<span class="sd">            The ``order`` th pool age moments over the time grid.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
             
         <span class="k">if</span> <span class="n">times</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
@@ -745,8 +747,8 @@
         
 
 <div class="viewcode-block" id="SmoothModelRun.age_moment_vector"><a class="viewcode-back" href="../../_autosummary/CompartmentalSystems.smooth_model_run.html#CompartmentalSystems.smooth_model_run.SmoothModelRun.age_moment_vector">[docs]</a>    <span class="k">def</span> <span class="nf">age_moment_vector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">start_age_moments</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Compute the `order` th pool age moment vector over the time grid by </span>
-<span class="sd">        an ODE system.</span>
+        <span class="sd">&quot;&quot;&quot;Compute the ``order`` th pool age moment vector over the time grid </span>
+<span class="sd">        by an ODE system.</span>
 
 <span class="sd">        This function solves an ODE system to obtain the pool age moments very</span>
 <span class="sd">        fast. If the system has empty pools at the beginning, the semi-explicit </span>
@@ -757,12 +759,12 @@
 <span class="sd">            order (int): The order of the pool age moments to be computed.</span>
 <span class="sd">            start_age_moments (numpy.ndarray order x nr_pools, optional): </span>
 <span class="sd">                Given initial age moments up to the order of interest. </span>
-<span class="sd">                Can possibly be computed by :func:`moments_from_densites`. </span>
+<span class="sd">                Can possibly be computed by :func:`moments_from_densities`. </span>
 <span class="sd">                Defaults to None assuming zero initial ages.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            numpy.ndarray: len(times) x nr_pools.</span>
-<span class="sd">            The `order` th pool age moments over the time grid.</span>
+<span class="sd">            The ``order`` th pool age moments over the time grid.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
         <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
@@ -818,8 +820,8 @@
 
     <span class="c1"># requires start moments &lt;= order</span>
 <div class="viewcode-block" id="SmoothModelRun.system_age_moment"><a class="viewcode-back" href="../../_autosummary/CompartmentalSystems.smooth_model_run.html#CompartmentalSystems.smooth_model_run.SmoothModelRun.system_age_moment">[docs]</a>    <span class="k">def</span> <span class="nf">system_age_moment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">start_age_moments</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Compute the `order` th system age moment vector over the time grid by</span>
-<span class="sd">        an ODE system.</span>
+        <span class="sd">&quot;&quot;&quot;Compute the ``order`` th system age moment vector over the time grid </span>
+<span class="sd">        by an ODE system.</span>
 
 <span class="sd">        The pool age moments are computed by :func:`age_moment_vector` and then </span>
 <span class="sd">        weighted corresponding to the pool contents.</span>
@@ -828,11 +830,11 @@
 <span class="sd">            order (int): The order of the pool age moments to be computed.</span>
 <span class="sd">            start_age_moments (numpy.ndarray order x nr_pools, optional): </span>
 <span class="sd">                Given initial age moments up to the order of interest. </span>
-<span class="sd">                Can possibly be computed by :func:`moments_from_densites`. </span>
+<span class="sd">                Can possibly be computed by :func:`moments_from_densities`. </span>
 <span class="sd">                Defaults to None assuming zero initial ages.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            numpy.array: The `order` th system age moment over the time grid.</span>
+<span class="sd">            numpy.array: The ``order`` th system age moment over the time grid.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
         <span class="n">age_moment_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">age_moment_vector</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">start_age_moments</span><span class="p">)</span>
@@ -860,8 +862,8 @@
 <span class="sd">                masses with the given age at time :math:`t_0`.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Python function `p_sv`: `p_sv(a, t)` returns the mass that leaves </span>
-<span class="sd">            the system at time `t` with age `a`.</span>
+<span class="sd">            Python function ``p_sv``: ``p_sv(a, t)`` returns the mass that </span>
+<span class="sd">            leaves the system at time ``t`` with age ``a``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
         <span class="n">p_age_sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_age_densities_single_value</span><span class="p">(</span><span class="n">start_age_densities</span><span class="p">)</span>
@@ -904,8 +906,8 @@
 <span class="sd">                Defaults to True and False might lead to unexpected behavior.</span>
 <span class="sd">        </span>
 <span class="sd">        Returns:</span>
-<span class="sd">            Python function `p_sv`: `p_sv(a, t)` returns how much mass will </span>
-<span class="sd">            leave the system with age `a` when it came in at time `t`.</span>
+<span class="sd">            Python function ``p_sv``: ``p_sv(a, t)`` returns how much mass will </span>
+<span class="sd">            leave the system with age ``a`` when it came in at time ``t``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
         <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
@@ -946,10 +948,10 @@
 <span class="sd">                Defaults to True and False might lead to unexpected behavior.</span>
 <span class="sd">        </span>
 <span class="sd">        Returns:</span>
-<span class="sd">            Python function `p`: `p(ages)` is a `numpy.ndarray` </span>
+<span class="sd">            Python function ``p``: ``p(ages)`` is a ``numpy.ndarray`` </span>
 <span class="sd">            len(ages) x len(times) that gives the mass that will leave the</span>
-<span class="sd">            system with the respective age when it came in at time `t`, </span>
-<span class="sd">            where `ages` is a `numpy.array`.</span>
+<span class="sd">            system with the respective age when it came in at time ``t``, </span>
+<span class="sd">            where ``ages`` is a ``numpy.array``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">p_sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_transit_time_density_single_value</span><span class="p">(</span><span class="n">cut_off</span><span class="p">)</span>
         <span class="n">pp</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">p_sv</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
@@ -971,7 +973,7 @@
     
 <div class="viewcode-block" id="SmoothModelRun.backward_transit_time_moment_from_density"><a class="viewcode-back" href="../../_autosummary/CompartmentalSystems.smooth_model_run.html#CompartmentalSystems.smooth_model_run.SmoothModelRun.backward_transit_time_moment_from_density">[docs]</a>    <span class="k">def</span> <span class="nf">backward_transit_time_moment_from_density</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
             <span class="n">order</span><span class="p">,</span> <span class="n">start_age_densities</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Compute the `order` th backward transit time moment based on an </span>
+        <span class="sd">&quot;&quot;&quot;Compute the ``order`` th backward transit time moment based on an </span>
 <span class="sd">        improper integral over the density.</span>
 
 <span class="sd">        This function is extremely slow and implemented only for the sake of </span>
@@ -985,7 +987,7 @@
 <span class="sd">                age at time :math:`t_0`.</span>
 <span class="sd">        </span>
 <span class="sd">        Returns:</span>
-<span class="sd">            numpy.array: The `order` th backward transit time moment over the </span>
+<span class="sd">            numpy.array: The ``order`` th backward transit time moment over the </span>
 <span class="sd">            time grid.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">p_sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">backward_transit_time_density_single_value</span><span class="p">(</span>
@@ -1008,7 +1010,7 @@
 
 
 <div class="viewcode-block" id="SmoothModelRun.backward_transit_time_moment"><a class="viewcode-back" href="../../_autosummary/CompartmentalSystems.smooth_model_run.html#CompartmentalSystems.smooth_model_run.SmoothModelRun.backward_transit_time_moment">[docs]</a>    <span class="k">def</span> <span class="nf">backward_transit_time_moment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">start_age_moments</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Compute the `order` th backward transit time moment based on the </span>
+        <span class="sd">&quot;&quot;&quot;Compute the ``order`` th backward transit time moment based on the </span>
 <span class="sd">        :func:`age_moment_vector`.</span>
 
 <span class="sd">        Args:</span>
@@ -1016,11 +1018,11 @@
 <span class="sd">                to be computed.</span>
 <span class="sd">            start_age_moments (numpy.ndarray order x nr_pools, optional): </span>
 <span class="sd">                Given initial age moments up to the order of interest. </span>
-<span class="sd">                Can possibly be computed by :func:`moments_from_densites`. </span>
+<span class="sd">                Can possibly be computed by :func:`moments_from_densities`. </span>
 <span class="sd">                Defaults to None assuming zero initial ages.</span>
 <span class="sd">       </span>
 <span class="sd">        Returns:</span>
-<span class="sd">            numpy.array: The `order` th backward transit time moment over the </span>
+<span class="sd">            numpy.array: The ``order`` th backward transit time moment over the </span>
 <span class="sd">            time grid.</span>
 <span class="sd">        &quot;&quot;&quot;</span> 
         <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
@@ -1032,7 +1034,7 @@
 
 
 <div class="viewcode-block" id="SmoothModelRun.forward_transit_time_moment"><a class="viewcode-back" href="../../_autosummary/CompartmentalSystems.smooth_model_run.html#CompartmentalSystems.smooth_model_run.SmoothModelRun.forward_transit_time_moment">[docs]</a>    <span class="k">def</span> <span class="nf">forward_transit_time_moment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Compute the `order` th forward transit time moment.</span>
+        <span class="sd">&quot;&quot;&quot;Compute the ``order`` th forward transit time moment.</span>
 
 <span class="sd">        Attention! This function integrates over the state transition operator </span>
 <span class="sd">        until infinite time.</span>
@@ -1044,7 +1046,7 @@
 <span class="sd">                computed.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            numpy.array: The `order` th forward transit time moment over the </span>
+<span class="sd">            numpy.array: The ``order`` th forward transit time moment over the </span>
 <span class="sd">            time grid.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">k</span> <span class="o">=</span> <span class="n">order</span>
@@ -1318,7 +1320,7 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            pool_age_densites_sv (Python function): A function that takes </span>
-<span class="sd">                `a`, `t` as arguments and returns a vector of pool contents </span>
+<span class="sd">                ``a``, ``t`` as arguments and returns a vector of pool contents </span>
 <span class="sd">                with mass a at time t. Potentially coming from </span>
 <span class="sd">                :func:`pool_age_densities_single_value`.</span>
 <span class="sd">            pool_age_values (numpy.ndarray len(times) x nr_pools): The ages over</span>
@@ -1358,8 +1360,8 @@
 <span class="sd">        is now implemented in a much faster way based on the surface itself.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            density_sv (Python function): A function that takes `a`, `t` </span>
-<span class="sd">                as arguments and returns density value with age a at time `t`. </span>
+<span class="sd">            density_sv (Python function): A function that takes ``a``, ``t`` </span>
+<span class="sd">                as arguments and returns density value with age a at time ``t``.</span>
 <span class="sd">                Potentially coming from :func:`system_age_density_single_value`.</span>
 <span class="sd">            values (numpy.array): The ages over the time grid at which the </span>
 <span class="sd">                density values are to be computed.</span>
@@ -1545,7 +1547,7 @@
 <span class="sd">    </span>
 <span class="sd">        Returns:</span>
 <span class="sd">            None.</span>
-<span class="sd">            Instead `fig` is changed in place.</span>
+<span class="sd">            Instead ``fig`` is changed in place.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
     <span class="c1">#fixme:</span>
     <span class="c1"># since time units and units are related to those</span>
@@ -1592,7 +1594,7 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            None.</span>
-<span class="sd">            Instead `ax` is changed in place.</span>
+<span class="sd">            Instead ``ax`` is changed in place.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
         <span class="n">soln</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
@@ -1626,7 +1628,7 @@
 <span class="sd">    </span>
 <span class="sd">        Returns:</span>
 <span class="sd">            None.</span>
-<span class="sd">            Instead `fig` is changed in place.</span>
+<span class="sd">            Instead ``fig`` is changed in place.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">state_vector</span><span class="p">)</span>
         <span class="n">planes</span> <span class="o">=</span> <span class="p">[(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span>
@@ -1656,7 +1658,7 @@
 <span class="sd">    </span>
 <span class="sd">        Returns:</span>
 <span class="sd">            None.</span>
-<span class="sd">            Instead `fig` is changed in place.</span>
+<span class="sd">            Instead ``fig`` is changed in place.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">internal_flux_funcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_flux_funcs</span><span class="p">()</span>
         <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">internal_flux_funcs</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
@@ -1693,7 +1695,7 @@
 <span class="sd">    </span>
 <span class="sd">        Returns:</span>
 <span class="sd">            None.</span>
-<span class="sd">            Instead `fig` is changed in place.</span>
+<span class="sd">            Instead ``fig`` is changed in place.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
         <span class="n">output_flux_funcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_flux_funcs</span><span class="p">()</span>
@@ -1728,7 +1730,7 @@
 <span class="sd">    </span>
 <span class="sd">        Returns:</span>
 <span class="sd">            None.</span>
-<span class="sd">            Instead `fig` is changed in place.</span>
+<span class="sd">            Instead ``fig`` is changed in place.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
         <span class="n">input_flux_funcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_input_flux_funcs</span><span class="p">()</span>
@@ -1767,7 +1769,7 @@
 <span class="sd">    </span>
 <span class="sd">        Returns:</span>
 <span class="sd">            None.</span>
-<span class="sd">            Instead `fig` is changed in place.</span>
+<span class="sd">            Instead ``fig`` is changed in place.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
@@ -1810,7 +1812,7 @@
 <span class="sd">    </span>
 <span class="sd">        Returns:</span>
 <span class="sd">            None.</span>
-<span class="sd">            Instead `ax` is changed in place.</span>
+<span class="sd">            Instead ``ax`` is changed in place.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
@@ -1867,7 +1869,7 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            None.</span>
-<span class="sd">            Instead `fig` is changed in place.</span>
+<span class="sd">            Instead ``fig`` is changed in place.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
         <span class="n">strided_data</span> <span class="o">=</span> <span class="n">stride</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">time_stride</span><span class="p">)</span>
@@ -1994,7 +1996,7 @@
 <span class="sd">    </span>
 <span class="sd">        Returns:</span>
 <span class="sd">            None.</span>
-<span class="sd">            Instead `fig` is changed in place.</span>
+<span class="sd">            Instead ``fig`` is changed in place.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">fig</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
@@ -2027,14 +2029,15 @@
 <span class="sd">                time :math:`t_0`. Defaults to None.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            Error: If both `start_age_densities` and `F0` are `None`. </span>
+<span class="sd">            Error: If both ``start_age_densities`` and ``F0`` are ``None``. </span>
 <span class="sd">                One must be given.</span>
-<span class="sd">                It is fastest to provide `F0`, otherwise `F0` will be computed </span>
-<span class="sd">                by numerical integration of `start_age_densities`.</span>
+<span class="sd">                It is fastest to provide ``F0``, otherwise ``F0`` will be </span>
+<span class="sd">                computed by numerical integration of ``start_age_densities``.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Python function `F_sv`: `F_sv(a,t)` is the vector of pool masses </span>
-<span class="sd">            (numpy.array) with age less than or equal to `a` at time `t`.</span>
+<span class="sd">            Python function ``F_sv``: ``F_sv(a,t)`` is the vector of pool </span>
+<span class="sd">            masses (``numpy.array``) with age less than or equal to ``a`` at </span>
+<span class="sd">            time ``t``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
         <span class="n">soln</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
@@ -2096,14 +2099,14 @@
 <span class="sd">                time :math:`t_0`. Defaults to None.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            Error: If both `start_age_densities` and `F0` are None. </span>
+<span class="sd">            Error: If both ``start_age_densities`` and ``F0`` are None. </span>
 <span class="sd">                One must be given.</span>
-<span class="sd">                It is fastest to provide `F0`, otherwise `F0` will be computed </span>
-<span class="sd">                by numerical integration of `start_age_densities`.</span>
+<span class="sd">                It is fastest to provide ``F0``, otherwise ``F0`` will be </span>
+<span class="sd">                computed by numerical integration of ``start_age_densities``.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Python function `F_sv`: `F_sv(a, t)` is the mass in the system with </span>
-<span class="sd">            age less than or equal to `a` at time `t`.</span>
+<span class="sd">            Python function ``F_sv``: ``F_sv(a, t)`` is the mass in the system </span>
+<span class="sd">            with age less than or equal to ``a`` at time ``t``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
         <span class="n">soln</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
@@ -2133,14 +2136,14 @@
 <span class="sd">                time :math:`t_0`. Defaults to None.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            Error: If both `start_age_densities` and `F0` are `None`. </span>
+<span class="sd">            Error: If both ``start_age_densities`` and ``F0`` are ``None``. </span>
 <span class="sd">                One must be given.</span>
-<span class="sd">                It is fastest to provide `F0`, otherwise `F0` will be computed </span>
-<span class="sd">                by numerical integration of `start_age_densities`.</span>
+<span class="sd">                It is fastest to provide ``F0``, otherwise ``F0`` will be </span>
+<span class="sd">                computed by numerical integration of ``start_age_densities``.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Python function `F_sv`: `F_sv(a, t)` is the mass leaving the system</span>
-<span class="sd">            at time `t` with age less than or equal to `a`.</span>
+<span class="sd">            Python function ``F_sv``: ``F_sv(a, t)`` is the mass leaving the </span>
+<span class="sd">            system at time ``t`` with age less than or equal to ``a``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">F0</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">start_age_densities</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span><span class="p">(</span><span class="n">Error</span><span class="p">(</span><span class="s1">&#39;Either F0 or start_age_densities must be given.&#39;</span><span class="p">))</span>
@@ -2163,15 +2166,15 @@
 <span class="sd">        distribution.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            cut_off (bool, optional): If `True`, no density values are going to </span>
-<span class="sd">                be computed after the end of the time grid, instead `numpy.nan`</span>
-<span class="sd">                will be returned. </span>
-<span class="sd">                Defaults to `True`.</span>
-<span class="sd">                `False` might lead to unexpected behavior.</span>
+<span class="sd">            cut_off (bool, optional): If ``True``, no density values are going </span>
+<span class="sd">                to be computed after the end of the time grid, instead </span>
+<span class="sd">                ``numpy.nan`` will be returned. </span>
+<span class="sd">                Defaults to ``True``.</span>
+<span class="sd">                ``False`` might lead to unexpected behavior.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Python function `F_sv`: `F_sv(a, t)` is the mass leaving the system </span>
-<span class="sd">            at time `t+a` with age less than or equal to `a`.</span>
+<span class="sd">            Python function ``F_sv``: ``F_sv(a, t)`` is the mass leaving the </span>
+<span class="sd">            system at time ``t+a`` with age less than or equal to ``a``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
         <span class="n">t_max</span> <span class="o">=</span> <span class="n">times</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -2203,29 +2206,29 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            quantile (between 0 and 1): The relative share of mass that is </span>
-<span class="sd">                considered to be left of the computed value. A value of `0.5` </span>
+<span class="sd">                considered to be left of the computed value. A value of ``0.5`` </span>
 <span class="sd">                leads to the computation of the median of the distribution.</span>
 <span class="sd">            start_age_densities (Python function, optional): A function of age </span>
-<span class="sd">                that returns a `numpy.array` containing the masses with the </span>
+<span class="sd">                that returns a ``numpy.array`` containing the masses with the </span>
 <span class="sd">                given age at time :math:`t_0`. </span>
-<span class="sd">                Defaults to `None`.</span>
-<span class="sd">            F0 (Python function): A function of age that returns a `numpy.array`</span>
-<span class="sd">                containing the masses with age less than or equal to the age at</span>
-<span class="sd">                time :math:`t_0`. </span>
-<span class="sd">                Defaults to `None`.</span>
+<span class="sd">                Defaults to ``None``.</span>
+<span class="sd">            F0 (Python function): A function of age that returns a </span>
+<span class="sd">                ``numpy.array`` containing the masses with age less than or</span>
+<span class="sd">                equal to the age at time :math:`t_0`. </span>
+<span class="sd">                Defaults to ``None``.</span>
 <span class="sd">            method (str): The method that is used for finding the roots of a </span>
 <span class="sd">                nonlinear function. Either &#39;brentq&#39; or &#39;newton&#39;. </span>
 <span class="sd">                Defaults to &#39;brentq&#39;.</span>
 <span class="sd">            tol (float): The tolerance used in the numerical root search </span>
 <span class="sd">                algorithm. A low tolerance decreases the computation speed </span>
-<span class="sd">                tremendously, so a value of `1e-01` might already be fine. </span>
-<span class="sd">                Defaults to `1e-08`.</span>
+<span class="sd">                tremendously, so a value of ``1e-01`` might already be fine. </span>
+<span class="sd">                Defaults to ``1e-08``.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            Error: If both `start_age_densities` and `F0` are `None`. </span>
+<span class="sd">            Error: If both ``start_age_densities`` and ``F0`` are ``None``. </span>
 <span class="sd">                One must be given.</span>
-<span class="sd">                It is fastest to provide `F0`, otherwise `F0` will be computed </span>
-<span class="sd">                by numerical integration of `start_age_densities`.</span>
+<span class="sd">                It is fastest to provide ``F0``, otherwise ``F0`` will be </span>
+<span class="sd">                computed by numerical integration of ``start_age_densities``.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            numpy.ndarray: (len(times) x nr_pools)</span>
@@ -2272,29 +2275,29 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            quantile (between 0 and 1): The relative share of mass that is </span>
-<span class="sd">                considered to be left of the computed value. A value of `0.5` </span>
+<span class="sd">                considered to be left of the computed value. A value of ``0.5`` </span>
 <span class="sd">                leads to the computation of the median of the distribution.</span>
 <span class="sd">            start_age_densities (Python function, optional): A function of age </span>
-<span class="sd">                that returns a `numpy.array` containing the masses with the </span>
+<span class="sd">                that returns a ``numpy.array`` containing the masses with the </span>
 <span class="sd">                given age at time :math:`t_0`. </span>
-<span class="sd">                Defaults to `None`.</span>
-<span class="sd">            F0 (Python function): A function of age that returns a `numpy.array`</span>
-<span class="sd">                containing the masses with age less than or equal to the age at </span>
-<span class="sd">                time :math:`t_0`. </span>
-<span class="sd">                Defaults to `None`.</span>
+<span class="sd">                Defaults to ``None``.</span>
+<span class="sd">            F0 (Python function): A function of age that returns a </span>
+<span class="sd">                ``numpy.array`` containing the masses with age less than or </span>
+<span class="sd">                equal to the age at time :math:`t_0`. </span>
+<span class="sd">                Defaults to ``None``.</span>
 <span class="sd">            method (str): The method that is used for finding the roots of a </span>
 <span class="sd">                nonlinear function. Either &#39;brentq&#39; or &#39;newton&#39;. </span>
 <span class="sd">                Defaults to &#39;brentq&#39;.</span>
 <span class="sd">            tol (float): The tolerance used in the numerical root search </span>
 <span class="sd">                algorithm. A low tolerance decreases the computation speed </span>
-<span class="sd">                tremendously, so a value of `1e-01` might already be fide. </span>
-<span class="sd">                Defaults to `1e-08`.</span>
+<span class="sd">                tremendously, so a value of ``1e-01`` might already be fide. </span>
+<span class="sd">                Defaults to ``1e-08``.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            Error: If both `start_age_densities` and `F0` are `None`. </span>
+<span class="sd">            Error: If both ``start_age_densities`` and ``F0`` are ``None``. </span>
 <span class="sd">                One must be given.</span>
-<span class="sd">                It is fastest to provide `F0`, otherwise `F0` will be computed </span>
-<span class="sd">                by numerical integration of `start_age_densities`.</span>
+<span class="sd">                It is fastest to provide ``F0``, otherwise ``F0`` will be </span>
+<span class="sd">                computed by numerical integration of ``start_age_densities``.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            numpy.array: The computed quantile values over the time grid.</span>
@@ -2336,11 +2339,11 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            quantile (between 0 and 1): The relative share of mass that is </span>
-<span class="sd">                considered to be left of the computed value. A value of `0.5` </span>
+<span class="sd">                considered to be left of the computed value. A value of ``0.5`` </span>
 <span class="sd">                leads to the computation of the median of the distribution.</span>
-<span class="sd">            F_sv (Python function): A function of age `a` and time `t` that </span>
-<span class="sd">                returns the mass that is of age less than or equal to `a` at </span>
-<span class="sd">                time `t`.</span>
+<span class="sd">            F_sv (Python function): A function of age ``a`` and time ``t`` that </span>
+<span class="sd">                returns the mass that is of age less than or equal to ``a`` at </span>
+<span class="sd">                time ``t``.</span>
 <span class="sd">            norm_consts (numpy.array, optional): An array over the time grid of</span>
 <span class="sd">                total masses over all ages. </span>
 <span class="sd">                Defaults to an array of ones assuming given probability </span>
@@ -2354,8 +2357,8 @@
 <span class="sd">                Defaults to &#39;brentq&#39;.</span>
 <span class="sd">            tol (float): The tolerance used in the numerical root search </span>
 <span class="sd">                algorithm. A low tolerance decreases the computation speed </span>
-<span class="sd">                tremendously, so a value of `1e-01` might already be fine. </span>
-<span class="sd">                Defaults to `1e-08`.</span>
+<span class="sd">                tremendously, so a value of ``1e-01`` might already be fine. </span>
+<span class="sd">                Defaults to ``1e-08``.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            numpy.array: The computed quantile values over the time grid.</span>
@@ -2415,26 +2418,26 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            quantile (between 0 and 1): The relative share of mass that is </span>
-<span class="sd">                considered to be left of the computed value. A value of `0.5` </span>
+<span class="sd">                considered to be left of the computed value. A value of ``0.5`` </span>
 <span class="sd">                leads to the computation of the median of the distribution.</span>
 <span class="sd">            start_age_densities (Python function, optional): A function of age </span>
-<span class="sd">                that returns a `numpy.array` containing the masses with the </span>
+<span class="sd">                that returns a ``numpy.array`` containing the masses with the </span>
 <span class="sd">                given age at time :math:`t_0`. </span>
-<span class="sd">                Defaults to `None`.</span>
-<span class="sd">            F0 (Python function): A function of age that returns a `numpy.array`</span>
-<span class="sd">                containing the masses with age less than or equal to the age at</span>
-<span class="sd">                time :math:`t_0`. </span>
-<span class="sd">                Defaults to `None`.</span>
+<span class="sd">                Defaults to ``None``.</span>
+<span class="sd">            F0 (Python function): A function of age that returns a </span>
+<span class="sd">                ``numpy.array`` containing the masses with age less than or </span>
+<span class="sd">                equal to the age at time :math:`t_0`. </span>
+<span class="sd">                Defaults to ``None``.</span>
 <span class="sd">            tol (float): The tolerance used in the numerical root search </span>
 <span class="sd">                algorithm. A low tolerance decreases the computation speed </span>
-<span class="sd">                tremendously, so a value of `1e-01` might already be fine. </span>
-<span class="sd">                Defaults to `1e-08`.</span>
+<span class="sd">                tremendously, so a value of ``1e-01`` might already be fine. </span>
+<span class="sd">                Defaults to ``1e-08``.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            Error: If both `start_age_densities` and `F0` are `None`. </span>
+<span class="sd">            Error: If both ``start_age_densities`` and ``F0`` are ``None``. </span>
 <span class="sd">                One must be given.</span>
-<span class="sd">                It is fastest to provide `F0`, otherwise `F0` will be computed </span>
-<span class="sd">                by numerical integration of `start_age_densities`.</span>
+<span class="sd">                It is fastest to provide ``F0``, otherwise ``F0`` will be </span>
+<span class="sd">                computed by numerical integration of ``start_age_densities``.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            numpy.ndarray: (len(times) x nr_pools) The computed quantile values </span>
@@ -2464,28 +2467,28 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            quantile (between 0 and 1): The relative share of mass that is </span>
-<span class="sd">                considered to be left of the computed value. A value of `0.5` </span>
+<span class="sd">                considered to be left of the computed value. A value of ``0.5`` </span>
 <span class="sd">                leads to the computation of the median of the distribution.</span>
 <span class="sd">            pool (int): The number of the pool for which the age quantile is to </span>
 <span class="sd">                be computed.</span>
 <span class="sd">            start_age_densities (Python function, optional): A function of age </span>
-<span class="sd">                that returns a `numpy.array` containing the masses with the </span>
+<span class="sd">                that returns a ``numpy.array`` containing the masses with the </span>
 <span class="sd">                given age at time :math:`t_0`. </span>
-<span class="sd">                Defaults to `None`.</span>
-<span class="sd">            F0 (Python function): A function of age that returns a `numpy.array`</span>
-<span class="sd">                containing the masses with age less than or equal to the age at </span>
-<span class="sd">                time :math:`t_0`. </span>
-<span class="sd">                Defaults to `None`.</span>
+<span class="sd">                Defaults to ``None``.</span>
+<span class="sd">            F0 (Python function): A function of age that returns a </span>
+<span class="sd">                ``numpy.array`` containing the masses with age less than or </span>
+<span class="sd">                equal to the age at time :math:`t_0`. </span>
+<span class="sd">                Defaults to ``None``.</span>
 <span class="sd">            tol (float): The tolerance used in the numerical root search </span>
 <span class="sd">                algorithm. A low tolerance decreases the computation speed </span>
-<span class="sd">                tremendously, so a value of `1e-01` might already be fine. </span>
-<span class="sd">                Defaults to `1e-08`.</span>
+<span class="sd">                tremendously, so a value of ``1e-01`` might already be fine. </span>
+<span class="sd">                Defaults to ``1e-08``.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            Error: If both `start_age_densities` and `F0` are `None`. </span>
+<span class="sd">            Error: If both ``start_age_densities`` and ``F0`` are ``None``. </span>
 <span class="sd">                One must be given.</span>
-<span class="sd">                It is fastest to provide `F0`, otherwise `F0` will be computed </span>
-<span class="sd">                by numerical integration of `start_age_densities`.</span>
+<span class="sd">                It is fastest to provide ``F0``, otherwise ``F0`` will be </span>
+<span class="sd">                computed by numerical integration of ``start_age_densities``.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            numpy.ndarray: (len(times)) The computed quantile values over the </span>
@@ -2612,28 +2615,28 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            quantile (between 0 and 1): The relative share of mass that is </span>
-<span class="sd">                considered to be left of the computed value. A value of `0.5` </span>
+<span class="sd">                considered to be left of the computed value. A value of ``0.5`` </span>
 <span class="sd">                leads to the computation of the median of the distribution.</span>
 <span class="sd">            pool (int): The number of the pool for which the age quantile is to </span>
 <span class="sd">                be computed.</span>
 <span class="sd">            start_age_densities (Python function, optional): A function of age </span>
-<span class="sd">                that returns a `numpy.array` containing the masses with the </span>
+<span class="sd">                that returns a ``numpy.array`` containing the masses with the </span>
 <span class="sd">                given age at time :math:`t_0`. </span>
-<span class="sd">                Defaults to `None`.</span>
-<span class="sd">            F0 (Python function): A function of age that returns a `numpy.array`</span>
-<span class="sd">                containing the masses with age less than or equal to the age at </span>
-<span class="sd">                time :math:`t_0`. </span>
-<span class="sd">                Defaults to `None`.</span>
+<span class="sd">                Defaults to ``None``.</span>
+<span class="sd">            F0 (Python function): A function of age that returns a </span>
+<span class="sd">                ``numpy.array`` containing the masses with age less than or </span>
+<span class="sd">                equal to the age at time :math:`t_0`. </span>
+<span class="sd">                Defaults to ``None``.</span>
 <span class="sd">            tol (float): The tolerance used in the numerical root search </span>
 <span class="sd">                algorithm. A low tolerance decreases the computation speed </span>
-<span class="sd">                tremendously, so a value of `1e-01` might already be fine. </span>
-<span class="sd">                Defaults to `1e-08`.</span>
+<span class="sd">                tremendously, so a value of ``1e-01`` might already be fine. </span>
+<span class="sd">                Defaults to ``1e-08``.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            Error: If both `start_age_densities` and `F0` are `None`. </span>
+<span class="sd">            Error: If both ``start_age_densities`` and ``F0`` are ``None``. </span>
 <span class="sd">                One must be given.</span>
-<span class="sd">                It is fastest to provide `F0`, otherwise `F0` will be computed </span>
-<span class="sd">                by numerical integration of `start_age_densities`.</span>
+<span class="sd">                It is fastest to provide ``F0``, otherwise ``F0`` will be </span>
+<span class="sd">                computed by numerical integration of ``start_age_densities``.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            numpy.ndarray: The computed quantile values over the time grid.</span>
@@ -2835,13 +2838,16 @@
         <span class="c1"># save all solutions for order &lt;= max_order</span>
         <span class="k">if</span> <span class="n">store</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">order</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_order</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
-                <span class="n">shorter_start_age_moments_list</span> <span class="o">=</span> <span class="n">start_age_moments_list</span><span class="p">[:</span><span class="n">order</span><span class="o">*</span><span class="n">n</span><span class="p">]</span>
+                <span class="n">shorter_start_age_moments_list</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">start_age_moments_list</span><span class="p">[:</span><span class="n">order</span><span class="o">*</span><span class="n">n</span><span class="p">])</span>
                 <span class="c1">#print(start_age_moments_list)</span>
                 <span class="c1">#print(shorter_start_age_moments_list)</span>
-                <span class="n">storage_key</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shorter_start_age_moments_list</span><span class="p">)</span> <span class="o">+</span> <span class="p">((</span><span class="n">order</span><span class="p">,),)</span>
+                <span class="n">storage_key</span> <span class="o">=</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">shorter_start_age_moments_list</span><span class="p">)</span> 
+                                <span class="o">+</span> <span class="p">((</span><span class="n">order</span><span class="p">,),))</span>
                 <span class="c1">#print(&#39;saving&#39;, storage_key)</span>
 
-                <span class="bp">self</span><span class="o">.</span><span class="n">_previously_computed_age_moment_sol</span><span class="p">[</span><span class="n">storage_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">soln</span><span class="p">[:,:(</span><span class="n">order</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">n</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_previously_computed_age_moment_sol</span><span class="p">[</span><span class="n">storage_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">soln</span><span class="p">[:,:(</span><span class="n">order</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">n</span><span class="p">])</span>
                 <span class="c1">#print(self._previously_computed_age_moment_sol[storage_key])</span>
 
         <span class="k">return</span> <span class="n">soln</span>
@@ -2869,7 +2875,8 @@
             <span class="k">def</span> <span class="nf">no_input_sol</span><span class="p">(</span><span class="n">times</span><span class="p">,</span> <span class="n">start_vector</span><span class="p">):</span>
                 <span class="c1">#print(&#39;nos&#39;, times, start_vector)</span>
                 <span class="c1"># Start and end time too close together? Do not integrate!</span>
-                <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">times</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">times</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mf">1e-14</span><span class="p">:</span> <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">start_vector</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">times</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">times</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mf">1e-14</span><span class="p">:</span> 
+                    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">start_vector</span><span class="p">)</span>
                 <span class="n">sv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">start_vector</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">,))</span>
                 <span class="k">return</span> <span class="n">odeint</span><span class="p">(</span><span class="n">no_inputs_num_rhs</span><span class="p">,</span> <span class="n">sv</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">mxstep</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         
@@ -3029,7 +3036,12 @@
                 <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_values</span><span class="p">)</span>
 
         <span class="c1"># cut off negative ages in start_age_densities</span>
-        <span class="n">p0</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="n">start_age_densities</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">if</span> <span class="n">a</span><span class="o">&gt;=</span><span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">,))</span>
+        <span class="k">def</span> <span class="nf">p0</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">a</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span> 
+                <span class="k">return</span> <span class="n">start_age_densities</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">,))</span>
+
         <span class="n">Phi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state_transition_operator</span>
  
         <span class="n">t0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>

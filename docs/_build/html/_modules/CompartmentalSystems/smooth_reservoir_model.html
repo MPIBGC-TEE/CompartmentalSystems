@@ -50,8 +50,8 @@
 <span class="sd">but rather defines the underlying structure of the respective model.</span>
 
 <span class="sd">All fluxes or matrix entries are supposed to be SymPy expressions.</span>
-<span class="sd">*Smooth* means that no `Piecewise` or `DiracDelta` functions should be involved</span>
-<span class="sd">in the model description.</span>
+<span class="sd">*Smooth* means that no ``Piecewise`` or ``DiracDelta`` functions should be </span>
+<span class="sd">involved in the model description.</span>
 
 <span class="sd">Counting of compartment/pool/reservoir numbers starts at zero and the </span>
 <span class="sd">total number of pools is :math:`d`.</span>
@@ -82,16 +82,16 @@
 <span class="sd">            Its entries are SymPy symbols.</span>
 <span class="sd">        state_variables (list of str): </span>
 <span class="sd">            Names of the variables in the state vector.</span>
-<span class="sd">            Its entries are of type `str`.</span>
+<span class="sd">            Its entries are of type ``str``.</span>
 <span class="sd">        time_symbol (SymPy symbol): The model&#39;s time symbol.</span>
 <span class="sd">        input_fluxes (dict): The model&#39;s external input fluxes.</span>
-<span class="sd">            `{key1: flux1, key2: flux2}` with `key` the pool number and `flux` </span>
-<span class="sd">            a SymPy expression for the influx.</span>
+<span class="sd">            ``{key1: flux1, key2: flux2}`` with ``key`` the pool number and </span>
+<span class="sd">            ``flux`` a SymPy expression for the influx.</span>
 <span class="sd">        output_fluxes (dict): The model&#39;s external output fluxes.</span>
-<span class="sd">            `{key1: flux1, key2: flux2}` with `key` the pool number and `flux` </span>
-<span class="sd">            a SymPy expression for the outflux.</span>
+<span class="sd">            ``{key1: flux1, key2: flux2}`` with ``key`` the pool number and </span>
+<span class="sd">            ``flux`` a SymPy expression for the outflux.</span>
 <span class="sd">        internal_fluxes (dict): The model&#39;s internal_fluxes.</span>
-<span class="sd">            `{key1: flux1, key2: flux2}` with `key = (pool_from, pool_to)`</span>
+<span class="sd">            ``{key1: flux1, key2: flux2}`` with ``key = (pool_from, pool_to)``</span>
 <span class="sd">            and *flux* a SymPy expression for the flux.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -106,17 +106,18 @@
 <span class="sd">                Its entries are SymPy symbols.</span>
 <span class="sd">            time_symbol (SymPy symbol): The model&#39;s time symbol.</span>
 <span class="sd">            input_fluxes (dict): The model&#39;s external input fluxes.</span>
-<span class="sd">                `{key1: flux1, key2: flux2}` with `key` the pool number </span>
-<span class="sd">                and `flux` a SymPy expression for the influx.</span>
+<span class="sd">                ``{key1: flux1, key2: flux2}`` with ``key`` the pool number </span>
+<span class="sd">                and ``flux`` a SymPy expression for the influx.</span>
 <span class="sd">            output_fluxes (dict): The model&#39;s external output fluxes.</span>
-<span class="sd">                `{key1: flux1, key2: flux2}` with `key` the pool number </span>
-<span class="sd">                and `flux` a SymPy expression for the outflux.</span>
+<span class="sd">                ``{key1: flux1, key2: flux2}`` with ``key`` the pool number </span>
+<span class="sd">                and ``flux`` a SymPy expression for the outflux.</span>
 <span class="sd">            internal_fluxes (dict): The model&#39;s internal_fluxes.</span>
-<span class="sd">                `{key1: flux1, key2: flux2}` with `key = (pool_from, pool_to)`</span>
-<span class="sd">                and `flux` a SymPy expression for the flux.</span>
+<span class="sd">                ``{key1: flux1, key2: flux2}`` with </span>
+<span class="sd">                ``key = (pool_from, pool_to)`` and ``flux`` a SymPy expression </span>
+<span class="sd">                for the flux.</span>
 <span class="sd">    </span>
 <span class="sd">        Returns:</span>
-<span class="sd">            :obj:`SmoothReservoirModel`</span>
+<span class="sd">            :class:`SmoothReservoirModel`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span> <span class="o">=</span> <span class="n">state_vector</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state_variables</span> <span class="o">=</span> <span class="p">[</span><span class="n">sv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">sv</span> <span class="ow">in</span> <span class="n">state_vector</span><span class="p">]</span>
@@ -140,7 +141,7 @@
     <span class="c1"># alternative constructor based on the formulation f=u+Ax</span>
     <span class="nd">@classmethod</span>
 <div class="viewcode-block" id="SmoothReservoirModel.from_A_u"><a class="viewcode-back" href="../../_autosummary/CompartmentalSystems.smooth_reservoir_model.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.from_A_u">[docs]</a>    <span class="k">def</span> <span class="nf">from_A_u</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">state_vector</span><span class="p">,</span> <span class="n">time_symbol</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">u</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Construct and return a :obj:`SmoothReservoirModel` instance from </span>
+        <span class="sd">&quot;&quot;&quot;Construct and return a :class:`SmoothReservoirModel` instance from </span>
 <span class="sd">           :math:`\\dot{x}=A\\,x+u`</span>
 <span class="sd">    </span>
 <span class="sd">        Args:</span>
@@ -152,7 +153,7 @@
 <span class="sd">            u (SymPy dx1-matrix): The model&#39;s external input vector.</span>
 <span class="sd">    </span>
 <span class="sd">        Returns:</span>
-<span class="sd">            :obj:`SmoothReservoirModel`</span>
+<span class="sd">            :class:`SmoothReservoirModel`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 <span class="c1">#        if not(u):</span>
 <span class="c1">#           # fixme mm:</span>
@@ -262,8 +263,8 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            tuple:</span>
 <span class="sd">            - xi (SymPy number): Environmental coefficient.</span>
-<span class="sd">            - T (SymPy dxd-matrix): Internal fluxes. Main diagonal contains `-1`</span>
-<span class="sd">                entries.</span>
+<span class="sd">            - T (SymPy dxd-matrix): Internal fluxes. Main diagonal contains </span>
+<span class="sd">                ``-1`` entries.</span>
 <span class="sd">            - N (SymPy dxd-matrix): Diagonal matrix containing the decomposition</span>
 <span class="sd">                rates.</span>
 <span class="sd">            - x (SymPy dx1-matrix): The model&#39;s state vector.</span>

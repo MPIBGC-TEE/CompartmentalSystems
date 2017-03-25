@@ -45,7 +45,7 @@
 <span id="compartmentalsystems-smooth-model-run"></span><h1>CompartmentalSystems.smooth_model_run<a class="headerlink" href="#module-CompartmentalSystems.smooth_model_run" title="Permalink to this headline">¶</a></h1>
 <p>Module for numerical treatment of smooth reservoir models.</p>
 <p>An abstract
-<a class="reference internal" href="CompartmentalSystems.smooth_reservoir_model.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-obj docutils literal"><span class="pre">SmoothReservoirModel</span></code></a> is
+<a class="reference internal" href="CompartmentalSystems.smooth_reservoir_model.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-class docutils literal"><span class="pre">SmoothReservoirModel</span></code></a> is
 filled with live by giving initial values, a parameter set, a time grid,
 and potentially additional involved functions to it.</p>
 <p>The model can then be run and as long as the model is linear,
@@ -62,7 +62,7 @@ total number of pools is <span class="math">\(d\)</span>.</p>
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun" title="CompartmentalSystems.smooth_model_run.SmoothModelRun"><code class="xref py py-obj docutils literal"><span class="pre">SmoothModelRun</span></code></a>(model,&nbsp;parameter_set,&nbsp;...[,&nbsp;...])</td>
-<td>Class for a model run based on a <a class="reference internal" href="CompartmentalSystems.smooth_reservoir_model.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-obj docutils literal"><span class="pre">SmoothReservoirModel</span></code></a>.</td>
+<td>Class for a model run based on a <a class="reference internal" href="CompartmentalSystems.smooth_reservoir_model.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-class docutils literal"><span class="pre">SmoothReservoirModel</span></code></a>.</td>
 </tr>
 </tbody>
 </table>
@@ -97,18 +97,18 @@ set self.__traceback__ to tb and return self.</p>
 <em class="property">class </em><code class="descname">SmoothModelRun</code><span class="sig-paren">(</span><em>model</em>, <em>parameter_set</em>, <em>start_values</em>, <em>times</em>, <em>func_set=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
 <p>Class for a model run based on a
-<a class="reference internal" href="CompartmentalSystems.smooth_reservoir_model.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-obj docutils literal"><span class="pre">SmoothReservoirModel</span></code></a>.</p>
+<a class="reference internal" href="CompartmentalSystems.smooth_reservoir_model.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-class docutils literal"><span class="pre">SmoothReservoirModel</span></code></a>.</p>
 <dl class="attribute">
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.model">
 <code class="descname">model</code><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.model" title="Permalink to this definition">¶</a></dt>
-<dd><p><a class="reference internal" href="CompartmentalSystems.smooth_reservoir_model.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-obj docutils literal"><span class="pre">SmoothReservoirModel</span></code></a> &#8211; The reservoir model on which the model run bases.</p>
+<dd><p><a class="reference internal" href="CompartmentalSystems.smooth_reservoir_model.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-class docutils literal"><span class="pre">SmoothReservoirModel</span></code></a> &#8211; The reservoir model on which the model run bases.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt>
 <code class="descname">parameter set</code></dt>
-<dd><p><em>dict</em> &#8211; <cite>{x: y}</cite> with <cite>x</cite> being a SymPy symbol
-and <cite>y</cite> being a numerical value.</p>
+<dd><p><em>dict</em> &#8211; <code class="docutils literal"><span class="pre">{x:</span> <span class="pre">y}</span></code> with <code class="docutils literal"><span class="pre">x</span></code> being a SymPy symbol
+and <code class="docutils literal"><span class="pre">y</span></code> being a numerical value.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -121,36 +121,36 @@ and <cite>y</cite> being a numerical value.</p>
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.times">
 <code class="descname">times</code><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.times" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>numpy.array</em> &#8211; The time grid used for the simulation.
-Typically created by <cite>numpy.linspace</cite>.</p>
+Typically created by <code class="docutils literal"><span class="pre">numpy.linspace</span></code>.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.func_set">
 <code class="descname">func_set</code><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.func_set" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>dict</em> &#8211; <cite>{f: func}</cite> with <cite>f</cite> being a SymPy symbol and
-<cite>func</cite> being a Python function. Defaults to <cite>dict()</cite>.</p>
+<dd><p><em>dict</em> &#8211; <code class="docutils literal"><span class="pre">{f:</span> <span class="pre">func}</span></code> with <code class="docutils literal"><span class="pre">f</span></code> being a SymPy symbol and
+<code class="docutils literal"><span class="pre">func</span></code> being a Python function. Defaults to <code class="docutils literal"><span class="pre">dict()</span></code>.</p>
 </dd></dl>
 
-<p>Pool counting starts with <cite>0</cite>. In combined structures for pools and system,
-the system is at the position of a <cite>(d+1)</cite> st pool.</p>
+<p>Pool counting starts with <code class="docutils literal"><span class="pre">0`</span></code>. In combined structures for pools and
+system, the system is at the position of a <code class="docutils literal"><span class="pre">(d+1)</span></code> st pool.</p>
 <p>Return a SmoothModelRun instance.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>model</strong> (<a class="reference internal" href="CompartmentalSystems.smooth_reservoir_model.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-obj docutils literal"><span class="pre">SmoothReservoirModel</span></code></a>) &#8211; The reservoir model on which the model run bases.</li>
-<li><strong>parameter_set</strong> (<em>dict</em>) &#8211; <cite>{x: y}</cite> with <cite>x</cite> being a SymPy symbol
-and <cite>y</cite> being a numerical value.</li>
+<li><strong>model</strong> (<a class="reference internal" href="CompartmentalSystems.smooth_reservoir_model.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-class docutils literal"><span class="pre">SmoothReservoirModel</span></code></a>) &#8211; The reservoir model on which the model run bases.</li>
+<li><strong>parameter_set</strong> (<em>dict</em>) &#8211; <code class="docutils literal"><span class="pre">{x:</span> <span class="pre">y}</span></code> with <code class="docutils literal"><span class="pre">x</span></code> being a SymPy symbol
+and <code class="docutils literal"><span class="pre">y</span></code> being a numerical value.</li>
 <li><strong>start_values</strong> (<em>numpy.array</em>) &#8211; The vector of start values.</li>
 <li><strong>times</strong> (<em>numpy.array</em>) &#8211; The time grid used for the simulation.
-Typically created by <cite>numpy.linspace</cite>.</li>
-<li><strong>func_set</strong> (<em>dict</em>) &#8211; <cite>{f: func}</cite> with <cite>f</cite> being a SymPy symbol and
-<cite>func</cite> being a Python function. Defaults to <cite>dict()</cite>.</li>
+Typically created by <code class="docutils literal"><span class="pre">numpy.linspace</span></code>.</li>
+<li><strong>func_set</strong> (<em>dict</em>) &#8211; <code class="docutils literal"><span class="pre">{f:</span> <span class="pre">func}</span></code> with <code class="docutils literal"><span class="pre">f</span></code> being a SymPy symbol and
+<code class="docutils literal"><span class="pre">func</span></code> being a Python function. Defaults to <code class="docutils literal"><span class="pre">dict()</span></code>.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If <cite>start_values</cite> is not a <cite>numpy.array</cite>.</p>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If <code class="docutils literal"><span class="pre">start_values</span></code> is not a <code class="docutils literal"><span class="pre">numpy.array</span></code>.</p>
 </td>
 </tr>
 </tbody>
@@ -166,7 +166,7 @@ Typically created by <cite>numpy.linspace</cite>.</li>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>t</strong> (<em>float</em>) &#8211; The time at which <span class="math">\(A\)</span> is to be evaluated.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The compartmental matrix evaluated at time <cite>t</cite>.</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The compartmental matrix evaluated at time <code class="docutils literal"><span class="pre">t</span></code>.</td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">numpy.ndarray</td>
 </tr>
@@ -200,7 +200,7 @@ equlibrium at time <span class="math">\(t_0\)</span>.</li>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">None.
-Instead <cite>fig</cite> is changed in place.</p>
+Instead <code class="docutils literal"><span class="pre">fig</span></code> is changed in place.</p>
 </td>
 </tr>
 </tbody>
@@ -244,7 +244,7 @@ Defaults to False.</li>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">None.
-Instead <cite>fig</cite> is changed in place.</p>
+Instead <code class="docutils literal"><span class="pre">fig</span></code> is changed in place.</p>
 </td>
 </tr>
 </tbody>
@@ -267,7 +267,7 @@ Instead <cite>fig</cite> is changed in place.</p>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">(len(ages) x len(times) x (nr_pools+1)).
 The system age density values are appended to the end of the
-pool density values (system = pool <cite>d+1</cite> with <cite>d = nr_pools</cite>).</p>
+pool density values (system = pool <code class="docutils literal"><span class="pre">d+1</span></code> with <code class="docutils literal"><span class="pre">d</span> <span class="pre">=</span> <span class="pre">nr_pools</span></code>).</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">numpy.ndarray</p>
@@ -280,8 +280,8 @@ pool density values (system = pool <cite>d+1</cite> with <cite>d = nr_pools</cit
 <dl class="method">
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.age_moment_vector">
 <code class="descname">age_moment_vector</code><span class="sig-paren">(</span><em>order</em>, <em>start_age_moments=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun.age_moment_vector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.age_moment_vector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute the <cite>order</cite> th pool age moment vector over the time grid by
-an ODE system.</p>
+<dd><p>Compute the <code class="docutils literal"><span class="pre">order</span></code> th pool age moment vector over the time grid
+by an ODE system.</p>
 <p>This function solves an ODE system to obtain the pool age moments very
 fast. If the system has empty pools at the beginning, the semi-explicit
 formula is used until all pools are non-empty. Then the ODE system
@@ -293,13 +293,13 @@ starts.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>order</strong> (<em>int</em>) &#8211; The order of the pool age moments to be computed.</li>
 <li><strong>start_age_moments</strong> (<em>numpy.ndarray order x nr_pools, optional</em>) &#8211; Given initial age moments up to the order of interest.
-Can possibly be computed by <code class="xref py py-func docutils literal"><span class="pre">moments_from_densites()</span></code>.
+Can possibly be computed by <a class="reference internal" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.moments_from_densities" title="CompartmentalSystems.smooth_model_run.SmoothModelRun.moments_from_densities"><code class="xref py py-func docutils literal"><span class="pre">moments_from_densities()</span></code></a>.
 Defaults to None assuming zero initial ages.</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">len(times) x nr_pools.
-The <cite>order</cite> th pool age moments over the time grid.</p>
+The <code class="docutils literal"><span class="pre">order</span></code> th pool age moments over the time grid.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">numpy.ndarray</p>
@@ -312,7 +312,7 @@ The <cite>order</cite> th pool age moments over the time grid.</p>
 <dl class="method">
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.age_moment_vector_from_densities">
 <code class="descname">age_moment_vector_from_densities</code><span class="sig-paren">(</span><em>order</em>, <em>start_age_densities</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun.age_moment_vector_from_densities"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.age_moment_vector_from_densities" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute the <cite>order</cite> th moment of the pool ages by integration.</p>
+<dd><p>Compute the <code class="docutils literal"><span class="pre">order</span></code> th moment of the pool ages by integration.</p>
 <p>This function is extremely slow, since for each pool the integral over
 the density is computed based on the singe-valued functions. It is
 implemented only for the sake of completeness and to test the results
@@ -329,7 +329,7 @@ masses with the given age at time <span class="math">\(t_0\)</span>.</li>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">len(times) x nr_pools.
-Contains the <cite>order</cite> th moment
+Contains the <code class="docutils literal"><span class="pre">order</span></code> th moment
 of the pool ages over the time grid.</p>
 </td>
 </tr>
@@ -343,7 +343,7 @@ of the pool ages over the time grid.</p>
 <dl class="method">
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.age_moment_vector_semi_explicit">
 <code class="descname">age_moment_vector_semi_explicit</code><span class="sig-paren">(</span><em>order</em>, <em>start_age_moments=None</em>, <em>times=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun.age_moment_vector_semi_explicit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.age_moment_vector_semi_explicit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute the <cite>order</cite> th moment of the pool ages by a semi-explicit
+<dd><p>Compute the <code class="docutils literal"><span class="pre">order</span></code> th moment of the pool ages by a semi-explicit
 formula.</p>
 <p>This function bases on a semi-explicit formula such that no improper
 integrals need to be computed.</p>
@@ -354,7 +354,7 @@ integrals need to be computed.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>order</strong> (<em>int</em>) &#8211; The order of the age moment to be computed.</li>
 <li><strong>start_age_moments</strong> (<em>numpy.ndarray order x nr_pools, optional</em>) &#8211; Given initial age moments up to the order of interest.
-Can possibly be computed by <code class="xref py py-func docutils literal"><span class="pre">moments_from_densites()</span></code>.
+Can possibly be computed by <a class="reference internal" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.moments_from_densities" title="CompartmentalSystems.smooth_model_run.SmoothModelRun.moments_from_densities"><code class="xref py py-func docutils literal"><span class="pre">moments_from_densities()</span></code></a>.
 Defaults to None assuming zero initial ages.</li>
 <li><strong>times</strong> (<em>numpy.array, optional</em>) &#8211; Time grid.
 Defaults to None and the original time grid is used.</li>
@@ -362,7 +362,7 @@ Defaults to None and the original time grid is used.</li>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">len(times) x nr_pools.
-The <cite>order</cite> th pool age moments over the time grid.</p>
+The <code class="docutils literal"><span class="pre">order</span></code> th pool age moments over the time grid.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">numpy.ndarray</p>
@@ -374,7 +374,7 @@ The <cite>order</cite> th pool age moments over the time grid.</p>
 
 <dl class="method">
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.apply_to_forward_transit_time_simulation">
-<code class="descname">apply_to_forward_transit_time_simulation</code><span class="sig-paren">(</span><em>f_dict={'mean': &lt;Mock id='140438298725680'&gt;}</em>, <em>N=10000</em>, <em>M=2</em>, <em>k=5</em>, <em>MH=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun.apply_to_forward_transit_time_simulation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.apply_to_forward_transit_time_simulation" title="Permalink to this definition">¶</a></dt>
+<code class="descname">apply_to_forward_transit_time_simulation</code><span class="sig-paren">(</span><em>f_dict={'mean': &lt;Mock id='140305003550256'&gt;}</em>, <em>N=10000</em>, <em>M=2</em>, <em>k=5</em>, <em>MH=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun.apply_to_forward_transit_time_simulation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.apply_to_forward_transit_time_simulation" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is just a tentative approach.</p>
 <p>To be honest, the problem of an unkown infinite future cannot be solved
 this way, since the densities used to simulate forward transit time
@@ -423,10 +423,8 @@ backward transit time density.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>start_age_densities</strong> (<em>Python function, optional</em>) &#8211; A function of age that returns a numpy.array containing the
 masses with the given age at time <span class="math">\(t_0\)</span>.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><cite>p_sv(a, t)</cite> returns the mass that leaves
-the system at time <cite>t</cite> with age <cite>a</cite>.</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Python function <cite>p_sv</cite></td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Python function <code class="docutils literal"><span class="pre">p_sv</span></code>: <code class="docutils literal"><span class="pre">p_sv(a,</span> <span class="pre">t)</span></code> returns the mass that
+leaves the system at time <code class="docutils literal"><span class="pre">t</span></code> with age <code class="docutils literal"><span class="pre">a</span></code>.</td>
 </tr>
 </tbody>
 </table>
@@ -435,7 +433,7 @@ the system at time <cite>t</cite> with age <cite>a</cite>.</td>
 <dl class="method">
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.backward_transit_time_moment">
 <code class="descname">backward_transit_time_moment</code><span class="sig-paren">(</span><em>order</em>, <em>start_age_moments</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun.backward_transit_time_moment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.backward_transit_time_moment" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute the <cite>order</cite> th backward transit time moment based on the
+<dd><p>Compute the <code class="docutils literal"><span class="pre">order</span></code> th backward transit time moment based on the
 <a class="reference internal" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.age_moment_vector" title="CompartmentalSystems.smooth_model_run.SmoothModelRun.age_moment_vector"><code class="xref py py-func docutils literal"><span class="pre">age_moment_vector()</span></code></a>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -445,12 +443,12 @@ the system at time <cite>t</cite> with age <cite>a</cite>.</td>
 <li><strong>order</strong> (<em>int</em>) &#8211; The order of the backward transit time moment that is
 to be computed.</li>
 <li><strong>start_age_moments</strong> (<em>numpy.ndarray order x nr_pools, optional</em>) &#8211; Given initial age moments up to the order of interest.
-Can possibly be computed by <code class="xref py py-func docutils literal"><span class="pre">moments_from_densites()</span></code>.
+Can possibly be computed by <a class="reference internal" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.moments_from_densities" title="CompartmentalSystems.smooth_model_run.SmoothModelRun.moments_from_densities"><code class="xref py py-func docutils literal"><span class="pre">moments_from_densities()</span></code></a>.
 Defaults to None assuming zero initial ages.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The <cite>order</cite> th backward transit time moment over the
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The <code class="docutils literal"><span class="pre">order</span></code> th backward transit time moment over the
 time grid.</p>
 </td>
 </tr>
@@ -464,7 +462,7 @@ time grid.</p>
 <dl class="method">
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.backward_transit_time_moment_from_density">
 <code class="descname">backward_transit_time_moment_from_density</code><span class="sig-paren">(</span><em>order</em>, <em>start_age_densities</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun.backward_transit_time_moment_from_density"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.backward_transit_time_moment_from_density" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute the <cite>order</cite> th backward transit time moment based on an
+<dd><p>Compute the <code class="docutils literal"><span class="pre">order</span></code> th backward transit time moment based on an
 improper integral over the density.</p>
 <p>This function is extremely slow and implemented only for the sake of
 completeness and for testing results from faster approaches.</p>
@@ -481,7 +479,7 @@ age at time <span class="math">\(t_0\)</span>.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The <cite>order</cite> th backward transit time moment over the
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The <code class="docutils literal"><span class="pre">order</span></code> th backward transit time moment over the
 time grid.</p>
 </td>
 </tr>
@@ -540,17 +538,14 @@ time <span class="math">\(t_0\)</span>. Defaults to None.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <cite>start_age_densities</cite> and <cite>F0</cite> are <cite>None</cite>.
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <code class="docutils literal"><span class="pre">start_age_densities</span></code> and <code class="docutils literal"><span class="pre">F0</span></code> are <code class="docutils literal"><span class="pre">None</span></code>.
 One must be given.
-It is fastest to provide <cite>F0</cite>, otherwise <cite>F0</cite> will be computed
-by numerical integration of <cite>start_age_densities</cite>.</p>
+It is fastest to provide <code class="docutils literal"><span class="pre">F0</span></code>, otherwise <code class="docutils literal"><span class="pre">F0</span></code> will be
+computed by numerical integration of <code class="docutils literal"><span class="pre">start_age_densities</span></code>.</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><cite>F_sv(a, t)</cite> is the mass leaving the system
-at time <cite>t</cite> with age less than or equal to <cite>a</cite>.</p>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Python function <cite>F_sv</cite></p>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Python function <code class="docutils literal"><span class="pre">F_sv</span></code>: <code class="docutils literal"><span class="pre">F_sv(a,</span> <span class="pre">t)</span></code> is the mass leaving the
+system at time <code class="docutils literal"><span class="pre">t</span></code> with age less than or equal to <code class="docutils literal"><span class="pre">a</span></code>.</p>
 </td>
 </tr>
 </tbody>
@@ -566,16 +561,14 @@ distribution.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cut_off</strong> (<em>bool, optional</em>) &#8211; If <cite>True</cite>, no density values are going to
-be computed after the end of the time grid, instead <cite>numpy.nan</cite>
-will be returned.
-Defaults to <cite>True</cite>.
-<cite>False</cite> might lead to unexpected behavior.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cut_off</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, no density values are going
+to be computed after the end of the time grid, instead
+<code class="docutils literal"><span class="pre">numpy.nan</span></code> will be returned.
+Defaults to <code class="docutils literal"><span class="pre">True</span></code>.
+<code class="docutils literal"><span class="pre">False</span></code> might lead to unexpected behavior.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><cite>F_sv(a, t)</cite> is the mass leaving the system
-at time <cite>t+a</cite> with age less than or equal to <cite>a</cite>.</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Python function <cite>F_sv</cite></td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Python function <code class="docutils literal"><span class="pre">F_sv</span></code>: <code class="docutils literal"><span class="pre">F_sv(a,</span> <span class="pre">t)</span></code> is the mass leaving the
+system at time <code class="docutils literal"><span class="pre">t+a</span></code> with age less than or equal to <code class="docutils literal"><span class="pre">a</span></code>.</td>
 </tr>
 </tbody>
 </table>
@@ -599,17 +592,15 @@ time <span class="math">\(t_0\)</span>. Defaults to None.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <cite>start_age_densities</cite> and <cite>F0</cite> are <cite>None</cite>.
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <code class="docutils literal"><span class="pre">start_age_densities</span></code> and <code class="docutils literal"><span class="pre">F0</span></code> are <code class="docutils literal"><span class="pre">None</span></code>.
 One must be given.
-It is fastest to provide <cite>F0</cite>, otherwise <cite>F0</cite> will be computed
-by numerical integration of <cite>start_age_densities</cite>.</p>
+It is fastest to provide <code class="docutils literal"><span class="pre">F0</span></code>, otherwise <code class="docutils literal"><span class="pre">F0</span></code> will be
+computed by numerical integration of <code class="docutils literal"><span class="pre">start_age_densities</span></code>.</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><cite>F_sv(a,t)</cite> is the vector of pool masses
-(numpy.array) with age less than or equal to <cite>a</cite> at time <cite>t</cite>.</p>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Python function <cite>F_sv</cite></p>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Python function <code class="docutils literal"><span class="pre">F_sv</span></code>: <code class="docutils literal"><span class="pre">F_sv(a,t)</span></code> is the vector of pool
+masses (<code class="docutils literal"><span class="pre">numpy.array</span></code>) with age less than or equal to <code class="docutils literal"><span class="pre">a</span></code> at
+time <code class="docutils literal"><span class="pre">t</span></code>.</p>
 </td>
 </tr>
 </tbody>
@@ -634,17 +625,14 @@ time <span class="math">\(t_0\)</span>. Defaults to None.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <cite>start_age_densities</cite> and <cite>F0</cite> are None.
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <code class="docutils literal"><span class="pre">start_age_densities</span></code> and <code class="docutils literal"><span class="pre">F0</span></code> are None.
 One must be given.
-It is fastest to provide <cite>F0</cite>, otherwise <cite>F0</cite> will be computed
-by numerical integration of <cite>start_age_densities</cite>.</p>
+It is fastest to provide <code class="docutils literal"><span class="pre">F0</span></code>, otherwise <code class="docutils literal"><span class="pre">F0</span></code> will be
+computed by numerical integration of <code class="docutils literal"><span class="pre">start_age_densities</span></code>.</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><cite>F_sv(a, t)</cite> is the mass in the system with
-age less than or equal to <cite>a</cite> at time <cite>t</cite>.</p>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Python function <cite>F_sv</cite></p>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Python function <code class="docutils literal"><span class="pre">F_sv</span></code>: <code class="docutils literal"><span class="pre">F_sv(a,</span> <span class="pre">t)</span></code> is the mass in the system
+with age less than or equal to <code class="docutils literal"><span class="pre">a</span></code> at time <code class="docutils literal"><span class="pre">t</span></code>.</p>
 </td>
 </tr>
 </tbody>
@@ -663,8 +651,8 @@ is now implemented in a much faster way based on the surface itself.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>density_sv</strong> (<em>Python function</em>) &#8211; A function that takes <cite>a</cite>, <cite>t</cite>
-as arguments and returns density value with age a at time <cite>t</cite>.
+<li><strong>density_sv</strong> (<em>Python function</em>) &#8211; A function that takes <code class="docutils literal"><span class="pre">a</span></code>, <code class="docutils literal"><span class="pre">t</span></code>
+as arguments and returns density value with age a at time <code class="docutils literal"><span class="pre">t</span></code>.
 Potentially coming from <a class="reference internal" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.system_age_density_single_value" title="CompartmentalSystems.smooth_model_run.SmoothModelRun.system_age_density_single_value"><code class="xref py py-func docutils literal"><span class="pre">system_age_density_single_value()</span></code></a>.</li>
 <li><strong>values</strong> (<em>numpy.array</em>) &#8211; The ages over the time grid at which the
 density values are to be computed.</li>
@@ -696,7 +684,7 @@ is now implemented in a much faster way based on the surface itself.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>pool_age_densites_sv</strong> (<em>Python function</em>) &#8211; A function that takes
-<cite>a</cite>, <cite>t</cite> as arguments and returns a vector of pool contents
+<code class="docutils literal"><span class="pre">a</span></code>, <code class="docutils literal"><span class="pre">t</span></code> as arguments and returns a vector of pool contents
 with mass a at time t. Potentially coming from
 <a class="reference internal" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.pool_age_densities_single_value" title="CompartmentalSystems.smooth_model_run.SmoothModelRun.pool_age_densities_single_value"><code class="xref py py-func docutils literal"><span class="pre">pool_age_densities_single_value()</span></code></a>.</li>
 <li><strong>pool_age_values</strong> (<em>numpy.ndarray len(times</em>) &#8211; The ages over
@@ -731,11 +719,11 @@ computed, this can take quite some time.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>quantile</strong> (<em>between 0 and 1</em>) &#8211; The relative share of mass that is
-considered to be left of the computed value. A value of <cite>0.5</cite>
+considered to be left of the computed value. A value of <code class="docutils literal"><span class="pre">0.5</span></code>
 leads to the computation of the median of the distribution.</li>
-<li><strong>F_sv</strong> (<em>Python function</em>) &#8211; A function of age <cite>a</cite> and time <cite>t</cite> that
-returns the mass that is of age less than or equal to <cite>a</cite> at
-time <cite>t</cite>.</li>
+<li><strong>F_sv</strong> (<em>Python function</em>) &#8211; A function of age <code class="docutils literal"><span class="pre">a</span></code> and time <code class="docutils literal"><span class="pre">t</span></code> that
+returns the mass that is of age less than or equal to <code class="docutils literal"><span class="pre">a</span></code> at
+time <code class="docutils literal"><span class="pre">t</span></code>.</li>
 <li><strong>norm_consts</strong> (<em>numpy.array, optional</em>) &#8211; An array over the time grid of
 total masses over all ages.
 Defaults to an array of ones assuming given probability
@@ -749,8 +737,8 @@ nonlinear function. Either &#8216;brentq&#8217; or &#8216;newton&#8217;.
 Defaults to &#8216;brentq&#8217;.</li>
 <li><strong>tol</strong> (<em>float</em>) &#8211; The tolerance used in the numerical root search
 algorithm. A low tolerance decreases the computation speed
-tremendously, so a value of <cite>1e-01</cite> might already be fine.
-Defaults to <cite>1e-08</cite>.</li>
+tremendously, so a value of <code class="docutils literal"><span class="pre">1e-01</span></code> might already be fine.
+Defaults to <code class="docutils literal"><span class="pre">1e-08</span></code>.</li>
 </ul>
 </td>
 </tr>
@@ -773,8 +761,9 @@ Defaults to <cite>1e-08</cite>.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><cite>{key: func}</cite> with <cite>key</cite> representing the pool which receives
-the input and <cite>func</cite> a function of time that returns a <cite>float</cite>.</td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><code class="docutils literal"><span class="pre">{key:</span> <span class="pre">func}</span></code> with <code class="docutils literal"><span class="pre">key</span></code> representing the pool which
+receives the input and <code class="docutils literal"><span class="pre">func</span></code> a function of time that returns
+a <code class="docutils literal"><span class="pre">float</span></code>.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
 </tr>
@@ -808,10 +797,8 @@ the input and <cite>func</cite> a function of time that returns a <cite>float</c
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><cite>u(t)</cite> is a <cite>numpy.array</cite> containing the
-external inputs at time <cite>t</cite>.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">Python function <cite>u</cite></td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Python function <code class="docutils literal"><span class="pre">u</span></code>: <code class="docutils literal"><span class="pre">u(t)</span></code> is a <code class="docutils literal"><span class="pre">numpy.array</span></code> containing the
+external inputs at time <code class="docutils literal"><span class="pre">t</span></code>.</td>
 </tr>
 </tbody>
 </table>
@@ -847,12 +834,10 @@ be computed after the end of the time grid, instead numpy.nan
 will be returned.
 Defaults to True and False might lead to unexpected behavior.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><cite>p(ages)</cite> is a <cite>numpy.ndarray</cite>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Python function <code class="docutils literal"><span class="pre">p</span></code>: <code class="docutils literal"><span class="pre">p(ages)</span></code> is a <code class="docutils literal"><span class="pre">numpy.ndarray</span></code>
 len(ages) x len(times) that gives the mass that will leave the
-system with the respective age when it came in at time <cite>t</cite>,
-where <cite>ages</cite> is a <cite>numpy.array</cite>.</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Python function <cite>p</cite></td>
+system with the respective age when it came in at time <code class="docutils literal"><span class="pre">t</span></code>,
+where <code class="docutils literal"><span class="pre">ages</span></code> is a <code class="docutils literal"><span class="pre">numpy.array</span></code>.</td>
 </tr>
 </tbody>
 </table>
@@ -872,10 +857,8 @@ be computed after the end of the time grid, instead numpy.nan
 will be returned.
 Defaults to True and False might lead to unexpected behavior.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><cite>p_sv(a, t)</cite> returns how much mass will
-leave the system with age <cite>a</cite> when it came in at time <cite>t</cite>.</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Python function <cite>p_sv</cite></td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Python function <code class="docutils literal"><span class="pre">p_sv</span></code>: <code class="docutils literal"><span class="pre">p_sv(a,</span> <span class="pre">t)</span></code> returns how much mass will
+leave the system with age <code class="docutils literal"><span class="pre">a</span></code> when it came in at time <code class="docutils literal"><span class="pre">t</span></code>.</td>
 </tr>
 </tbody>
 </table>
@@ -884,7 +867,7 @@ leave the system with age <cite>a</cite> when it came in at time <cite>t</cite>.
 <dl class="method">
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.forward_transit_time_moment">
 <code class="descname">forward_transit_time_moment</code><span class="sig-paren">(</span><em>order</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun.forward_transit_time_moment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.forward_transit_time_moment" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute the <cite>order</cite> th forward transit time moment.</p>
+<dd><p>Compute the <code class="docutils literal"><span class="pre">order</span></code> th forward transit time moment.</p>
 <p>Attention! This function integrates over the state transition operator
 until infinite time.
 The results are going to be weird, since at the end of the time grid
@@ -896,7 +879,7 @@ some cut- off will happen which biases the result.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>order</strong> (<em>int</em>) &#8211; The order of the forward transit time moment to be
 computed.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The <cite>order</cite> th forward transit time moment over the
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The <code class="docutils literal"><span class="pre">order</span></code> th forward transit time moment over the
 time grid.</td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">numpy.array</td>
@@ -914,9 +897,9 @@ time grid.</td>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><cite>{key: func}</cite> with <cite>key=(pool_from, pool_to)</cite> representing the
-pools involved and <cite>func</cite> a function of time that returns
-a float.</td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><code class="docutils literal"><span class="pre">{key:</span> <span class="pre">func}</span></code> with <code class="docutils literal"><span class="pre">key=(pool_from,</span> <span class="pre">pool_to)</span></code> representing
+the pools involved and <code class="docutils literal"><span class="pre">func</span></code> a function of time that returns
+a <code class="docutils literal"><span class="pre">float</span></code>.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">ditc</td>
 </tr>
@@ -936,10 +919,10 @@ this is why nonlinear systems should be linearized first.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A linearized version of the original
-<a class="reference internal" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun" title="CompartmentalSystems.smooth_model_run.SmoothModelRun"><code class="xref py py-obj docutils literal"><span class="pre">SmoothModelRun</span></code></a>, with the solutions now being part
-of <cite>func_set</cite>.</td>
+<a class="reference internal" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun" title="CompartmentalSystems.smooth_model_run.SmoothModelRun"><code class="xref py py-class docutils literal"><span class="pre">SmoothModelRun</span></code></a>, with the solutions now being part
+of <code class="docutils literal"><span class="pre">func_set</span></code>.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun" title="CompartmentalSystems.smooth_model_run.SmoothModelRun"><code class="xref py py-obj docutils literal"><span class="pre">SmoothModelRun</span></code></a></td>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun" title="CompartmentalSystems.smooth_model_run.SmoothModelRun"><code class="xref py py-class docutils literal"><span class="pre">SmoothModelRun</span></code></a></td>
 </tr>
 </tbody>
 </table>
@@ -1071,8 +1054,9 @@ densities.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><cite>{key: func}</cite> with <cite>key</cite> representing the pool from which the
-output comes and <cite>func</cite> a function of time that returns a float.</td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><code class="docutils literal"><span class="pre">{key:</span> <span class="pre">func}</span></code> with <code class="docutils literal"><span class="pre">key</span></code> representing the pool from which
+the output comes and <code class="docutils literal"><span class="pre">func</span></code> a function of time that returns a
+<code class="docutils literal"><span class="pre">float</span></code>.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
 </tr>
@@ -1088,7 +1072,7 @@ output comes and <cite>func</cite> a function of time that returns a float.</td>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">len(times) x nr_pools, <cite>solution/output_vector</cite></td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">len(times) x nr_pools, <code class="docutils literal"><span class="pre">solution/output_vector</span></code></td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">numpy.ndarray</td>
 </tr>
@@ -1099,15 +1083,15 @@ output comes and <cite>func</cite> a function of time that returns a float.</td>
 <dl class="method">
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.output_rate_vector_at_t">
 <code class="descname">output_rate_vector_at_t</code><span class="sig-paren">(</span><em>t</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun.output_rate_vector_at_t"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.output_rate_vector_at_t" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return a vector of output rates at time <cite>t</cite>.</p>
+<dd><p>Return a vector of output rates at time <code class="docutils literal"><span class="pre">t</span></code>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>t</strong> (<em>float</em>) &#8211; The time at which the output rates are computed.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The ith entry contains the output rate of pool <cite>i</cite>
-at time <cite>t</cite>.</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The ith entry contains the output rate of pool <code class="docutils literal"><span class="pre">i</span></code>
+at time <code class="docutils literal"><span class="pre">t</span></code>.</td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">numpy.array</td>
 </tr>
@@ -1118,15 +1102,15 @@ at time <cite>t</cite>.</td>
 <dl class="method">
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.output_vector_func">
 <code class="descname">output_vector_func</code><span class="sig-paren">(</span><em>t</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun.output_vector_func"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.output_vector_func" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return a vector of the external output fluxes at time <cite>t</cite>.</p>
+<dd><p>Return a vector of the external output fluxes at time <code class="docutils literal"><span class="pre">t</span></code>.</p>
 <p>The resulting values base on sol_funcs and come from  linear
 interpolations.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The <cite>i</cite> th entry is the output from pool <cite>i</cite> at
-time <cite>t</cite>.</td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The <code class="docutils literal"><span class="pre">i</span></code> th entry is the output from pool <code class="docutils literal"><span class="pre">i</span></code> at
+time <code class="docutils literal"><span class="pre">t</span></code>.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">numpy.array</td>
 </tr>
@@ -1182,7 +1166,7 @@ is saved.</li>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">None.
-Instead <cite>fig</cite> is changed in place.</p>
+Instead <code class="docutils literal"><span class="pre">fig</span></code> is changed in place.</p>
 </td>
 </tr>
 </tbody>
@@ -1205,7 +1189,7 @@ Instead <cite>fig</cite> is changed in place.</p>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">None.
-Instead <cite>fig</cite> is changed in place.</p>
+Instead <code class="docutils literal"><span class="pre">fig</span></code> is changed in place.</p>
 </td>
 </tr>
 </tbody>
@@ -1228,7 +1212,7 @@ Instead <cite>fig</cite> is changed in place.</p>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">None.
-Instead <cite>fig</cite> is changed in place.</p>
+Instead <code class="docutils literal"><span class="pre">fig</span></code> is changed in place.</p>
 </td>
 </tr>
 </tbody>
@@ -1253,7 +1237,7 @@ pools at time <span class="math">\(t_0\)</span>.</li>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">None.
-Instead <cite>fig</cite> is changed in place.</p>
+Instead <code class="docutils literal"><span class="pre">fig</span></code> is changed in place.</p>
 </td>
 </tr>
 </tbody>
@@ -1277,7 +1261,7 @@ pools at time <span class="math">\(t_0\)</span>.</li>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">None.
-Instead <cite>ax</cite> is changed in place.</p>
+Instead <code class="docutils literal"><span class="pre">ax</span></code> is changed in place.</p>
 </td>
 </tr>
 </tbody>
@@ -1302,7 +1286,7 @@ plotted.</li>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">None.
-Instead <cite>ax</cite> is changed in place.</p>
+Instead <code class="docutils literal"><span class="pre">ax</span></code> is changed in place.</p>
 </td>
 </tr>
 </tbody>
@@ -1325,7 +1309,7 @@ Instead <cite>ax</cite> is changed in place.</p>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">None.
-Instead <cite>fig</cite> is changed in place.</p>
+Instead <code class="docutils literal"><span class="pre">fig</span></code> is changed in place.</p>
 </td>
 </tr>
 </tbody>
@@ -1348,7 +1332,7 @@ Instead <cite>fig</cite> is changed in place.</p>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">None.
-Instead <cite>fig</cite> is changed in place.</p>
+Instead <code class="docutils literal"><span class="pre">fig</span></code> is changed in place.</p>
 </td>
 </tr>
 </tbody>
@@ -1370,12 +1354,10 @@ age at time <span class="math">\(t_0\)</span>.
 Defaults to None, meaning that all initial mass is considered
 to have zero age.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><cite>p(ages)</cite> returns a <cite>numpy.ndarray</cite>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Python function <code class="docutils literal"><span class="pre">p</span></code>: <code class="docutils literal"><span class="pre">p(ages)</span></code> returns a <code class="docutils literal"><span class="pre">numpy.ndarray</span></code>
 len(ages) x len(times) x nr_pools containing the pool contents
-with the respective ages at the respective times, where <cite>ages</cite>
-is a <cite>numpy.array</cite>.</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Python function <cite>p</cite></td>
+with the respective ages at the respective times, where <code class="docutils literal"><span class="pre">ages</span></code>
+is a <code class="docutils literal"><span class="pre">numpy.array</span></code>.</td>
 </tr>
 </tbody>
 </table>
@@ -1394,10 +1376,8 @@ that returns a numpy.array containing the masses with the given
 age at time <span class="math">\(t_0\)</span>. Defaults to None, meaning that all
 initial mass is considered to have zero age.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><cite>p_sv(a, t)</cite> returns <cite>a numpy.array</cite>
-containing the pool contents with age <cite>a</cite> at time <cite>t</cite>.</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Python function <cite>p_sv</cite></td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Python function <code class="docutils literal"><span class="pre">p_sv</span></code>: <code class="docutils literal"><span class="pre">p_sv(a,</span> <span class="pre">t)</span></code> returns <code class="docutils literal"><span class="pre">a</span> <span class="pre">numpy.array</span></code>
+containing the pool contents with age <code class="docutils literal"><span class="pre">a</span></code> at time <code class="docutils literal"><span class="pre">t</span></code>.</td>
 </tr>
 </tbody>
 </table>
@@ -1418,29 +1398,29 @@ the pool age distribution by a numerical root search algorithm.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>quantile</strong> (<em>between 0 and 1</em>) &#8211; The relative share of mass that is
-considered to be left of the computed value. A value of <cite>0.5</cite>
+considered to be left of the computed value. A value of <code class="docutils literal"><span class="pre">0.5</span></code>
 leads to the computation of the median of the distribution.</li>
 <li><strong>pool</strong> (<em>int</em>) &#8211; The number of the pool for which the age quantile is to
 be computed.</li>
 <li><strong>start_age_densities</strong> (<em>Python function, optional</em>) &#8211; A function of age
-that returns a <cite>numpy.array</cite> containing the masses with the
+that returns a <code class="docutils literal"><span class="pre">numpy.array</span></code> containing the masses with the
 given age at time <span class="math">\(t_0\)</span>.
-Defaults to <cite>None</cite>.</li>
-<li><strong>F0</strong> (<em>Python function</em>) &#8211; A function of age that returns a <cite>numpy.array</cite>
-containing the masses with age less than or equal to the age at
-time <span class="math">\(t_0\)</span>.
-Defaults to <cite>None</cite>.</li>
+Defaults to <code class="docutils literal"><span class="pre">None</span></code>.</li>
+<li><strong>F0</strong> (<em>Python function</em>) &#8211; A function of age that returns a
+<code class="docutils literal"><span class="pre">numpy.array</span></code> containing the masses with age less than or
+equal to the age at time <span class="math">\(t_0\)</span>.
+Defaults to <code class="docutils literal"><span class="pre">None</span></code>.</li>
 <li><strong>tol</strong> (<em>float</em>) &#8211; The tolerance used in the numerical root search
 algorithm. A low tolerance decreases the computation speed
-tremendously, so a value of <cite>1e-01</cite> might already be fine.
-Defaults to <cite>1e-08</cite>.</li>
+tremendously, so a value of <code class="docutils literal"><span class="pre">1e-01</span></code> might already be fine.
+Defaults to <code class="docutils literal"><span class="pre">1e-08</span></code>.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <cite>start_age_densities</cite> and <cite>F0</cite> are <cite>None</cite>.
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <code class="docutils literal"><span class="pre">start_age_densities</span></code> and <code class="docutils literal"><span class="pre">F0</span></code> are <code class="docutils literal"><span class="pre">None</span></code>.
 One must be given.
-It is fastest to provide <cite>F0</cite>, otherwise <cite>F0</cite> will be computed
-by numerical integration of <cite>start_age_densities</cite>.</p>
+It is fastest to provide <code class="docutils literal"><span class="pre">F0</span></code>, otherwise <code class="docutils literal"><span class="pre">F0</span></code> will be
+computed by numerical integration of <code class="docutils literal"><span class="pre">start_age_densities</span></code>.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">(len(times)) The computed quantile values over the
@@ -1468,30 +1448,30 @@ computed, this can take quite some time.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>quantile</strong> (<em>between 0 and 1</em>) &#8211; The relative share of mass that is
-considered to be left of the computed value. A value of <cite>0.5</cite>
+considered to be left of the computed value. A value of <code class="docutils literal"><span class="pre">0.5</span></code>
 leads to the computation of the median of the distribution.</li>
 <li><strong>start_age_densities</strong> (<em>Python function, optional</em>) &#8211; A function of age
-that returns a <cite>numpy.array</cite> containing the masses with the
+that returns a <code class="docutils literal"><span class="pre">numpy.array</span></code> containing the masses with the
 given age at time <span class="math">\(t_0\)</span>.
-Defaults to <cite>None</cite>.</li>
-<li><strong>F0</strong> (<em>Python function</em>) &#8211; A function of age that returns a <cite>numpy.array</cite>
-containing the masses with age less than or equal to the age at
-time <span class="math">\(t_0\)</span>.
-Defaults to <cite>None</cite>.</li>
+Defaults to <code class="docutils literal"><span class="pre">None</span></code>.</li>
+<li><strong>F0</strong> (<em>Python function</em>) &#8211; A function of age that returns a
+<code class="docutils literal"><span class="pre">numpy.array</span></code> containing the masses with age less than or
+equal to the age at time <span class="math">\(t_0\)</span>.
+Defaults to <code class="docutils literal"><span class="pre">None</span></code>.</li>
 <li><strong>method</strong> (<em>str</em>) &#8211; The method that is used for finding the roots of a
 nonlinear function. Either &#8216;brentq&#8217; or &#8216;newton&#8217;.
 Defaults to &#8216;brentq&#8217;.</li>
 <li><strong>tol</strong> (<em>float</em>) &#8211; The tolerance used in the numerical root search
 algorithm. A low tolerance decreases the computation speed
-tremendously, so a value of <cite>1e-01</cite> might already be fine.
-Defaults to <cite>1e-08</cite>.</li>
+tremendously, so a value of <code class="docutils literal"><span class="pre">1e-01</span></code> might already be fine.
+Defaults to <code class="docutils literal"><span class="pre">1e-08</span></code>.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <cite>start_age_densities</cite> and <cite>F0</cite> are <cite>None</cite>.
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <code class="docutils literal"><span class="pre">start_age_densities</span></code> and <code class="docutils literal"><span class="pre">F0</span></code> are <code class="docutils literal"><span class="pre">None</span></code>.
 One must be given.
-It is fastest to provide <cite>F0</cite>, otherwise <cite>F0</cite> will be computed
-by numerical integration of <cite>start_age_densities</cite>.</p>
+It is fastest to provide <code class="docutils literal"><span class="pre">F0</span></code>, otherwise <code class="docutils literal"><span class="pre">F0</span></code> will be
+computed by numerical integration of <code class="docutils literal"><span class="pre">start_age_densities</span></code>.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">(len(times) x nr_pools)
@@ -1519,27 +1499,27 @@ the pool age distribution by a numerical root search algorithm.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>quantile</strong> (<em>between 0 and 1</em>) &#8211; The relative share of mass that is
-considered to be left of the computed value. A value of <cite>0.5</cite>
+considered to be left of the computed value. A value of <code class="docutils literal"><span class="pre">0.5</span></code>
 leads to the computation of the median of the distribution.</li>
 <li><strong>start_age_densities</strong> (<em>Python function, optional</em>) &#8211; A function of age
-that returns a <cite>numpy.array</cite> containing the masses with the
+that returns a <code class="docutils literal"><span class="pre">numpy.array</span></code> containing the masses with the
 given age at time <span class="math">\(t_0\)</span>.
-Defaults to <cite>None</cite>.</li>
-<li><strong>F0</strong> (<em>Python function</em>) &#8211; A function of age that returns a <cite>numpy.array</cite>
-containing the masses with age less than or equal to the age at
-time <span class="math">\(t_0\)</span>.
-Defaults to <cite>None</cite>.</li>
+Defaults to <code class="docutils literal"><span class="pre">None</span></code>.</li>
+<li><strong>F0</strong> (<em>Python function</em>) &#8211; A function of age that returns a
+<code class="docutils literal"><span class="pre">numpy.array</span></code> containing the masses with age less than or
+equal to the age at time <span class="math">\(t_0\)</span>.
+Defaults to <code class="docutils literal"><span class="pre">None</span></code>.</li>
 <li><strong>tol</strong> (<em>float</em>) &#8211; The tolerance used in the numerical root search
 algorithm. A low tolerance decreases the computation speed
-tremendously, so a value of <cite>1e-01</cite> might already be fine.
-Defaults to <cite>1e-08</cite>.</li>
+tremendously, so a value of <code class="docutils literal"><span class="pre">1e-01</span></code> might already be fine.
+Defaults to <code class="docutils literal"><span class="pre">1e-08</span></code>.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <cite>start_age_densities</cite> and <cite>F0</cite> are <cite>None</cite>.
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <code class="docutils literal"><span class="pre">start_age_densities</span></code> and <code class="docutils literal"><span class="pre">F0</span></code> are <code class="docutils literal"><span class="pre">None</span></code>.
 One must be given.
-It is fastest to provide <cite>F0</cite>, otherwise <cite>F0</cite> will be computed
-by numerical integration of <cite>start_age_densities</cite>.</p>
+It is fastest to provide <code class="docutils literal"><span class="pre">F0</span></code>, otherwise <code class="docutils literal"><span class="pre">F0</span></code> will be
+computed by numerical integration of <code class="docutils literal"><span class="pre">start_age_densities</span></code>.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">(len(times) x nr_pools) The computed quantile values
@@ -1664,10 +1644,8 @@ corresponding to the system.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><cite>f(t)</cite> returns a numpy.array containing the
-pool contents at time <cite>t</cite>.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">Python function <cite>f</cite></td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Python function <code class="docutils literal"><span class="pre">f</span></code>: <code class="docutils literal"><span class="pre">f(t)</span></code> returns a numpy.array containing the
+pool contents at time <code class="docutils literal"><span class="pre">t</span></code>.</td>
 </tr>
 </tbody>
 </table>
@@ -1709,12 +1687,10 @@ at the times given in the time grid.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>alternative_start_values</strong> (<em>numpy.array, optional</em>) &#8211; If not given, the
-original <cite>start_values</cite> are used.</td>
+original <code class="docutils literal"><span class="pre">start_values</span></code> are used.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><cite>f(t)</cite> is a numpy.array that containts the
-pool contents at time <cite>t</cite>.</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Python function <cite>f</cite></td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Python function <code class="docutils literal"><span class="pre">f</span></code>: <code class="docutils literal"><span class="pre">f(t)</span></code> is a numpy.array that containts the
+pool contents at time <code class="docutils literal"><span class="pre">t</span></code>.</td>
 </tr>
 </tbody>
 </table>
@@ -1753,10 +1729,8 @@ age at time <span class="math">\(t_0\)</span>.
 Defaults to None, meaning that all initial mass is considered
 to have zero age.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><cite>sys_p_sv(a, t)</cite> returns the system
-content with age <cite>a</cite> at time <cite>t</cite>.</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Python function <cite>sys_p_sv</cite></td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Python function <code class="docutils literal"><span class="pre">sys_p_sv</span></code>: <code class="docutils literal"><span class="pre">sys_p_sv(a,</span> <span class="pre">t)</span></code> returns the system
+content with age <code class="docutils literal"><span class="pre">a</span></code> at time <code class="docutils literal"><span class="pre">t</span></code>.</td>
 </tr>
 </tbody>
 </table>
@@ -1776,30 +1750,30 @@ computed, this can take quite some time.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>quantile</strong> (<em>between 0 and 1</em>) &#8211; The relative share of mass that is
-considered to be left of the computed value. A value of <cite>0.5</cite>
+considered to be left of the computed value. A value of <code class="docutils literal"><span class="pre">0.5</span></code>
 leads to the computation of the median of the distribution.</li>
 <li><strong>start_age_densities</strong> (<em>Python function, optional</em>) &#8211; A function of age
-that returns a <cite>numpy.array</cite> containing the masses with the
+that returns a <code class="docutils literal"><span class="pre">numpy.array</span></code> containing the masses with the
 given age at time <span class="math">\(t_0\)</span>.
-Defaults to <cite>None</cite>.</li>
-<li><strong>F0</strong> (<em>Python function</em>) &#8211; A function of age that returns a <cite>numpy.array</cite>
-containing the masses with age less than or equal to the age at
-time <span class="math">\(t_0\)</span>.
-Defaults to <cite>None</cite>.</li>
+Defaults to <code class="docutils literal"><span class="pre">None</span></code>.</li>
+<li><strong>F0</strong> (<em>Python function</em>) &#8211; A function of age that returns a
+<code class="docutils literal"><span class="pre">numpy.array</span></code> containing the masses with age less than or
+equal to the age at time <span class="math">\(t_0\)</span>.
+Defaults to <code class="docutils literal"><span class="pre">None</span></code>.</li>
 <li><strong>method</strong> (<em>str</em>) &#8211; The method that is used for finding the roots of a
 nonlinear function. Either &#8216;brentq&#8217; or &#8216;newton&#8217;.
 Defaults to &#8216;brentq&#8217;.</li>
 <li><strong>tol</strong> (<em>float</em>) &#8211; The tolerance used in the numerical root search
 algorithm. A low tolerance decreases the computation speed
-tremendously, so a value of <cite>1e-01</cite> might already be fide.
-Defaults to <cite>1e-08</cite>.</li>
+tremendously, so a value of <code class="docutils literal"><span class="pre">1e-01</span></code> might already be fide.
+Defaults to <code class="docutils literal"><span class="pre">1e-08</span></code>.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <cite>start_age_densities</cite> and <cite>F0</cite> are <cite>None</cite>.
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <code class="docutils literal"><span class="pre">start_age_densities</span></code> and <code class="docutils literal"><span class="pre">F0</span></code> are <code class="docutils literal"><span class="pre">None</span></code>.
 One must be given.
-It is fastest to provide <cite>F0</cite>, otherwise <cite>F0</cite> will be computed
-by numerical integration of <cite>start_age_densities</cite>.</p>
+It is fastest to provide <code class="docutils literal"><span class="pre">F0</span></code>, otherwise <code class="docutils literal"><span class="pre">F0</span></code> will be
+computed by numerical integration of <code class="docutils literal"><span class="pre">start_age_densities</span></code>.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The computed quantile values over the time grid.</p>
@@ -1826,29 +1800,29 @@ the system age distribution by a numerical root search algorithm.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>quantile</strong> (<em>between 0 and 1</em>) &#8211; The relative share of mass that is
-considered to be left of the computed value. A value of <cite>0.5</cite>
+considered to be left of the computed value. A value of <code class="docutils literal"><span class="pre">0.5</span></code>
 leads to the computation of the median of the distribution.</li>
 <li><strong>pool</strong> (<em>int</em>) &#8211; The number of the pool for which the age quantile is to
 be computed.</li>
 <li><strong>start_age_densities</strong> (<em>Python function, optional</em>) &#8211; A function of age
-that returns a <cite>numpy.array</cite> containing the masses with the
+that returns a <code class="docutils literal"><span class="pre">numpy.array</span></code> containing the masses with the
 given age at time <span class="math">\(t_0\)</span>.
-Defaults to <cite>None</cite>.</li>
-<li><strong>F0</strong> (<em>Python function</em>) &#8211; A function of age that returns a <cite>numpy.array</cite>
-containing the masses with age less than or equal to the age at
-time <span class="math">\(t_0\)</span>.
-Defaults to <cite>None</cite>.</li>
+Defaults to <code class="docutils literal"><span class="pre">None</span></code>.</li>
+<li><strong>F0</strong> (<em>Python function</em>) &#8211; A function of age that returns a
+<code class="docutils literal"><span class="pre">numpy.array</span></code> containing the masses with age less than or
+equal to the age at time <span class="math">\(t_0\)</span>.
+Defaults to <code class="docutils literal"><span class="pre">None</span></code>.</li>
 <li><strong>tol</strong> (<em>float</em>) &#8211; The tolerance used in the numerical root search
 algorithm. A low tolerance decreases the computation speed
-tremendously, so a value of <cite>1e-01</cite> might already be fine.
-Defaults to <cite>1e-08</cite>.</li>
+tremendously, so a value of <code class="docutils literal"><span class="pre">1e-01</span></code> might already be fine.
+Defaults to <code class="docutils literal"><span class="pre">1e-08</span></code>.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <cite>start_age_densities</cite> and <cite>F0</cite> are <cite>None</cite>.
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><a class="reference internal" href="#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-exc docutils literal"><span class="pre">Error</span></code></a> &#8211; If both <code class="docutils literal"><span class="pre">start_age_densities</span></code> and <code class="docutils literal"><span class="pre">F0</span></code> are <code class="docutils literal"><span class="pre">None</span></code>.
 One must be given.
-It is fastest to provide <cite>F0</cite>, otherwise <cite>F0</cite> will be computed
-by numerical integration of <cite>start_age_densities</cite>.</p>
+It is fastest to provide <code class="docutils literal"><span class="pre">F0</span></code>, otherwise <code class="docutils literal"><span class="pre">F0</span></code> will be
+computed by numerical integration of <code class="docutils literal"><span class="pre">start_age_densities</span></code>.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The computed quantile values over the time grid.</p>
@@ -1864,8 +1838,8 @@ by numerical integration of <cite>start_age_densities</cite>.</p>
 <dl class="method">
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.system_age_moment">
 <code class="descname">system_age_moment</code><span class="sig-paren">(</span><em>order</em>, <em>start_age_moments=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun.system_age_moment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.system_age_moment" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute the <cite>order</cite> th system age moment vector over the time grid by
-an ODE system.</p>
+<dd><p>Compute the <code class="docutils literal"><span class="pre">order</span></code> th system age moment vector over the time grid
+by an ODE system.</p>
 <p>The pool age moments are computed by <a class="reference internal" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.age_moment_vector" title="CompartmentalSystems.smooth_model_run.SmoothModelRun.age_moment_vector"><code class="xref py py-func docutils literal"><span class="pre">age_moment_vector()</span></code></a> and then
 weighted corresponding to the pool contents.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -1875,12 +1849,12 @@ weighted corresponding to the pool contents.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>order</strong> (<em>int</em>) &#8211; The order of the pool age moments to be computed.</li>
 <li><strong>start_age_moments</strong> (<em>numpy.ndarray order x nr_pools, optional</em>) &#8211; Given initial age moments up to the order of interest.
-Can possibly be computed by <code class="xref py py-func docutils literal"><span class="pre">moments_from_densites()</span></code>.
+Can possibly be computed by <a class="reference internal" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.moments_from_densities" title="CompartmentalSystems.smooth_model_run.SmoothModelRun.moments_from_densities"><code class="xref py py-func docutils literal"><span class="pre">moments_from_densities()</span></code></a>.
 Defaults to None assuming zero initial ages.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The <cite>order</cite> th system age moment over the time grid.</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The <code class="docutils literal"><span class="pre">order</span></code> th system age moment over the time grid.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">numpy.array</p>

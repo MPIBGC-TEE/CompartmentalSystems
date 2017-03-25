@@ -50,8 +50,8 @@ models.
 It does not deal with numerical computations and model simulations,
 but rather defines the underlying structure of the respective model.</p>
 <p>All fluxes or matrix entries are supposed to be SymPy expressions.
-<em>Smooth</em> means that no <cite>Piecewise</cite> or <cite>DiracDelta</cite> functions should be involved
-in the model description.</p>
+<em>Smooth</em> means that no <code class="docutils literal"><span class="pre">Piecewise</span></code> or <code class="docutils literal"><span class="pre">DiracDelta</span></code> functions should be
+involved in the model description.</p>
 <p>Counting of compartment/pool/reservoir numbers starts at zero and the
 total number of pools is <span class="math">\(d\)</span>.</p>
 <p class="rubric">Classes</p>
@@ -109,7 +109,7 @@ Its entries are SymPy symbols.</p>
 <dt id="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.state_variables">
 <code class="descname">state_variables</code><a class="headerlink" href="#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.state_variables" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>list of str</em> &#8211; Names of the variables in the state vector.
-Its entries are of type <cite>str</cite>.</p>
+Its entries are of type <code class="docutils literal"><span class="pre">str</span></code>.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -122,23 +122,23 @@ Its entries are of type <cite>str</cite>.</p>
 <dt id="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.input_fluxes">
 <code class="descname">input_fluxes</code><a class="headerlink" href="#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.input_fluxes" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict</em> &#8211; The model&#8217;s external input fluxes.
-<cite>{key1: flux1, key2: flux2}</cite> with <cite>key</cite> the pool number and <cite>flux</cite>
-a SymPy expression for the influx.</p>
+<code class="docutils literal"><span class="pre">{key1:</span> <span class="pre">flux1,</span> <span class="pre">key2:</span> <span class="pre">flux2}</span></code> with <code class="docutils literal"><span class="pre">key</span></code> the pool number and
+<code class="docutils literal"><span class="pre">flux</span></code> a SymPy expression for the influx.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.output_fluxes">
 <code class="descname">output_fluxes</code><a class="headerlink" href="#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.output_fluxes" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict</em> &#8211; The model&#8217;s external output fluxes.
-<cite>{key1: flux1, key2: flux2}</cite> with <cite>key</cite> the pool number and <cite>flux</cite>
-a SymPy expression for the outflux.</p>
+<code class="docutils literal"><span class="pre">{key1:</span> <span class="pre">flux1,</span> <span class="pre">key2:</span> <span class="pre">flux2}</span></code> with <code class="docutils literal"><span class="pre">key</span></code> the pool number and
+<code class="docutils literal"><span class="pre">flux</span></code> a SymPy expression for the outflux.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.internal_fluxes">
 <code class="descname">internal_fluxes</code><a class="headerlink" href="#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.internal_fluxes" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict</em> &#8211; The model&#8217;s internal_fluxes.
-<cite>{key1: flux1, key2: flux2}</cite> with <cite>key = (pool_from, pool_to)</cite>
+<code class="docutils literal"><span class="pre">{key1:</span> <span class="pre">flux1,</span> <span class="pre">key2:</span> <span class="pre">flux2}</span></code> with <code class="docutils literal"><span class="pre">key</span> <span class="pre">=</span> <span class="pre">(pool_from,</span> <span class="pre">pool_to)</span></code>
 and <em>flux</em> a SymPy expression for the flux.</p>
 </dd></dl>
 
@@ -153,18 +153,19 @@ and <em>flux</em> a SymPy expression for the flux.</p>
 Its entries are SymPy symbols.</li>
 <li><strong>time_symbol</strong> (<em>SymPy symbol</em>) &#8211; The model&#8217;s time symbol.</li>
 <li><strong>input_fluxes</strong> (<em>dict</em>) &#8211; The model&#8217;s external input fluxes.
-<cite>{key1: flux1, key2: flux2}</cite> with <cite>key</cite> the pool number
-and <cite>flux</cite> a SymPy expression for the influx.</li>
+<code class="docutils literal"><span class="pre">{key1:</span> <span class="pre">flux1,</span> <span class="pre">key2:</span> <span class="pre">flux2}</span></code> with <code class="docutils literal"><span class="pre">key</span></code> the pool number
+and <code class="docutils literal"><span class="pre">flux</span></code> a SymPy expression for the influx.</li>
 <li><strong>output_fluxes</strong> (<em>dict</em>) &#8211; The model&#8217;s external output fluxes.
-<cite>{key1: flux1, key2: flux2}</cite> with <cite>key</cite> the pool number
-and <cite>flux</cite> a SymPy expression for the outflux.</li>
+<code class="docutils literal"><span class="pre">{key1:</span> <span class="pre">flux1,</span> <span class="pre">key2:</span> <span class="pre">flux2}</span></code> with <code class="docutils literal"><span class="pre">key</span></code> the pool number
+and <code class="docutils literal"><span class="pre">flux</span></code> a SymPy expression for the outflux.</li>
 <li><strong>internal_fluxes</strong> (<em>dict</em>) &#8211; The model&#8217;s internal_fluxes.
-<cite>{key1: flux1, key2: flux2}</cite> with <cite>key = (pool_from, pool_to)</cite>
-and <cite>flux</cite> a SymPy expression for the flux.</li>
+<code class="docutils literal"><span class="pre">{key1:</span> <span class="pre">flux1,</span> <span class="pre">key2:</span> <span class="pre">flux2}</span></code> with
+<code class="docutils literal"><span class="pre">key</span> <span class="pre">=</span> <span class="pre">(pool_from,</span> <span class="pre">pool_to)</span></code> and <code class="docutils literal"><span class="pre">flux</span></code> a SymPy expression
+for the flux.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-obj docutils literal"><span class="pre">SmoothReservoirModel</span></code></a></p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-class docutils literal"><span class="pre">SmoothReservoirModel</span></code></a></p>
 </td>
 </tr>
 </tbody>
@@ -268,7 +269,7 @@ no legend. Defaults to False.</li>
 <dt id="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.from_A_u">
 <em class="property">classmethod </em><code class="descname">from_A_u</code><span class="sig-paren">(</span><em>state_vector</em>, <em>time_symbol</em>, <em>A</em>, <em>u</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_reservoir_model.html#SmoothReservoirModel.from_A_u"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.from_A_u" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="docutils">
-<dt>Construct and return a <a class="reference internal" href="#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-obj docutils literal"><span class="pre">SmoothReservoirModel</span></code></a> instance from</dt>
+<dt>Construct and return a <a class="reference internal" href="#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-class docutils literal"><span class="pre">SmoothReservoirModel</span></code></a> instance from</dt>
 <dd><span class="math">\(\dot{x}=A\,x+u\)</span></dd>
 </dl>
 <table class="docutils field-list" frame="void" rules="none">
@@ -285,7 +286,7 @@ Its entries are SymPy symbols.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-obj docutils literal"><span class="pre">SmoothReservoirModel</span></code></a></p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-class docutils literal"><span class="pre">SmoothReservoirModel</span></code></a></p>
 </td>
 </tr>
 </tbody>
@@ -322,8 +323,8 @@ Its entries are SymPy symbols.</li>
 <tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
 <li>xi (SymPy number): Environmental coefficient.</li>
 <li><dl class="first docutils">
-<dt>T (SymPy dxd-matrix): Internal fluxes. Main diagonal contains <cite>-1</cite></dt>
-<dd>entries.</dd>
+<dt>T (SymPy dxd-matrix): Internal fluxes. Main diagonal contains</dt>
+<dd><code class="docutils literal"><span class="pre">-1</span></code> entries.</dd>
 </dl>
 </li>
 <li><dl class="first docutils">
