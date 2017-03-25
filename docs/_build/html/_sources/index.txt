@@ -38,10 +38,10 @@ Table of Contents
     ~CompartmentalSystems.smooth_model_run
 
 
-Jupyter notebook example
-------------------------
+Jupyter notebook examples
+-------------------------
 
-* :download:`Nonlinear global carbon cycle model (html) <../notebooks/nonl_gcm_3p/nonl_gcm_3p.html>`
+* `Nonlinear global carbon cycle model (html) <_downloads/nonl_gcm_3p.html>`_ :download:`. <../notebooks/nonl_gcm_3p/nonl_gcm_3p.html>`
 * :download:`Nonlinear global carbon cycle model (ipynb) <../notebooks/nonl_gcm_3p/nonl_gcm_3p.ipynb>`
 
 

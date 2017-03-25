@@ -38,8 +38,8 @@ Further required packages can be found in the install script.
 Jupyter notebook examples
 -------------------------
 
-- [Nonlinear global carbon cycle model (html)](notebooks/nonl_gcm_3p.html)
-- [Nonlinear global carbon cycle model (ipynb)](notebooks/nonl_gcm_3p.ipynb)
+- [Nonlinear global carbon cycle model (html)](notebooks/nonl_gcm_3p/nonl_gcm_3p.html)
+- [Nonlinear global carbon cycle model (ipynb)](notebooks/nonl_gcm_3p/nonl_gcm_3p.ipynb)
 
 
 
