@@ -1,4 +1,4 @@
-This is a Python package for compartmental systems.
+# CompartmentalSystem: A Python package for the analysis of compartmental systems
 
 Python package to deal with compartmental models. These models can
 be both nonlinear and nonautonomous. Consequently, this package can be seen
@@ -8,7 +8,7 @@ While [LAPM](https://github.com/goujou/LAPM) also allows explicit symbolic compu
 in compartmental systems, this package is mostly concerned with numerical
 computations of
 
-* age
+* Age
 
     * compartmental age densities
     * system age densities
@@ -17,7 +17,7 @@ computations of
     * compartmental age quantiles
     * system age quantiles
 
-* transit time
+* Transit time
 
     * forward and backward transit time densities
     * backward transit time mean and higher order moments
