@@ -12,6 +12,6 @@ pip3 install scipy
 pip3 install sympy
 pip3 install tqdm
 
-pip3 install git+https://github.com/goujou/LAPM
+pip3 install git+https://github.com/MPIBGC-TEE/LAPM
 
 python3 setup.py develop
