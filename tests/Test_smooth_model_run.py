@@ -531,7 +531,42 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
+        smr = SmoothModelRun(srm, {}, start_values, times)
 
+        ages = np.linspace(-1,1,3)
+        # negative ages will be cut off automatically
+        start_age_densities = lambda a: np.exp(-a)*start_values
+
+        p = smr.pool_age_densities_func(start_age_densities)
+        pool_age_densities = p(ages)
+        system_age_density = smr.system_age_density(pool_age_densities)
+        
+        age_densities = smr.age_densities(pool_age_densities, system_age_density)
+
+        a_ref = np.array(
+            [[[ 0.        ,  0.        ,  0.        ],
+              [ 0.        ,  0.        ,  0.        ],
+              [ 0.        ,  0.        ,  0.        ],
+              [ 0.        ,  0.        ,  0.        ],
+              [ 0.        ,  0.        ,  0.        ],
+              [ 0.        ,  0.        ,  0.        ]],
+            
+             [[ 5.        ,  3.        ,  8.        ],
+              [ 1.        ,  2.        ,  3.        ],
+              [ 1.        ,  2.        ,  3.        ],
+              [ 1.        ,  2.        ,  3.        ],
+              [ 1.        ,  2.        ,  3.        ],
+              [ 1.        ,  2.        ,  3.        ]],
+            
+             [[ 1.83939721,  1.10363832,  2.94303553],
+              [ 1.83939724,  1.10363834,  2.94303558],
+              [ 1.83939726,  1.10363835,  2.94303561],
+              [ 1.83939725,  1.10363835,  2.9430356 ],
+              [ 1.8393973 ,  1.10363838,  2.94303568],
+              [ 1.83939729,  1.10363837,  2.94303566]]])
+
+        ref = np.ndarray((3,6,3), np.float, a_ref)
+        self.assertTrue(np.allclose(age_densities, ref))
 
     def test_system_age_density_single_value(self):
         # two-dimensional

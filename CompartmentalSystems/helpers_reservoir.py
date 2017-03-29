@@ -369,11 +369,12 @@ def MH_sampling(N, PDF, start = 1.0):
 
 
 def save_csv(filename, melted, header):
-    np.savetxt(filename, melted, header = header, delimiter=',', fmt="%10.8f")
+    np.savetxt(filename, melted, header = header, 
+                    delimiter=',', fmt="%10.8f", comments='')
 
 
 def load_csv(filename):
-    #return np.#loadtxt(filename, skiprows=1, delimiter=',', comments='')
+    #return np.loadtxt(filename, skiprows=1, delimiter=',', comments='')
     return np.loadtxt(filename, skiprows=1, delimiter=',')
     
 

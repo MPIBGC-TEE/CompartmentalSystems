@@ -574,7 +574,7 @@ class SmoothModelRun(object):
         nr_ages = pool_age_densities.shape[0]
         nr_times = pool_age_densities.shape[1]
 
-        _age_densities = np.zeros(nr_ages, nr_times, n+1)
+        _age_densities = np.zeros((nr_ages, nr_times, n+1))
         _age_densities[:,:,:n] = pool_age_densities
         _age_densities[:,:,n] = system_age_density
 
