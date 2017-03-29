@@ -30,6 +30,9 @@ computations of
 ---
 
 Installation simply via the install script `install.sh`.
+Use either `develop` or `install` as additional parameter, it will be 
+passed to the `python3 setup.py` call.
+
 Be sure to have [LAPM](https://github.com/MPIBPG-TEE/LAPM) installed.
 Further required packages can be found in the install script.
 

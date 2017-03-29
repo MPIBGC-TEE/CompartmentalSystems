@@ -618,7 +618,7 @@
         <span class="n">nr_ages</span> <span class="o">=</span> <span class="n">pool_age_densities</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">nr_times</span> <span class="o">=</span> <span class="n">pool_age_densities</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 
-        <span class="n">_age_densities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nr_ages</span><span class="p">,</span> <span class="n">nr_times</span><span class="p">,</span> <span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">_age_densities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nr_ages</span><span class="p">,</span> <span class="n">nr_times</span><span class="p">,</span> <span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
         <span class="n">_age_densities</span><span class="p">[:,:,:</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">pool_age_densities</span>
         <span class="n">_age_densities</span><span class="p">[:,:,</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">system_age_density</span>
 
@@ -901,8 +901,8 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            cut_off (bool, optional): If True, no density values are going to </span>
-<span class="sd">                be computed after the end of the time grid, instead numpy.nan </span>
-<span class="sd">                will be returned. </span>
+<span class="sd">                be computed after the end of the time grid, instead </span>
+<span class="sd">                ``numpy.nan`` will be returned. </span>
 <span class="sd">                Defaults to True and False might lead to unexpected behavior.</span>
 <span class="sd">        </span>
 <span class="sd">        Returns:</span>
@@ -943,8 +943,8 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            cut_off (bool, optional): If True, no density values are going to </span>
-<span class="sd">                be computed after the end of the time grid, instead numpy.nan </span>
-<span class="sd">                will be returned. </span>
+<span class="sd">                be computed after the end of the time grid, instead </span>
+<span class="sd">                ``numpy.nan`` will be returned. </span>
 <span class="sd">                Defaults to True and False might lead to unexpected behavior.</span>
 <span class="sd">        </span>
 <span class="sd">        Returns:</span>

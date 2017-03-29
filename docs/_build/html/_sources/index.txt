@@ -1,7 +1,7 @@
 Compartmental Systems
 =====================
 
-`CompartmentalSystems <https://github.com/goujou/CompartmentalSystems>`_ is a 
+`CompartmentalSystems <https://github.com/MPIBGC-TEE/CompartmentalSystems>`_ is a 
 Python package to deal with compartmental models of the form
 
 .. math:: \frac{d}{dt}\,x(t) = A(x(t),t)\,x(t) + u(t).

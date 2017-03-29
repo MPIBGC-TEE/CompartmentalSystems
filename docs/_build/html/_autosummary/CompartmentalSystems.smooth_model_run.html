@@ -374,7 +374,7 @@ The <code class="docutils literal"><span class="pre">order</span></code> th pool
 
 <dl class="method">
 <dt id="CompartmentalSystems.smooth_model_run.SmoothModelRun.apply_to_forward_transit_time_simulation">
-<code class="descname">apply_to_forward_transit_time_simulation</code><span class="sig-paren">(</span><em>f_dict={'mean': &lt;Mock id='140305003550256'&gt;}</em>, <em>N=10000</em>, <em>M=2</em>, <em>k=5</em>, <em>MH=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun.apply_to_forward_transit_time_simulation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.apply_to_forward_transit_time_simulation" title="Permalink to this definition">¶</a></dt>
+<code class="descname">apply_to_forward_transit_time_simulation</code><span class="sig-paren">(</span><em>f_dict={'mean': &lt;Mock id='140183241074616'&gt;}</em>, <em>N=10000</em>, <em>M=2</em>, <em>k=5</em>, <em>MH=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/CompartmentalSystems/smooth_model_run.html#SmoothModelRun.apply_to_forward_transit_time_simulation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#CompartmentalSystems.smooth_model_run.SmoothModelRun.apply_to_forward_transit_time_simulation" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is just a tentative approach.</p>
 <p>To be honest, the problem of an unkown infinite future cannot be solved
 this way, since the densities used to simulate forward transit time
@@ -830,8 +830,8 @@ density.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cut_off</strong> (<em>bool, optional</em>) &#8211; If True, no density values are going to
-be computed after the end of the time grid, instead numpy.nan
-will be returned.
+be computed after the end of the time grid, instead
+<code class="docutils literal"><span class="pre">numpy.nan</span></code> will be returned.
 Defaults to True and False might lead to unexpected behavior.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Python function <code class="docutils literal"><span class="pre">p</span></code>: <code class="docutils literal"><span class="pre">p(ages)</span></code> is a <code class="docutils literal"><span class="pre">numpy.ndarray</span></code>
@@ -853,8 +853,8 @@ forward transit time density.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cut_off</strong> (<em>bool, optional</em>) &#8211; If True, no density values are going to
-be computed after the end of the time grid, instead numpy.nan
-will be returned.
+be computed after the end of the time grid, instead
+<code class="docutils literal"><span class="pre">numpy.nan</span></code> will be returned.
 Defaults to True and False might lead to unexpected behavior.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Python function <code class="docutils literal"><span class="pre">p_sv</span></code>: <code class="docutils literal"><span class="pre">p_sv(a,</span> <span class="pre">t)</span></code> returns how much mass will

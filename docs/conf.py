@@ -184,7 +184,7 @@ html_theme = 'alabaster'
 # documentation.
 html_theme_options = {'sidebar_width': '400px', 
                       'page_width': '1240px',
-                      'github_user': 'goujou',
+                      'github_user': 'MPIBGC-TEE',
                       'github_repo': 'CompartmentalSystems',
                       'github_button': False}
 
