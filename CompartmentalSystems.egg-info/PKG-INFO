@@ -6,17 +6,16 @@ Home-page: UNKNOWN
 Author: Holger Metzler, Markus Müller
 Author-email: hmetzler@bgc-jena.mpg.de
 License: UNKNOWN
-Description: This is a Python package for compartmental systems.
+Description: # CompartmentalSystem: A Python3 package for the analysis of compartmental systems
         
-        Python package to deal with compartmental models. These models can
-        be both nonlinear and nonautonomous. Consequently, this package can be seen
-        as an extension of [LAPM](https://github.com/goujou/LAPM) which deals
+        These systems can be both nonlinear and nonautonomous. Consequently, this package can be seen
+        as an extension of [LAPM](https://github.com/MPIBGC-TEE/LAPM) which deals
         with linear autonomous models.
-        While [LAPM](https://github.com/goujou/LAPM) also allows explicit symbolic compuations of age distributions 
+        While [LAPM](https://github.com/MPIBGC-TEE/LAPM) also allows explicit symbolic compuations of age distributions 
         in compartmental systems, this package is mostly concerned with numerical
         computations of
         
-        * age
+        * Age
         
             * compartmental age densities
             * system age densities
@@ -25,7 +24,7 @@ Description: This is a Python package for compartmental systems.
             * compartmental age quantiles
             * system age quantiles
         
-        * transit time
+        * Transit time
         
             * forward and backward transit time densities
             * backward transit time mean and higher order moments
@@ -38,7 +37,10 @@ Description: This is a Python package for compartmental systems.
         ---
         
         Installation simply via the install script `install.sh`.
-        Be sure to have [LAPM](https://github.com/goujou/LAPM) installed.
+        Use either `develop` or `install` as additional parameter, it will be 
+        passed to the `python3 setup.py` call.
+        
+        Be sure to have [LAPM](https://github.com/MPIBPG-TEE/LAPM) installed.
         Further required packages can be found in the install script.
         
         ---
@@ -46,8 +48,8 @@ Description: This is a Python package for compartmental systems.
         Jupyter notebook examples
         -------------------------
         
-        - [Nonlinear global carbon cycle model (html)](http://htmlpreview.github.io/?https://github.com/goujou/CompartmentalSystems/blob/master/notebooks/nonl_gcm_3p/nonl_gcm_3p.html)
-        - [Nonlinear global carbon cycle model (ipynb)](notebooks/nonl_gcm_3p/nonl_gcm_3p.ipynb)
+        - [Analysis of a nonlinear global carbon cycle model (html)](http://htmlpreview.github.io/?https://github.com/MPIBGC-TEE/CompartmentalSystems/blob/master/notebooks/nonl_gcm_3p/nonl_gcm_3p.html)
+        - [Analysis of a nonlinear global carbon cycle model (ipynb)](notebooks/nonl_gcm_3p/nonl_gcm_3p.ipynb)
         
         
         

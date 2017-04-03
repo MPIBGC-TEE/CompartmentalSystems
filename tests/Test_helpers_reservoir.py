@@ -5,10 +5,10 @@ import unittest
 
 import matplotlib.pyplot as plt
 import numpy as np
-from sympy import Matrix, symbols, sin, Piecewise, DiracDelta
+from sympy import Symbol,Matrix, symbols, sin, Piecewise, DiracDelta
 
 from CompartmentalSystems.helpers_reservoir import (factor_out_from_matrix, 
-    parse_input_function, melt, MH_sampling, stride)
+    parse_input_function, melt, MH_sampling, stride, is_compartmental)
 
 class TestHelpers_reservoir(unittest.TestCase):
 
@@ -99,6 +99,11 @@ class TestHelpers_reservoir(unittest.TestCase):
         self.assertTrue(np.all(melted==ref))
 
     def test_MH_sampling(self):
+        # fixme:
+        # fails sometimes because of bad random values
+        # perhaps a fixed random seed would help
+
+
         # uniform distribution on [0,1]
         PDF = lambda x: 1 if x>=0 and x<=1 else 0
         rvs = MH_sampling(200000, PDF)
@@ -141,6 +146,12 @@ class TestHelpers_reservoir(unittest.TestCase):
         
         strided_times = stride(times, 1)
         self.assertTrue(np.all(strided_times==times))
+
+    def test_is_compartmental(self):
+        k=Symbol('k',positive=True, real=True)
+        l=Symbol('l',positive=True, real=True)
+        M=Matrix([[-k,0],[0,-l]])
+        self.assertTrue(is_compartmental(M))
 
 
 

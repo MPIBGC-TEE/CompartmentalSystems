@@ -404,6 +404,9 @@ def stride(data, strides):
 
     return data[np.ix_(*index_list)]
 
-
+def is_compartmental(M):    
+    gen=range(M.shape[0])
+    return all([M.is_square,all([M[i,i]<=0 for i in gen]), all([sum(M[i,:])<=0 for i in gen])])    
+    
 
 
