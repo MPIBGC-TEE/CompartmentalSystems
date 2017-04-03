@@ -34,7 +34,7 @@ class TestSmoothReservoirModel(InDirTest):
         self.assertEqual(rm._internal_flux_type(0,1), 'linear')
         self.assertEqual(rm._internal_flux_type(1,0), 'nonlinear')
 
-        # (1,0): 4 is considered to be nonlinear : in A the corresponding entry is 4/C_1
+        # (1,0): 4 is considered to be nonlinear : in B the corresponding entry is 4/C_1
         internal_fluxes = {(0,1): C_0+5, (1,0): C_1/C_0}
 
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
@@ -56,7 +56,7 @@ class TestSmoothReservoirModel(InDirTest):
         self.assertEqual(rm._output_flux_type(0), 'linear')
         self.assertEqual(rm._output_flux_type(1), 'nonlinear')
 
-        # (1,0): 4 is considered to be nonlinear : in A the corresponding entry is 4/C_1
+        # (1,0): 4 is considered to be nonlinear : in B the corresponding entry is 4/C_1
         output_fluxes = {0: C_0+5, 1: C_1/C_0}
 
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
@@ -91,9 +91,9 @@ class TestSmoothReservoirModel(InDirTest):
                     [t_21,   -1, t_23],
                     [t_31, t_32,   -1]])
         N = diag(k_1, k_2, k_3)
-        A = gamma*T*N
+        B = gamma*T*N
 
-        rm=SmoothReservoirModel.from_A_u(C,t,A,u)
+        rm=SmoothReservoirModel.from_B_u(C,t,B,u)
 
         self.assertEqual(rm.input_fluxes, {0: u_1, 1: u_2, 2: u_3})
         self.assertEqual(rm.output_fluxes, {0: gamma*k_1*(1-t_21-t_31)*C_1,
@@ -111,18 +111,18 @@ class TestSmoothReservoirModel(InDirTest):
         self.assertEqual(T,T2)
         self.assertEqual(N,N2)
 
-    def test_Au_matrices_to_fluxes_and_back(self):
-        # f = u + xi*A*C
+    def test_Bu_matrices_to_fluxes_and_back(self):
+        # f = u + xi*B*C
         t,C_1, C_2, C_3, k_1, k_2, k_3, a_12, a_13, a_21, a_23, a_31, a_32, u_1, u_2, u_3, gamma, xi \
         = symbols('t,C_1 C_2 C_3 k_1 k_2 k_3 a_12 a_13 a_21 a_23 a_31 a_32 u_1 u_2 u_3 gamma xi')
         C = Matrix(3,1, [C_1, C_2, C_3])
         u = Matrix(3,1, [u_1, u_2, u_3])
-        A = gamma*Matrix([
+        B = gamma*Matrix([
                 [-k_1, a_12, a_13],
                 [a_21, -k_2, a_23],
                 [a_31, a_32, -k_3]
             ])
-        rm = SmoothReservoirModel.from_A_u(C,t,A,u)
+        rm = SmoothReservoirModel.from_B_u(C,t,B,u)
         self.assertEqual(rm.input_fluxes, {0: u_1, 1: u_2, 2: u_3})
         self.assertEqual(rm.output_fluxes, {0: gamma*(k_1-a_21-a_31)*C_1,
                                    1: gamma*(k_2-a_12-a_32)*C_2,
@@ -134,10 +134,10 @@ class TestSmoothReservoirModel(InDirTest):
             (2,0): gamma*a_13*C_3, (2,1): gamma*a_23*C_3})
             
         ## test backward conversion to compartmental matrix 
-        A2 = rm.compartmental_matrix
+        B2 = rm.compartmental_matrix
         u2 = rm.external_inputs
         self.assertEqual(u,u2)
-        self.assertEqual(A,A2)
+        self.assertEqual(B,B2)
 
     def test_matrix_to_flux_and_back_nonlinear(self):
         # f = u + xi*T*N*C
@@ -150,7 +150,7 @@ class TestSmoothReservoirModel(InDirTest):
                     [t_21,   -1, t_23],
                     [t_31*k_1, t_32,   -1]])
         N = diag(k_1*C_2, k_2/C_3, k_3)
-        rm = SmoothReservoirModel.from_A_u(C,t,xi*T*N,u)
+        rm = SmoothReservoirModel.from_B_u(C,t,xi*T*N,u)
          
         self.assertEqual(rm.input_fluxes, {0: u_1, 1: u_2, 2: u_3})
         self.assertEqual(rm.output_fluxes, {0: 2*gamma*k_1*(1-t_21-t_31*k_1)*C_1*C_2,
@@ -184,10 +184,10 @@ class TestSmoothReservoirModel(InDirTest):
     def test_age_moment_system(self):
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
-        A = Matrix([[-1, 0],
+        B = Matrix([[-1, 0],
                     [ 0,-2]])
         u = Matrix(2, 1, [9,1])
-        srm = SmoothReservoirModel.from_A_u(state_vector, t, A, u)
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         max_order = 1
         extended_state, extended_rhs = srm.age_moment_system(max_order)

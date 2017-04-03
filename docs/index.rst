@@ -4,11 +4,11 @@ Compartmental Systems
 `CompartmentalSystems <https://github.com/MPIBGC-TEE/CompartmentalSystems>`_ is a 
 Python package to deal with compartmental models of the form
 
-.. math:: \frac{d}{dt}\,x(t) = A(x(t),t)\,x(t) + u(t).
+.. math:: \frac{d}{dt}\,x(t) = B(x(t),t)\,x(t) + u(t).
 
 Since most computations are based on the state transition operator :math:`\Phi` that solves
 
-.. math:: \frac{d}{dt}\,\Phi(t,s) = A(t)\,\Phi(t,s),\quad \Phi(s,s) = \bf{I},
+.. math:: \frac{d}{dt}\,\Phi(t,s) = B(t)\,\Phi(t,s),\quad \Phi(s,s) = \bf{I},
 
 nonlinear models need to be linearized in the first step. Then the package provides numerical computation of
 
@@ -48,11 +48,11 @@ Jupyter notebook examples
 Important Note
 --------------
 
-:math:`A(t)=(a_{ij}(t))` is supposed to be a *compartmental matrix* for all times :math:`t`:
+:math:`B(t)=(b_{ij}(t))` is supposed to be a *compartmental matrix* for all times :math:`t`:
 
-* :math:`a_{ii}(t)\leq0` for all :math:`i`
-* :math:`a_{ij}(t)\geq0` for :math:`i\neq j`
-* :math:`\sum\limits_{i=1}^d a_{ij}(t)\leq 0` for all :math:`j`
+* :math:`b_{ii}(t)\leq0` for all :math:`i`
+* :math:`b_{ij}(t)\geq0` for :math:`i\neq j`
+* :math:`\sum\limits_{i=1}^d b_{ij}(t)\leq 0` for all :math:`j`
 
 
 ----------------------------------

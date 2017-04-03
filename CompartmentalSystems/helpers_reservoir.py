@@ -41,7 +41,7 @@ def parse_input_function(u_i, time_symbol):
     """Return an ordered list of jumps in the input function u.
 
     Args:
-        u (SymPy expression): input function in :math:`\\dot{x} = A\\,x + u`
+        u (SymPy expression): input function in :math:`\\dot{x} = B\\,x + u`
 
     Returns:
         ascending list of jumps in u

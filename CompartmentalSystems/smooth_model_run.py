@@ -104,37 +104,37 @@ class SmoothModelRun(object):
         self._state_transition_operator_values = None
 
 
-    # create self.A(t)
+    # create self.B(t)
 
-    # in a linear model, A(t) is independent of the state_variables,
-    # consequently, we can call _A with X = 0,
+    # in a linear model, B(t) is independent of the state_variables,
+    # consequently, we can call _B with X = 0,
     # in a nonlinear model we would need to compute X(t) 
     # by solving the ODE first,
     # then plug it in --> much slower 
     # --> influences quantiles and forward transit time computation time
 
     # --> this should be respected by the class to which the model belongs
-    def A(self, t):
-        """Return :math:`A(t)` with :math:`A` from 
-        :math:`\\dot{x} = A\\,x+u.`
+    def B(self, t):
+        """Return :math:`B(t)` with :math:`B` from 
+        :math:`\\dot{x} = B\\,x+u.`
 
         Args:
-            t (float): The time at which :math:`A` is to be evaluated.
+            t (float): The time at which :math:`B` is to be evaluated.
 
         Returns:
             numpy.ndarray: The compartmental matrix evaluated at time ``t``.
         """
-        if not hasattr(self, '_A'):
+        if not hasattr(self, '_B'):
             #fixme: what about a piecewise in the matrix?
             # is this here the right place to do it??
             cm_par = self.model.compartmental_matrix.subs(self.parameter_set)
             tup = tuple(self.model.state_vector)+(self.model.time_symbol.name,)
             cut_func_set = {key[:key.index('(')]: val 
                                 for key, val in self.func_set.items()}
-            A_func = lambdify(tup, cm_par, [cut_func_set, 'numpy'])
+            B_func = lambdify(tup, cm_par, [cut_func_set, 'numpy'])
         
-            def _A(t):
-                #print('A', t)
+            def _B(t):
+                #print('B', t)
                 #fixme: another times cut off!
                 t = min(t, self.times[-1])
                 #print(t)
@@ -143,11 +143,11 @@ class SmoothModelRun(object):
                 # for a linear model this is OK (and faster)
                 X = np.ones((self.nr_pools,)) 
                 Xt = tuple(X) + (t,)
-                return A_func(*Xt)
+                return B_func(*Xt)
 
-            self._A = _A
+            self._B = _B
 
-        return self._A(t)     
+        return self._B(t)     
 
     def linearize(self):
         """Return a linearized SmoothModelRun instance.
@@ -186,17 +186,17 @@ class SmoothModelRun(object):
             sol_dict[key] = func_maker(pool)
 
 
-        linearized_A = (xi*T*N).subs(symbolic_sol_funcs)
+        linearized_B = (xi*T*N).subs(symbolic_sol_funcs)
         linearized_u = u.subs(symbolic_sol_funcs)
 
         func_set = self.func_set
         func_set.update(sol_dict)
 
         cl=srm.__class__
-        linearized_srm = cl.from_A_u(
+        linearized_srm = cl.from_B_u(
             srm.state_vector, 
             srm.time_symbol, 
-            linearized_A, 
+            linearized_B, 
             linearized_u
         )      
 
@@ -884,7 +884,7 @@ class SmoothModelRun(object):
             if sum(u) == 0: return np.nan
             if (a < 0): return 0.0
             
-            return -self.A(t+a).dot(Phi(t+a, t, u)).sum()
+            return -self.B(t+a).dot(Phi(t+a, t, u)).sum()
 
         return p_ftt_sv
 
@@ -2525,23 +2525,23 @@ class SmoothModelRun(object):
             u_val = u(t_val)[pool]
             F_vec = F(y, t_val).reshape((n,1))
             x_vec = sol_funcs(t_val).reshape((n,1))
-            A = self.A(t_val)
+            B = self.B(t_val)
 
-            #print('A', A)
+            #print('B', B)
             #print('x', x_vec)
-            #print('A*x', A.dot(x_vec))
+            #print('B*x', B.dot(x_vec))
             #print('p', p_val)
             #print('u', u_val)
             #print('F', F_vec)
-            #print('A*F', A.dot(F_vec))
-            #print(A.dot(F_vec)[pool])
-            #print(A.dot(F_vec)[1])
+            #print('B*F', B.dot(F_vec))
+            #print(B.dot(F_vec)[pool])
+            #print(B.dot(F_vec)[1])
 
             if p_val == 0:
                 raise(Error('Division by zero during quantile computation.'))
             else:
                 res = (1 + 1/p_val*(u_val*(quantile-1.0)
-                        +quantile*(A.dot(x_vec))[pool]-(A.dot(F_vec))[pool]))
+                        +quantile*(B.dot(x_vec))[pool]-(B.dot(F_vec))[pool]))
             #print('res', res)
             #print('---')
 
@@ -2677,22 +2677,22 @@ class SmoothModelRun(object):
             u_vec = u(t_val)
             F_vec = F(y, t_val).reshape((n,1))
             x_vec = sol_funcs(t_val).reshape((n,1))
-            A = self.A(t_val)
+            B = self.B(t_val)
 
-            #print('A', A)
+            #print('B', B)
             #print('x', x_vec)
-            #print('A*x', A.dot(x_vec))
+            #print('B*x', B.dot(x_vec))
             #print('p', p_val)
             #print('u', u_vec)
             #print('F', F_vec)
-            #print('A*F', A.dot(F_vec))
+            #print('B*F', B.dot(F_vec))
 
-            #print(F_val/x_val.sum()*((A*x_val).sum()-(A*F_val).sum()))
+            #print(F_val/x_val.sum()*((B*x_val).sum()-(B*F_val).sum()))
             if p_val == 0:
                 raise(Error('Division by zero during quantile computation.'))
             else:
                 res = (1 + 1/p_val*(u_vec.sum()*(quantile-1.0)+
-                            quantile*(A.dot(x_vec)).sum()-(A.dot(F_vec)).sum()))
+                            quantile*(B.dot(x_vec)).sum()-(B.dot(F_vec)).sum()))
             #print('res', res)
 
             last_t = t_val

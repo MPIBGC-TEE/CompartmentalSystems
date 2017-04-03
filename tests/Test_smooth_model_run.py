@@ -191,10 +191,10 @@ class TestSmoothModelRun(InDirTest):
     def test_solve_symbolic(self):
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
-        A = Matrix([[-1, 0],
+        B = Matrix([[-1, 0],
                     [ 0,-2]])
         u = Matrix(2, 1, [0,1])
-        srm = SmoothReservoirModel.from_A_u(state_vector, t, A, u)
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
         smr = SmoothModelRun(srm, parameter_set={}, start_values=np.array([1,1]), times=np.linspace(0,1,10))
         a_ref = np.array([[ 1.        ,  1.        ], 
                           [ 0.89483932,  0.90036872],
@@ -716,13 +716,13 @@ class TestSmoothModelRun(InDirTest):
         # test mean age
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
-        A = Matrix([[-1, 0],
+        B = Matrix([[-1, 0],
                     [ 0,-2]])
         u = Matrix(2, 1, [0,1])
         start_values = np.array([1,2])
         times = np.linspace(0,1,3)
 
-        srm = SmoothReservoirModel.from_A_u(state_vector, t, A, u)
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
         smr = SmoothModelRun(srm, parameter_set={}, start_values=start_values, times=times)
 
         start_age_densities = lambda a: 2*np.exp(-2*a)*start_values
@@ -745,7 +745,7 @@ class TestSmoothModelRun(InDirTest):
         x, y, t = symbols("x y t")
         X = Matrix([x,y])
         u = Matrix(2, 1, [1, 2])
-        srm = SmoothReservoirModel.from_A_u(X, t, Matrix([[-1,0],[0,-1]]), u)
+        srm = SmoothReservoirModel.from_B_u(X, t, Matrix([[-1,0],[0,-1]]), u)
         
         start_values = np.array([1,1])
         times = np.linspace(0, 1, 10)
@@ -778,7 +778,7 @@ class TestSmoothModelRun(InDirTest):
         x, y, t = symbols("x y t")
         X = Matrix([x,y])
         u = Matrix(2, 1, [0, 1])
-        srm = SmoothReservoirModel.from_A_u(X, t, Matrix([[-1,0],[0,-1]]), u)
+        srm = SmoothReservoirModel.from_B_u(X, t, Matrix([[-1,0],[0,-1]]), u)
         
         start_values = np.array([1,0])
         times = np.linspace(0, 1, 11)
@@ -801,10 +801,10 @@ class TestSmoothModelRun(InDirTest):
     def test_age_moment_vector(self):
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
-        A = Matrix([[-1, 0],
+        B = Matrix([[-1, 0],
                     [ 0,-2]])
         u = Matrix(2, 1, [9,1])
-        srm = SmoothReservoirModel.from_A_u(state_vector, t, A, u)
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array([1,1])
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
@@ -833,10 +833,10 @@ class TestSmoothModelRun(InDirTest):
         # test empty initial pool, pool remains empty
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
-        A = Matrix([[-1, 0],
+        B = Matrix([[-1, 0],
                     [ 0,-2]])
         u = Matrix(2, 1, [9,0])
-        srm = SmoothReservoirModel.from_A_u(state_vector, t, A, u)
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array([1,0])
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
@@ -866,10 +866,10 @@ class TestSmoothModelRun(InDirTest):
         # test second moment for technical problems
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
-        A = Matrix([[-1, 0],
+        B = Matrix([[-1, 0],
                     [ 0,-2]])
         u = Matrix(2, 1, [9,1])
-        srm = SmoothReservoirModel.from_A_u(state_vector, t, A, u)
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array([1,0])
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
@@ -902,7 +902,7 @@ class TestSmoothModelRun(InDirTest):
         x, y, t = symbols("x y t")
         X = Matrix([x,y])
         u = Matrix([0,0])
-        srm = SmoothReservoirModel.from_A_u(X, t, Matrix([[-1,0],[0,-1]]), u)
+        srm = SmoothReservoirModel.from_B_u(X, t, Matrix([[-1,0],[0,-1]]), u)
 
         start_values = np.array([1,1])
         smr = SmoothModelRun(srm, {}, start_values, np.linspace(0,1,10))
@@ -922,7 +922,7 @@ class TestSmoothModelRun(InDirTest):
         x, y, t = symbols("x y t")
         X = Matrix([x,y])
         u = Matrix(2, 1, [0,1])
-        srm = SmoothReservoirModel.from_A_u(X, t, Matrix([[-1,0],[0,-1]]), u)
+        srm = SmoothReservoirModel.from_B_u(X, t, Matrix([[-1,0],[0,-1]]), u)
 
         start_values = np.array([0,0])
         smr = SmoothModelRun(srm, {}, start_values, np.linspace(0,1,10))
@@ -1107,13 +1107,13 @@ class TestSmoothModelRun(InDirTest):
         # test mean BTT 
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
-        A = Matrix([[-1, 0],
+        B = Matrix([[-1, 0],
                     [ 0,-2]])
         u = Matrix(2, 1, [0,1])
         start_values = np.array([1,2])
         times = np.linspace(0,1,3)
 
-        srm = SmoothReservoirModel.from_A_u(state_vector, t, A, u)
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
         smr = SmoothModelRun(srm, parameter_set={}, start_values=start_values, times=times)
 
         start_age_densities = lambda a: 2*np.exp(-2*a)*start_values
@@ -1133,10 +1133,10 @@ class TestSmoothModelRun(InDirTest):
     def test_backward_transit_time_moment(self):
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
-        A = Matrix([[-1, 0],
+        B = Matrix([[-1, 0],
                     [ 0,-2]])
         u = Matrix(2, 1, [9,1])
-        srm = SmoothReservoirModel.from_A_u(state_vector, t, A, u)
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array([1,1])
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
@@ -1164,12 +1164,12 @@ class TestSmoothModelRun(InDirTest):
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
         k = 10
-        A = Matrix([[-k,  0],
+        B = Matrix([[-k,  0],
                     [ 0, -k]])
         u = Matrix(2, 1, [1,1])
-        srm = SmoothReservoirModel.from_A_u(state_vector, t, A, u)
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
-        start_values = np.array(-A**(-1)*u)
+        start_values = np.array(-B**(-1)*u)
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,11))
 
         start_age_densities = lambda a: np.exp(-a*k) / start_values*np.array(u)
@@ -1184,9 +1184,9 @@ class TestSmoothModelRun(InDirTest):
         # test integration to infinity 
         x, t = symbols("x t")
         state_vector = Matrix([x])
-        A = Matrix([-1])
+        B = Matrix([-1])
         u = Matrix([1])
-        srm = SmoothReservoirModel.from_A_u(state_vector, t, A, u)
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
         
         start_values = np.array([1])
         n = 101
@@ -1198,7 +1198,7 @@ class TestSmoothModelRun(InDirTest):
         # some code to show possible problems with the sto
 #        Phi = smr._state_transition_operator
 #        Phi(1, 0, [1])
-#        A = smr._state_transition_operator_values[0,:,:,:].reshape((101,))
+#        B = smr._state_transition_operator_values[0,:,:,:].reshape((101,))
 #
 #        from scipy.integrate import odeint
 #        def rhs(X, t):
@@ -1208,10 +1208,10 @@ class TestSmoothModelRun(InDirTest):
 #            return odeint(rhs, X, [53, t])[-1]
 #
 #
-#        C = np.array([f(A[ti], t+1) for ti, t in enumerate(np.linspace(0, 99, 100))]).reshape((100,))
+#        C = np.array([f(B[ti], t+1) for ti, t in enumerate(np.linspace(0, 99, 100))]).reshape((100,))
 #
 #        ft = np.linspace(7, 10, 1001)
-#        print('A')
+#        print('B')
 #        plt.plot(ft, [Phi(54+t, 54, [1]) for t in ft])
 #        print('B')
 #        plt.plot(ft, np.exp(-ft), color = 'red')
@@ -1224,7 +1224,7 @@ class TestSmoothModelRun(InDirTest):
 #        from scipy.integrate import quad
 #        print(quad(integrand, 0, np.infty)[0])
 #
-#        #print(A)
+#        #print(B)
 #        #print(np.exp(-np.linspace(0,100,101)))
 #        #print(C)
 
@@ -1234,10 +1234,10 @@ class TestSmoothModelRun(InDirTest):
     def test_apply_to_forward_transit_time_simulation(self):
         x, t = symbols("x t")
         state_vector = Matrix([x])
-        A = Matrix([-1*(1.4+sin(2*pi/10*t))])
-        #A = Matrix([-1])
+        B = Matrix([-1*(1.4+sin(2*pi/10*t))])
+        #B = Matrix([-1])
         u = Matrix([1])
-        srm = SmoothReservoirModel.from_A_u(state_vector, t, A, u)
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
         
         start_values = np.array([1])
         n = 101
@@ -1685,10 +1685,10 @@ class TestSmoothModelRun(InDirTest):
     def test_solve_age_moment_system_single_value(self):
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
-        A = Matrix([[-1, 0],
+        B = Matrix([[-1, 0],
                     [ 0,-2]])
         u = Matrix(2, 1, [9,1])
-        srm = SmoothReservoirModel.from_A_u(state_vector, t, A, u)
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
         t_end = 1
         t_mid=(t_end-0)/2
         start_values = np.array([1,1])
@@ -1731,10 +1731,10 @@ class TestSmoothModelRun(InDirTest):
     def test_solve_age_moment_system(self):
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
-        A = Matrix([[-1, 0],
+        B = Matrix([[-1, 0],
                     [ 0,-2]])
         u = Matrix(2, 1, [9,1])
-        srm = SmoothReservoirModel.from_A_u(state_vector, t, A, u)
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array([1,1])
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))

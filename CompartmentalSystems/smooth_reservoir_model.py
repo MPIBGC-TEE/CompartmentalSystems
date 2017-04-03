@@ -94,18 +94,18 @@ class SmoothReservoirModel(object):
    # def add_model_run(self,mr):
    #     self.model_runs.append(mr)
 
-    # alternative constructor based on the formulation f=u+Ax
+    # alternative constructor based on the formulation f=u+Bx
     @classmethod
-    def from_A_u(cls, state_vector, time_symbol, A, u):
+    def from_B_u(cls, state_vector, time_symbol, B, u):
         """Construct and return a :class:`SmoothReservoirModel` instance from 
-           :math:`\\dot{x}=A\\,x+u`
+           :math:`\\dot{x}=B\\,x+u`
     
         Args:
             state_vector (SymPy dx1-matrix): The model's state vector 
                 :math:`x`.
                 Its entries are SymPy symbols.
             time_symbol (SymPy symbol): The model's time symbol.
-            A (SymPy dxd-matrix): The model's compartmental matrix.
+            B (SymPy dxd-matrix): The model's compartmental matrix.
             u (SymPy dx1-matrix): The model's external input vector.
     
         Returns:
@@ -119,7 +119,7 @@ class SmoothReservoirModel(object):
         
         # fixme mm:
         # we do not seem to have a check that makes sure 
-        # that the argument A is compartmental
+        # that the argument B is compartmental
         # maybe the fixme belongs rather to the SmoothModelRun class since 
         # we perhaps need parameters 
         
@@ -132,7 +132,7 @@ class SmoothReservoirModel(object):
         output_fluxes = dict()
         # calculate outputs
         for pool in range(state_vector.rows):
-            outp = -sum(A[:, pool]) * state_vector[pool]
+            outp = -sum(B[:, pool]) * state_vector[pool]
             outp = simplify(outp)
             if outp:
                 output_fluxes[pool] = outp
@@ -142,7 +142,7 @@ class SmoothReservoirModel(object):
         pipes = [(i,j) for i in range(state_vector.rows) 
                         for j in range(state_vector.rows) if i != j]
         for pool_from, pool_to in pipes:
-            flux = A[pool_to, pool_from] * state_vector[pool_from]
+            flux = B[pool_to, pool_from] * state_vector[pool_from]
             flux = simplify(flux)
             if flux:
                 internal_fluxes[(pool_from, pool_to)] = flux
@@ -155,7 +155,7 @@ class SmoothReservoirModel(object):
     @property
     def F(self):
         """SymPy dx1-matrix: The right hand side of the differential equation 
-        :math:`\\dot{x}=A\\,x+u`."""
+        :math:`\\dot{x}=B\\,x+u`."""
         v = (self.external_inputs + self.internal_inputs
                 - self.internal_outputs - self.external_outputs)
         for i in range(len(v)):
@@ -268,11 +268,11 @@ class SmoothReservoirModel(object):
 
     @property
     def compartmental_matrix(self):
-        """SymPy Matrix: :math:`A` from 
-        :math:`\\dot{x} = A\\,x+u`.
+        """SymPy Matrix: :math:`B` from 
+        :math:`\\dot{x} = B\\,x+u`.
 
         Returns:
-            SymPy dxd-matrix: :math:`A = \\xi\\,T\\,N`
+            SymPy dxd-matrix: :math:`B = \\xi\\,T\\,N`
         """
         # could be computed directly from Jaquez
         # but since we need the xi*T*N decomposition anyway
@@ -297,7 +297,7 @@ class SmoothReservoirModel(object):
         u = self.external_inputs
         #X = Matrix(self.state_variables)
         X = self.state_vector
-        A = self.compartmental_matrix
+        B = self.compartmental_matrix
 
         n = self.nr_pools
         extended_state = list(X)
@@ -307,7 +307,7 @@ class SmoothReservoirModel(object):
             additional_states = [Symbol(str(x)+'_moment_'+str(k)) for x in X]
             g = [k*former_additional_states[i]
                     +(sum([(additional_states[j]-additional_states[i])
-                        *A[i,j]*X[j] for j in range(n)])
+                        *B[i,j]*X[j] for j in range(n)])
                       -additional_states[i]*u[i])/X[i] for i in range(n)]
 
             former_additional_states = additional_states

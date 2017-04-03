@@ -1,5 +1,5 @@
-# this module provides some examples of reservoir systems that are used in the tests
-# to avoid global variables we put them in functions
+# this module provides some examples of reservoir systems that are used in the 
+# tests to avoid global variables we put them in functions
 from sympy import symbols, tanh, sin, cos, Matrix, pi
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
@@ -63,10 +63,10 @@ def emanuel(symbs):
     x = Matrix(5,1,[x_1, x_2, x_3, x_4, x_5])
     u = (1+sin(t*pi*2)/2)*Matrix(5, 1, [u_1, 0, u_3, 0, 0])
     
-    A  = (1+cos(t*pi*2))*Matrix([[-F_1,        0,       0,       0,        0],
+    B  = (1+cos(t*pi*2))*Matrix([[-F_1,        0,       0,       0,        0],
                                  [F_21,     -F_2,       0,       0,        0],
                                  [   0,        0,    -F_3,       0,        0],
                                  [F_41,     F_42,    F_43,    -F_4,        0],
                                  [   0,     F_52,    F_53,    F_54,     -F_5]])
-    srm = SmoothReservoirModel.from_A_u(x,t,A,u)
+    srm = SmoothReservoirModel.from_B_u(x,t,B,u)
     return srm
