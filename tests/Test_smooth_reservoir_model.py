@@ -4,7 +4,7 @@ import sys
 import unittest
 
 import numpy as np
-from sympy import Symbol, Matrix, symbols, diag 
+from sympy import Symbol, Matrix, symbols, diag, zeros, simplify
 
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
@@ -76,8 +76,9 @@ class TestSmoothReservoirModel(InDirTest):
         input_fluxes = {0: ADD}
 
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
-        J,R,C,u = rm.port_controlled_Hamiltonian_representation()
-
+        J,Q,C,u = rm.port_controlled_Hamiltonian_representation()
+        self.assertEqual(J, Matrix([[0,-r*df+k_B*B],[r*df-k_B*B, 0]]))
+        self.assertEqual(zeros(2),simplify(Q-Matrix([[(1-r)*df,0],[0, 0]])))
         self.assertEqual(u, Matrix([ADD, 0]))
 
     def test_xi_T_N_u_representation(self):
