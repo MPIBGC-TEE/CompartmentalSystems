@@ -64,6 +64,22 @@ class TestSmoothReservoirModel(InDirTest):
         self.assertEqual(rm._output_flux_type(0), 'no substrate dependence')
         self.assertEqual(rm._output_flux_type(1), 'nonlinear')
 
+    def test_port_controlled_Hamiltonian_representation(self):
+        # for the test the two pool microbial model is used
+        S,B,t,ux=symbols('S B,t,ux')
+        V,ADD,k_B,k_SD,r,A_f,K_m,k_S=symbols('V,ADD,k_B,k_SD,r,A_f,K_m,k_S')
+        state_vector = [S, B]
+        time_symbol = Symbol('t')
+        df      = k_S*A_f*S/(S+K_m)*B
+        output_fluxes= {0:(1-r)*df}
+        internal_fluxes= {(0,1):r*df,(1,0):k_B*B  }
+        input_fluxes = {0: ADD}
+
+        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        J,R,C,u = rm.port_controlled_Hamiltonian_representation()
+
+        self.assertEqual(u, Matrix([ADD, 0]))
+
     def test_xi_T_N_u_representation(self):
         u_0, u_1, C_0, C_1, gamma  = symbols('u_0 u_1 C_0 C_1 gamma')
         state_vector = [C_0, C_1]

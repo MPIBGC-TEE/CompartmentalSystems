@@ -211,7 +211,57 @@ class SmoothReservoirModel(object):
         """int: Return the number of pools involved in the model."""
         return(len(self.state_variables))
 
+    def port_controlled_Hamiltonian_representation(self):
+        """tuple: :math:`J, R, N, x, u` from 
+        :math:`\\dot{x} = [J(x)-R(x)] \\frac{\\partial}{\\partial x}H+u`.
+	with
+	:math:H=\\sum_i x_i \\implies \\frac{\\partial}{\\partial x}H = I
+
+        Returns:
+            tuple:
+            - J (skew symmetric SymPy dxd-matrix): Internal of internal fluxbalances. 
+	    	:math: J_{i,j}=r_{j,i}-r_{i,j) 
+            - Q (SymPy dxd-matrix): Diagonal matrix describing the dissipation (outfluxes) 
+                rates.
+            - x (SymPy dx1-matrix): The model's state vector.
+            - u (SymPy dx1-matrix): The model's external input vector.
+        """
+        nr_pools = self.nr_pools
+        inputs = self.input_fluxes
+        outputs = self.output_fluxes
+        internal_fluxes = self.internal_fluxes
+
+        C = self.state_vector
+
+        # convert inputs
+        u = self.external_inputs
+
+        # calculate decomposition operators
+        decomp_fluxes = []
+        for pool in range(nr_pools):
+            if pool in outputs.keys():
+                decomp_flux = outputs[pool]
+            else:
+                decomp_flux = 0
+            decomp_fluxes.append(simplify(decomp_flux))
+
+        Q = diag(*decomp_fluxes)
+
+        # calculate the skewsymmetric matrix J
+        J = zeros(nr_pools)
+        
+        for (i,j), flux in internal_fluxes.items():
+            J[j,i] +=flux
+            J[i,j] -=flux
+
+        return (J, Q, C, u)
+
     @property
+    # fixme mm:
+    # If the method does not return a single value it should not be decorated as a property
+    # T could be as well as N or u or xi but not the whole lot.
+    # The purpose of the property decorator is not to save parentheses but to make actual properties 
+    # indistinguishable from methods that synthesize them to give us flexibility in the implementation
     def xi_T_N_u_representation(self):
         """tuple: :math:`\\xi, T, N, x, u` from 
         :math:`\\dot{x} = \\xi\\,T\\,N\\,x+u`.
