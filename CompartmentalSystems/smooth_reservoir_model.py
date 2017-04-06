@@ -215,7 +215,7 @@ class SmoothReservoirModel(object):
         """tuple: :math:`J, R, N, x, u` from 
         :math:`\\dot{x} = [J(x)-R(x)] \\frac{\\partial}{\\partial x}H+u`.
 	with
-	:math:H=\\sum_i x_i \\implies \\frac{\\partial}{\\partial x}H = I
+	:math:H=\\sum_i x_i \\implies \\frac{\\partial}{\\partial x}H =(1,1,...,1) 
 
         Returns:
             tuple:
