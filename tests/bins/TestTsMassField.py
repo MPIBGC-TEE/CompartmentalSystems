@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 from CompartmentalSystems.bins.TsMassField import TsMassField 
-from tests.test_infrastructure import InDirTest
+from testinfrastructure.InDirTest import InDirTest
 class TestTsMassField(InDirTest):
     def test_plot_bins(self):
         x=6

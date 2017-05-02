@@ -10,6 +10,11 @@ from string import Template
 from sympy import flatten, gcd, lambdify, DiracDelta, solve
 from sympy.polys.polyerrors import PolynomialError
 
+def pp(strng,env,comment=""):
+    print(comment+"\n"+strng+"=:")
+    print(env[strng])
+
+
 
 #fixme: test
 def has_pw(expr):

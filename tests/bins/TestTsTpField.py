@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 from CompartmentalSystems.bins.TsTpField import TsTpField 
-from tests.test_infrastructure import InDirTest
+from testinfrastructure.InDirTest import InDirTest
 class TestTsTpField(InDirTest):
     
     def test_init(self):

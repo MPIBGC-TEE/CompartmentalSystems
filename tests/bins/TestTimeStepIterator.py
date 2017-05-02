@@ -8,7 +8,7 @@ from CompartmentalSystems.bins.TimeStep import TimeStep
 from CompartmentalSystems.bins.TsTpMassField import TsTpMassField 
 from CompartmentalSystems.bins.TsTpDeathRateField import TsTpDeathRateField 
 
-from tests.test_infrastructure import InDirTest
+from testinfrastructure.InDirTest import InDirTest
 
 class TestTimeStepIterator(InDirTest):
      def test_list_comprehension(self):

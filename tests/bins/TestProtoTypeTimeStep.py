@@ -3,7 +3,7 @@
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import unittest
-from tests.test_infrastructure import InDirTest
+from testinfrastructure.InDirTest import InDirTest
 class Content:
     def __init__(self,amount):
         self.val=amount

@@ -8,7 +8,7 @@ from sympy import Symbol, Matrix, symbols, diag, zeros, simplify
 
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
-from test_infrastructure import InDirTest
+from testinfrastructure.InDirTest import InDirTest
 
 
 ######### TestClass #############

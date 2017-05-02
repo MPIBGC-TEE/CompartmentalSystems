@@ -3,7 +3,7 @@ import unittest
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from CompartmentalSystems.bins.TsTpBin import TsTpBin
-from tests.test_infrastructure import InDirTest
+from testinfrastructure.InDirTest import InDirTest
 class TestAgeBin(InDirTest):
     def test_plot(self):
         tss=0.1

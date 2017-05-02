@@ -10,8 +10,11 @@ import sys
 from pathlib import Path
 
 def main():
-    p = Path(__file__).absolute().parents[2]
-    sys.path.append(p.as_posix())
+    # the following monkeypatching of the path would 
+    # make the execution in subdirectories impossible 
+    # it is no longer necessary anyway.
+    #p = Path(__file__).absolute().parents[2]
+    #sys.path.append(p.as_posix())
 
     print("\n###################### running tests ##########################\n")
 

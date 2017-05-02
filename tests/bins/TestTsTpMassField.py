@@ -1,9 +1,9 @@
 # vim: set ff=unix expandtab ts=4 sw=4:
 import unittest
 import numpy as np
-from bgc_md.TsMassField import TsMassField
-from bgc_md.TsTpMassField import TsTpMassField 
-from bgc_md.TsTpDeathRateField import TsTpDeathRateField
+from CompartmentalSystems.bins.TsMassField import TsMassField
+from CompartmentalSystems.bins.TsTpMassField import TsTpMassField 
+from CompartmentalSystems.bins.TsTpDeathRateField import TsTpDeathRateField
 
 
 class TestTsTpMassField(unittest.TestCase):

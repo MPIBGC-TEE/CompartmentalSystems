@@ -1,10 +1,10 @@
 # vim: set ff=unix expandtab ts=4 sw=4:
 import unittest
 import numpy as np
-from bgc_md.TsTpMassField import TsTpMassField 
-from bgc_md.TsTpDeathRateField import TsTpDeathRateField 
-from bgc_md.TsTpMassFields import TsTpMassFieldsPerPool,TsTpMassFieldsPerPipe
-from bgc_md.CompatibleTsTpMassFieldsPerPool import CompatibleTsTpMassFieldsPerPool
+from CompartmentalSystems.bins.TsTpMassField import TsTpMassField 
+from CompartmentalSystems.bins.TsTpDeathRateField import TsTpDeathRateField 
+from CompartmentalSystems.bins.TsTpMassFields import TsTpMassFieldsPerPool,TsTpMassFieldsPerPipe
+from CompartmentalSystems.bins.CompatibleTsTpMassFieldsPerPool import CompatibleTsTpMassFieldsPerPool
 
 class TestCompatibleTsTpMassFieldsPerPool(unittest.TestCase):
     def test_init(self):

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from CompartmentalSystems.bins.TsMassField import TsMassField 
 from CompartmentalSystems.bins.TsMassFieldsPerTimeStep import TsMassFieldsPerTimeStep
-from tests.test_infrastructure import InDirTest
+from testinfrastructure.InDirTest import InDirTest
 
 class TestTsMassFieldsPerTimeStep(InDirTest):
     def test_plot_bins(self):

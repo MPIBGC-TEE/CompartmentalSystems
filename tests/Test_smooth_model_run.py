@@ -14,7 +14,7 @@ from sympy import sin, symbols, Matrix, Symbol, exp, solve, Eq, pi, Piecewise, F
 import example_smooth_reservoir_models as ESRM
 import example_smooth_model_runs as ESMR
 
-from test_infrastructure import InDirTest
+from testinfrastructure.InDirTest import InDirTest
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 

@@ -1,6 +1,6 @@
 # vim:set ff=unix expandtab ts=4 sw=4
 import unittest
-from tests.test_infrastructure import InDirTest
+from testinfrastructure.InDirTest import InDirTest
 import numpy as np
 from CompartmentalSystems.bins.TimeStep import TimeStep
 from CompartmentalSystems.bins.TimeStepPlotter import TimeStepPlotter

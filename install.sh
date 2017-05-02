@@ -1,5 +1,8 @@
-# although the following packages are mentioned in setup.py of bgc_md as dependencies
-# the install in the order determined by setuptools seems to fail 
+# Although the following packages are mentioned in setup.py as dependencies
+# the install in the order determined by setuptools seems to fail sometimes, probably
+# due to unstated dependencies of numpy and matlotlib.
+# This script helps in such cases but is not intended to replace setup.py
+# 
 
 pip3 install --upgrade pip
 
@@ -13,5 +16,6 @@ pip3 install sympy
 pip3 install tqdm
 
 pip3 install git+https://github.com/MPIBGC-TEE/LAPM
+pip3 install git+https://github.com/mamueller/testinfrastructure
 
 python3 setup.py develop
