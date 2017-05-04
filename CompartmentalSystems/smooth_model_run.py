@@ -1931,7 +1931,7 @@ class SmoothModelRun(object):
         
         return fig
 
-    def add_equilibrium_surface_plotly(self, fig, opacity=0.9, index=0):
+    def add_equilibrium_surface_plotly(self, fig, opacity=0.7, index=0):
         """Add a grey and transparent equilibrium density surface to an existing
         Plotly density plot.
 
