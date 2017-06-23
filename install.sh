@@ -8,6 +8,8 @@ pip3 install --upgrade pip
 
 pip3 install concurrencytest
 pip3 install jupyter
+pip3 install jupyter_contrib_nbextensions
+pip3 install jupyter_nbextensions_configurator
 pip3 install matplotlib
 pip3 install numpy
 pip3 install plotly
