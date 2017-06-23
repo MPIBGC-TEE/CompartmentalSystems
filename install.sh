@@ -21,3 +21,9 @@ pip3 install git+https://github.com/MPIBGC-TEE/LAPM
 pip3 install git+https://github.com/mamueller/testinfrastructure
 
 python3 setup.py develop
+
+# enable jupyter notebook nbextensions
+jupyter contrib nbextension install --user
+jupyter nbextensions_configurator enable --user
+jupyter nbextension enable python-markdown/main
+
