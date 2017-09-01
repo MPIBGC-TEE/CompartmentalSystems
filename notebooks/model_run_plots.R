@@ -2,7 +2,8 @@
 # date: 2017-03-29
 
 # set working directory to output_data folder
-setwd("nonl_gcm_3p/output_data")
+#setwd("nonl_gcm_3p/output_data")
+setwd("nonl_gcm_3p_many_params/output_data_v5")
 
 # install and load required packages
 install_and_load <- Vectorize(function(pkg){
@@ -26,10 +27,10 @@ names(age_density_data) <- c('age', 'year', 'pool', 'value')
 ss_age_density_data <- age_density_data[age_density_data$year==1765, c('age', 'pool', 'value')]
 
 ss_stats <- ggplot(ss_age_density_data, aes(x = age, y = value, color = factor(pool))) + 
-  geom_line(size = 1) +
+  geom_line(size = 2) +
   scale_x_continuous(TeX("Age (yr)"), expand = c(0,0)) +
   scale_y_continuous(TeX("Mass (PgC/yr)"), limits = c(0,50), expand = c(0,0)) +
-  theme_bw(30) + 
+  theme_bw(40) + 
   theme(#text=element_text(family="CM Roman"), 
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
@@ -53,6 +54,9 @@ ss_stats <- ggplot(ss_age_density_data, aes(x = age, y = value, color = factor(p
 ss_stats
 
 
+
+
+
 ## 2) external data ##
 
 # external fossil fuel input flux
@@ -60,15 +64,15 @@ input_flux_data <- read.csv('input_flux.csv')
 input_flux <- input_flux_data[input_flux_data$pool==0,]
 
 # fixed land use flux
-flux_data <- read.csv('emissions.csv', skip = 37, sep = " ")[,1:3]
+flux_data <- read.csv('../emissions.csv', skip = 37, sep = " ")[,1:3]
 names(flux_data) = c('year', 'FF', 'LU')
 external_data <- melt(flux_data, id.vars = c('year'))
 
 plt_external_data <- ggplot(external_data, aes(x = year, y = value, color = factor(variable))) + 
-  geom_line(size=1) +
+  geom_line(size=2) +
   scale_x_continuous("Time (yr)", limits = c(1765, 2500), expand = c(0,0), breaks = c(1765, 2000, 2250, 2500)) +
   scale_y_continuous("Flux (PgC/yr)", limits = c(0,30), expand = c(0,0), labels = c("", "10", "20", "30")) +
-  theme_bw(30) + 
+  theme_bw(40) + 
   theme(#text=element_text(family="CM Roman"), 
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -82,7 +86,7 @@ plt_external_data <- ggplot(external_data, aes(x = year, y = value, color = fact
         #axis.text.x = element_blank(),
         axis.title.y = element_text(vjust = 2.0),
         #axis.title.y = element_blank(),
-        plot.margin = unit(c(0.5, 1.5, 0.3, 0.5), "cm"), # top, right, bottom, left
+        plot.margin = unit(c(0.5, 1.5, 0.4, 0.5), "cm"), # top, right, bottom, left
         axis.title.x = element_text(vjust = 0)
   ) +
   #scale_color_brewer(palette = "Set1", labels = list(TeX('fossil fuel input $u_A$'), TeX('land use change $f_{TA}$'))) +
@@ -115,11 +119,12 @@ ftt_median_const_ff$density_value <- sapply(1:length(years), function(i){
 show_nr = 5
 show_years = years[1:show_nr]
 labels = c("1800", "1990 (Kyoto Protocol)", "2015 (Paris Agreement)", "2170 (max. median)", "2300")[1:show_nr]
+#labels = c("1800", "1990 (Kyoto Protocol)", "2015 (Paris Agreement)", "2170", "2300")[1:show_nr]
 plt_ftt <- ggplot(ftt_density_data[ftt_density_data$year %in% show_years,], aes(x = age, y = value, color = factor(year))) + 
-  geom_line(size = 1) +
+  geom_line(size = 2) +
   scale_x_continuous(TeX("Age (yr)"), expand = c(0,0), limits = c(0,250)) +
   scale_y_continuous(TeX("Mass (PgC/yr)"), limits = c(0, 0.015), expand = c(0,0)) +
-  theme_bw(30) + 
+  theme_bw(40) + 
   theme(#text=element_text(family="CM Roman"), 
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
