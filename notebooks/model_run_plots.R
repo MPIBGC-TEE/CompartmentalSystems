@@ -2,8 +2,8 @@
 # date: 2017-03-29
 
 # set working directory to output_data folder
-#setwd("nonl_gcm_3p/output_data")
-setwd("nonl_gcm_3p_many_params/output_data_v5")
+setwd("PNAS/output_data_v1")
+#setwd("PNAS/output_data_v2")
 
 # install and load required packages
 install_and_load <- Vectorize(function(pkg){
@@ -148,63 +148,3 @@ plt_ftt <- ggplot(ftt_density_data[ftt_density_data$year %in% show_years,], aes(
   geom_segment(data = ftt_median_const_ff[ftt_median_const_ff$year %in% show_years,], mapping = aes(x = median, y  =  0, xend = median, yend = density_value), linetype = 2, size = 1)
 plt_ftt
 
-
-## 4) backward transit time ##
-
-age_mean_data <- read.csv("age_mean.csv")
-age_median_data <- read.csv("age_median.csv")
-age_mean_data_ff_only <- read.csv("age_mean_ff_only.csv")
-age_median_data_ff_only <- read.csv("age_median_ff_only.csv")
-
-names(age_mean_data) <- c('year', 'pool', 'mean')
-names(age_median_data) <- c('year', 'pool', 'median')
-names(age_mean_data_ff_only) <- c('year', 'pool', 'mean')
-names(age_median_data_ff_only) <- c('year', 'pool', 'median')
-
-stats1_data <- merge(age_mean_data, age_median_data, id.vars = c('year', 'pool'))
-stats1_data <- melt(stats1_data, id.vars = c('year', 'pool'))
-stats1_data$system <- 'total'
-
-stats2_data <- merge(age_mean_data_ff_only, age_median_data_ff_only, id.vars = c('year', 'pool'))
-stats2_data <- melt(stats2_data, id.vars = c('year', 'pool'))
-stats2_data$system <- 'ff_only'
-
-stats_data <- rbind(stats1_data, stats2_data)
-stats_data <- stats_data[stats_data$pool %in% c(2),]
-
-fct <- as.factor(stats_data$system) 
-stats_data$system <- factor(fct, levels = rev(levels(fct)), labels = c("total", "fossil fuels"))
-
-show_nr = 2
-systems = unique(stats_data$system)[1:show_nr]
-plt_stats <- ggplot(stats_data[stats_data$system %in% systems,], aes(x = year, y = value, linetype = factor(system), color = factor(variable))) + 
-  geom_line(size=1) +
-  scale_x_continuous("Time (yr)", limits = c(1765, 2500), expand = c(0,0), breaks = c(1765, 2000, 2250, 2500)) +
-  scale_y_continuous("Age (yr)", limits = c(0, 350), expand = c(0,0), breaks = c(0, 100, 200, 300), labels = c("", 100, 200, 300)) +
-  theme_bw(30) + 
-  theme(#text=element_text(family="CM Roman"), 
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    #panel.border = element_blank(),
-    panel.background = element_blank(),
-    legend.position = c(0.2,0.7), 
-    legend.background = element_blank(), 
-    legend.title = element_blank(),
-    legend.key = element_blank(),
-    axis.title.y = element_text(vjust = 2.0),
-    axis.title.x = element_text(vjust = 0.0),
-    plot.margin = unit(c(0.5, 1.3, 0.4, 0.5), "cm"),
-    axis.title.y = element_text(vjust = 2)
-  ) +
-  scale_linetype_manual(values = c(1, 2)) +
-  scale_color_manual(values = c("blue", "red")) +
-  #geom_abline(slope = 1, intercept=-1765, linetype = 2) +
-  guides(linetype=guide_legend(
-    keywidth=0.5,
-    keyheight=0.5,
-    default.unit="inch")) +
-  guides(color=guide_legend(
-    keywidth=0.5,
-    keyheight=0.5,
-    default.unit="inch"))
-plt_stats

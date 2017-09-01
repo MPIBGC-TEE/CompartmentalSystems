@@ -2307,6 +2307,7 @@ class SmoothModelRun(object):
             start_values (numpy.array, optional): An array over the time grid of
                 start values for the nonlinear search.
                 Good values are slighty greater than the solution values.
+                Must have the same length as ``times``.
                 Defaults to an array of zeros.
             method (str): The method that is used for finding the roots of a 
                 nonlinear function. Either 'brentq' or 'newton'. 
