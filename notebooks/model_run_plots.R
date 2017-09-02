@@ -2,8 +2,8 @@
 # date: 2017-03-29
 
 # set working directory to output_data folder
-setwd("PNAS/output_data_v1")
-#setwd("PNAS/output_data_v2")
+#setwd("PNAS/output_data_v1")
+setwd("PNAS/output_data_v2")
 
 # install and load required packages
 install_and_load <- Vectorize(function(pkg){
@@ -118,8 +118,8 @@ ftt_median_const_ff$density_value <- sapply(1:length(years), function(i){
 
 show_nr = 5
 show_years = years[1:show_nr]
-labels = c("1800", "1990 (Kyoto Protocol)", "2015 (Paris Agreement)", "2170 (max. median)", "2300")[1:show_nr]
-#labels = c("1800", "1990 (Kyoto Protocol)", "2015 (Paris Agreement)", "2170", "2300")[1:show_nr]
+#labels = c("1800", "1990 (Kyoto Protocol)", "2015 (Paris Agreement)", "2170 (max. median)", "2300")[1:show_nr]
+labels = c("1800", "1990 (Kyoto Protocol)", "2015 (Paris Agreement)", "2170", "2300")[1:show_nr]
 plt_ftt <- ggplot(ftt_density_data[ftt_density_data$year %in% show_years,], aes(x = age, y = value, color = factor(year))) + 
   geom_line(size = 2) +
   scale_x_continuous(TeX("Age (yr)"), expand = c(0,0), limits = c(0,250)) +
