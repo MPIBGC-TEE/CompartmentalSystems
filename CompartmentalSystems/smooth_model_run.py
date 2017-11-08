@@ -2164,6 +2164,11 @@ class SmoothModelRun(object):
             quantile (between 0 and 1): The relative share of mass that is 
                 considered to be left of the computed value. A value of ``0.5`` 
                 leads to the computation of the median of the distribution.
+            start_values (numpy.ndarray, len(times) x nr_pools, optional): 
+                For each pool an array over the time grid of start values for 
+                the nonlinear search.
+                Good values are slighty greater than the solution values.
+                Defaults to an array of zeros for each pool
             start_age_densities (Python function, optional): A function of age 
                 that returns a ``numpy.array`` containing the masses with the 
                 given age at time :math:`t_0`. 
@@ -2233,6 +2238,11 @@ class SmoothModelRun(object):
             quantile (between 0 and 1): The relative share of mass that is 
                 considered to be left of the computed value. A value of ``0.5`` 
                 leads to the computation of the median of the distribution.
+            start_values (numpy.array, optional): An array over the time grid of
+                start values for the nonlinear search.
+                Good values are slighty greater than the solution values.
+                Must have the same length as ``times``.
+                Defaults to an array of zeros.
             start_age_densities (Python function, optional): A function of age 
                 that returns a ``numpy.array`` containing the masses with the 
                 given age at time :math:`t_0`. 
@@ -2951,8 +2961,8 @@ class SmoothModelRun(object):
     
             # integrate z to t: sol=Phi(t,tm2)*z
             soln = (no_input_sol([tm2, t],z)).reshape((n,))
-    
-        return soln
+        
+        return np.maximum(soln, np.zeros_like(soln))
         
 
     def _flux_vector(self, flux_vec_symbolic):

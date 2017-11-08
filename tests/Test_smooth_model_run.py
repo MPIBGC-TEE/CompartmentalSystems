@@ -1831,6 +1831,7 @@ class TestSmoothModelRun(InDirTest):
 
         self.assertEqual(Phix.shape, (1,))
         self.assertTrue(abs(Phix-np.exp(-1))<3e-05)
+        print(type(Phix))
 
         # two-dimensional case
         C_0, C_1 = symbols('C_0 C_1')

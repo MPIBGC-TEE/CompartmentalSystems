@@ -8,7 +8,7 @@ setwd("PNAS/output_data_v2")
 # install and load required packages
 install_and_load <- Vectorize(function(pkg){
   if (!require(pkg, character.only = TRUE)){
-    install.packages(pkg, char)
+    install.packages(pkg)
     if (!require(pkg, character.only = TRUE)) stop()
   }  
 })
