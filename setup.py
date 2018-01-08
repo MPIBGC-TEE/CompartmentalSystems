@@ -39,7 +39,7 @@ setup(name='CompartmentalSystems',
         ],   
         install_requires=[
         'testinfrastructure',
-        'sympy',
+        'sympy==1.0.0',
         'numpy',
         'scipy',
     	'matplotlib',
