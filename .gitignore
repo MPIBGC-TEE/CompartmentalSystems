@@ -1,4 +1,6 @@
 __pycache__/
 .ipynb_checkpoints
 .Rhistory
+CompartmentalSystems.egg-info/*
 tests/tmp/*
+.*.swp
