@@ -30,4 +30,4 @@ It contains a jupiter notebook which reproduces the numerical example from the p
 
 ## Contact
 
-If you have comments or questions feel free to contact [Holger Metzler](hmetzler@bgc-jena.mpg.de).
+If you have comments or questions feel free to contact [Holger Metzler](mailto:hmetzler@bgc-jena.mpg.de).
