@@ -16,8 +16,8 @@ It contains a jupiter notebook which reproduces the numerical example from the p
 
 ## Subfolders
 
-* output_data_v1: Output data of the nonlinear version
-* outout_data_v2: Output data of the linear version
+* `output_data_v1`: Output data of the nonlinear version
+* `outout_data_v2`: Output data of the linear version
 
 ## Links
 
