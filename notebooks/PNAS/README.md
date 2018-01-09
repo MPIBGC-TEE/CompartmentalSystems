@@ -3,6 +3,7 @@ Supporting Material for the PNAS paper (2018)
 # Transit-time and age distributions for nonlinear and time-dependent compartmental systems
 
 H. Metzler, M. Müller, C. A. Sierra
+
 Max Planck Institute for Biogeochemistry, 07745 Jena, Germany
 
 This folder is a subfolder of the Python package CompartmentalSystems.
