@@ -1,4 +1,4 @@
-# CompartmentalSystem: A Python3 package for the analysis of compartmental systems
+# CompartmentalSystems: A Python3 package for the analysis of compartmental systems
 
 These systems can be both nonlinear and nonautonomous. Consequently, this package can be seen
 as an extension of [LAPM](https://github.com/MPIBGC-TEE/LAPM) which deals
