@@ -25,9 +25,9 @@ It contains a jupiter notebook which reproduces the numerical example from the p
 
 ## Notes
 
-* If you cannot see the 3D figures, hower with the mouse over it and an interactive panel should apper. Click on _orbital rotation_ (for example) and the figure should load.
+* If you cannot see the interactive 3D figures, hover with the mouse over the large white areas and an interactive panel should apper. Click on _orbital rotation_ (for example) and the figure should load.
 * Downloading the HTML file and viewing it offline might solve the display problms of the In-GitHub preview.
 
 ## Contact
 
-If you have comments or questions feel free to contact [Holger Metzler](mailto: hmetzler@bgc-jena.mpg.de).
+If you have comments or questions feel free to contact [Holger Metzler](hmetzler@bgc-jena.mpg.de).
