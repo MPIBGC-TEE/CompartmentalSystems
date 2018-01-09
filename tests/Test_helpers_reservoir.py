@@ -142,7 +142,7 @@ class TestHelpers_reservoir(unittest.TestCase):
 
         times = np.linspace(0,100,101)
         strided_times = stride(times, 25)
-        self.assertTrue(np.all(strided_times==np.array([0,25,50, 75, 100])))
+        self.assertTrue(np.all(strided_times==np.array([0, 25, 50, 75, 100])))
         
         strided_times = stride(times, 1)
         self.assertTrue(np.all(strided_times==times))
