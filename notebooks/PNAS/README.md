@@ -21,5 +21,13 @@ It contains a jupiter notebook which reproduces the numerical example from the p
 
 ## Links
 
-- [In-GitHub preview](http://htmlpreview.github.io/?https://github.com/MPIBGC-TEE/CompartmentalSystems/blob/master/notebooks/PNAS/notebook.html)
+- [In-GitHub preview](http://htmlpreview.github.io/?https://github.com/MPIBGC-TEE/CompartmentalSystems/blob/master/notebooks/PNAS/notebook.html) (with small display issues)
 
+## Notes
+
+* If you cannot see the 3D figures, hower with the mouse over it and an interactive panel should apper. Click on _orbital rotation_ (for example) and the figure should load.
+* Downloading the HTML file and viewing it offline might solve the display problms of the In-GitHub preview.
+
+## Contact
+
+If you have comments or questions feel free to contact [Holger Metzler](mailto: hmetzler@bgc-jena.mpg.de).
