@@ -48,6 +48,31 @@ class Error(Exception):
     """Generic error occurring in this module."""
     pass
 
+def check_parameter_set_complete(model, parameter_set, func_set):
+    """Check if the parameter set  the function set are complete 
+       to enable a model run.
+
+    Args:
+        model (:class:`~.smooth_reservoir_model.SmoothReservoirModel`): 
+            The reservoir model on which the model run bases.
+        parameter_set (dict): ``{x: y}`` with ``x`` being a SymPy symbol 
+            and ``y`` being a numerical value.
+        func_set (dict): ``{f: func}`` with ``f`` being a SymPy symbol and 
+            ``func`` being a Python function. Defaults to ``dict()``.
+    Returns:
+        free_symbols (set): set of free symbols, parameter_set is complete if
+                            ``free_symbols`` is the empty set
+    """
+    free_symbols = model.F.subs(parameter_set).free_symbols
+    free_symbols -= {model.time_symbol}
+    free_symbols -= set(model.state_vector)
+
+    # remove function names, are given as strings
+    free_names = set([symbol.name for symbol in free_symbols])
+    func_names = set([key for key in func_set.keys()])
+    free_names = free_names - func_names
+
+    return free_names
 
 class SmoothModelRun(object):
     """Class for a model run based on a 
@@ -67,7 +92,6 @@ class SmoothModelRun(object):
     Pool counting starts with ``0```. In combined structures for pools and 
     system, the system is at the position of a ``(d+1)`` st pool.
     """
-
 
     def __init__(self, model, parameter_set, 
                         start_values, times, func_set=None):
@@ -91,17 +115,29 @@ class SmoothModelRun(object):
         # things with it! But that is bad style anyways
         if parameter_set is None: parameter_set = dict()
         if func_set is None: func_set = dict()
-        #fixme:
-        # check for completeness and so on and so forth
+        
+        # check parameter_set + func_set for completeness
+        free_symbols = check_parameter_set_complete(
+                            model, 
+                            parameter_set, 
+                            func_set)
+        if free_symbols != set():
+            raise(Error('Missing parameter values for ' + str(free_symbols)))
+
+
         self.model = model
         self.parameter_set = parameter_set
         self.times = times
-        self.start_values = start_values
+        # make sure that start_values are an array,
+        # even a one-dimensional one
+        self.start_values = np.asarray(start_values) * np.ones(1)
         if not(isinstance(start_values, np.ndarray)):
             raise(Error("start_values should be a numpy array"))
         func_set = {str(key): val for key, val in func_set.items()}
         self.func_set = func_set
         self._state_transition_operator_values = None
+
+
 
 
     # create self.B(t)
@@ -3171,6 +3207,48 @@ class SmoothModelRun(object):
         return flux_funcs
 
 
- 
+    ## temporary ##
+
+    def _lambda_bar(self, end, s, u):
+        u_norm = u.sum()
+        Phi = self._state_transition_operator
+        t1 = end
+
+        result = -np.log(Phi(t1, s, u).sum()/u_norm)/(t1-s)
+        return result
+
+    def _finite_time_transit_time_R(self, start, end):
+        #fixme: check if start, end are valid
+        t0 = start
+        t1 = end
+        u_func = self.external_input_vector_func()
+        Phi = self._state_transition_operator
+        x0 = self.start_values
+        x0_norm = x0.sum()
+        
+        A = x0_norm*(t1-t0)*self._lambda_bar(t1, t0, x0)
+        #print('A', A)
+
+        def B_integrand(s):
+            u = u_func(s)
+            u_norm = u.sum()
+            return u_norm*(t1-s)*self._lambda_bar(t1, s, u)
+
+        B = quad(B_integrand, t0, t1)[0]
+        #print('B', B)
+
+        C = x0_norm*(t1-t0)
+        #print('C', C)
+
+        def D_integrand(s):
+            u_norm = u_func(s).sum()
+            return u_norm*(t1-s)
+
+        D = quad(D_integrand, t0, t1)[0]
+        #print('D', D)
+
+        return (A+B)/(C+D)
+
+  
 
  

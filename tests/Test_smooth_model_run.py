@@ -20,6 +20,7 @@ from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
 
 class TestSmoothModelRun(InDirTest):
+
         
     def test_init(self):
         #create a valid model run complete with start ages
@@ -40,10 +41,12 @@ class TestSmoothModelRun(InDirTest):
         self.assertEqual(smr.start_values, start_values)
         self.assertTrue(all(smr.times==times))
        
-        #fixme: 
-        #check for incomplete param set...to be implemented
-        # --> implemented in Model.py
+        #check for incomplete param set
+        pardict = {}
+        with self.assertRaises(Exception):
+            smr = SmoothModelRun(srm, pardict, start_values, times=times)
 
+        
     
     def test_linearize(self):
         # Atmosphere, Terrestrial Carbon and Surface layer
@@ -2416,6 +2419,33 @@ class TestSmoothModelRun(InDirTest):
         pass
 
 
+    ##### temporary #####
+
+
+    def test_finite_time_transit_time_R(self):
+        # one-dimensional in steady state
+        # the result should be lambda
+        lamda, I, C = symbols('lamda I C')
+        B = Matrix([-lamda])
+        u = Matrix([I])
+        state_vector = Matrix([C])
+        time_symbol = Symbol('t')
+
+        srm = SmoothReservoirModel.from_B_u(state_vector,
+                                            time_symbol,
+                                            B,
+                                            u)
+
+        par_set = {lamda: 2/5, I: 7}
+        start_values = np.array(par_set[I]/par_set[lamda]) # steady state
+        start, end = 0, 10
+        times = np.linspace(start, end, 101)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+        print(start_values)
+        print('soln', smr.solve())
+
+        result = smr._finite_time_transit_time_R(start, end)
+        self.assertEqual(round(result, 5), par_set[lamda])
 
 
 
