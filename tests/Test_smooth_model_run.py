@@ -2422,7 +2422,52 @@ class TestSmoothModelRun(InDirTest):
     ##### temporary #####
 
 
-    def test_finite_time_transit_time_R(self):
+    def test_FTTT_lambda_bar(self):
+        # symmetric case
+        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
+        B = Matrix([[-lamda_1,        0],
+                    [       0, -lamda_2]])
+        u = Matrix(2, 1, [1/2, 1/2])
+        state_vector = Matrix(2, 1, [C_1, C_2])
+        time_symbol = Symbol('t')
+
+        srm = SmoothReservoirModel.from_B_u(state_vector,
+                                            time_symbol,
+                                            B,
+                                            u)
+
+        par_set = {lamda_1: 1, lamda_2: 1}
+        start_values = np.array([u[0]/par_set[lamda_1],
+                                 u[1]/par_set[lamda_2]]) # steady-state
+        start, end = 0, 10
+        times = np.linspace(start, end, 101)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+
+        result = smr._FTTT_lambda_bar(end, 5, np.array(u).astype(np.float64))
+        self.assertEqual(round(result, 5), 1)
+
+        # asymmetric case
+        par_set = {lamda_1: 3, lamda_2: 2}
+        start_values = np.array([u[0]/par_set[lamda_1],
+                                 u[1]/par_set[lamda_2]]) # steady-state
+        start, end = 0, 0.000005
+        times = np.linspace(start, end, 101)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+
+        s = (start+end)/2
+        result = smr._FTTT_lambda_bar(end, s, np.array(u).astype(np.float64))
+        self.assertEqual(round(result, 5),
+                         round(-np.log((np.exp(-par_set[lamda_1]*(end-s))
+                                       +np.exp(-par_set[lamda_2]*(end-s)))/2)/
+                                        (end-s),
+                                5))
+        # at the same time we prove that for t1 --> t0
+        # lambda_bar --> 1/2(lambda1+lambda2)
+        self.assertEqual(round(result, 5),
+                         1/2*(par_set[lamda_1]+par_set[lamda_2]))
+
+
+    def test_FTTT_lambda_bar_R(self):
         # one-dimensional in steady state
         # the result should be lambda
         lamda, I, C = symbols('lamda I C')
@@ -2441,15 +2486,42 @@ class TestSmoothModelRun(InDirTest):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
-        print(start_values)
-        print('soln', smr.solve())
+        #print(start_values)
+        #print('soln', smr.solve())
 
-        result = smr._finite_time_transit_time_R(start, end)
+        result = smr._FTTT_lambda_bar_R(start, end)
+        self.assertEqual(round(result, 5), par_set[lamda])
+        
+
+    def test_FTTT_lambda_bar_S(self):
+        # one-dimensional in steady state
+        # the result should be lambda
+        lamda, I, C = symbols('lamda I C')
+        B = Matrix([-lamda])
+        u = Matrix([I])
+        state_vector = Matrix([C])
+        time_symbol = Symbol('t')
+
+        srm = SmoothReservoirModel.from_B_u(state_vector,
+                                            time_symbol,
+                                            B,
+                                            u)
+
+        par_set = {lamda: 2/5, I: 7}
+        start_values = np.array(par_set[I]/par_set[lamda]) # steady state
+        start, end = 0, 10
+        times = np.linspace(start, end, 101)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+        #print(start_values)
+        #print('soln', smr.solve())
+
+        result = smr._FTTT_lambda_bar_S(start, end)
         self.assertEqual(round(result, 5), par_set[lamda])
 
-
+        
 
 ####################################################################################################
+
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmoothModelRun)
 #    # Run same tests across 16 processes

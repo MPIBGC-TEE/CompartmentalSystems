@@ -28,7 +28,7 @@ import plotly.graph_objs as go
 
 import pickle
 
-from sympy import lambdify, flatten, latex, Function, sympify, sstr
+from sympy import lambdify, flatten, latex, Function, sympify, sstr, solve
 from sympy.abc import _clash
 
 from scipy.integrate import odeint, quad 
@@ -3209,30 +3209,33 @@ class SmoothModelRun(object):
 
     ## temporary ##
 
-    def _lambda_bar(self, end, s, u):
+    def _FTTT_lambda_bar(self, end, s, u):
         u_norm = u.sum()
         Phi = self._state_transition_operator
         t1 = end
-
         result = -np.log(Phi(t1, s, u).sum()/u_norm)/(t1-s)
+        
         return result
 
-    def _finite_time_transit_time_R(self, start, end):
+
+    def _FTTT_lambda_bar_R(self, start, end):
         #fixme: check if start, end are valid
         t0 = start
         t1 = end
         u_func = self.external_input_vector_func()
         Phi = self._state_transition_operator
-        x0 = self.start_values
+        soln_func = self.solve_single_value()
+        x0 = soln_func(t0)
         x0_norm = x0.sum()
         
-        A = x0_norm*(t1-t0)*self._lambda_bar(t1, t0, x0)
+        A = x0_norm*(t1-t0)*self._FTTT_lambda_bar(t1, t0, x0)
+        
         #print('A', A)
 
         def B_integrand(s):
             u = u_func(s)
             u_norm = u.sum()
-            return u_norm*(t1-s)*self._lambda_bar(t1, s, u)
+            return u_norm*(t1-s)*self._FTTT_lambda_bar(t1, s, u)
 
         B = quad(B_integrand, t0, t1)[0]
         #print('B', B)
@@ -3250,5 +3253,85 @@ class SmoothModelRun(object):
         return (A+B)/(C+D)
 
   
+    def _FTTT_T_bar_R(self, start, end):
+        #fixme: check if start, end are valid
+        t0 = start
+        t1 = end
+        u_func = self.external_input_vector_func()
+        Phi = self._state_transition_operator
 
- 
+        soln_func = self.solve_single_value()
+        x0 = soln_func(t0)
+        x0_norm = x0.sum()
+        
+        A = x0_norm*(t1-t0)*1/self._FTTT_lambda_bar(t1, t0, x0)
+        #print('A', A)
+
+        def B_integrand(s):
+            u = u_func(s)
+            u_norm = u.sum()
+            return u_norm*(t1-s)*1/self._FTTT_lambda_bar(t1, s, u)
+
+        B = quad(B_integrand, t0, t1)[0]
+        #print('B', B)
+
+        C = x0_norm*(t1-t0)
+        #print('C', C)
+
+        def D_integrand(s):
+            u_norm = u_func(s).sum()
+            return u_norm*(t1-s)
+
+        D = quad(D_integrand, t0, t1)[0]
+        #print('D', D)
+
+        return (A+B)/(C+D)
+
+
+    def _FTTT_lambda_bar_S(self, start, end):
+        #fixme: check if start, end are valid
+        t0, t1 = start, end 
+        soln_func = self.solve_single_value()
+        x0 = soln_func(t0)
+        x1 = soln_func(t1)
+
+        z0 = x0.sum()
+        z1 = x1.sum()
+
+        u_func = self.external_input_vector_func()
+
+        # function to minimize during Newton to find lambda_bar_S
+        def g(lamda):
+            def f(z, t):
+                # RHS in the surrogate system
+                return -lamda*z+sum(u_func(t))
+        
+            # solve the system with current lambda
+            sol = odeint(f, z0, [t0, t1])
+
+            # return the distance of the current final time value
+            # from the desired z1
+            res = sol[-1]-z1
+            return res
+
+        # return lambda_bar_S after optimization
+        try:
+            res = newton(g, 0.5, maxiter=5000)
+        except RuntimeError:
+            print('optimization aborted')
+            return np.nan
+        
+        if not isinstance(res, float): 
+            res = res[0]
+        return res
+            
+
+    def _calculate_steady_states(self):
+    #fixme: should be possible only for autonomous, possibly nonlinear,
+    # models
+    #fixme: test?
+        ss = solve(self.model.F.subs(self.parameter_set), 
+                   self.model.state_vector, 
+                   dict=True)
+
+        return ss
