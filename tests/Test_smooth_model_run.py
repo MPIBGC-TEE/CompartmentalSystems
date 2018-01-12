@@ -2519,8 +2519,43 @@ class TestSmoothModelRun(InDirTest):
         self.assertEqual(round(result, 5), par_set[lamda])
 
         
+    def test_FTTT_lambda_bar_R_left_limit(self):
+        # symmetric case
+        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
+        B = Matrix([[-lamda_1,        0],
+                    [       0, -lamda_2]])
+        u = Matrix(2, 1, [1/2, 1/2])
+        state_vector = Matrix(2, 1, [C_1, C_2])
+        time_symbol = Symbol('t')
 
-####################################################################################################
+        srm = SmoothReservoirModel.from_B_u(state_vector,
+                                            time_symbol,
+                                            B,
+                                            u)
+
+        par_set = {lamda_1: 1, lamda_2: 1}
+        start_values = np.array([u[0]/par_set[lamda_1],
+                                 u[1]/par_set[lamda_2]]) # steady-state
+        start, end = 0, 10
+        times = np.linspace(start, end, 101)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+
+        result = smr._FTTT_lambda_bar_R_left_limit(start)
+        self.assertEqual(result, 1*1/2+1*1/2)
+
+        # asymmetric case
+        par_set = {lamda_1: 3, lamda_2: 2}
+        start_values = np.array([u[0]/par_set[lamda_1],
+                                 u[1]/par_set[lamda_2]]) # steady-state
+        start, end = 0, 10
+        times = np.linspace(start, end, 101)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+
+        result = smr._FTTT_lambda_bar_R_left_limit(start)
+        self.assertEqual(result, (3*1/6+2*1/4)/(1/6+1/4)),
+
+
+###############################################################################
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmoothModelRun)

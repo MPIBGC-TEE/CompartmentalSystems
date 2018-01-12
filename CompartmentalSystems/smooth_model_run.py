@@ -28,12 +28,13 @@ import plotly.graph_objs as go
 
 import pickle
 
-from sympy import lambdify, flatten, latex, Function, sympify, sstr, solve
+from sympy import lambdify, flatten, latex, Function, sympify, sstr, solve, \
+                  ones, mpmath, Matrix
 from sympy.abc import _clash
 
 from scipy.integrate import odeint, quad 
 from scipy.interpolate import interp1d, UnivariateSpline
-from scipy.optimize import newton, brentq
+from scipy.optimize import newton, brentq, minimize
 
 from tqdm import tqdm
 
@@ -3219,7 +3220,11 @@ class SmoothModelRun(object):
 
 
     def _FTTT_lambda_bar_R(self, start, end):
-        #fixme: check if start, end are valid
+        if (start < self.times[0]) or (end > self.times[-1]):
+            raise(Error('Interval boundaries out of bounds'))
+        if start > end:
+            raise(Error('Starting time must not be later then ending time'))
+
         t0 = start
         t1 = end
         u_func = self.external_input_vector_func()
@@ -3254,7 +3259,11 @@ class SmoothModelRun(object):
 
   
     def _FTTT_T_bar_R(self, start, end):
-        #fixme: check if start, end are valid
+        if (start < self.times[0]) or (end > self.times[-1]):
+            raise(Error('Interval boundaries out of bounds'))
+        if start > end:
+            raise(Error('Starting time must not be later then ending time'))
+
         t0 = start
         t1 = end
         u_func = self.external_input_vector_func()
@@ -3289,7 +3298,14 @@ class SmoothModelRun(object):
 
 
     def _FTTT_lambda_bar_S(self, start, end):
-        #fixme: check if start, end are valid
+        if (start < self.times[0]) or (end > self.times[-1]):
+            raise(Error('Interval boundaries out of bounds'))
+        if start > end:
+            raise(Error('Starting time must not be later than ending time'))
+
+        if start == end:
+            return np.nan
+
         t0, t1 = start, end 
         soln_func = self.solve_single_value()
         x0 = soln_func(t0)
@@ -3301,6 +3317,7 @@ class SmoothModelRun(object):
         u_func = self.external_input_vector_func()
 
         # function to minimize during Newton to find lambda_bar_S
+        # g seems to have huge numerical issues
         def g(lamda):
             def f(z, t):
                 # RHS in the surrogate system
@@ -3314,14 +3331,37 @@ class SmoothModelRun(object):
             res = sol[-1]-z1
             return res
 
+        # g2 seems to work much better
+        def g2(lamda):
+            if lamda <= 0:
+                return 137
+
+            def f(s):
+                res = np.exp(-lamda*(t1-s))*sum(u_func(s))
+                #print(lamda, res, u_func(s), t1, s)
+                return res
+
+            int_res = quad(f, t0, t1)[0]
+            z0_remaining = np.exp(-lamda*(t1-t0))*z0
+            if (z0_remaining<1e-08) or np.isnan(z0_remaining):
+                z0_remaining=0
+            res = z0_remaining-z1+int_res
+            #print(lamda, z0_remaining, z1, int_res, res)
+            return res
+
         # return lambda_bar_S after optimization
         try:
-            res = newton(g, 0.5, maxiter=5000)
+            #res = newton(g, 0.5, maxiter=5000)
+            #res = newton(g2, 1.5, maxiter=500)
+            res = brentq(g2, 0, 5, maxiter=500)
         except RuntimeError:
             print('optimization aborted')
             return np.nan
         
-        if not isinstance(res, float): 
+        if res <= 0:
+            return np.nan
+
+        if not isinstance(res, float):
             res = res[0]
         return res
             
@@ -3335,3 +3375,11 @@ class SmoothModelRun(object):
                    dict=True)
 
         return ss
+
+
+    def _FTTT_lambda_bar_R_left_limit(self, t0):
+        B0 = self.B(t0)
+        iv = Matrix(self.start_values) # column vector
+        z = (-ones(1, len(iv))*B0).T
+        
+        return (z.T*iv/mpmath.norm(iv, 1))[0]
