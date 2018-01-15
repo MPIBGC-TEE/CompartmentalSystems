@@ -28,12 +28,13 @@ import plotly.graph_objs as go
 
 import pickle
 
-from sympy import lambdify, flatten, latex, Function, sympify, sstr
+from sympy import lambdify, flatten, latex, Function, sympify, sstr, solve, \
+                  ones, mpmath, Matrix
 from sympy.abc import _clash
 
 from scipy.integrate import odeint, quad 
 from scipy.interpolate import interp1d, UnivariateSpline
-from scipy.optimize import newton, brentq
+from scipy.optimize import newton, brentq, minimize
 
 from tqdm import tqdm
 
@@ -48,6 +49,31 @@ class Error(Exception):
     """Generic error occurring in this module."""
     pass
 
+def check_parameter_set_complete(model, parameter_set, func_set):
+    """Check if the parameter set  the function set are complete 
+       to enable a model run.
+
+    Args:
+        model (:class:`~.smooth_reservoir_model.SmoothReservoirModel`): 
+            The reservoir model on which the model run bases.
+        parameter_set (dict): ``{x: y}`` with ``x`` being a SymPy symbol 
+            and ``y`` being a numerical value.
+        func_set (dict): ``{f: func}`` with ``f`` being a SymPy symbol and 
+            ``func`` being a Python function. Defaults to ``dict()``.
+    Returns:
+        free_symbols (set): set of free symbols, parameter_set is complete if
+                            ``free_symbols`` is the empty set
+    """
+    free_symbols = model.F.subs(parameter_set).free_symbols
+    free_symbols -= {model.time_symbol}
+    free_symbols -= set(model.state_vector)
+
+    # remove function names, are given as strings
+    free_names = set([symbol.name for symbol in free_symbols])
+    func_names = set([key for key in func_set.keys()])
+    free_names = free_names - func_names
+
+    return free_names
 
 class SmoothModelRun(object):
     """Class for a model run based on a 
@@ -67,7 +93,6 @@ class SmoothModelRun(object):
     Pool counting starts with ``0```. In combined structures for pools and 
     system, the system is at the position of a ``(d+1)`` st pool.
     """
-
 
     def __init__(self, model, parameter_set, 
                         start_values, times, func_set=None):
@@ -91,17 +116,29 @@ class SmoothModelRun(object):
         # things with it! But that is bad style anyways
         if parameter_set is None: parameter_set = dict()
         if func_set is None: func_set = dict()
-        #fixme:
-        # check for completeness and so on and so forth
+        
+        # check parameter_set + func_set for completeness
+        free_symbols = check_parameter_set_complete(
+                            model, 
+                            parameter_set, 
+                            func_set)
+        if free_symbols != set():
+            raise(Error('Missing parameter values for ' + str(free_symbols)))
+
+
         self.model = model
         self.parameter_set = parameter_set
         self.times = times
-        self.start_values = start_values
+        # make sure that start_values are an array,
+        # even a one-dimensional one
+        self.start_values = np.asarray(start_values) * np.ones(1)
         if not(isinstance(start_values, np.ndarray)):
             raise(Error("start_values should be a numpy array"))
         func_set = {str(key): val for key, val in func_set.items()}
         self.func_set = func_set
         self._state_transition_operator_values = None
+
+
 
 
     # create self.B(t)
@@ -3171,6 +3208,178 @@ class SmoothModelRun(object):
         return flux_funcs
 
 
- 
+    ## temporary ##
 
- 
+    def _FTTT_lambda_bar(self, end, s, u):
+        u_norm = u.sum()
+        Phi = self._state_transition_operator
+        t1 = end
+        result = -np.log(Phi(t1, s, u).sum()/u_norm)/(t1-s)
+        
+        return result
+
+
+    def _FTTT_lambda_bar_R(self, start, end):
+        if (start < self.times[0]) or (end > self.times[-1]):
+            raise(Error('Interval boundaries out of bounds'))
+        if start > end:
+            raise(Error('Starting time must not be later then ending time'))
+
+        t0 = start
+        t1 = end
+        u_func = self.external_input_vector_func()
+        Phi = self._state_transition_operator
+        soln_func = self.solve_single_value()
+        x0 = soln_func(t0)
+        x0_norm = x0.sum()
+        
+        A = x0_norm*(t1-t0)*self._FTTT_lambda_bar(t1, t0, x0)
+        
+        #print('A', A)
+
+        def B_integrand(s):
+            u = u_func(s)
+            u_norm = u.sum()
+            return u_norm*(t1-s)*self._FTTT_lambda_bar(t1, s, u)
+
+        B = quad(B_integrand, t0, t1)[0]
+        #print('B', B)
+
+        C = x0_norm*(t1-t0)
+        #print('C', C)
+
+        def D_integrand(s):
+            u_norm = u_func(s).sum()
+            return u_norm*(t1-s)
+
+        D = quad(D_integrand, t0, t1)[0]
+        #print('D', D)
+
+        return (A+B)/(C+D)
+
+  
+    def _FTTT_T_bar_R(self, start, end):
+        if (start < self.times[0]) or (end > self.times[-1]):
+            raise(Error('Interval boundaries out of bounds'))
+        if start > end:
+            raise(Error('Starting time must not be later then ending time'))
+
+        t0 = start
+        t1 = end
+        u_func = self.external_input_vector_func()
+        Phi = self._state_transition_operator
+
+        soln_func = self.solve_single_value()
+        x0 = soln_func(t0)
+        x0_norm = x0.sum()
+        
+        A = x0_norm*(t1-t0)*1/self._FTTT_lambda_bar(t1, t0, x0)
+        #print('A', A)
+
+        def B_integrand(s):
+            u = u_func(s)
+            u_norm = u.sum()
+            return u_norm*(t1-s)*1/self._FTTT_lambda_bar(t1, s, u)
+
+        B = quad(B_integrand, t0, t1)[0]
+        #print('B', B)
+
+        C = x0_norm*(t1-t0)
+        #print('C', C)
+
+        def D_integrand(s):
+            u_norm = u_func(s).sum()
+            return u_norm*(t1-s)
+
+        D = quad(D_integrand, t0, t1)[0]
+        #print('D', D)
+
+        return (A+B)/(C+D)
+
+
+    def _FTTT_lambda_bar_S(self, start, end):
+        if (start < self.times[0]) or (end > self.times[-1]):
+            raise(Error('Interval boundaries out of bounds'))
+        if start > end:
+            raise(Error('Starting time must not be later than ending time'))
+
+        if start == end:
+            return np.nan
+
+        t0, t1 = start, end 
+        soln_func = self.solve_single_value()
+        x0 = soln_func(t0)
+        x1 = soln_func(t1)
+
+        z0 = x0.sum()
+        z1 = x1.sum()
+
+        u_func = self.external_input_vector_func()
+
+        # function to minimize during Newton to find lambda_bar_S
+        # g seems to have huge numerical issues
+        def g(lamda):
+            def f(z, t):
+                # RHS in the surrogate system
+                return -lamda*z+sum(u_func(t))
+        
+            # solve the system with current lambda
+            sol = odeint(f, z0, [t0, t1])
+
+            # return the distance of the current final time value
+            # from the desired z1
+            res = sol[-1]-z1
+            return res
+
+        # g2 seems to work much better
+        def g2(lamda):
+            if lamda <= 0:
+                return 137
+
+            def f(s):
+                res = np.exp(-lamda*(t1-s))*sum(u_func(s))
+                #print(lamda, res, u_func(s), t1, s)
+                return res
+
+            int_res = quad(f, t0, t1)[0]
+            z0_remaining = np.exp(-lamda*(t1-t0))*z0
+            if (z0_remaining<1e-08) or np.isnan(z0_remaining):
+                z0_remaining=0
+            res = z0_remaining-z1+int_res
+            #print(lamda, z0_remaining, z1, int_res, res)
+            return res
+
+        # return lambda_bar_S after optimization
+        try:
+            #res = newton(g, 0.5, maxiter=5000)
+            #res = newton(g2, 1.5, maxiter=500)
+            res = brentq(g2, 0, 5, maxiter=500)
+        except RuntimeError:
+            print('optimization aborted')
+            return np.nan
+        
+        if res <= 0:
+            return np.nan
+
+        if not isinstance(res, float):
+            res = res[0]
+        return res
+            
+
+    def _calculate_steady_states(self):
+    #fixme: should be possible only for autonomous, possibly nonlinear,
+    # models
+    #fixme: test?
+        ss = solve(self.model.F.subs(self.parameter_set), 
+                   self.model.state_vector, 
+                   dict=True)
+
+        return ss
+
+
+    def _FTTT_lambda_bar_R_left_limit(self, t0):
+        B0 = self.B(t0)
+        iv = Matrix(self.start_values) # column vector
+        z = (-ones(1, len(iv))*B0).T
+        
+        return (z.T*iv/mpmath.norm(iv, 1))[0]
