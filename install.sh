@@ -1,16 +1,15 @@
-# Although the following packages are mentioned in setup.py as dependencies
-# the install in the order determined by setuptools seems to fail sometimes, probably
-# due to unstated dependencies of numpy and matlotlib.
-# This script helps in such cases but is not intended to replace setup.py
-# 
+# This script calls pip to perform package installation and adds some packages that we usually use 
+# in conjuntion with our package
 
-pip3 install --upgrade pip
-pip3 install --upgrade setuptools
+pip3 install --upgrade pip setuptools wheel
 
-
-python3 setup.py develop
+pip3 install -e -r requirements.txt .
+#python3 setup.py develop
 
 # enable jupyter notebook nbextensions
+pip3 install concurrencytest 
+pip3 install --upgrade jupyter jupyter_contrib_nbextensions jupyter_nbextensions_configurator
+
 jupyter contrib nbextension install --user
 jupyter nbextensions_configurator enable --user
 jupyter nbextension enable python-markdown/main
