@@ -7,6 +7,7 @@ pip3 install -e -r requirements.txt .
 #python3 setup.py develop
 
 # enable jupyter notebook nbextensions
+pip3 install tox #testtool to chech the lib against different python versions
 pip3 install concurrencytest 
 pip3 install --upgrade jupyter jupyter_contrib_nbextensions jupyter_nbextensions_configurator
 
