@@ -3,4 +3,5 @@ __pycache__/
 .Rhistory
 CompartmentalSystems.egg-info/*
 tests/tmp/*
+tests/bins/tmp/*
 .*.swp
