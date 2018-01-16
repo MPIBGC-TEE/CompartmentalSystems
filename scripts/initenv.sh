@@ -1,4 +1,6 @@
-#!/bin/bash
+# This script wants to be sourced!
+# source initenv.sh (otherwise you will not see the benefit of the set paths)
+
 # This script destroys and recreates a virtual environment in the users home dir
 # It assumes that python-3.6.4 has been successfully 
 # installed under $HOME/opt along with the tcl and tk libs
@@ -19,7 +21,7 @@ python3Dir=$myOpt/Python-3.6.4
 export PATH=$python3Dir/bin:$PATH
 
 myPython3Venv="${HOME}/env-3.6.4-opt"
-rm -r $myPython3Venv
+rm -rf $myPython3Venv
 mkdir -p $myPython3Venv
 python3.6 -m venv $myPython3Venv
 source $myPython3Venv/bin/activate
