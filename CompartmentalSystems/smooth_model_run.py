@@ -27,9 +27,10 @@ import numpy as np
 import plotly.graph_objs as go
 
 import pickle
+import mpmath
 
 from sympy import lambdify, flatten, latex, Function, sympify, sstr, solve, \
-                  ones, mpmath, Matrix
+                  ones, Matrix
 from sympy.abc import _clash
 
 from scipy.integrate import odeint, quad 

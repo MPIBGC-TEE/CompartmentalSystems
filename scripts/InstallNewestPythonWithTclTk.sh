@@ -26,45 +26,49 @@ for key in tcl tk python
 		# downlaod
 		url=${urls[$key]}
 		echo $url
-		wget $url
-		
-		# untar
 		tarN=$(basename $url)
 		tarNames[$key]=$tarN
+		dirN=$(echo $tarN|sed 's/-src\.tar\.gz$\|\.tgz$//')
+		rm -rf $dirN
+		#rm $tarN*
+		#wget $url
+		
+		# untar
 		tar xfz $tarN
 		
 		#remember srcdir dirNames array
-		dirN=$(echo $tarN|sed 's/-src\.tar\.gz$\|\.tgz$//')
 		echo $dirN
 		dirNames[$key]=$dirN
 		prefixes[$key]=${prefix}/$dirN
 done
 
 # we start by configuring, making and installing the tcl sources 
-#tclBuildDir=${dirNames[tcl]}/unix
-#cd $tclBuildDir
-#	pwd
-#	./configure --prefix=${prefixes[tcl]}
-#	make
-#	make install
-#cd -
-#
-## now we configure make and install the tk sources
-#cd ${dirNames[tk]}/unix
-#	pwd
-#	./configure --prefix=${prefixes[tk]} --with-tcl="../../$tclBuildDir"
-#	make
-#	make install
-#cd -
+tclBuildDir=${dirNames[tcl]}/unix
+cd $tclBuildDir
+	pwd
+	./configure --prefix=${prefixes[tcl]}
+	make
+	make install
+cd -
+
+# now we configure make and install the tk sources
+cd ${dirNames[tk]}/unix
+	pwd
+	./configure --prefix=${prefixes[tk]} --with-tcl="../../$tclBuildDir"
+	make
+	make install
+cd -
 
 # finally we configure make and install the python interpreter
 cd ${dirNames[python]}
-	pwd
-	export LD_LIBRARY_PATH="${prefixes[tcl]}/lib:${prefixes[tk]}/lib" 
-	export LD_RUN_PATH="${prefixes[tcl]}/lib:${prefixes[tk]}/lib" 
-	export CPPFLAGS="-I${prefixex[tcl]}/include -I${prefixes[tk]}/include" #
-	export PATH=${prefixes[tcl]}/bin:${prefixes[tk]}/bin:$PATH
-	./configure --prefix=${prefixes[python]} --with-PACKAGE=tkinter #--exec-prefix=${prefixes[python]} 
+	Libs="-L${prefixes[tcl]}/lib -L${prefixes[tk]}/lib"
+	Includes="-I${prefixes[tcl]}/include -I${prefixes[tk]}/include"
+	echo ${Libs}
+	echo ${Includes}
+	command="./configure --prefix=${prefixes[python]} --with-tcltk-includes=\"$Includes\" --with-tcltk-libs=\"$Libs\""
+	echo $command
+	eval $command
+	#--exec-prefix=${prefixes[python]} 
 	make
 	make install
 cd -

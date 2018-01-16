@@ -1,2 +1,14 @@
--e git://github.com/MPIBGC-TEE/sphinx-repaired#egg=Sphinx
--e git://github.com/MPIBGC-TEE/LAPM#egg=LAPM
+concurrencytest
+jupyter
+jupyter_contrib_nbextensions
+jupyter_nbextensions_configurator
+matplotlib
+mpmath
+numpy
+plotly
+scipy
+sympy==1.0.0
+testinfrastructure
+tqdm
+LAPM
+
