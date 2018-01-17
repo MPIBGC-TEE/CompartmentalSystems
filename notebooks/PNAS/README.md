@@ -20,7 +20,7 @@ It contains a Jupyter notebook to reproduce the numerical example from the paper
 
 ## Links
 
-- [In-GitHub preview](http://htmlpreview.github.io/?https://github.com/MPIBGC-TEE/CompartmentalSystems/blob/master/notebooks/PNAS/notebook.html) (with small display issues)
+- [In-GitHub preview](http://htmlpreview.github.io/?https://github.com/MPIBGC-TEE/CompartmentalSystems/blob/master/notebooks/PNAS/PNAS_notebook.html) (with minor display issues)
 
 ## Notes
 
