@@ -1625,17 +1625,18 @@ class SmoothModelRun(object):
             Instead ``fig`` is changed in place.
         """
         n = len(self.model.state_vector)
-        planes = [(i,j) for i in range(n) for j in range(i)]
 
-        rows, cols = arrange_subplots(len(planes))
+        if n>=2:
+            planes = [(i,j) for i in range(n) for j in range(i)]
+            rows, cols = arrange_subplots(len(planes))
 
-        for k, (i, j) in enumerate(planes):
-            ax = fig.add_subplot(rows, cols, k+1)
-            self.plot_phase_plane(ax, i, j, fontsize)
-            ax.get_xaxis().set_ticks([])
-            ax.get_yaxis().set_ticks([])
+            for k, (i, j) in enumerate(planes):
+                ax = fig.add_subplot(rows, cols, k+1)
+                self.plot_phase_plane(ax, i, j, fontsize)
+                ax.get_xaxis().set_ticks([])
+                ax.get_yaxis().set_ticks([])
 
-        fig.tight_layout()
+            fig.tight_layout()
     
 
     ## fluxes ##
