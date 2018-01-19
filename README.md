@@ -34,7 +34,7 @@ The way you install the package depends on your usage scenario.
 - If you just want to install the package with the versions of some dependencies fixed but do not want it to interfere with your own setup of tools (jupyter) just type 
  " pip3 install -rrequirements.txt -e . " (This is also one step done by the install.sh script )
 - If you want to develop the package or integrate it into your own library and have the required libraries already installed you can use
- "python3 setup.py develop". This is the least invasive scenario but since "setup.py" does not contain package versions (on purpose). This way you can test the package with your own set of library versions (e.g. with a more recent sympy). 
+ "python3 setup.py develop". This is the least invasive scenario since "setup.py" does not contain package versions (on purpose). This way you can test the package with your own set of library versions (e.g. with a more recent sympy). 
 It will **not** make sure that the versions are compatible with the package (on purpose).
 
 
