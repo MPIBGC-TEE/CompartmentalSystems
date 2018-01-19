@@ -18,7 +18,9 @@ def main():
 
     print("\n###################### running tests ##########################\n")
 
-    s = unittest.defaultTestLoader.discover('', pattern="Test*")
+    s = unittest.defaultTestLoader.discover('', pattern='Test*')
+    p = unittest.defaultTestLoader.discover('', pattern='Pinned_Test*')
+    s.addTests(p)
     concurrent_suite = ConcurrentTestSuite(s, fork_for_tests(16))
     r = unittest.TextTestRunner()
 
