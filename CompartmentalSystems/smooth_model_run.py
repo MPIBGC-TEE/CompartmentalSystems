@@ -66,8 +66,11 @@ def check_parameter_set_complete(model, parameter_set, func_set):
                             ``free_symbols`` is the empty set
     """
     free_symbols = model.F.subs(parameter_set).free_symbols
+    #print('fs', free_symbols)
     free_symbols -= {model.time_symbol}
+    #print(free_symbols)
     free_symbols -= set(model.state_vector)
+    #print(free_symbols)
 
     # remove function names, are given as strings
     free_names = set([symbol.name for symbol in free_symbols])
@@ -3212,8 +3215,12 @@ class SmoothModelRun(object):
 
     ## temporary ##
 
+
     def _FTTT_lambda_bar(self, end, s, u):
         u_norm = u.sum()
+        if u_norm == 0:
+            return 0
+
         Phi = self._state_transition_operator
         t1 = end
         result = -np.log(Phi(t1, s, u).sum()/u_norm)/(t1-s)
@@ -3242,6 +3249,7 @@ class SmoothModelRun(object):
         def B_integrand(s):
             u = u_func(s)
             u_norm = u.sum()
+
             return u_norm*(t1-s)*self._FTTT_lambda_bar(t1, s, u)
 
         B = quad(B_integrand, t0, t1)[0]
@@ -3275,13 +3283,19 @@ class SmoothModelRun(object):
         x0 = soln_func(t0)
         x0_norm = x0.sum()
         
-        A = x0_norm*(t1-t0)*1/self._FTTT_lambda_bar(t1, t0, x0)
+        if x0_norm > 0:
+            A = x0_norm*(t1-t0)*1/self._FTTT_lambda_bar(t1, t0, x0)
+        else:
+            A = 0
         #print('A', A)
 
         def B_integrand(s):
             u = u_func(s)
             u_norm = u.sum()
-            return u_norm*(t1-s)*1/self._FTTT_lambda_bar(t1, s, u)
+            if u_norm > 0:
+                return u_norm*(t1-s)*1/self._FTTT_lambda_bar(t1, s, u)
+            else:
+                return 0
 
         B = quad(B_integrand, t0, t1)[0]
         #print('B', B)
@@ -3375,8 +3389,18 @@ class SmoothModelRun(object):
         ss = solve(self.model.F.subs(self.parameter_set), 
                    self.model.state_vector, 
                    dict=True)
+        
+        return_ss = []
+        for ss_i in ss:
+            add = True
+            for key, val in ss_i.items():
+                if self.model.time_symbol in val.free_symbols:
+                    add = False
 
-        return ss
+            if add:
+                return_ss.append(ss_i)
+
+        return return_ss
 
 
     def _FTTT_lambda_bar_R_left_limit(self, t0):
