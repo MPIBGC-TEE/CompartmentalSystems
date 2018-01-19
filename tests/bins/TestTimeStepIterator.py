@@ -1,6 +1,8 @@
 # vim:set ff=unix expandtab ts=4 sw=4
 import unittest
 import numpy as np
+import matplotlib
+matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 from CompartmentalSystems.bins.CompatibleTsTpMassFieldsPerPool import CompatibleTsTpMassFieldsPerPool
 from CompartmentalSystems.bins.TimeStepIterator import TimeStepIterator

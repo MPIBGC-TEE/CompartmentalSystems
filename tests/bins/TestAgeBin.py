@@ -1,5 +1,7 @@
 # vim: set ff=unix expandtab ts=4 sw=4:
 import unittest
+import matplotlib
+matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from CompartmentalSystems.bins.TsTpBin import TsTpBin

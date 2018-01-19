@@ -4,7 +4,8 @@
 from concurrencytest import ConcurrentTestSuite, fork_for_tests
 import unittest
 import sys 
-
+import matplotlib
+matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import interp1d 

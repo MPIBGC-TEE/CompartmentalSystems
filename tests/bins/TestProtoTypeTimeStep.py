@@ -2,6 +2,8 @@
 # There is a TestTimeStep for the full implementation
 
 from copy import deepcopy
+import matplotlib
+matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 import unittest
 from testinfrastructure.InDirTest import InDirTest
