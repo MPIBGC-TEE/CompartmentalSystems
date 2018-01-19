@@ -10,15 +10,19 @@ tclDir=$myOpt/tcl8.6.8
 export PATH=$tclDir/bin:$PATH
 export TCL_LIBRARY=$tclDir/lib/tcl8.6
 export LD_LIBRARY_PATH=${tclDir}/lib:$LD_LIBRARY_PATH
+export LIBRARY_PATH=${tclDir}/lib:$LD_LIBRARY_PATH
 
 tkDir=$myOpt/tk8.6.8
 export PATH=$tkDir/bin:$PATH
 export TKPATH=$tkDir/bin
 export TK_LIBRARY=$tkDir/lib/tk8.6
 export LD_LIBRARY_PATH=${tkDir}/lib:$LD_LIBRARY_PATH
+export LIBRARY_PATH=${tkDir}/lib:$LD_LIBRARY_PATH
 
 python3Dir=$myOpt/Python-3.6.4
 export PATH=$python3Dir/bin:$PATH
+export LD_LIBRARY_PATH=${python3Dir}:$LD_LIBRARY_PATH
+export LIBRARY_PATH=${python3Dir}:$LD_LIBRARY_PATH
 
 myPython3Venv="${HOME}/env-3.6.4-opt"
 rm -rf $myPython3Venv
