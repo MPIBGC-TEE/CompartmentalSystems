@@ -3,7 +3,7 @@
 
 pip3 install --upgrade pip setuptools wheel
 
-pip3 install -e -r requirements.txt .
+pip3 install -rrequirements.txt -e .
 #python3 setup.py develop
 
 # enable jupyter notebook nbextensions
