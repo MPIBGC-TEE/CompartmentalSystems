@@ -158,8 +158,8 @@ class SmoothReservoirModel(object):
         :math:`\\dot{x}=B\\,x+u`."""
         v = (self.external_inputs + self.internal_inputs
                 - self.internal_outputs - self.external_outputs)
-        for i in range(len(v)):
-            v[i] = simplify(v[i])
+        #for i in range(len(v)):
+        #    v[i] = simplify(v[i])
         return v
     
     @property
