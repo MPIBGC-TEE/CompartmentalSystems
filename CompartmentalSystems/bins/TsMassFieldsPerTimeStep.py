@@ -33,31 +33,36 @@ class TsMassFieldsPerTimeStep(FieldsPerTimeStep):
         ax.set_xlim(0,self.max_Ts*1.05)
         ax.set_zlim(0,z_max)
         ax.invert_xaxis()
-        self.set_ticks_and_labels(ax,mr,pool)
+        # fixme mm 31.01.2018
+        # the model objects of CompartmentalSystems have no units
+        # therefore the whole function does not work
+        #self.set_ticks_and_labels(ax,mr,pool)
         
-    #fixme: treatment of units
-    def set_ticks_and_labels(self,ax,mr=None,pool=None, fontsize=20):
-        #fixme:
-        # no ticksetting yet
+    # fixme mm 31.01.2018
+    # the model objects of CompartmentalSystems have no units
+    # therefore the whole function does not work
+    #def set_ticks_and_labels(self,ax,mr=None,pool=None, fontsize=20):
+    #    #fixme:
+    #    # no ticksetting yet
 
-        if mr and mr.model.time_unit:
-            ax.set_xlabel("System age ($" + latex(mr.model.time_unit) + "$)", fontsize=fontsize)
-            ax.set_ylabel("time ($" + latex(mr.model.time_unit) + "$)", fontsize=fontsize)
-        else:
-            ax.set_xlabel("system age")
-            ax.set_ylabel("time")
+    #    if mr and mr.model.time_unit:
+    #        ax.set_xlabel("System age ($" + latex(mr.model.time_unit) + "$)", fontsize=fontsize)
+    #        ax.set_ylabel("time ($" + latex(mr.model.time_unit) + "$)", fontsize=fontsize)
+    #    else:
+    #        ax.set_xlabel("system age")
+    #        ax.set_ylabel("time")
 
-        if mr and (pool != None) and mr.model.units and mr.model.units[pool]:
-            pool_unit = mr.model.units[pool]
-           
-            if pool_unit:
-                ax.set_zlabel("content ($" + latex(pool_unit) + "$)", fontsize=fontsize)
-            else:
-                ax.set_zlabel("content")
+    #    if mr and (pool != None) and mr.model.units and mr.model.units[pool]:
+    #        pool_unit = mr.model.units[pool]
+    #       
+    #        if pool_unit:
+    #            ax.set_zlabel("content ($" + latex(pool_unit) + "$)", fontsize=fontsize)
+    #        else:
+    #            ax.set_zlabel("content")
 
-        ax.xaxis.labelpad = 20
-        ax.yaxis.labelpad = 20
-        ax.zaxis.labelpad = 15
+    #    ax.xaxis.labelpad = 20
+    #    ax.yaxis.labelpad = 20
+    #    ax.zaxis.labelpad = 15
 
     def plot_surface(self,ax,mr=None,pool=None):
         times=self.times

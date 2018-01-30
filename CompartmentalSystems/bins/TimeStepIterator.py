@@ -72,7 +72,7 @@ class TimeStepIterator:
     @classmethod
     def from_ode_reservoir_model_run(cls,mr,initial_plains=None):
         obj=cls.__new__(cls)
-        number_of_pools=mr.n
+        number_of_pools=mr.nr_pools
         start_values=mr.start_values
         # to avoid excess of numerical cost we limit to 100 time steps here
         obj.number_of_steps=100
