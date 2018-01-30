@@ -1,11 +1,3 @@
-# This file only specifies those packages that are either: 
-# 1.) have to  be present in a defined version or
-# 2.) have to be fetched from somewhere else than pypi 
-
-# In particular it does not have to contain all the libs listed in setup.py 
-# since pip will interrogate the setup.py anyway and will fetch
-# add the necessary requirements
-
 sympy==1.0.0
 -e git+https://git@github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
 -e git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 

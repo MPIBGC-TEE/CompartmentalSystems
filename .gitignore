@@ -3,5 +3,7 @@ __pycache__/
 .Rhistory
 CompartmentalSystems.egg-info/*
 tests/tmp/*
+tmp/*
 tests/bins/tmp/*
 .*.swp
+.tox/
