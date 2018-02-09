@@ -8,10 +8,11 @@ import matplotlib
 matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.integrate import quad
 from scipy.interpolate import interp1d 
 from scipy.misc import factorial
-from sympy import sin, symbols, Matrix, Symbol, exp, solve, Eq, pi, Piecewise, Function
-
+from sympy import sin, symbols, Matrix, Symbol, exp, solve, Eq, pi, Piecewise, Function, ones
+    
 import example_smooth_reservoir_models as ESRM
 import example_smooth_model_runs as ESMR
 
@@ -2459,7 +2460,295 @@ class TestSmoothModelRun(InDirTest):
         self.assertEqual(result, (3*1/6+2*1/4)/(1/6+1/4)),
 
 
+    def test_alpha_s_i_and_alpha_s(self):
+        # symmetric case
+        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
+        B = Matrix([[-lamda_1,        0],
+                    [       0, -lamda_2]])
+        u = Matrix(2, 1, [1/2, 1/2])
+        state_vector = Matrix(2, 1, [C_1, C_2])
+        time_symbol = Symbol('t')
+
+        srm = SmoothReservoirModel.from_B_u(state_vector,
+                                            time_symbol,
+                                            B,
+                                            u)
+
+        par_set = {lamda_1: 1, lamda_2: 1}
+        start_values = np.array([u[0]/par_set[lamda_1],
+                                 u[1]/par_set[lamda_2]]) # steady-state
+        start, end = 0, 10
+        times = np.linspace(start, end, 101)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+
+        s = 5
+        t1 = 6
+        result1 = 0
+        u_val = smr.external_input_vector_func()(s)
+        for i in range(smr.nr_pools):
+            result1 += u_val[i] * smr._alpha_s_i(s, i, t1)
+        result1 /= u_val.sum()
+
+        result2 = smr._alpha_s(s, t1, u_val)
+
+        self.assertEqual(round(result1,5), round(1-np.exp(-(t1-s)),5))
+        self.assertEqual(round(result1,5), round(result2,5))
+
+        # asymmetric case
+        par_set = {lamda_1: 3, lamda_2: 2}
+        start_values = np.array([u[0]/par_set[lamda_1],
+                                 u[1]/par_set[lamda_2]]) # steady-state
+        start, end = 0, 10
+        times = np.linspace(start, end, 101)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+
+        s = 5
+        t1 = 6
+        result1 = 0
+        u_val = smr.external_input_vector_func()(s)
+        for i in range(smr.nr_pools):
+            result1 += u_val[i] * smr._alpha_s_i(s, i, t1)
+        result1 /= u_val.sum()
+
+        result2 = smr._alpha_s(s, t1, u_val)
+
+        self.assertEqual(round(result1,5), 
+            round(1-(np.exp(-par_set[lamda_1]*(t1-s))*u_val[0]+
+                     np.exp(-par_set[lamda_2]*(t1-s))*u_val[1])/
+                    u_val.sum(), 5))
+        self.assertEqual(round(result1,5), round(result2,5))
+
+
+    def test_EFFTT_s_i(self):
+        # asymmetric case
+        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
+        B = Matrix([[-lamda_1,        0],
+                    [       0, -lamda_2]])
+        u = Matrix(2, 1, [1/2, 1/2])
+        state_vector = Matrix(2, 1, [C_1, C_2])
+        time_symbol = Symbol('t')
+
+        srm = SmoothReservoirModel.from_B_u(state_vector,
+                                            time_symbol,
+                                            B,
+                                            u)
+
+        par_set = {lamda_1: 3, lamda_2: 2}
+        start_values = np.array([u[0]/par_set[lamda_1],
+                                 u[1]/par_set[lamda_2]]) # steady-state
+        start, end = 0, 10
+        times = np.linspace(start, end, 101)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+
+        s = 5
+        t1 = 6
+        
+        result0 = smr._EFFTT_s_i(s, 0, t1)
+        self.assertEqual(round(result0,5), 
+                         round((np.exp(3)-4)/(3*np.exp(3)-3),5))
+        result1 = smr._EFFTT_s_i(s, 1, t1)
+        self.assertEqual(round(result1,5), 
+                         round((np.exp(2)-3)/(2*np.exp(2)-2),5))
+    
+        # check that splitting over the pools is necessary
+        u_val = smr.external_input_vector_func()(s)
+        Phi = smr._state_transition_operator
+
+        def F_FTT(a):
+            return 1 - Phi(s+a,s, u_val).sum()/u_val.sum()
+
+        alpha_s = smr._alpha_s(s, t1, u_val)
+        def integrand(a):
+            return 1 - F_FTT(a)/alpha_s
+      
+        comb_res = quad(integrand, 0, t1-s)[0]
+      
+        self.assertFalse(comb_res == 1/2*result0+1/2*result1)
+
+
+    def test_TR(self):
+        # asymmetric case
+        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
+        B = Matrix([[-lamda_1,        0],
+                    [       0, -lamda_2]])
+        u = Matrix(2, 1, [1/2, 1/2])
+        state_vector = Matrix(2, 1, [C_1, C_2])
+        time_symbol = Symbol('t')
+
+        srm = SmoothReservoirModel.from_B_u(state_vector,
+                                            time_symbol,
+                                            B,
+                                            u)
+
+        par_set = {lamda_1: 3, lamda_2: 2}
+        start_values = np.array([u[0]/par_set[lamda_1],
+                                 u[1]/par_set[lamda_2]]) # steady-state
+        start, end = 0, 10
+        times = np.linspace(start, end, 101)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+
+        s = 5
+        t1 = 6
+        
+        o = ones(smr.nr_pools, 1)
+        Phi = smr._state_transition_operator
+        v = Phi(t1, s, np.array(u).astype(np.float64))
+        v_normed = v/sum(v)
+
+        self.assertEqual(round(smr._TR(s, t1, v)-(t1-s), 5),
+                         round((-o.T * (B.subs(par_set)**-1) * v_normed)[0], 5)) 
+
+
+    def test_FTTT_finite_plus_remaining(self):
+        # asymmetric case
+        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
+        B = Matrix([[-lamda_1,        0],
+                    [       0, -lamda_2]])
+        u = Matrix(2, 1, [1/2, 1/2])
+        state_vector = Matrix(2, 1, [C_1, C_2])
+        time_symbol = Symbol('t')
+
+        srm = SmoothReservoirModel.from_B_u(state_vector,
+                                            time_symbol,
+                                            B,
+                                            u)
+
+        par_set = {lamda_1: 3, lamda_2: 2}
+        start_values = np.array([u[0]/par_set[lamda_1],
+                                 u[1]/par_set[lamda_2]], dtype=np.float64) # steady-state
+        start, end = 0, 10
+        times = np.linspace(start, end, 101)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+
+        # dealing with s in the middle of the interval
+        s = 5
+        t1 = 6
+        t0 = 0
+        u_val = smr.external_input_vector_func()(s)
+
+        n = smr.nr_pools
+        alpha_s_is = [smr._alpha_s_i(s, i, t1) for i in range(n)]
+        EFFT_s_is = [smr._EFFTT_s_i(s, i, t1) for i in range(n)]
+        finite = sum([u_val[i] * alpha_s_is[i] * EFFT_s_is[i] 
+                            for i in range(n)])
+
+        Phi = smr._state_transition_operator
+        v = Phi(t1,s,u_val)
+        alpha_s = sum([u_val[i] * alpha_s_is[i] 
+                            for i in range(n)])/u_val.sum()
+        remaining = (1-alpha_s) * u_val.sum() * smr._TR(s, t1, v)
+
+
+        self.assertEqual(round(smr._FTTT_finite_plus_remaining(s,t1,t0),5), 
+                         round(finite+remaining,5))
+
+        # dealing with s at the beginning of the interval
+        s = 0
+        t1 = 6
+        t0 = 0
+        u_val = smr.start_values
+
+        n = smr.nr_pools
+        alpha_s_is = [smr._alpha_s_i(s, i, t1) for i in range(n)]
+        EFFT_s_is = [smr._EFFTT_s_i(s, i, t1) for i in range(n)]
+        finite = sum([u_val[i] * alpha_s_is[i] * EFFT_s_is[i] 
+                            for i in range(n)])
+
+        Phi = smr._state_transition_operator
+        v = Phi(t1,s,u_val)
+        alpha_s = sum([u_val[i] * alpha_s_is[i] 
+                            for i in range(n)])/u_val.sum()
+        remaining = (1-alpha_s) * u_val.sum() * smr._TR(s, t1, v)
+
+
+        self.assertEqual(round(smr._FTTT_finite_plus_remaining(s,t1,t0),5), 
+                         round(finite+remaining,5))
+
+
+    def test_FTTT_conditional(self):
+        # one-dimensional autonomous case
+        lamda, C = symbols('lamda C')
+        B = Matrix([[-lamda]])
+        u = Matrix(1, 1, [1])
+        state_vector = Matrix(1, 1, [C])
+        time_symbol = Symbol('t')
+
+        srm = SmoothReservoirModel.from_B_u(state_vector,
+                                            time_symbol,
+                                            B,
+                                            u)
+
+        par_set = {lamda: 1}
+        start_values = np.array([u[0]/par_set[lamda]], dtype=np.float64) # steady-state
+        start, end = 0, 10
+        times = np.linspace(start, end, 101)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+
+        t0 = 0
+        t1 = 1
+        result = np.array([smr._FTTT_conditional(t1,t0) 
+                                for t1 in range(1, 11)])
+        
+        self.assertTrue(np.allclose(result, np.array([1]*10)))
+
+        # symmetric case
+        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
+        B = Matrix([[-lamda_1,        0],
+                    [       0, -lamda_2]])
+        u = Matrix(2, 1, [1, 2])
+        state_vector = Matrix(2, 1, [C_1, C_2])
+        time_symbol = Symbol('t')
+
+        srm = SmoothReservoirModel.from_B_u(state_vector,
+                                            time_symbol,
+                                            B,
+                                            u)
+
+        par_set = {lamda_1: 1, lamda_2: 1}
+        start_values = np.array([u[0]/par_set[lamda_1],
+                                 u[1]/par_set[lamda_2]], dtype=np.float64) # steady-state
+        start, end = 0, 10
+        times = np.linspace(start, end, 101)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+
+        t0 = 0
+        result = np.array([smr._FTTT_conditional(t1,t0) 
+                                for t1 in range(1, 11)])
+        
+        self.assertTrue(np.allclose(result, np.array([1]*10)))
+
+
+        # asymmetric case
+        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
+        B = Matrix([[-lamda_1,        0],
+                    [       0, -lamda_2]])
+        u = Matrix(2, 1, [1, 1])
+        state_vector = Matrix(2, 1, [C_1, C_2])
+        time_symbol = Symbol('t')
+
+        srm = SmoothReservoirModel.from_B_u(state_vector,
+                                            time_symbol,
+                                            B,
+                                            u)
+
+        par_set = {lamda_1: 2, lamda_2: 1}
+        start_values = np.array([u[0]/par_set[lamda_1],
+                                 u[1]/par_set[lamda_2]], dtype=np.float64) # steady-state
+        start, end = 0, 22
+        times = np.linspace(start, end, 11)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+
+        t0 = 0
+        result = np.array([smr._FTTT_conditional(t1,t0) 
+                                for t1 in times[1:]])
+        
+        # tested is here only that no error eccurs
+        #print(result)
+        #self.assertTrue(np.allclose(result, np.array([1]*10)))
+
+
 ###############################################################################
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmoothModelRun)

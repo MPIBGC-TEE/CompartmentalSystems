@@ -33,6 +33,7 @@ from sympy import lambdify, flatten, latex, Function, sympify, sstr, solve, \
                   ones, Matrix
 from sympy.abc import _clash
 
+import scipy.linalg
 from scipy.integrate import odeint, quad 
 from scipy.interpolate import interp1d, UnivariateSpline
 from scipy.optimize import newton, brentq, minimize
@@ -1073,7 +1074,12 @@ class SmoothModelRun(object):
             #print(times[ti], '\n')
             return quad(integrand, 0, np.infty)[0]
 
-        res = np.array([moment_at_ti(ti) for ti in range(len(times))])
+        #res = np.array([moment_at_ti(ti) for ti in range(len(times))])
+        res = []
+        for ti in tqdm(range(len(times))):
+            res.append(moment_at_ti(ti))
+        res = np.array(res)
+
         return res
 
 
@@ -3237,7 +3243,6 @@ class SmoothModelRun(object):
         t0 = start
         t1 = end
         u_func = self.external_input_vector_func()
-        Phi = self._state_transition_operator
         soln_func = self.solve_single_value()
         x0 = soln_func(t0)
         x0_norm = x0.sum()
@@ -3410,386 +3415,113 @@ class SmoothModelRun(object):
         
         return (z.T*iv/mpmath.norm(iv, 1))[0]
 
+    ## new FTTT approach ##
 
-
-
-    def _FTTT_T_bar_R_v2(self, start, end):
-        if (start < self.times[0]) or (end > self.times[-1]):
-            raise(Error('Interval boundaries out of bounds'))
-        if start > end:
-            raise(Error('Starting time must not be later then ending time'))
-
-        t0 = start
-        t1 = end
-        u_func = self.external_input_vector_func()
+    def _alpha_s_i(self, s, i, t1):
         Phi = self._state_transition_operator
+        e_i = np.zeros(self.nr_pools)
+        e_i[i] = 1
+        
+        return 1 - Phi(t1,s,e_i).sum()
+            
+    def _alpha_s(self, s, t1, vec):
+        Phi = self._state_transition_operator
+        vec_norm = vec.sum()
+
+        return 1 - Phi(t1,s,vec).sum()/vec_norm
+
+    def _EFFTT_s_i(self, s, i, t1):
+        Phi = self._state_transition_operator
+        alpha_s_i = self._alpha_s_i(s, i, t1)
+       
+        e_i = np.zeros(self.nr_pools)
+        e_i[i] = 1
+        def F_FTT_i(a):
+            return 1 - Phi(s+a,s,e_i).sum()
+
+        def integrand(a):
+            return 1 - F_FTT_i(a)/alpha_s_i
+
+        result = quad(integrand, 0, t1-s)[0]
+        return result
+
+    def _TR(self, s, t1, v): # v is the remaining vector, not normalized
+        #u_func = self.external_input_vector_func()
+        Phi = self._state_transition_operator
+
+        #u = u_func(s)
+        #v = Phi(t1,s,u) # remaining mass at time t1
+
+        n = self.nr_pools
+        Phi_matrix = np.zeros((n,n))
+        for i in range(n):
+            e_i = np.zeros(n)
+            e_i[i] = 1
+            Phi_matrix[:,i] = Phi(t1,s,e_i)
+
+        #fixme: problem with s==t1?
+        A = scipy.linalg.logm(Phi_matrix)/(t1-s)
+        A_inv = scipy.linalg.inv(A)
+        o = np.ones(n)
+        v_normed = v/v.sum()
+
+        return (t1-s) + (-o @ A_inv @ v_normed)
+
+
+    def _FTTT_finite_plus_remaining(self, s, t1, t0):
+        if s == t0:
+            soln_func = self.solve_single_value()
+            vec = soln_func(s)
+        else:
+            u_func = self.external_input_vector_func()
+            vec = u_func(s)
+        vec_norm = vec.sum()
+
+        if vec_norm > 0 :
+            Phi = self._state_transition_operator
+
+            # the finite time part
+            finite = 0
+            for i in range(self.nr_pools):
+                alpha_s_i = self._alpha_s_i(s, i, t1)
+                EFFTT_s_i = self._EFFTT_s_i(s, i, t1)
+                finite += vec[i] * alpha_s_i * EFFTT_s_i
+
+            # the part for the remaining mass
+            v = Phi(t1,s,vec) # remaining mass at time t1
+            alpha_s = self._alpha_s(s, t1, vec)
+            remaining = (1-alpha_s) * vec_norm * self._TR(s, t1, v)
+
+            return finite + remaining
+        else:
+            return 0
+
+
+    def _FTTT_conditional(self, t1, t0):
+        if (t0 < self.times[0]) or (t1 > self.times[-1]):
+            raise(Error('Interval boundaries out of bounds'))
+        if t0 >= t1:
+            raise(Error('Starting time must be earlier then ending time'))
+        
+        A = (t1-t0) * self._FTTT_finite_plus_remaining(t0, t1, t0)
+
+        def B_integrand(s):
+            return (t1-s) * self._FTTT_finite_plus_remaining(s, t1, t0)
+
+        B = quad(B_integrand, t0, t1)[0]
 
         soln_func = self.solve_single_value()
         x0 = soln_func(t0)
         x0_norm = x0.sum()
-        
-        def f(s, vec):
-            A = t1-s
-            C = vec.sum()
-            D = Phi(t1,s,vec).sum()
-            B = np.log(C/D)
-
-            return A/B
-
-        if x0_norm > 0:
-            A = x0_norm*(t1-t0)*f(t0, x0)
-        else:
-            A = 0
-        #print('A', A)
-
-        def B_integrand(s):
-            u = u_func(s)
-            u_norm = u.sum()
-            if u_norm > 0:
-                return u_norm*(t1-s)*f(s, u)
-            else:
-                return 0
-
-        B = quad(B_integrand, t0, t1)[0]
-        #print('B', B)
-
         C = x0_norm*(t1-t0)
-        #print('C', C)
-
+        
+        u_func = self.external_input_vector_func()
         def D_integrand(s):
             u_norm = u_func(s).sum()
             return u_norm*(t1-s)
 
         D = quad(D_integrand, t0, t1)[0]
-        #print('D', D)
 
         return (A+B)/(C+D)
 
-
-
-
-    def _FTTT_T_bar_R_v3(self, start, end):
-        if (start < self.times[0]) or (end > self.times[-1]):
-            raise(Error('Interval boundaries out of bounds'))
-        if start > end:
-            raise(Error('Starting time must not be later then ending time'))
-
-        t0 = start
-        t1 = end
-        u_func = self.external_input_vector_func()
-        Phi = self._state_transition_operator
-
-        soln_func = self.solve_single_value()
-        x0 = soln_func(t0)
-        x0_norm = x0.sum()
-        
-        def f(s, vec):
-            A = t1-s
-            C = np.log(vec.sum())
-            D = np.log(Phi(t1,s,vec).sum())
-            B = C-D
-
-            return A/B
-
-        if x0_norm > 0:
-            A = x0_norm*(t1-t0)*f(t0, x0)
-        else:
-            A = 0
-        #print('A', A)
-
-        def B_integrand(s):
-            u = u_func(s)
-            u_norm = u.sum()
-            if u_norm > 0:
-                return u_norm*(t1-s)*f(s, u)
-            else:
-                return 0
-
-        B = quad(B_integrand, t0, t1)[0]
-        #print('B', B)
-
-        C = x0_norm*(t1-t0)
-        #print('C', C)
-
-        def D_integrand(s):
-            u_norm = u_func(s).sum()
-            return u_norm*(t1-s)
-
-        D = quad(D_integrand, t0, t1)[0]
-        #print('D', D)
-
-        return (A+B)/(C+D)
-
-
-    def _FTTT_T_bar_R_v4(self, start, end):
-        if (start < self.times[0]) or (end > self.times[-1]):
-            raise(Error('Interval boundaries out of bounds'))
-        if start > end:
-            raise(Error('Starting time must not be later then ending time'))
-
-        t0 = start
-        t1 = end
-        u_func = self.external_input_vector_func()
-        Phi = self._state_transition_operator
-
-        soln_func = self.solve_single_value()
-        x0 = soln_func(t0)
-        x0_norm = x0.sum()
-        
-        def f(s, vec):
-            A = 1
-            C = np.log(vec.sum())/(t1-s)
-            D = np.log((Phi(t1,s,vec).sum())**(1/(t1-s)))
-            B = C-D
-
-            return A/B
-
-        if x0_norm > 0:
-            A = x0_norm*(t1-t0)*f(t0, x0)
-        else:
-            A = 0
-        #print('A', A)
-
-        def B_integrand(s):
-            u = u_func(s)
-            u_norm = u.sum()
-            if u_norm > 0:
-                return u_norm*(t1-s)*f(s, u)
-            else:
-                return 0
-
-        B = quad(B_integrand, t0, t1)[0]
-        #print('B', B)
-
-        C = x0_norm*(t1-t0)
-        #print('C', C)
-
-        def D_integrand(s):
-            u_norm = u_func(s).sum()
-            return u_norm*(t1-s)
-
-        D = quad(D_integrand, t0, t1)[0]
-        #print('D', D)
-
-        return (A+B)/(C+D)
-
-
-
-    def _FTTT_T_bar_R_v5(self, start, end):
-        if (start < self.times[0]) or (end > self.times[-1]):
-            raise(Error('Interval boundaries out of bounds'))
-        if start > end:
-            raise(Error('Starting time must not be later then ending time'))
-
-        t0 = start
-        t1 = end
-        u_func = self.external_input_vector_func()
-        Phi = self._state_transition_operator
-
-        soln_func = self.solve_single_value()
-        x0 = soln_func(t0)
-        x0_norm = x0.sum()
-        
-        def f(s, vec):
-            A = 1
-            C = np.log(vec.sum())/((t1-s)**2)
-            D = np.log((Phi(t1,s,vec).sum())**(1/((t1-s)**2)))
-            B = C-D
-
-            return A/B
-
-        if x0_norm > 0:
-            A = x0_norm*f(t0, x0)
-        else:
-            A = 0
-        #print('A', A)
-
-        def B_integrand(s):
-            u = u_func(s)
-            u_norm = u.sum()
-            if u_norm > 0:
-                return u_norm*f(s, u)
-            else:
-                return 0
-
-        B = quad(B_integrand, t0, t1)[0]
-        #print('B', B)
-
-        C = x0_norm*(t1-t0)
-        #print('C', C)
-
-        def D_integrand(s):
-            u_norm = u_func(s).sum()
-            return u_norm*(t1-s)
-
-        D = quad(D_integrand, t0, t1)[0]
-        #print('D', D)
-
-        return (A+B)/(C+D)
-
-
-
-
-    def _FTTT_T_bar_R_v6(self, start, end):
-        if (start < self.times[0]) or (end > self.times[-1]):
-            raise(Error('Interval boundaries out of bounds'))
-        if start > end:
-            raise(Error('Starting time must not be later then ending time'))
-
-        t0 = start
-        t1 = end
-        u_func = self.external_input_vector_func()
-        Phi = self._state_transition_operator
-
-        soln_func = self.solve_single_value()
-        x0 = soln_func(t0)
-        x0_norm = x0.sum()
-        
-        def f(s, vec):
-            A = t1-s
-            C = np.log(vec.sum())
-            D = np.log(1/Phi(t1,s,vec).sum())
-            B = C+D
-
-            return A/B
-
-        if x0_norm > 0:
-            A = x0_norm*(t1-t0)*f(t0, x0)
-        else:
-            A = 0
-        #print('A', A)
-
-        def B_integrand(s):
-            u = u_func(s)
-            u_norm = u.sum()
-            if u_norm > 0:
-                return u_norm*(t1-s)*f(s, u)
-            else:
-                return 0
-
-        B = quad(B_integrand, t0, t1)[0]
-        #print('B', B)
-
-        C = x0_norm*(t1-t0)
-        #print('C', C)
-
-        def D_integrand(s):
-            u_norm = u_func(s).sum()
-            return u_norm*(t1-s)
-
-        D = quad(D_integrand, t0, t1)[0]
-        #print('D', D)
-
-        return (A+B)/(C+D)
-
-
-    def _FTTT_T_bar_R_v7(self, start, end):
-        if (start < self.times[0]) or (end > self.times[-1]):
-            raise(Error('Interval boundaries out of bounds'))
-        if start > end:
-            raise(Error('Starting time must not be later then ending time'))
-
-        t0 = start
-        t1 = end
-        u_func = self.external_input_vector_func()
-        Phi = self._state_transition_operator
-
-        soln_func = self.solve_single_value()
-        x0 = soln_func(t0)
-        x0_norm = x0.sum()
-        
-        def f(s, vec):
-            A = 1
-            C = np.log(vec.sum())/(t1-s)
-            D = np.log(1/((Phi(t1,s,vec).sum())**(1/(t1-s))))
-            B = C+D
-
-            return A/B
-
-        if x0_norm > 0:
-            A = x0_norm*(t1-t0)*f(t0, x0)
-        else:
-            A = 0
-        #print('A', A)
-
-        def B_integrand(s):
-            u = u_func(s)
-            u_norm = u.sum()
-            if u_norm > 0:
-                return u_norm*(t1-s)*f(s, u)
-            else:
-                return 0
-
-        B = quad(B_integrand, t0, t1)[0]
-        #print('B', B)
-
-        C = x0_norm*(t1-t0)
-        #print('C', C)
-
-        def D_integrand(s):
-            u_norm = u_func(s).sum()
-            return u_norm*(t1-s)
-
-        D = quad(D_integrand, t0, t1)[0]
-        #print('D', D)
-
-        return (A+B)/(C+D)
-
-
-    def _FTTT_T_bar_R_v8(self, start, end):
-        if (start < self.times[0]) or (end > self.times[-1]):
-            raise(Error('Interval boundaries out of bounds'))
-        if start > end:
-            raise(Error('Starting time must not be later then ending time'))
-
-        t0 = start
-        t1 = end
-        u_func = self.external_input_vector_func()
-        Phi = self._state_transition_operator
-
-        soln_func = self.solve_single_value()
-        x0 = soln_func(t0)
-        x0_norm = x0.sum()
-        
-        def f(s, vec):
-            A = 1
-            C = np.log(vec.sum())/((t1-s)**2)
-            D = np.log(1/((Phi(t1,s,vec).sum())**(1/((t1-s)**2))))
-            B = C+D
-
-            return A/B
-
-        if x0_norm > 0:
-            A = x0_norm*f(t0, x0)
-        else:
-            A = 0
-        #print('A', A)
-
-        def B_integrand(s):
-            u = u_func(s)
-            u_norm = u.sum()
-            if u_norm > 0:
-                return u_norm*f(s, u)
-            else:
-                return 0
-
-        B = quad(B_integrand, t0, t1)[0]
-        #print('B', B)
-
-        C = x0_norm*(t1-t0)
-        #print('C', C)
-
-        def D_integrand(s):
-            u_norm = u_func(s).sum()
-            return u_norm*(t1-s)
-
-        D = quad(D_integrand, t0, t1)[0]
-        #print('D', D)
-
-        return (A+B)/(C+D)
-
-
-
-
-
-
+ 
