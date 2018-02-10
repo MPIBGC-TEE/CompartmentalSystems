@@ -1,0 +1,3 @@
+sympy==1.1.1
+-e git+https://git@github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
+-e git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
