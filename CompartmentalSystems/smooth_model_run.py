@@ -142,7 +142,7 @@ class SmoothModelRun(object):
         func_set = {str(key): val for key, val in func_set.items()}
         self.func_set = func_set
         self._state_transition_operator_values = None
-
+        self._external_input_vector_func = None
 
 
 
@@ -409,20 +409,26 @@ class SmoothModelRun(object):
             Python function ``u``: ``u(t)`` is a ``numpy.array`` containing the 
             external inputs at time ``t``.
         """
-        t0 = self.times[0]
-        # cut off inputs until t0
-        t_valid = lambda t: True if (t0<t) and (t<=self.times[-1]) else False
+        if self._external_input_vector_func is None:
+            t0 = self.times[0]
+            # cut off inputs until t0
+            t_valid = lambda t: True if ((t0<t) and 
+                            (t<=self.times[-1])) else False
 
-        input_fluxes = []
-        for i in range(self.nr_pools):
-            if i in self.external_input_flux_funcs().keys():
-                input_fluxes.append(self.external_input_flux_funcs()[i])
-            else:
-                input_fluxes.append(lambda t: 0)
+            input_fluxes = []
+            for i in range(self.nr_pools):
+                if i in self.external_input_flux_funcs().keys():
+                    input_fluxes.append(self.external_input_flux_funcs()[i])
+                else:
+                    input_fluxes.append(lambda t: 0)
         
-        u = lambda t: (np.array([f(t) for f in input_fluxes], dtype=np.float) 
-                                  if t_valid(t) else np.zeros((self.nr_pools,)))
-        return u
+            u = lambda t: (np.array([f(t) for f in input_fluxes], 
+                            dtype=np.float) 
+                                if t_valid(t) else np.zeros((self.nr_pools,)))
+            
+            self._external_input_vector_func = u
+     
+        return self._external_input_vector_func
 
     # fixme: returns a vector
     def output_rate_vector_at_t(self, t):
@@ -3430,9 +3436,10 @@ class SmoothModelRun(object):
 
         return 1 - Phi(t1,s,vec).sum()/vec_norm
 
-    def _EFFTT_s_i(self, s, i, t1):
+    def _EFFTT_s_i(self, s, i, t1, alpha_s_i = None):
         Phi = self._state_transition_operator
-        alpha_s_i = self._alpha_s_i(s, i, t1)
+        if alpha_s_i is None:
+            alpha_s_i = self._alpha_s_i(s, i, t1)
        
         e_i = np.zeros(self.nr_pools)
         e_i[i] = 1
@@ -3464,11 +3471,12 @@ class SmoothModelRun(object):
         A_inv = scipy.linalg.inv(A)
         o = np.ones(n)
         v_normed = v/v.sum()
-
+   
         return (t1-s) + (-o @ A_inv @ v_normed)
 
 
     def _FTTT_finite_plus_remaining(self, s, t1, t0):
+        print('s', s, 't1', t1)
         if s == t0:
             soln_func = self.solve_single_value()
             vec = soln_func(s)
@@ -3484,14 +3492,15 @@ class SmoothModelRun(object):
             finite = 0
             for i in range(self.nr_pools):
                 alpha_s_i = self._alpha_s_i(s, i, t1)
-                EFFTT_s_i = self._EFFTT_s_i(s, i, t1)
+                EFFTT_s_i = self._EFFTT_s_i(s, i, t1, alpha_s_i)
                 finite += vec[i] * alpha_s_i * EFFTT_s_i
-
+            
             # the part for the remaining mass
             v = Phi(t1,s,vec) # remaining mass at time t1
             alpha_s = self._alpha_s(s, t1, vec)
             remaining = (1-alpha_s) * vec_norm * self._TR(s, t1, v)
 
+            print('frs', finite, remaining, finite+remaining)
             return finite + remaining
         else:
             return 0
@@ -3504,16 +3513,19 @@ class SmoothModelRun(object):
             raise(Error('Starting time must be earlier then ending time'))
         
         A = (t1-t0) * self._FTTT_finite_plus_remaining(t0, t1, t0)
+        print(A)
 
         def B_integrand(s):
             return (t1-s) * self._FTTT_finite_plus_remaining(s, t1, t0)
 
         B = quad(B_integrand, t0, t1)[0]
+        print(B)
 
         soln_func = self.solve_single_value()
         x0 = soln_func(t0)
         x0_norm = x0.sum()
         C = x0_norm*(t1-t0)
+        print(C)
         
         u_func = self.external_input_vector_func()
         def D_integrand(s):
@@ -3521,6 +3533,7 @@ class SmoothModelRun(object):
             return u_norm*(t1-s)
 
         D = quad(D_integrand, t0, t1)[0]
+        print(D)
 
         return (A+B)/(C+D)
 
