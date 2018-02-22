@@ -3449,15 +3449,11 @@ class SmoothModelRun(object):
         def integrand(a):
             return 1 - F_FTT_i(a)/alpha_s_i
 
-        result = quad(integrand, 0, t1-s)[0]
+        result = quad(integrand, 0, t1-s, epsabs=1.5e-03, epsrel=1.5e-03)[0]
         return result
 
     def _TR(self, s, t1, v): # v is the remaining vector, not normalized
-        #u_func = self.external_input_vector_func()
         Phi = self._state_transition_operator
-
-        #u = u_func(s)
-        #v = Phi(t1,s,u) # remaining mass at time t1
 
         n = self.nr_pools
         Phi_matrix = np.zeros((n,n))
@@ -3466,7 +3462,6 @@ class SmoothModelRun(object):
             e_i[i] = 1
             Phi_matrix[:,i] = Phi(t1,s,e_i)
 
-        #fixme: problem with s==t1?
         A = scipy.linalg.logm(Phi_matrix)/(t1-s)
         A_inv = scipy.linalg.inv(A)
         o = np.ones(n)
@@ -3496,9 +3491,12 @@ class SmoothModelRun(object):
                 finite += vec[i] * alpha_s_i * EFFTT_s_i
             
             # the part for the remaining mass
-            v = Phi(t1,s,vec) # remaining mass at time t1
-            alpha_s = self._alpha_s(s, t1, vec)
-            remaining = (1-alpha_s) * vec_norm * self._TR(s, t1, v)
+            if s < t1:
+                v = Phi(t1,s,vec) # remaining mass at time t1
+                alpha_s = self._alpha_s(s, t1, vec)
+                remaining = (1-alpha_s) * vec_norm * self._TR(s, t1, v)
+            else:
+                remaining = 0
 
             print('frs', finite, remaining, finite+remaining)
             return finite + remaining
@@ -3513,19 +3511,19 @@ class SmoothModelRun(object):
             raise(Error('Starting time must be earlier then ending time'))
         
         A = (t1-t0) * self._FTTT_finite_plus_remaining(t0, t1, t0)
-        print(A)
+        print('A', A)
 
         def B_integrand(s):
             return (t1-s) * self._FTTT_finite_plus_remaining(s, t1, t0)
 
-        B = quad(B_integrand, t0, t1)[0]
-        print(B)
+        B = quad(B_integrand, t0, t1, epsabs=1.5e-03, epsrel=1.5e-03)[0]
+        print('B', B)
 
         soln_func = self.solve_single_value()
         x0 = soln_func(t0)
         x0_norm = x0.sum()
         C = x0_norm*(t1-t0)
-        print(C)
+        print('C', C)
         
         u_func = self.external_input_vector_func()
         def D_integrand(s):
@@ -3533,7 +3531,7 @@ class SmoothModelRun(object):
             return u_norm*(t1-s)
 
         D = quad(D_integrand, t0, t1)[0]
-        print(D)
+        print('D', D)
 
         return (A+B)/(C+D)
 
