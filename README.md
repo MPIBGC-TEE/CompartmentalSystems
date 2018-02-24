@@ -1,7 +1,7 @@
 # CompartmentalSystems: A Python3 package for the analysis of compartmental systems
 
-These systems can be both nonlinear and nonautonomous. Consequently, this package can be seen
-as an extension of [LAPM](https://github.com/MPIBGC-TEE/LAPM) which deals
+These systems can be both nonlinear and nonautonomous. Consequently, CompartmentalSystems can be seen
+as a companion package of [LAPM](https://github.com/MPIBGC-TEE/LAPM) which deals
 with linear autonomous models.
 While [LAPM](https://github.com/MPIBGC-TEE/LAPM) also allows explicit symbolic compuations of age distributions 
 in compartmental systems, this package is mostly concerned with numerical
