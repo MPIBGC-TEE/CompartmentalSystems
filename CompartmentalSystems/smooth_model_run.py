@@ -17,6 +17,7 @@ total number of pools is :math:`d`.
 
 from __future__ import division
 
+from copy import copy, deepcopy
 from matplotlib import cm
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -95,7 +96,7 @@ class SmoothModelRun(object):
         func_set (dict): ``{f: func}`` with ``f`` being a SymPy symbol and 
             ``func`` being a Python function. Defaults to ``dict()``.
 
-    Pool counting starts with ``0```. In combined structures for pools and 
+    Pool counting starts with ``0``. In combined structures for pools and 
     system, the system is at the position of a ``(d+1)`` st pool.
     """
 
@@ -2773,6 +2774,91 @@ class SmoothModelRun(object):
 
         #print(res)
         return res
+
+
+    ########## 14C methods #########
+
+
+    def to_14C_only(self, atm_delta_14C, decay_rate=0.0001209681):
+        """Construct and return a :class:`SmoothModelRun` instance that
+           models the 14C component of the original model run.
+    
+        Args:
+            atm_delta_14C (numpy.ndarray, 2 x length): A table consisting of
+                years and :math:`\\Delta^{14}C` values. The first row serves
+                as header.
+            decay rate (float, optional): The decay rate to be used, defaults to
+                ``0.0001209681``.
+        Returns:
+            :class:`SmoothModelRun`
+        """
+        srm_14C = self.model.to_14C_only('lamda_14C', 'Fa_14C')
+
+        # create SmoothModelRun for 14C
+        par_set_14C = copy(self.parameter_set)
+        par_set_14C['lamda_14C'] = decay_rate
+        start_values_14C = self.start_values
+        times_14C = self.times
+
+        Fa_atm = copy(atm_delta_14C)
+        Fa_atm[:,1] = Fa_atm[:,1]/1000 + 1
+        Fa_func = interp1d(Fa_atm[:,0], Fa_atm[:,1])
+        func_set_14C = copy(self.func_set)
+
+        function_string = 'Fa_14C(' + srm_14C.time_symbol.name + ')'
+        func_set_14C[function_string] = Fa_func
+
+        smr_14C = SmoothModelRun(
+            srm_14C, 
+            par_set_14C,
+            start_values_14C,
+            times_14C,
+            func_set_14C)
+
+        return smr_14C
+
+
+    def to_14C_explicit(self, atm_delta_14C, decay_rate=0.0001209681):
+        """Construct and return a :class:`SmoothModelRun` instance that
+           models the 14C component additional to the original model run.
+    
+        Args:
+            atm_delta_14C (numpy.ndarray, 2 x length): A table consisting of
+                years and :math:`\\Delta^{14}C` values. The first row serves
+                as header.
+            decay rate (float, optional): The decay rate to be used, defaults to
+                ``0.0001209681``.
+        Returns:
+            :class:`SmoothModelRun`
+        """
+        srm_14C = self.model.to_14C_explicit('lamda_14C', 'Fa_14C')
+
+        # create SmoothModelRun for 14C
+        par_set_14C = copy(self.parameter_set)
+        par_set_14C['lamda_14C'] = decay_rate
+
+        nr_pools =self.nr_pools
+        start_values_14C = np.ones(nr_pools*2)
+        start_values_14C[:nr_pools] = self.start_values
+        start_values_14C[nr_pools:] = self.start_values
+        times_14C = self.times
+
+        Fa_atm = copy(atm_delta_14C)
+        Fa_atm[:,1] = Fa_atm[:,1]/1000 + 1
+        Fa_func = interp1d(Fa_atm[:,0], Fa_atm[:,1])
+        func_set_14C = copy(self.func_set)
+
+        function_string = 'Fa_14C(' + srm_14C.time_symbol.name + ')'
+        func_set_14C[function_string] = Fa_func
+
+        smr_14C = SmoothModelRun(
+            srm_14C, 
+            par_set_14C,
+            start_values_14C,
+            times_14C,
+            func_set_14C)
+
+        return smr_14C
 
 
     ########## private methods #########

@@ -2,12 +2,14 @@
 # vim:set ff=unix expandtab ts=4 sw=4:
 
 from concurrencytest import ConcurrentTestSuite, fork_for_tests
-import unittest
-import sys 
+import inspect
 import matplotlib
+import sys 
+import unittest
 matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 from scipy.integrate import quad
 from scipy.interpolate import interp1d 
 from scipy.misc import factorial
@@ -2322,6 +2324,71 @@ class TestSmoothModelRun(InDirTest):
         #   test_plot_age_densities
         #   test_plot_system_age_densities
         pass
+
+
+    ##### 14C methods #####
+
+    
+    def test_to_14C_only(self):
+        # we test only that the construction works and can be solved,
+        # not the actual solution values
+        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
+        B = Matrix([[-lamda_1,        0],
+                    [       0, -lamda_2]])
+        u = Matrix(2, 1, [1, 1])
+        state_vector = Matrix(2, 1, [C_1, C_2])
+        time_symbol = Symbol('t')
+
+        srm = SmoothReservoirModel.from_B_u(state_vector,
+                                            time_symbol,
+                                            B,
+                                            u)
+
+        par_set = {lamda_1: 0.5, lamda_2: 0.2}
+        start_values = np.array([7,4])
+        start, end, ts = 1950, 2000, 0.5
+        times = np.linspace(start, end, (end+ts-start)/ts)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+        soln = smr.solve()
+
+        pabs = Path(inspect.getfile(SmoothModelRun)).absolute()
+        pfile = pabs.parents[1].joinpath('Data').joinpath('C14Atm_NH.csv')
+
+        atm_delta_14C = np.loadtxt(pfile, skiprows=1, delimiter=',')
+        smr_14C = smr.to_14C_only(atm_delta_14C, 1)
+
+        soln_14C = smr_14C.solve()
+
+
+    def test_to_14C_explicit(self):
+        # we test only that the construction works and can be solved,
+        # not the actual solution values
+        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
+        B = Matrix([[-lamda_1,        0],
+                    [       0, -lamda_2]])
+        u = Matrix(2, 1, [1, 1])
+        state_vector = Matrix(2, 1, [C_1, C_2])
+        time_symbol = Symbol('t')
+
+        srm = SmoothReservoirModel.from_B_u(state_vector,
+                                            time_symbol,
+                                            B,
+                                            u)
+
+        par_set = {lamda_1: 0.5, lamda_2: 0.2}
+        start_values = np.array([7,4])
+        start, end, ts = 1950, 2000, 0.5
+        times = np.linspace(start, end, (end+ts-start)/ts)
+        smr = SmoothModelRun(srm, par_set, start_values, times)
+        soln = smr.solve()
+
+        pabs = Path(inspect.getfile(SmoothModelRun)).absolute()
+        pfile = pabs.parents[1].joinpath('Data').joinpath('C14Atm_NH.csv')
+
+        atm_delta_14C = np.loadtxt(pfile, skiprows=1, delimiter=',')
+        smr_14C = smr.to_14C_explicit(atm_delta_14C, 1)
+
+        soln_14C = smr_14C.solve()
 
 
     ##### temporary #####
