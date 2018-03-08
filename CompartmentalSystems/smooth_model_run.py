@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 import numpy as np
+from numpy.linalg import matrix_power
 
 import plotly.graph_objs as go
 
@@ -35,6 +36,8 @@ from sympy import lambdify, flatten, latex, Function, sympify, sstr, solve, \
 from sympy.abc import _clash
 
 import scipy.linalg
+from scipy.linalg import inv
+from scipy.misc import factorial
 from scipy.integrate import odeint, quad 
 from scipy.interpolate import interp1d, UnivariateSpline
 from scipy.optimize import newton, brentq, minimize
@@ -253,7 +256,6 @@ class SmoothModelRun(object):
  
         return linearized_smr
 
-    # return an ndarray (moments x pools) 
     @staticmethod
     def moments_from_densities(max_order, densities):
         """Compute the moments up to max_order of the given densities.
@@ -281,7 +283,32 @@ class SmoothModelRun(object):
 
         return np.array([kth_moment(k) for k in range(1, max_order+1)])
 
-    
+    #fixme: test
+    def compute_start_age_moments(self, max_order):
+        """Compute the start age moments up ``max_order`` considering the system in
+           equilibrium at time :math:`t_0`.
+        
+        Args:
+            max_order (int): The highest order up to which moments are
+                to be computed.
+
+        Returns:
+            numpy.ndarra: moments x pools, containing the moments of the
+                pool ages in equilibrium.
+        """
+        times = self.times
+        B0 = self.B(times[0])
+        x0 = self.solve()[0]
+        X0 = x0 * np.identity(len(x0))
+        start_age_moments = []
+        for n in range(1, max_order+1):
+            start_age_moment = (-1)**n * factorial(n) \
+                                * inv(X0) @ matrix_power(inv(B0), n) @ x0
+            start_age_moments.append(start_age_moment)
+
+        return np.array(start_age_moments)
+
+
     ########## public methods and properties ########## 
 
     
@@ -1030,8 +1057,6 @@ class SmoothModelRun(object):
             numpy.array: The ``order`` th backward transit time moment over the 
             time grid.
         """ 
-        times = self.times
-
         age_moment_vector = self.age_moment_vector(order, start_age_moments)
         r = self.external_output_vector
         
