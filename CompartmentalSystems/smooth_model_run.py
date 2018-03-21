@@ -2833,12 +2833,13 @@ class SmoothModelRun(object):
         function_string = 'Fa_14C(' + srm_14C.time_symbol.name + ')'
         func_set_14C[function_string] = Fa_func
 
-        smr_14C = SmoothModelRun(
+        smr_14C = SmoothModelRun_14C(
             srm_14C, 
             par_set_14C,
             start_values_14C,
             times_14C,
-            func_set_14C)
+            func_set_14C,
+            decay_rate)
 
         return smr_14C
 
@@ -3645,5 +3646,30 @@ class SmoothModelRun(object):
         print('D', D)
 
         return (A+B)/(C+D)
+
+
+class SmoothModelRun_14C(SmoothModelRun):
+
+    def __init__(self, srm, par_set, start_values, times, func_set, decay_rate):
+        SmoothModelRun.__init__(
+            self, 
+            srm, 
+            par_set,
+            start_values,
+            times,
+            func_set)
+        self.decay_rate =  decay_rate
+
+    @property 
+    def external_output_vector(self):
+        r = super().external_output_vector
+        # remove the decay because it is not part of respiration
+        correction_rates = - np.ones_like(r) * self.decay_rate
+        soln = self.solve()
+        correction = correction_rates * soln
+        r += correction
+
+        return r
+        
 
  
