@@ -210,7 +210,7 @@ class SmoothModelRun(object):
         sol_funcs = self.sol_funcs()
         
         srm = self.model
-        xi, T, N, C, u = srm.xi_T_N_u_representation
+        xi, T, N, C, u = srm.xi_T_N_u_representation()
         svec = srm.state_vector
 
         symbolic_sol_funcs = {sv: Function(sv.name + '_sol')(srm.time_symbol) 
@@ -525,6 +525,7 @@ class SmoothModelRun(object):
         soln[soln==0] = 0
 
         return output_vec/soln
+
 
     ##### age density methods #####
     
@@ -2822,14 +2823,15 @@ class SmoothModelRun(object):
         # create SmoothModelRun for 14C
         par_set_14C = copy(self.parameter_set)
         par_set_14C['lamda_14C'] = decay_rate
+        #fixme: use 14C equilibrium start values
         start_values_14C = self.start_values
         times_14C = self.times
 
         Fa_atm = copy(atm_delta_14C)
         Fa_atm[:,1] = Fa_atm[:,1]/1000 + 1
         Fa_func = interp1d(Fa_atm[:,0], Fa_atm[:,1])
-        func_set_14C = copy(self.func_set)
 
+        func_set_14C = copy(self.func_set)
         function_string = 'Fa_14C(' + srm_14C.time_symbol.name + ')'
         func_set_14C[function_string] = Fa_func
 
@@ -3006,11 +3008,12 @@ class SmoothModelRun(object):
                 self.times)
     
             def no_input_sol(times, start_vector):
-                #print('nos', times, start_vector)
+                ('nos', times, start_vector)
                 # Start and end time too close together? Do not integrate!
                 if abs(times[0]-times[-1]) < 1e-14: 
                     return np.array(start_vector)
                 sv = np.array(start_vector).reshape((self.nr_pools,))
+
                 return odeint(no_inputs_num_rhs, sv, times, mxstep = 10000)[-1]
         
             self._saved_no_input_sol = no_input_sol

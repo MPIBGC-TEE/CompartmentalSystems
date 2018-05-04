@@ -90,7 +90,7 @@ class TestSmoothReservoirModel(InDirTest):
         internal_fluxes = {(0,1): gamma*3*5*C_0*C_1, (1,0): gamma*3*4*C_0}
 
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
-        xi, T, N, C, u = rm.xi_T_N_u_representation
+        xi, T, N, C, u = rm.xi_T_N_u_representation()
 
         self.assertEqual(u, Matrix([u_0, u_1]))
         self.assertEqual(xi, 3*gamma)
@@ -122,7 +122,7 @@ class TestSmoothReservoirModel(InDirTest):
             (2,0): gamma*t_13*k_3*C_3, (2,1): gamma*t_23*k_3*C_3})
 
         # test backward conversion to matrices
-        xi2, T2, N2, C2, u2 = rm.xi_T_N_u_representation
+        xi2, T2, N2, C2, u2 = rm.xi_T_N_u_representation()
         self.assertEqual(xi,xi2)
         self.assertEqual(u,u2)
         self.assertEqual(T,T2)
@@ -180,7 +180,7 @@ class TestSmoothReservoirModel(InDirTest):
 
         # test backward conversion to matrices
         
-        xi2, T2, N2, C2, u2 = rm.xi_T_N_u_representation
+        xi2, T2, N2, C2, u2 = rm.xi_T_N_u_representation()
         self.assertEqual(xi,xi2)
         self.assertEqual(u,u2)
         self.assertEqual(T,T2)

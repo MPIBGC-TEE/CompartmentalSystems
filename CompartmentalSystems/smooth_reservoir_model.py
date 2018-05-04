@@ -215,9 +215,9 @@ class SmoothReservoirModel(object):
 
     def port_controlled_Hamiltonian_representation(self):
         """tuple: :math:`J, R, N, x, u` from 
-        :math:`\\dot{x} = [J(x)-R(x)] \\frac{\\partial}{\\partial x}H+u`.
-	with
-	:math:H=\\sum_i x_i \\implies \\frac{\\partial}{\\partial x}H =(1,1,...,1) 
+            :math:`\\dot{x} = [J(x)-R(x)] \\frac{\\partial}{\\partial x}H+u`.
+    	    with
+	        :math:H=\\sum_i x_i \\implies \\frac{\\partial}{\\partial x}H =(1,1,...,1) 
 
         Returns:
             tuple:
@@ -258,15 +258,14 @@ class SmoothReservoirModel(object):
 
         return (J, Q, C, u)
 
-    @property
-    # fixme mm:
-    # If the method does not return a single value it should not be decorated as a property
-    # T could be as well as N or u or xi but not the whole lot.
-    # The purpose of the property decorator is not to save parentheses but to make actual properties 
-    # indistinguishable from methods that synthesize them to give us flexibility in the implementation
-    def xi_T_N_u_representation(self):
+    def xi_T_N_u_representation(self, factor_out_xi=True):
         """tuple: :math:`\\xi, T, N, x, u` from 
         :math:`\\dot{x} = \\xi\\,T\\,N\\,x+u`.
+
+        Args:
+            factor_out_xi (bool): If true, xi is extracted from the matrix,
+                otherwise :math:`xi=1` will be returned.
+                (Defaults to ``True``.)
 
         Returns:
             tuple:
@@ -308,13 +307,16 @@ class SmoothReservoirModel(object):
             T[j,i] = flux/C[i]/N[i,i]
 
         # try to extract xi from N and T
-        xi_N = factor_out_from_matrix(N)
-        N = N/xi_N
+        if factor_out_xi:
+            xi_N = factor_out_from_matrix(N)
+            N = N/xi_N
 
-        xi_T = factor_out_from_matrix(T)
-        T = T/xi_T
+            xi_T = factor_out_from_matrix(T)
+            T = T/xi_T
 
-        xi = xi_N * xi_T
+            xi = xi_N * xi_T
+        else:
+            xi = 1
 
         return (xi, T, N, C, u)
 
@@ -329,7 +331,7 @@ class SmoothReservoirModel(object):
         # could be computed directly from Jaquez
         # but since we need the xi*T*N decomposition anyway
         # we can use it
-        xi, T, N, C, u = self.xi_T_N_u_representation
+        xi, T, N, C, u = self.xi_T_N_u_representation(factor_out_xi=False)
         return(xi*T*N)
     
     def age_moment_system(self, max_order):

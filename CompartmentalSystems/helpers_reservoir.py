@@ -209,6 +209,7 @@ def numerical_rhs(state_vector, time_symbol, rhs,
             res = num_rhs(X, t)
 
         #print('brhs', 't', t, 'X', X, 'res', res)
+        #print('t', t)
         return res
 
     return bounded_num_rhs
