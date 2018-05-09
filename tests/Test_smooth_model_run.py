@@ -2347,12 +2347,13 @@ class TestSmoothModelRun(InDirTest):
         par_set = {lamda_1: 0.5, lamda_2: 0.2}
         start_values = np.array([7,4])
         start, end, ts = 1950, 2000, 0.5
-        times = np.linspace(start, end, (end+ts-start)/ts)
+        times = np.linspace(start, end, int((end+ts-start)/ts))
         smr = SmoothModelRun(srm, par_set, start_values, times)
         soln = smr.solve()
 
         pabs = Path(inspect.getfile(SmoothModelRun)).absolute()
-        pfile = pabs.parents[1].joinpath('Data').joinpath('C14Atm_NH.csv')
+        pfile = pabs.parents[0].joinpath('Data').joinpath('C14Atm_NH.csv')
+        print(pfile)
 
         atm_delta_14C = np.loadtxt(pfile, skiprows=1, delimiter=',')
         smr_14C = smr.to_14C_only(atm_delta_14C, 1)
@@ -2378,12 +2379,12 @@ class TestSmoothModelRun(InDirTest):
         par_set = {lamda_1: 0.5, lamda_2: 0.2}
         start_values = np.array([7,4])
         start, end, ts = 1950, 2000, 0.5
-        times = np.linspace(start, end, (end+ts-start)/ts)
+        times = np.linspace(start, end, int((end+ts-start)/ts))
         smr = SmoothModelRun(srm, par_set, start_values, times)
         soln = smr.solve()
 
         pabs = Path(inspect.getfile(SmoothModelRun)).absolute()
-        pfile = pabs.parents[1].joinpath('Data').joinpath('C14Atm_NH.csv')
+        pfile = pabs.parents[0].joinpath('Data').joinpath('C14Atm_NH.csv')
 
         atm_delta_14C = np.loadtxt(pfile, skiprows=1, delimiter=',')
         smr_14C = smr.to_14C_explicit(atm_delta_14C, 1)
