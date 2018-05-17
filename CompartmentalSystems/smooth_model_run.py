@@ -1669,14 +1669,18 @@ class SmoothModelRun(object):
         n = len(self.model.state_vector)
 
         if n>=2:
-            planes = [(i,j) for i in range(n) for j in range(i)]
-            rows, cols = arrange_subplots(len(planes))
-
-            for k, (i, j) in enumerate(planes):
-                ax = fig.add_subplot(rows, cols, k+1)
-                self.plot_phase_plane(ax, i, j, fontsize)
-                ax.get_xaxis().set_ticks([])
-                ax.get_yaxis().set_ticks([])
+#            planes = [(i,j) for i in range(n) for j in range(i)]
+#            rows, cols = arrange_subplots(len(planes))
+            
+            k = 0
+            for i in range(n-1):
+                for j in range(n-1):
+                    k += 1
+                    if i > j:
+                        ax = fig.add_subplot(n-1, n-1, k)
+                        self.plot_phase_plane(ax, i, j, fontsize)
+                        ax.get_xaxis().set_ticks([])
+                        ax.get_yaxis().set_ticks([])
 
             fig.tight_layout()
     

@@ -20,8 +20,9 @@ import matplotlib.pyplot as plt
 
 from copy import copy
 from sympy import (zeros, Matrix, simplify, diag, eye, gcd, latex, Symbol, 
-                   flatten, Function)
+                   flatten, Function, solve)
 import numpy as np
+import multiprocessing
 
 from .helpers_reservoir import factor_out_from_matrix, has_pw
 
@@ -647,6 +648,46 @@ class SmoothReservoirModel(object):
 
         return srm_total
         
+    def steady_states(self, par_set = None):
+        if par_set is None:
+            #compute steady state formulas
+            par_set = {}
+        # try to calculate the steady states for ten seconds
+        # after ten seconds stop it
+        q = multiprocessing.Queue()
+        def calc_steady_states(q):    
+            ss = solve(self.F.subs(par_set), self.state_vector, dict=True)
+            q.put(ss)
+    
+        p = multiprocessing.Process(target=calc_steady_states, args=(q,))
+        p.start()
+        p.join(10)
+        if p.is_alive():
+            p.terminate()
+            p.join()
+            steady_states = []
+        else:
+            steady_states = q.get()
+       
+        formal_steady_states = []
+        for ss in steady_states:
+            result = []
+            ss_dict = {}
+            for sv_symbol in self.state_vector:
+                if sv_symbol in ss.keys():
+                    ss[sv_symbol] = simplify(ss[sv_symbol])
+                else:
+                    ss[sv_symbol] = sv_symbol
+
+                ss_expr = ss[sv_symbol]
+                if self.time_symbol in ss_expr.free_symbols:
+                    # take limit of time to infinity if steady state still depends on time
+                    ss_expr = limit(ss_expr, time_symbol, oo)
+                ss_dict[sv_symbol.name] = ss_expr
+
+            formal_steady_states.append(ss_dict)
+
+        return formal_steady_states
 
 
     ##### functions for internal use only #####
