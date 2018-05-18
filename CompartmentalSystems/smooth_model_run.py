@@ -37,6 +37,7 @@ from sympy.abc import _clash
 
 import scipy.linalg
 from scipy.linalg import inv
+from numpy.linalg import pinv
 from scipy.misc import factorial
 from scipy.integrate import odeint, quad 
 from scipy.interpolate import interp1d, UnivariateSpline
@@ -293,7 +294,7 @@ class SmoothModelRun(object):
                 to be computed.
 
         Returns:
-            numpy.ndarra: moments x pools, containing the moments of the
+            numpy.ndarray: moments x pools, containing the moments of the
                 pool ages in equilibrium.
         """
         times = self.times
@@ -428,7 +429,7 @@ class SmoothModelRun(object):
     
 
     #fixme: returns a function
-    def external_input_vector_func(self):
+    def external_input_vector_func(self, cut_off = True):
         """Return a vector valued function for the external inputs.
 
         The resulting function bases on sol_funcs and is a linear interpolation.
@@ -440,8 +441,11 @@ class SmoothModelRun(object):
         if self._external_input_vector_func is None:
             t0 = self.times[0]
             # cut off inputs until t0
-            t_valid = lambda t: True if ((t0<t) and 
-                            (t<=self.times[-1])) else False
+            if cut_off:
+                t_valid = lambda t: True if ((t0<t) and 
+                                (t<=self.times[-1])) else False
+            else:
+                t_valid = lambda t: True
 
             input_fluxes = []
             for i in range(self.nr_pools):
