@@ -1639,7 +1639,7 @@ class SmoothModelRun(object):
         times = self.times
         soln = self.solve()
         ax.plot(soln[:, i], soln[:, j])
-
+        
         x0 = soln[0, i]
         y0 = soln[0, j]
         ax.scatter([x0],[y0], s=60)
@@ -1652,9 +1652,9 @@ class SmoothModelRun(object):
                     arrowstyle='simple', mutation_scale=20, alpha=1))
 
         ax.set_xlabel(self._add_content_unit(
-            "$"+latex(self.model.state_variables[i])+"$"), fontsize=fontsize)
+            "$"+latex(sympify(self.model.state_variables[i]))+"$"), fontsize=fontsize)
         ax.set_ylabel(self._add_content_unit(
-            "$"+latex(self.model.state_variables[j])+"$"), fontsize=fontsize)
+            "$"+latex(sympify(self.model.state_variables[j]))+"$"), fontsize=fontsize)
 
 
     def plot_phase_planes(self, fig, fontsize = 10):
@@ -1670,18 +1670,17 @@ class SmoothModelRun(object):
             None.
             Instead ``fig`` is changed in place.
         """
-        n = len(self.model.state_vector)
-
+        n = self.nr_pools
+        
         if n>=2:
 #            planes = [(i,j) for i in range(n) for j in range(i)]
 #            rows, cols = arrange_subplots(len(planes))
-            
             k = 0
-            for i in range(n-1):
-                for j in range(n-1):
+            for i in range(n):
+                for j in range(n):
                     k += 1
                     if i > j:
-                        ax = fig.add_subplot(n-1, n-1, k)
+                        ax = fig.add_subplot(n, n, k)
                         self.plot_phase_plane(ax, i, j, fontsize)
                         ax.get_xaxis().set_ticks([])
                         ax.get_yaxis().set_ticks([])
