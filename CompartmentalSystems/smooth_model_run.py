@@ -21,7 +21,6 @@ from copy import copy, deepcopy
 from matplotlib import cm
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 import numpy as np
 from numpy.linalg import matrix_power
