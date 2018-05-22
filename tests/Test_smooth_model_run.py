@@ -2351,6 +2351,7 @@ class TestSmoothModelRun(InDirTest):
         smr = SmoothModelRun(srm, par_set, start_values, times)
         soln = smr.solve()
 
+        #this=Path(__file__).parents[0] #the package dir
         pabs = Path(inspect.getfile(SmoothModelRun)).absolute()
         pfile = pabs.parents[0].joinpath('Data').joinpath('C14Atm_NH.csv')
         print(pfile)
