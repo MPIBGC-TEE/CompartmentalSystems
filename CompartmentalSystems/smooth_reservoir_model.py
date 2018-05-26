@@ -418,7 +418,8 @@ class SmoothReservoirModel(object):
        
         fig = plt.figure(figsize=figure_size,dpi=300)
         if legend:
-            ax = fig.add_axes([0,0,1,0.9])
+            #ax = fig.add_axes([0,0,1,0.9])
+            ax = fig.add_axes([0,0,0.8,0.8])
         else:
             #ax = fig.add_axes([0,0,1,1])
             ax = fig.add_subplot(1,1,1)
