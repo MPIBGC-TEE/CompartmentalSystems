@@ -1,6 +1,6 @@
 import numpy as np
 
-from numpy.linalg import matrix_power
+from numpy.linalg import matrix_power, pinv
 from scipy.linalg import inv
 from scipy.misc import factorial
 from scipy.special import binom
@@ -106,8 +106,8 @@ class DiscreteModelRun(object):
         X = x * Id
         n = order
 
-        fm = factorial(n) * inv(X) @ matrix_power(B, n) @ \
-                matrix_power(inv(Id-B), n) @ x
+        fm = factorial(n) * pinv(X) @ matrix_power(B, n) @ \
+                matrix_power(pinv(Id-B), n) @ x
 
         return fm
 
@@ -403,8 +403,7 @@ class DiscreteModelRun(object):
 
         Bs_14C = np.zeros_like(Bs)
         for k in range(len(Bs)):
-            decay_matrix = -(1-np.exp(-decay_rate*dts[k])) * np.identity(n)
-            Bs_14C[k] = Bs[k] + decay_matrix
+            Bs_14C[k] = Bs[k] * np.exp(-decay_rate*dts[k])
 
         dmr_14C = DiscreteModelRun_14C(
             start_values_14C,
@@ -430,9 +429,9 @@ class DiscreteModelRun_14C(DiscreteModelRun):
         n = self.nr_pools
         Bs = self.Bs
         dts = self.dts
-        lamda = self.decay_rate
-        rho = np.array([1-Bs[k].sum(0).reshape((n,))
-                           - (1-np.exp(-lamda*dts[k])) for k in range(len(Bs))])
+        decay_rate = self.decay_rate
+        rho = np.array([(1-Bs[k].sum(0).reshape((n,))) 
+                          * np.exp(-decay_rate*dts[k]) for k in range(len(Bs))])
         soln = self.solve()
         r = rho * soln[:-1]
 

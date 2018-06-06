@@ -9,7 +9,7 @@ The model can then be run and as long as the model is linear,
 based on the state transition operator age and transit time
 distributions can be computed.
 
-Nonlinear models can be lineaized along a solution trajectory.
+Nonlinear models can be linearized along a solution trajectory.
 
 Counting of compartment/pool/reservoir numbers start at zero and the 
 total number of pools is :math:`d`.
