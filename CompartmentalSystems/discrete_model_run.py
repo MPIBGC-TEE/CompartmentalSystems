@@ -403,7 +403,9 @@ class DiscreteModelRun(object):
 
         Bs_14C = np.zeros_like(Bs)
         for k in range(len(Bs)):
+            # there seems to be no difference
             Bs_14C[k] = Bs[k] * np.exp(-decay_rate*dts[k])
+            #Bs_14C[k] = Bs[k] * (1.0-decay_rate*dts[k])
 
         dmr_14C = DiscreteModelRun_14C(
             start_values_14C,
@@ -438,3 +440,21 @@ class DiscreteModelRun_14C(DiscreteModelRun):
         return r
 
 
+#    def solve(self):
+#        if not hasattr(self, 'soln2'):
+#            dts = self.dts
+#            decay_rate = self.decay_rate
+#            start_values = self.start_values
+#            soln2 = [start_values]
+#            for k in range(len(self.times)-1):
+#                x_new = soln2[k].copy()
+#                #x_new = x_new + self.us[k]
+#                B = self.Bs[k] * np.exp(decay_rate*dts[k])
+#                x_new = B @ x_new + self.us[k]
+#                x_new = x_new * np.exp(-decay_rate*dts[k])
+#                soln2.append(x_new)
+#    
+#            self.soln2 = np.array(soln2)        
+#
+#        return self.soln2
+#        
