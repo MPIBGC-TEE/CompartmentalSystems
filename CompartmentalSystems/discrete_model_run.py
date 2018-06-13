@@ -25,7 +25,7 @@ class DiscreteModelRun(object):
         self.times = times
         self.Bs = Bs
         self.us = us
-        self.dts = np.diff(self.times)
+        self.dts = np.diff(self.times).astype(np.float64)
 
     @classmethod
     def reconstruct_from_data(cls, times, start_values, xs, Fs, rs, us):
