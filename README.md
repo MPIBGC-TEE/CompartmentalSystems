@@ -38,7 +38,7 @@ The way you install the package depends on your usage scenario.
 It will **not** make sure that the versions are compatible with the package (on purpose).
 
 
-Be sure to have [LAPM](https://github.com/MPIBPG-TEE/LAPM) installed.
+Be sure to have [LAPM](https://github.com/MPIBGC-TEE/LAPM) installed.
 Further required packages can be found in the install script.
 
 ---
