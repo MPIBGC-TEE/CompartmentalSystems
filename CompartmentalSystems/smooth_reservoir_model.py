@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 from copy import copy
 from sympy import (zeros, Matrix, simplify, diag, eye, gcd, latex, Symbol, 
-                   flatten, Function, solve)
+                   flatten, Function, solve, limit,oo)
 import numpy as np
 import multiprocessing
 
@@ -683,7 +683,7 @@ class SmoothReservoirModel(object):
                 ss_expr = ss[sv_symbol]
                 if self.time_symbol in ss_expr.free_symbols:
                     # take limit of time to infinity if steady state still depends on time
-                    ss_expr = limit(ss_expr, time_symbol, oo)
+                    ss_expr = limit(ss_expr, self.time_symbol, oo)
                 ss_dict[sv_symbol.name] = ss_expr
 
             formal_steady_states.append(ss_dict)
