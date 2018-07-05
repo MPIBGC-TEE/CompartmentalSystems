@@ -18,13 +18,16 @@ from __future__ import division
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
-from copy import copy
+from copy import deepcopy
+from string import Template
+from functools import reduce
 from sympy import (zeros, Matrix, simplify, diag, eye, gcd, latex, Symbol, 
-                   flatten, Function, solve, limit,oo)
+                   flatten, Function, solve, limit, oo , ask , Q, assuming )
+from sympy.printing import pprint
 import numpy as np
 import multiprocessing
 
-from .helpers_reservoir import factor_out_from_matrix, has_pw
+from .helpers_reservoir import factor_out_from_matrix, has_pw, flux_dict_string
 
 
 class Error(Exception):
@@ -86,17 +89,85 @@ class SmoothReservoirModel(object):
         self.internal_fluxes=internal_fluxes
         # fixme mm:
         # this is a kind of circular dependency 
-        # or at least a clumsy approach at a one-to-many relationship
+        # or at least a clumsy, duplicating and therefore error prone approach 
+        # at a one-to-many relationship
         # there is no need to store SmoothModelRun objects in ReservoirModel 
         # objects since we already have the 
         # attribute model_run_combinations in class Model
         #self.model_runs=[]
 
-    # fixme mm:
-    # see the description of the model_runs property
-   # def add_model_run(self,mr):
-   #     self.model_runs.append(mr)
+        # fixme mm:
+        # see the description of the model_runs property
+        # def add_model_run(self,mr):
+        #     self.model_runs.append(mr)
 
+    @property
+    def free_symbols(self):
+        flux_exprs=self.all_fluxes().values()
+        free_sym_sets=[ sym_set for sym_set in map(lambda sym:sym.free_symbols,flux_exprs)] 
+        return reduce( lambda A,B: A.union(B),free_sym_sets)
+
+    def subs(self,par_set):
+        """ returns a class: `SmoothReservoirModel` instance with all parameters in the parameter_set replaced 
+            by their values.
+            Args:
+                par_set: A dictionary with the structure {parameter_symbol:parameter_value,....}
+        """
+        return SmoothReservoirModel(
+            self.state_vector,
+            self.time_symbol,
+            {k:fl.subs(par_set) for k,fl in    self.input_fluxes.items()},
+            {k:fl.subs(par_set) for k,fl in   self.output_fluxes.items()},
+            {k:fl.subs(par_set) for k,fl in self.internal_fluxes.items()}
+        )
+
+    def __str__(self):
+        s="Object of class "+str(self.__class__)
+        indent=2 
+        s+="\n Input fluxes:\n"
+        s+=flux_dict_string(self.input_fluxes,indent)
+
+        s+="\n Internal fluxes:\n"
+        s+=flux_dict_string(self.internal_fluxes,indent)
+        
+        s+="\n Output fluxes:\n"
+        s+=flux_dict_string(self.output_fluxes,indent)
+
+        return s 
+
+    def all_fluxes(self): 
+        allFluxDict=deepcopy(self.input_fluxes)
+        allFluxDict.update(self.internal_fluxes)
+        allFluxDict.update(self.output_fluxes)
+        return allFluxDict
+
+    
+    @property
+    def is_compartmental(self):
+        # check if all free symbols have been removed
+        allowed_symbs= set( [sym for sym in self.state_vector])
+        if hasattr(self,"time_symbol"):
+            allowed_symbs.add(self.time_symbol)
+
+        if not(allowed_symbs.issuperset(self.free_symbols)):
+            raise Exception(
+                    Template("Sympy can not check the parameters without assumptions. Try to substitute all variables except the state variables and the time symbol. Use the subs methot of the class {c}").subs(c=self__class__)
+                )
+
+        def f(expr):
+            return ask(Q.positive(expr))
+        # making a list of predicated stating that all state variables are positive
+        predList=[Q.positive(sym) for sym in self.state_vector]
+        if hasattr(self,"time_symbol"):
+            predList+=[Q.positive(self.time_symbol)]
+
+        with assuming(*predList):
+            # under this assumption eveluate all fluxes
+            all_fluxes_positive=all(map(f,[val for val in self.all_fluxes().values()]))
+
+        return all_fluxes_positive
+        
+    
     # alternative constructor based on the formulation f=u+Bx
     @classmethod
     def from_B_u(cls, state_vector, time_symbol, B, u):

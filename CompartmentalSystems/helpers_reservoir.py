@@ -14,6 +14,12 @@ def pp(strng,env,comment=""):
     print(comment+"\n"+strng+"=:")
     print(env[strng])
 
+def flux_dict_string(d,indent=0):
+    s=""
+    for k,val in d.items():
+        s+=' '*indent+str(k)+": "+str(val)+"\n"
+
+    return s
 
 
 #fixme: test
