@@ -55,8 +55,8 @@ class TestSmoothReservoirModelChecks(InDirTest):
         # Therefore we can check the compartmental_property best after all paramater value have been substituted
 
         # f = u + xi*B*C
-        t,C_1, C_2, C_3, k_1, k_2, k_3, a_12, a_13, a_21, a_23, a_31, a_32, u_1, u_2, u_3, gamma, xi \
-        = symbols('t,C_1 C_2 C_3 k_1 k_2 k_3 a_12 a_13 a_21 a_23 a_31 a_32 u_1 u_2 u_3 gamma xi')
+        t,L,C_1, C_2, C_3, k_1, k_2, k_3, a_12, a_13, a_21, a_23, a_31, a_32, u_1, u_2, u_3, gamma, xi \
+        = symbols('t,L,C_1 C_2 C_3 k_1 k_2 k_3 a_12 a_13 a_21 a_23 a_31 a_32 u_1 u_2 u_3 gamma xi')
         C = Matrix(3,1, [C_1, C_2, C_3])
         u = Matrix(3,1, [u_1, u_2, u_3])
         B = gamma*Matrix([
@@ -65,8 +65,11 @@ class TestSmoothReservoirModelChecks(InDirTest):
                 [a_31, a_32, -k_3]
             ])
         rm = SmoothReservoirModel.from_B_u(C,t,B,u)
+        
+        # check that the method refuses if there are still free symbols (except the state variables and time)
         with self.assertRaises(Exception):
             print(rm.is_compartmental)
+        
         # we first choose a parameter set that leads to a compartmental system
         rm_p1=rm.subs(
             {
@@ -91,9 +94,64 @@ class TestSmoothReservoirModelChecks(InDirTest):
                 xi:0.5
             }
         )
-        print(rm)
-        print(rm_p1)
         self.assertFalse(rm_p1.is_compartmental) 
+        
+        # As an edge case  we now choose a parameter set that leads to a compartmental system with a zero
+        # flux in one of the pools
+        rm_p1=rm.subs(
+            {
+                k_1:4,a_21:2,a_31:2,# zero flux
+                k_2:6,a_12:2,a_32:3,
+                k_3:9,a_13:4,a_23:4,
+                u_1:1,u_2:1,u_3:1,
+                gamma:1,
+                xi:0.5
+            }
+        )
+        self.assertTrue(rm_p1.is_compartmental) 
+       # print(rm_p1)
+        
+        # try a nonlinear model
+        B = gamma*Matrix([
+                [-k_1 *C_1/(C_1+L), a_12, a_13],
+                [ a_21*C_1/(C_1+L), -k_2, a_23],
+                [ a_31*C_1/(C_1+L), a_32, -k_3]
+            ])
+        rm = SmoothReservoirModel.from_B_u(C,t,B,u)
+        rm_p1=rm.subs(
+            {   
+                L  :10,
+                k_1:4,a_21:1,a_31:2,
+                k_2:6,a_12:2,a_32:3,
+                k_3:9,a_13:4,a_23:4,
+                u_1:1,u_2:1,u_3:1,
+                gamma:1,
+                xi:0.5
+            }
+        )
+        print(rm_p1)
+        # unfortunately sympy cannot handle this Michaelis Menten case yet
+        with self.assertRaises(Exception):
+            rm_p1.is_compartmental 
+        
+        # but it works for other  nonlinear models 
+        B = gamma*Matrix([
+                [-k_1 *C_1, a_12, a_13],
+                [ a_21*C_1, -k_2, a_23],
+                [ a_31*C_1, a_32, -k_3]
+            ])
+        rm = SmoothReservoirModel.from_B_u(C,t,B,u)
+        rm_p1=rm.subs(
+            {   
+                k_1:4,a_21:1,a_31:2,
+                k_2:6,a_12:2,a_32:3,
+                k_3:9,a_13:4,a_23:4,
+                u_1:1,u_2:1,u_3:1,
+                gamma:1,
+                xi:0.5
+            }
+        )
+        self.assertTrue(rm_p1.is_compartmental) 
         #self.assertEqual(rm.input_fluxes, {0: u_1, 1: u_2, 2: u_3})
         #self.assertEqual(rm.output_fluxes, {0: 2*gamma*k_1*(1-t_21-t_31*k_1)*C_1*C_2,
         #                           1: -2*gamma*k_2*(-1+t_12*C_2+t_32)*C_2/C_3,

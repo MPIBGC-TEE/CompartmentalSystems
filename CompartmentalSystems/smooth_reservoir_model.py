@@ -18,7 +18,7 @@ from __future__ import division
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
-from copy import deepcopy
+from copy import copy, deepcopy
 from string import Template
 from functools import reduce
 from sympy import (zeros, Matrix, simplify, diag, eye, gcd, latex, Symbol, 
@@ -103,13 +103,15 @@ class SmoothReservoirModel(object):
 
     @property
     def free_symbols(self):
+        """ Returns the superset of the free symbols of the flux expressions.
+        """
         flux_exprs=self.all_fluxes().values()
         free_sym_sets=[ sym_set for sym_set in map(lambda sym:sym.free_symbols,flux_exprs)] 
         return reduce( lambda A,B: A.union(B),free_sym_sets)
 
     def subs(self,par_set):
-        """ returns a class: `SmoothReservoirModel` instance with all parameters in the parameter_set replaced 
-            by their values.
+        """ Returns a new instance of class: `SmoothReservoirModel` with all parameters in the parameter_set replaced 
+            by their values by calling subs on all the flux expressions. 
             Args:
                 par_set: A dictionary with the structure {parameter_symbol:parameter_value,....}
         """
@@ -122,6 +124,8 @@ class SmoothReservoirModel(object):
         )
 
     def __str__(self):
+        """ This method is called implicitly by print and gives an returns a string that gives an overview over the fluxes 
+        """
         s="Object of class "+str(self.__class__)
         indent=2 
         s+="\n Input fluxes:\n"
@@ -144,7 +148,25 @@ class SmoothReservoirModel(object):
     
     @property
     def is_compartmental(self):
-        # check if all free symbols have been removed
+        """ Returns checks that all fluxes are nonnegative
+        at the time of implementation this functionality sympy did not support 
+        relations in predicates yet.
+        So while the following works:
+        
+        with assuming(Q.positive(x) & Q.positive(y)):
+           print(ask(Q.positive(2*x+y)
+        
+        it is not possible yet to get a meaningful answer to:
+        
+        with assuming(Q.is_true(x>0) & Q.is_true(y>0)):
+           print(ask(Q.positive(2*x+y)
+        
+        We therefore cannot implement more elaborate assumptions like k_1-(a_12+a_32)>=0 
+        but still can assume all the state_variables and the time_symbol to be nonnegative
+        Therefore we can check the compartmental_property best after all paramater value have been substituted.
+        At the moment the function throws an exception if this is not the case.
+        """
+        #check if all free symbols have been removed
         allowed_symbs= set( [sym for sym in self.state_vector])
         if hasattr(self,"time_symbol"):
             allowed_symbs.add(self.time_symbol)
@@ -155,17 +177,26 @@ class SmoothReservoirModel(object):
                 )
 
         def f(expr):
-            return ask(Q.positive(expr))
-        # making a list of predicated stating that all state variables are positive
-        predList=[Q.positive(sym) for sym in self.state_vector]
+            res= ask(Q.nonnegative(expr))
+            if res is None:
+                raise Exception(
+                        Template("""Sympy can not (yet) check the parameters even with correct assumptions,\ 
+since relations (<,>) are not implemented yet. 
+It gave up for the following expression: ${e}."""
+                        ).substitute(e=expr) 
+                    )
+            return res
+
+        # making a list of predicated stating that all state variables are nonnegative
+        predList=[Q.nonnegative(sym) for sym in self.state_vector]
         if hasattr(self,"time_symbol"):
-            predList+=[Q.positive(self.time_symbol)]
+            predList+=[Q.nonnegative(self.time_symbol)]
 
         with assuming(*predList):
             # under this assumption eveluate all fluxes
-            all_fluxes_positive=all(map(f,[val for val in self.all_fluxes().values()]))
+            all_fluxes_nonnegative=all(map(f,[val for val in self.all_fluxes().values()]))
 
-        return all_fluxes_positive
+        return all_fluxes_nonnegative
         
     
     # alternative constructor based on the formulation f=u+Bx
