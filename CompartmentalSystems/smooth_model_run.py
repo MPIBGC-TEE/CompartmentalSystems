@@ -296,6 +296,7 @@ class SmoothModelRun(object):
             numpy.ndarray: moments x pools, containing the moments of the
                 pool ages in equilibrium.
         """
+        print('###########################################mm1')
         times = self.times
         B0 = self.B(times[0])
         x0 = self.solve()[0]
@@ -303,7 +304,9 @@ class SmoothModelRun(object):
         start_age_moments = []
         for n in range(1, max_order+1):
             start_age_moment = (-1)**n * factorial(n) \
-                                * inv(X0) @ matrix_power(inv(B0), n) @ x0
+                                * pinv(X0) @ matrix_power(pinv(B0), n) @ x0
+                                #* inv(X0) @ matrix_power(inv(B0), n) @ x0
+                                # use the pseudoinvers pinv
             start_age_moments.append(start_age_moment)
 
         return np.array(start_age_moments)

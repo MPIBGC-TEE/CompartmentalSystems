@@ -25,6 +25,38 @@ from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
 class TestSmoothModelRun(InDirTest):
 
+    def test_compute_start_age_moments(self):
+        # two-dimensional linear
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        time_symbol = Symbol('t')
+        input_fluxes = {0: 1, 1: 2}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+
+
+        start_values = np.array([5, 3])
+        times = np.linspace(0,1,6)
+        smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.compute_start_age_moments(1)
+
+        # two-dimensional nonlinear with a noninvertable matrix at C_0 =1 point
+        output_fluxes = {0: (C_0-1)**2, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.compute_start_age_moments(1)
+
+        # the start distributions have not been fully tested yet.
+        # We suspect some serious issues with some spinup scenarios
+        # since according to Holgers experience jumps occur in some cases.
+        # The function has to be changed in at least one of two ways:
+        # 1.) compute the correct result and test it
+        # 2.) reject cases where the present approach does not work 
+        # 
+        # since tests for both are missing we let the test fail here
+        raise Exception("Not implemented yet")
         
     def test_init(self):
         #create a valid model run complete with start ages
