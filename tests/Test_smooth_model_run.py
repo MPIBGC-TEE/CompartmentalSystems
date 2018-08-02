@@ -509,6 +509,18 @@ class TestSmoothModelRun(InDirTest):
 
         ref = np.ndarray((3,6,3), np.float, a_ref)
         self.assertTrue(np.allclose(age_densities, ref))
+        
+        # two-dimensional nonlinear with a noninvertable matrix at C_0 =1 point
+        output_fluxes = {0: (C_0-1)**2, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        smr = SmoothModelRun(srm, {}, start_values, times)
+        lmr=smr.linearize()
+        ages = np.linspace(0,2,21)
+        p = lmr.pool_age_densities_func(start_age_densities)
+        pool_age_densities = p(ages)
+        # we should be able to reproduce the failure in bgc-md but cant yet
+        raise Exception("Not implemented yet")
 
     def test_system_age_density_single_value(self):
         # two-dimensional
