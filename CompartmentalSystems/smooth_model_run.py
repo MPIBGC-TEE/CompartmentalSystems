@@ -297,6 +297,13 @@ class SmoothModelRun(object):
                 pool ages in equilibrium.
         """
         print('###########################################mm1')
+        raise Exception("""
+        Is the whole algorithm is ambigous?
+        At the moment is assumes an equilibrium
+        at t_0 with B_0=B(t_0) but starts at the startvalues. Actually it could start at the equilibrium point. of the nonlinear autonomous system. Until this is clear I break the tests.
+         
+        """
+        )
         times = self.times
         B0 = self.B(times[0])
         x0 = self.solve()[0]
