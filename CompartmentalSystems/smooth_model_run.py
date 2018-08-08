@@ -283,40 +283,6 @@ class SmoothModelRun(object):
 
         return np.array([kth_moment(k) for k in range(1, max_order+1)])
 
-    #fixme: test
-    def compute_start_age_moments(self, max_order):
-        """Compute the start age moments up ``max_order`` considering the system in
-           equilibrium at time :math:`t_0`.
-        
-        Args:
-            max_order (int): The highest order up to which moments are
-                to be computed.
-
-        Returns:
-            numpy.ndarray: moments x pools, containing the moments of the
-                pool ages in equilibrium.
-        """
-        print('###########################################mm1')
-        raise Exception("""
-        Is the whole algorithm is ambigous?
-        At the moment is assumes an equilibrium
-        at t_0 with B_0=B(t_0) but starts at the startvalues. Actually it could start at the equilibrium point. of the nonlinear autonomous system. Until this is clear I break the tests.
-         
-        """
-        )
-        times = self.times
-        B0 = self.B(times[0])
-        x0 = self.solve()[0]
-        X0 = x0 * np.identity(len(x0))
-        start_age_moments = []
-        for n in range(1, max_order+1):
-            start_age_moment = (-1)**n * factorial(n) \
-                                * pinv(X0) @ matrix_power(pinv(B0), n) @ x0
-                                #* inv(X0) @ matrix_power(inv(B0), n) @ x0
-                                # use the pseudoinvers pinv
-            start_age_moments.append(start_age_moment)
-
-        return np.array(start_age_moments)
 
 
     ########## public methods and properties ########## 

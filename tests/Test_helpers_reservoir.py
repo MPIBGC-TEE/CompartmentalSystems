@@ -8,10 +8,28 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sympy import Symbol,Matrix, symbols, sin, Piecewise, DiracDelta
 
-from CompartmentalSystems.helpers_reservoir import (factor_out_from_matrix, 
-    parse_input_function, melt, MH_sampling, stride, is_compartmental)
+from CompartmentalSystems.helpers_reservoir import factor_out_from_matrix, parse_input_function, melt, MH_sampling, stride, is_compartmental,start_age_moments_from_empty_spin_up,start_age_moments_from_steady_state 
 
 class TestHelpers_reservoir(unittest.TestCase):
+    
+    def test_compute_start_age_moments(self):
+        # two-dimensional linear
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        time_symbol = Symbol('t')
+        input_fluxes = {0: 1, 1: 2}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        res_1=start_age_moments_from_steady_state(srm,parameter_set={},func_set={},max_order=1)
+
+        # two-dimensional nonlinear 
+        output_fluxes = {0: (C_0-1)**2, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        with self.assertRaises(Exception) as e:
+            # not implemented yet
+            res_1=start_age_moments_from_steady_state(srm,parameter_set={},func_set={},max_order=1)
 
     def test_parse_input_function(self):
         t = symbols('t')
