@@ -27,7 +27,7 @@ from sympy.printing import pprint
 import numpy as np
 import multiprocessing
 
-from .helpers_reservoir import factor_out_from_matrix, has_pw, flux_dict_string
+from .helpers_reservoir import factor_out_from_matrix, has_pw, flux_dict_string , jacobian
 
 
 class Error(Exception):
@@ -144,6 +144,12 @@ class SmoothReservoirModel(object):
         allFluxDict.update(self.internal_fluxes)
         allFluxDict.update(self.output_fluxes)
         return allFluxDict
+
+    @property
+    def jacobian(self):
+        state_vec=self.state_vector
+        vec=Matrix(self.F)
+        return jacobian(vec,state_vec)
 
     
     @property
@@ -488,7 +494,7 @@ It gave up for the following expression: ${e}."""
                 no legend. Defaults to False.
 
         Returns:
-            Matplotlib figure: Figure representing the reservir model.
+            Matplotlib figure: Figure representing the reservoir model.
         """
         inputs = self.input_fluxes
         outputs =  self.output_fluxes
@@ -538,7 +544,7 @@ It gave up for the following expression: ${e}."""
                 self.inputs = inputs
                 self.outputs = outputs
                 self.nr = nr
-                # fixme:
+                # fixme mm:
                 # circular dependency
                 # actually a reservoir model can have pools and 
                 # pipelines (and should initialize them)
@@ -793,6 +799,18 @@ It gave up for the following expression: ${e}."""
         return formal_steady_states
 
 
+    @property
+    def is_linear(self):
+       	J=self.jacobian 
+       	print("####################################")
+        Jfss=J.free_symbols
+        svs=set([e for e in self.state_vector])
+        print(Jfss)
+        print(svs)
+        inter=Jfss.intersection(svs)
+        print(inter)
+        return len(inter)==0	
+
     ##### functions for internal use only #####
 
 
@@ -837,6 +855,25 @@ It gave up for the following expression: ${e}."""
         else:
             # probably this can never happen
             raise(Error('Unknown internal flux type'))
+
+    def _input_flux_type(self, pool_to):
+        """Return the type of an external input flux.
+
+        Args:
+            pool_to (int): The number of the pool to which the flux contributes.
+
+        Returns:
+            str: 'linear', 'nonlinear', 'no substrate dependence'
+
+        Raises:
+            Error: If unknown flux type is encountered.
+        """
+        sv = self.state_vector[pool_to]
+        print(sv)
+        flux = self.input_fluxes[pool_to]
+        print(flux)
+        flux = self.input_fluxes[pool_to]
+        raise Exception("not implemented yet")
 
 
     def _output_flux_type(self, pool_from):

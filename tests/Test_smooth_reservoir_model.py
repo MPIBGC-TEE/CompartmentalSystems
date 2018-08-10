@@ -14,11 +14,90 @@ from testinfrastructure.InDirTest import InDirTest
 ######### TestClass #############
 class TestSmoothReservoirModel(InDirTest):
 
-    #fixme:
     def test_init(self):
+        #fixme:
         # test that state_vector is a sympy matrix
         # test simple cases
         pass
+
+    def test_jacobian(self):
+        C_0, C_1  = symbols('C_0 C_1')
+        state_vars = [C_0, C_1]
+        time_symbol = Symbol('t')
+        # 1.)
+        # linear compartmental matrix 
+        # constant input
+        # The result is the compartmental matrix
+        input_fluxes = {0:50,1:60}
+        internal_fluxes = {}
+        #output_fluxes = {0: C_0+5, 1: C_1/C_0}
+        #output_fluxes = {}
+        output_fluxes = {0: C_0, 1: 6*C_1}
+
+        rm = SmoothReservoirModel(state_vars, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        self.assertEqual(rm.jacobian,-diag(1,6))
+        # 2.)
+        # linear compartmental matrix 
+        sv=Matrix(state_vars)
+        B=-diag(1,6)
+        # 'linear state dependent' input I=M*C+I0
+        # The result is J=B+M
+         
+        M=Matrix([[1,2],[3,4]])
+        I0=Matrix(2,1,[50,60])
+        I=M*sv+I0
+        rm=SmoothReservoirModel.from_B_u(sv,time_symbol,-diag(1,6),I)
+        self.assertEqual(rm.jacobian,B+M)
+
+    def test_is_linear(self):
+        C_0, C_1  = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        time_symbol = Symbol('t')
+        # test all fluxes linear
+        internal_fluxes = {(0,1): 5*C_0, (1,0): 4*C_1}
+        input_fluxes = {}
+        output_fluxes = {}
+        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        self.assertEqual(rm.is_linear,True)
+
+        # test nonlinear internal flux
+        input_fluxes = {}
+        output_fluxes = {}
+        internal_fluxes = {(0,1): 5*C_0, (1,0): 4*C_1**2}
+        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        print(rm.F)
+        self.assertEqual(rm.is_linear,False)
+        
+        # test nonlinear output flux
+        input_fluxes = {}
+        output_fluxes = {0: C_0+5, 1: C_1/C_0}
+        internal_fluxes = {(0,1): 5*C_0, (1,0): 4*C_1}
+        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        self.assertEqual(rm.is_linear,False)
+        
+        # test state dependent input flux that is linear though
+        output_fluxes = {}
+        input_fluxes = {0: C_0+5, 1: 0}
+        internal_fluxes = {(0,1): 5*C_0, (1,0): 4*C_1}
+        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        self.assertEqual(rm.is_linear,True)
+        
+    def test_input_flux_type(self):
+        C_0, C_1, C_2  = symbols('C_0 C_1 C_2')
+        state_vector = [C_0, C_1, C_2]
+        time_symbol = Symbol('t')
+        input_fluxes = {0: C_0+5, 1: 0, 2:C_0**2+C_1}
+        output_fluxes = {}
+
+        internal_fluxes = {}
+        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        print("###############")
+        print(rm.compartmental_matrix)
+
+        self.assertEqual(rm._input_flux_type(0), 'linear')
+        #self.assertEqual(rm._input_flux_type(1), 'no substrate dependence')
+        #self.assertEqual(rm._input_flux_type(2), 'nonlinear')
+
 
     def test_internal_flux_type(self):
         # test simple cases
@@ -50,14 +129,14 @@ class TestSmoothReservoirModel(InDirTest):
         input_fluxes = {}
         internal_fluxes = {}
         
-        output_fluxes = {0: 5*C_0, 1: C_1**2}
+        output_fluxes = {0: C_0, 1: C_1*(5+C_0)}
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
 
         self.assertEqual(rm._output_flux_type(0), 'linear')
         self.assertEqual(rm._output_flux_type(1), 'nonlinear')
 
         # (1,0): 4 is considered to be nonlinear : in B the corresponding entry is 4/C_1
-        output_fluxes = {0: C_0+5, 1: C_1/C_0}
+        output_fluxes = {0: 5, 1: C_1/C_0}
 
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
 

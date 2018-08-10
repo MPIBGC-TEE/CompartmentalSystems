@@ -7,7 +7,7 @@ from scipy.interpolate import lagrange
 from scipy.optimize import brentq
 from scipy.stats import norm
 from string import Template
-from sympy import flatten, gcd, lambdify, DiracDelta, solve
+from sympy import flatten, gcd, lambdify, DiracDelta, solve, Matrix,diff
 from sympy.polys.polyerrors import PolynomialError
 
 def pp(strng,env,comment=""):
@@ -21,6 +21,9 @@ def flux_dict_string(d,indent=0):
 
     return s
 
+def jacobian(vec,state_vec):
+     dim = vec.rows
+     return(Matrix(dim,dim,lambda i,j: diff(vec[i],state_vec[j])))
 
 #fixme: test
 def has_pw(expr):
@@ -426,7 +429,7 @@ def start_age_moments_from_empty_spin_up(srm,parameter_set,func_set,a_max,max_or
     # to do:
     # run a spin up and observe the age distribution at the end
     # then compute the moments numerically
-    raise(Exception("Not implemented yet")
+    raise Exception("Not implemented yet")
 
 def start_age_moments_from_steady_state(srm,parameter_set,func_set,max_order):
     """
@@ -511,7 +514,7 @@ def start_age_moments_from_steady_state(srm,parameter_set,func_set,max_order):
         Until this is actually implemented  the tests should fail 
         at least for all nonlinear models.
          
-        """
+        """)
         # to do:
         # try to find an equilibrium
         # and implement 2a) or fail
