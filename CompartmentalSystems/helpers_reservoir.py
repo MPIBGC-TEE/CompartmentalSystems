@@ -22,8 +22,9 @@ def flux_dict_string(d,indent=0):
     return s
 
 def jacobian(vec,state_vec):
-     dim = vec.rows
-     return(Matrix(dim,dim,lambda i,j: diff(vec[i],state_vec[j])))
+     dim1 = vec.rows
+     dim2 = state_vec.rows
+     return(Matrix(dim1,dim2,lambda i,j: diff(vec[i],state_vec[j])))
 
 #fixme: test
 def has_pw(expr):

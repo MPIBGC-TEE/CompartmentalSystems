@@ -147,7 +147,7 @@ class SmoothReservoirModel(object):
 
     @property
     def jacobian(self):
-        state_vec=self.state_vector
+        state_vec=Matrix(self.state_vector)
         vec=Matrix(self.F)
         return jacobian(vec,state_vec)
 
@@ -802,13 +802,9 @@ It gave up for the following expression: ${e}."""
     @property
     def is_linear(self):
        	J=self.jacobian 
-       	print("####################################")
         Jfss=J.free_symbols
         svs=set([e for e in self.state_vector])
-        print(Jfss)
-        print(svs)
         inter=Jfss.intersection(svs)
-        print(inter)
         return len(inter)==0	
 
     ##### functions for internal use only #####
@@ -863,17 +859,32 @@ It gave up for the following expression: ${e}."""
             pool_to (int): The number of the pool to which the flux contributes.
 
         Returns:
-            str: 'linear', 'nonlinear', 'no substrate dependence'
+            str: 'linear', 'nonlinear', 'no state dependence'
 
         Raises:
             Error: If unknown flux type is encountered.
         """
         sv = self.state_vector[pool_to]
-        print(sv)
-        flux = self.input_fluxes[pool_to]
-        print(flux)
-        flux = self.input_fluxes[pool_to]
-        raise Exception("not implemented yet")
+        # we compute the derivative of the appropriate row of the input vector w.r.t. all the state variables
+        # (This is a row of the jacobian)  
+        u_i=Matrix([self.external_inputs[pool_to]])
+        s_v=Matrix(self.state_vector)
+        J_i=jacobian(u_i,s_v)
+        # an input that does not depend on state variables has a zero derivative with respect 
+        # to all state variables
+        if all([ j_ij==0 for j_ij in J_i]):
+            return 'no state dependence'
+        # an input that depends on state variables in a linear way
+        # has a constant derivatives with respect to all state variables 
+        # (the derivative has no state variables in its free symbols)
+        J_ifss=J_i.free_symbols
+        svs=set([e for e in self.state_vector])
+        inter=J_ifss.intersection(svs)
+        if len(inter)==0:
+            return 'linear'
+        else:
+            return 'nonlinear'
+
 
 
     def _output_flux_type(self, pool_from):

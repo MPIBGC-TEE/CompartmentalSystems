@@ -162,3 +162,35 @@ class TestSmoothReservoirModelChecks(InDirTest):
         #    (1,0): 2*gamma*t_12*k_2*C_2**2/C_3, (1,2): 2*gamma*t_32*k_2*C_2/C_3,
         #    (2,0): 2*gamma*t_13*k_3*C_3, (2,1): 2*gamma*t_23*k_3*C_3})
 
+    def test_is_linear(self):
+        C_0, C_1  = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        time_symbol = Symbol('t')
+        # test all fluxes linear
+        internal_fluxes = {(0,1): 5*C_0, (1,0): 4*C_1}
+        input_fluxes = {}
+        output_fluxes = {}
+        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        self.assertEqual(rm.is_linear,True)
+
+        # test nonlinear internal flux
+        input_fluxes = {}
+        output_fluxes = {}
+        internal_fluxes = {(0,1): 5*C_0, (1,0): 4*C_1**2}
+        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        print(rm.F)
+        self.assertEqual(rm.is_linear,False)
+        
+        # test nonlinear output flux
+        input_fluxes = {}
+        output_fluxes = {0: C_0+5, 1: C_1/C_0}
+        internal_fluxes = {(0,1): 5*C_0, (1,0): 4*C_1}
+        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        self.assertEqual(rm.is_linear,False)
+        
+        # test state dependent input flux that is linear though
+        output_fluxes = {}
+        input_fluxes = {0: C_0+5, 1: 0}
+        internal_fluxes = {(0,1): 5*C_0, (1,0): 4*C_1}
+        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        self.assertEqual(rm.is_linear,True)
