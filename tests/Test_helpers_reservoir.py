@@ -6,11 +6,34 @@ import matplotlib
 matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 import numpy as np
-from sympy import Symbol,Matrix, symbols, sin, Piecewise, DiracDelta
-
-from CompartmentalSystems.helpers_reservoir import factor_out_from_matrix, parse_input_function, melt, MH_sampling, stride, is_compartmental,start_age_moments_from_empty_spin_up,start_age_moments_from_steady_state 
+from sympy import Symbol,Matrix, symbols, sin, Piecewise, DiracDelta, Function
+from CompartmentalSystems.helpers_reservoir import factor_out_from_matrix, parse_input_function, melt, MH_sampling, stride, is_compartmental, func_subs
+from CompartmentalSystems.start_distributions import start_age_moments_from_empty_spin_up,start_age_moments_from_steady_state 
+from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 class TestHelpers_reservoir(unittest.TestCase):
+    def test_func_subs(self):
+        # t is in the third position
+        C_0, C_1  = symbols('C_0 C_1')
+        t= Symbol('t')  
+        u_0_expr = Function('u_0')(C_0, C_1, t)
+        def u_0_func(C_0,C_1,t):
+            return (C_0*C_1)**t
+
+        ref=u_0_func(1,2,3)
+        u_0_part=func_subs(t,u_0_expr,u_0_func,3)
+        res=u_0_part(1,2)
+        self.assertEqual(ref,res)
+       
+        # this time t is in the first position
+        u_0_expr = Function('u_0')(t,C_0, C_1)
+        def u_0_func(C_0,C_1,t):
+            return (C_0*C_1)**t
+
+        ref=u_0_func(1,2,3)
+        u_0_part=func_subs(t,u_0_expr,u_0_func,1)
+        res=u_0_part(2,3)
+        self.assertEqual(ref,res)
     
     def test_compute_start_age_moments(self):
         # two-dimensional linear
@@ -21,7 +44,7 @@ class TestHelpers_reservoir(unittest.TestCase):
         output_fluxes = {0: C_0, 1: C_1}
         internal_fluxes = {}
         srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
-        res_1=start_age_moments_from_steady_state(srm,parameter_set={},func_set={},max_order=1)
+        res_1=start_age_moments_from_steady_state(srm,t0=0,parameter_set={},func_set={},max_order=1)
 
         # two-dimensional nonlinear 
         output_fluxes = {0: (C_0-1)**2, 1: C_1}
@@ -29,7 +52,7 @@ class TestHelpers_reservoir(unittest.TestCase):
         srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
         with self.assertRaises(Exception) as e:
             # not implemented yet
-            res_1=start_age_moments_from_steady_state(srm,parameter_set={},func_set={},max_order=1)
+            res_1=start_age_moments_from_steady_state(srm,t0=0,parameter_set={},max_order=1)
 
     def test_parse_input_function(self):
         t = symbols('t')

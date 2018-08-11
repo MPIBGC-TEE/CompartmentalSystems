@@ -100,6 +100,9 @@ class SmoothReservoirModel(object):
         # see the description of the model_runs property
         # def add_model_run(self,mr):
         #     self.model_runs.append(mr)
+    
+
+        
 
     @property
     def free_symbols(self):
@@ -109,6 +112,7 @@ class SmoothReservoirModel(object):
         free_sym_sets=[ sym_set for sym_set in map(lambda sym:sym.free_symbols,flux_exprs)] 
         return reduce( lambda A,B: A.union(B),free_sym_sets)
 
+ 
     def subs(self,par_set):
         """ Returns a new instance of class: `SmoothReservoirModel` with all parameters in the parameter_set replaced 
             by their values by calling subs on all the flux expressions. 
@@ -799,13 +803,15 @@ It gave up for the following expression: ${e}."""
         return formal_steady_states
 
 
+    def is_state_dependent(self,expr):
+        efss=expr.free_symbols
+        svs=set([e for e in self.state_vector])
+        inter=efss.intersection(svs)
+        return len(inter)==0	
+
     @property
     def is_linear(self):
-       	J=self.jacobian 
-        Jfss=J.free_symbols
-        svs=set([e for e in self.state_vector])
-        inter=Jfss.intersection(svs)
-        return len(inter)==0	
+        return self.is_state_dependent(self.jacobian)
 
     ##### functions for internal use only #####
 
@@ -851,7 +857,7 @@ It gave up for the following expression: ${e}."""
         else:
             # probably this can never happen
             raise(Error('Unknown internal flux type'))
-
+    
     def _input_flux_type(self, pool_to):
         """Return the type of an external input flux.
 
@@ -918,6 +924,6 @@ It gave up for the following expression: ${e}."""
         else:
             # probably this can never happen
             raise(Error('Unknown internal flux type'))
-
+    
 
 

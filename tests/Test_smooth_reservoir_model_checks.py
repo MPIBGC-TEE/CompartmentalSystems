@@ -194,3 +194,25 @@ class TestSmoothReservoirModelChecks(InDirTest):
         internal_fluxes = {(0,1): 5*C_0, (1,0): 4*C_1}
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
         self.assertEqual(rm.is_linear,True)
+        
+        # test state dependent input flux with external functions 
+        # (to be replaced later by numeric approximations of data)
+
+        # external functions of state variables are always considered 
+        # to be nonlinear
+        # It they are not it is easy to write them as a product...
+        output_fluxes = {}
+        u_0_expr = Function('u_0')(C_0, C_1, time_symbol)
+        input_fluxes = {0: u_0_expr, 1: 0}
+        internal_fluxes = {(0,1): 5*C_0, (1,0): 4*C_1}
+        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        self.assertEqual(rm.is_linear,False)
+
+        # this time with a linear symbolic function 
+        # (that does not depend on the state)
+        output_fluxes = {}
+        u_0_expr = Function('u_0')(time_symbol)
+        input_fluxes = {0: u_0_expr, 1: 0}
+        internal_fluxes = {(0,1): 5*C_0, (1,0): 4*C_1}
+        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        self.assertEqual(rm.is_linear,True)
