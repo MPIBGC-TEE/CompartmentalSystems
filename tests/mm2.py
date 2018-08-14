@@ -15,6 +15,7 @@ from sympy import sin, symbols, Matrix, Symbol, exp, solve, Eq, pi, Piecewise, F
 import example_smooth_reservoir_models as ESRM
 import example_smooth_model_runs as ESMR
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
+from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 from sympy import sin, symbols, Matrix, Symbol, exp, solve, Eq, pi, Piecewise, Function, ones,lambdify
 C_0, C_1, C_2 = symbols('C_0 C_1 C_2')
@@ -55,15 +56,16 @@ times = np.linspace(t_min,t_max, 11)
 smr = SmoothModelRun(srm, parameter_set=parameter_set, start_values=start_values, times=times,func_set=func_set)
 
 soln = smr.solve()
-
-# we want B and u as python functions 
 u_sym=srm.external_inputs
-str_func_set = {str(key): val for key, val in func_set.items()}
-cut_func_set = {key[:key.index('(')]: val 
-    for key, val in str_func_set.items()}
-
+# we want B and u as python functions 
+#str_func_set = {str(key): val for key, val in func_set.items()}
+#cut_func_set = {key[:key.index('(')]: val 
+#    for key, val in str_func_set.items()}
+#
+#tup = tuple(X) + (t,)
+#u_par=u_sym.subs(parameter_set)
+#print(u_par)
+#u_func = lambdify(tup, u_par, modules=[cut_func_set, 'numpy'])
 tup = tuple(X) + (t,)
-u_par=u_sym.subs(parameter_set)
-print(u_par)
-u_func = lambdify(tup, u_par, modules=[cut_func_set, 'numpy'])
+u_func=numerical_function_from_expression(u_sym,tup,parameter_set,func_set)
 u_func(1,1,1,0)

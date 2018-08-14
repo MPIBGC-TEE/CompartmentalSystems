@@ -130,6 +130,22 @@ def factor_out_from_matrix(M):
         # we could make it work...if we really wanted to
         return 1
 
+def numerical_function_from_expression(expr,tup,parameter_set,func_set):
+    # the indices in funset are exressions of the form u_1(x,..)
+    # Firstly we convert them to strings 'u_1(x,...)'
+    str_func_set = {str(key): val for key, val in func_set.items()}
+    # Secondly we remove the parenthesis and there content
+    # since lambdify wants the dictionary indexed by
+    # the function name only
+    # after this step we have the key 'u_1'
+    cut_func_set = {key[:key.index('(')]: val 
+        for key, val in str_func_set.items()}
+   
+
+    expr_par=expr.subs(parameter_set)
+    print(expr_par)
+    expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
+    return expr_func
 
 def numerical_rhs(state_vector, time_symbol, rhs, 
         parameter_set, func_set, times):
