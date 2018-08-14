@@ -79,7 +79,7 @@ def start_age_moments_from_steady_state(srm,t0,parameter_set,func_set,max_order)
         Not implemented yet
         look at test/mm2.py to see how to construct the functions with lambdify
         """)
-        x0=inv(B0)*u0
+        x0=-inv(B0)*u0
         # old: x0 = self.solve()[0]
         # fixed mm 8.8.2018 
         # x0 is not free to choose in the nonlinear case

@@ -328,16 +328,15 @@ It gave up for the following expression: ${e}."""
 
     def port_controlled_Hamiltonian_representation(self):
         """tuple: :math:`J, R, N, x, u` from 
-            :math:`\\dot{x} = [J(x)-R(x)] \\frac{\\partial}{\\partial x}H+u`.
-    	    with
-	        :math:H=\\sum_i x_i \\implies \\frac{\\partial}{\\partial x}H =(1,1,...,1) 
+        :math:`\\dot{x} = [J(x)-R(x)] \\frac{\\partial}{\\partial x}H+u`.
+    	with :math:`H=\\sum_i x_i \\implies \\frac{\\partial}{\\partial x}H =(1,1,...,1)`
 
         Returns:
             tuple:
             - J (skew symmetric SymPy dxd-matrix): Internal of internal fluxbalances. 
-	    	:math: J_{i,j}=r_{j,i}-r_{i,j) 
+                :math:`J_{i,j}=r_{j,i}-r_{i,j)` 
             - Q (SymPy dxd-matrix): Diagonal matrix describing the dissipation (outfluxes) 
-                rates.
+            rates.
             - x (SymPy dx1-matrix): The model's state vector.
             - u (SymPy dx1-matrix): The model's external input vector.
         """

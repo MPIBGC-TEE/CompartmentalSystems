@@ -183,10 +183,7 @@ class SmoothModelRun(object):
                 #print('B', t)
                 #fixme: another times cut off!
                 t = min(t, self.times[-1])
-                #print(t)
-                #X = self.solve_single_value()(t) # nonlinear model needs that
 
-                # for a linear model this is OK (and faster)
                 X = np.ones((self.nr_pools,)) 
                 Xt = tuple(X) + (t,)
                 return B_func(*Xt)
@@ -1952,14 +1949,14 @@ class SmoothModelRun(object):
                     strided_z.append(density_value)
 
             trace_on_surface = go.Scatter3d(
-            name=name,
-            x=-strided_times, y=strided_data, z=strided_z,
-            mode = 'lines',
-            line=dict(
-                color=color,
-                width=width
-                ),
-            showlegend = legend_on_surface
+                name=name,
+                x=-strided_times, y=strided_data, z=strided_z,
+                mode = 'lines',
+                line=dict(
+                    color=color,
+                    width=width
+                    ),
+                showlegend = legend_on_surface
             )
             fig['data'] += [trace_on_surface]
 

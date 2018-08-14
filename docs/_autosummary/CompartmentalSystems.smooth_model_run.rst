@@ -8,6 +8,12 @@ CompartmentalSystems.smooth_model_run
 
    
    
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      check_parameter_set_complete
+   
    
 
    
@@ -17,6 +23,7 @@ CompartmentalSystems.smooth_model_run
    .. autosummary::
    
       SmoothModelRun
+      SmoothModelRun_14C
    
    
 
