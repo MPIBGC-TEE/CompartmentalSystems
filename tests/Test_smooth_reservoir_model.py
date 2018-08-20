@@ -47,15 +47,14 @@ class TestSmoothReservoirModel(InDirTest):
         
         # non linear compartmental matrix 
         # constant input
-        # The result is the compartmental matrix B
-        internal_fluxes = {(0,1): 5*C_0**3, (1,0): 4*C_1}
-        output_fluxes = {0: C_0, 1: C_1/C_0}
+        # The result is NOT the compartmental matrix B 
+        state_vars = [C_0]
+        output_fluxes = {0: C_0**3}
         #input_fluxes = {0:50,1:60}
         input_fluxes = {}
         rm = SmoothReservoirModel(state_vars, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
         J=rm.jacobian
-        CM=rm.compartmental_matrix
-        print(J)
+        CM=Matrix([-3*C_0**2])
         print(CM)
         # the next line breaks 
         self.assertEqual(J,CM)
