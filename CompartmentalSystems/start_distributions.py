@@ -3,6 +3,9 @@ import numpy as np
 from CompartmentalSystems.helpers_reservoir import jacobian,func_subs
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
+def start_age_moments_from_zero_initial_content(srm,max_order):
+    return [ np.zeros(srm.nr_pools,1) for n in range(1, max_order+1)]
+
 def start_age_moments_from_empty_spin_up(srm,parameter_set,func_set,a_max,max_order):
     # to do:
     # run a spin up and observe the age distribution at the end
