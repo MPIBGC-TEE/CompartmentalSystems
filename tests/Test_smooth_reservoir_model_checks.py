@@ -36,6 +36,17 @@ class TestSmoothReservoirModelChecks(InDirTest):
             }
         )
         print(rm_p1.free_symbols)
+
+    def test_is_state_dependent(self):
+        x, y, t = symbols("x y t")
+        X = Matrix([x,y])
+        u = Matrix([0,0])
+        srm = SmoothReservoirModel.from_B_u(X, t, Matrix([[-1,0],[0,-1]]), u)
+        self.assertFalse(srm.is_state_dependent(u))
+
+        u = Matrix([x,0])
+        srm = SmoothReservoirModel.from_B_u(X, t, Matrix([[-1,0],[0,-1]]), u)
+        self.assertTrue(srm.is_state_dependent(u))
     
     @unittest.skip('it does not work yet for the nonlinear example')
     def test_is_compartmental(self):
@@ -200,7 +211,7 @@ class TestSmoothReservoirModelChecks(InDirTest):
 
         # external functions of state variables are always considered 
         # to be nonlinear
-        # It they are not it is easy to write them as a product...
+        # It they are not it is easy to rewrite them as a product...
         output_fluxes = {}
         u_0_expr = Function('u_0')(C_0, C_1, time_symbol)
         input_fluxes = {0: u_0_expr, 1: 0}

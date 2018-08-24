@@ -27,7 +27,7 @@ from sympy.printing import pprint
 import numpy as np
 import multiprocessing
 
-from .helpers_reservoir import factor_out_from_matrix, has_pw, flux_dict_string , jacobian
+from .helpers_reservoir import factor_out_from_matrix, has_pw, flux_dict_string, jacobian, pe
 
 
 class Error(Exception):
@@ -806,11 +806,23 @@ It gave up for the following expression: ${e}."""
         efss=expr.free_symbols
         svs=set([e for e in self.state_vector])
         inter=efss.intersection(svs)
-        return len(inter)==0	
+        return not(len(inter)==0)	
 
     @property
     def is_linear(self):
-        return self.is_state_dependent(self.jacobian)
+        """Returns True if we can make SURE that the model is linear by checking that the jacobian is not state dependent.
+        Note that external numerical functions of state variables are represented as sympy.Function f(x_1,x_2,...,t)
+        Sympy will consider the derivative of math:`df/dx_i` with respect to state variable math:`x_i` as function math:`g(x_1, x_2,...)` too, since it can not exclude this possibility if we know f only numerically. 
+        In consequence this method will return False even if the numerical implementation of f IS linear in math:`x_1,x_2,...` . 
+        To avoid this situation you can just reformulate linear external functions math:`f(x_1,x_2,...,t)` as linear combinations
+        of state independent external functions math:`f(x_1,x_2,...,t)=g_1(t)x_1+g_2(t)x_2+...` so that sympy can detect the linearity.
+        
+
+        Returns:
+            bool: 'True', 'False'
+
+        """
+        return not(self.is_state_dependent(self.jacobian))
 
     ##### functions for internal use only #####
 

@@ -12,8 +12,14 @@ from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction
 
 def pp(strng,env,comment=""):
+    pe(strng,env,comment)
+    
+
+def pe(strng,env,comment=""):
+    print('############################################')
     print(comment+"\n"+strng+"=:")
-    print(env[strng])
+    print(eval(strng,env))
+    print('############################################')
 
 def flux_dict_string(d,indent=0):
     s=""

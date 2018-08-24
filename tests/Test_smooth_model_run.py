@@ -21,6 +21,7 @@ import example_smooth_model_runs as ESMR
 from testinfrastructure.InDirTest import InDirTest
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
+from CompartmentalSystems.helpers_reservoir import pe
 
 
 class TestSmoothModelRun(InDirTest):
@@ -833,6 +834,8 @@ class TestSmoothModelRun(InDirTest):
         order = 2
         start_age_densities = lambda a: np.exp(-a) * start_values
         start_age_moments = smr.moments_from_densities(order, start_age_densities)
+        pe('start_age_moments',locals())
+        pe('start_age_moments.shape',locals())
 
         system_age_moment = smr.system_age_moment(order, start_age_moments)
         age_moment_vector = smr.age_moment_vector(order, start_age_moments)

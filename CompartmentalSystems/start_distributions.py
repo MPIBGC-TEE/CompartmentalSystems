@@ -1,7 +1,10 @@
 from sympy import Matrix
 import numpy as np 
-from CompartmentalSystems.helpers_reservoir import jacobian,func_subs
+from scipy.linalg import inv, LinAlgError
+from scipy.special import factorial
+from CompartmentalSystems.helpers_reservoir import jacobian, func_subs, numerical_function_from_expression,pe
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 
 def start_age_moments_from_zero_initial_content(srm,max_order):
     return [ np.zeros(srm.nr_pools,1) for n in range(1, max_order+1)]
@@ -19,7 +22,7 @@ def start_age_moments_from_steady_state(srm,t0,parameter_set,func_set,max_order)
     In fact EVERY age distribution can be chosen. 
     The implemented algorithms will correcly project it 
     to any time :math`t`.
-    The distribution eaisiest to imagine is the one with all pools empty.
+    The distributions eaisiest to imagine are the one with all pools empty or the one where all initial mass has age zero.
     However often one is interested in the CHANGE of an age distribution that has been ESTABLISHED over a long period of time.        
     There are several ways to generate such an established
     distribution.
@@ -31,7 +34,7 @@ def start_age_moments_from_steady_state(srm,t0,parameter_set,func_set,max_order)
     It would for instance not make sense to mistake the fact that the percentage of material older than :math `a_max` will increase over time as a property of the system, where it is actually a property of the (spun up) start distribution.  
     
     2 ) find a steady state  of the autonumuous system
-    If you take the term ESTABLISHED to the limit of infinity you can look for a related system that has persisted unchanged for all  times :math t<t_0 and start with the age distribution created by this system.
+    If you take the term ESTABLISHED to the limit of infinity you can look for a related system that has persisted unchanged for all  times :math `t<t_0` and start with the age distribution created by this system.
       1.) Transform the general nonlinear non-autonomous system into a nonlinear autonomous system by freezing it at time :math `t=t_0`: 
     Compute :math `u_0(x)=u(t_0,x_0)` and :math `B_0(x)=B(t_0,x_0)` 
     Numerically look for an equilibrium :math `x*` of the nonlinear system :math `0=B_0(x*)+u_0(x*).
@@ -45,53 +48,63 @@ def start_age_moments_from_steady_state(srm,t0,parameter_set,func_set,max_order)
         srm (SmoothReservoirModel) : The (symbolic) model
         par_set : The parameter set that transforms the symbolic model into a numeric one. 
         max_order (int): The highest order up to which moments are
-            to be computed.
+        to be computed.
 
     Returns:
         numpy.ndarray: moments x pools, containing the moments of the
-            pool ages in equilibrium.
+        pool ages in equilibrium.
     """
     
-    # check for linearity, note that a state dependent input counts
+    # check for linearity, note that some state dependent input counts
     # as linear too (because it leads to a linear system) 
-    # if u=M*stateVector+I0 with M state dependent
-    # (M is the jacobian of u with respect to the statevariables
-    # this even includes 
+    # We can write u=M*stateVector+I0 
+    # If M is state INdependent M is the jacobian of u with respect to the statevariables
+    # (This is not true for general nonlinear u)
     if srm.is_linear:
 
-        B = srm.compartmental_matrix
-        u=srm.external_inputs
-        if srm.is_state_dependent(u):
-            # in this case we can transform to a  linear Model with constant
+        B_sym = srm.compartmental_matrix
+        u_sym=srm.external_inputs
+
+        if srm.is_state_dependent(u_sym):
+            # in this case we can in principle transform to a linear Model with constant
             # imput and new B
             # compute the jacobian of u
             sv=Matrix(srm.state_vector)
-            M=jacobian(u,sv)
-            u=u-M*sv
-            B=B+M
-        # this linear case should actually be handled by LAPM and just call a function from there. 
-        # In cases of an empty funcset, it could even be done symbolically 
-        # to be able to handle the general nonautonomous case we have to 
-        # create an autonomous model B0(x),u0(x) by evaluating B(x,t) and u(x,t) at time t0 
-        # since the srm can already contain numeric functions
-        # we have to evaluate them also at t0
+            M=jacobian(u_sym,sv)
+            u_sym=u_sym-M*sv
+            B_sym=B_sym+M
+        
         t=srm.time_symbol
-        func_set0={func_subs(t,expr,func,t0) for expr,func in func_set.items()}
          
-        raise Exception("""
-        Not implemented yet
-        look at test/mm2.py to see how to construct the functions with lambdify
-        """)
-        x0=-inv(B0)*u0
-        # old: x0 = self.solve()[0]
-        # fixed mm 8.8.2018 
-        # x0 is not free to choose in the nonlinear case
-        # see helptext above: 
-        X0 = x0 * np.identity(len(x0))
+        #tup = tuple(srm.state_vector) + (t,)
+        # since we are in the linear case B can not depend on the state variables
+        tup = (t,)
+        u_func=numerical_function_from_expression(u_sym,tup,parameter_set,func_set)
+        B_func=numerical_function_from_expression(B_sym,tup,parameter_set,func_set)
+        B0=B_func(t0)
+        u0=u_func(t0)
+        try:
+            x0=-inv(B0)@u0
+        except LinAlgError as e:
+            print("""
+            B_0=B(t_0) is not invertable
+            If a singular matrix B_0 occurs, then the system would have traps. 
+            A steady state could then only occour
+            if the components of u0=u(t0) would be zero for the pools connected
+            to the trap. 
+            In this (unlikely) event the startage distribution would
+            be ambigous because the fixedpoint x* is not uniqe (The content of the trap is a free 
+            parameter and so is its age.)
+            """)
+            raise e
+
+        lapm=LinearAutonomousPoolModel(Matrix(u0),Matrix(B0))
         start_age_moments = []
         for n in range(1, max_order+1):
-            start_age_moment = (-1)**n * factorial(n) \
-                            * inv(X0) @ matrix_power(inv(B0), n) @ x0
+            start_age_moment_sym=lapm.a_nth_moment(n)
+            start_age_moment=np.array(start_age_moment_sym).astype(np.float).reshape(srm.nr_pools)
+            #start_age_moment = (-1)**n * factorial(n) \
+                            #* inv(X0) @ np.linalg.matrix_power(inv(B0), n) @ x0
                             # fixed mm 8.8.2018: 
                             #* pinv(X0) @ matrix_power(pinv(B0), n) @ x0
                             # I think that pinv (pseudo inverse) is not justified here since 
@@ -107,8 +120,9 @@ def start_age_moments_from_steady_state(srm,t0,parameter_set,func_set,max_order)
                             # In this case we should at least issue  a warning 
                             
             start_age_moments.append(start_age_moment)
-
-        return np.array(start_age_moments)
+        ret=np.array(start_age_moments)
+        
+        return ret
     else:
         raise Exception("""
         At the moment the algorithm assumes an equilibrium
