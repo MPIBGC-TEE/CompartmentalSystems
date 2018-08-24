@@ -47,8 +47,13 @@ class TestHelpers_reservoir(unittest.TestCase):
             internal_fluxes
         )
         tup = tuple(X) + (t,)
-        u_func=numerical_function_from_expression(u_sym,tup,parameter_set,func_set)
-        u_func(1,1,1,0)
+        u_0_func=numerical_function_from_expression(u_0_expr,tup,parameter_set,func_set)
+        u_0_func(1,1,1,0)
+        
+        tup = (t,)
+        u_2_func=numerical_function_from_expression(u_2_expr,tup,parameter_set,func_set)
+        u_2_func(0)
+        raise Exception("check the actual values")
 
     def test_func_subs(self):
         # t is in the third position
