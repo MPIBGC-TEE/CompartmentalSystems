@@ -5,7 +5,6 @@ import unittest
 import matplotlib
 matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d 
 import numpy as np
 from sympy import Symbol,Matrix, symbols, sin, Piecewise, DiracDelta, Function
 from CompartmentalSystems.helpers_reservoir import factor_out_from_matrix, parse_input_function, melt, MH_sampling, stride, is_compartmental, func_subs, numerical_function_from_expression
@@ -22,18 +21,13 @@ class TestHelpers_reservoir(unittest.TestCase):
         
         X = Matrix([C_0, C_1, C_2])
         t_min, t_max = 0, 10
-        u_data_0 = np.array([[ t_min ,  0.1], [ t_max ,  0.2]])
-        u_data_2 = np.array([[ t_min ,  0.4], [ t_max ,  0.5]])
-        input_fluxes = {0: u_data_0, 2: u_data_2}
         symbolic_input_fluxes = {0: u_0_expr, 2: u_2_expr}
         
-        u_0_interp = interp1d(u_data_0[:,0], u_data_0[:,1])
         def u0_func(C_0_val, C_1_val, t_val):
-            return C_0_val*0 + C_1_val*0 + u_0_interp(t_val)
+            return C_0_val+ C_1_val + t_val
         
-        u_1_interp = interp1d(u_data_2[:,0], u_data_2[:,1])
         def u2_func(t_val):
-            return u_1_interp(t_val)
+            return t_val
         parameter_set={}
         func_set = {u_0_expr: u0_func, u_2_expr: u2_func}
         
@@ -46,14 +40,18 @@ class TestHelpers_reservoir(unittest.TestCase):
             output_fluxes, 
             internal_fluxes
         )
-        tup = tuple(X) + (t,)
+        tup = (C_0,C_1) + (t,)
         u_0_func=numerical_function_from_expression(u_0_expr,tup,parameter_set,func_set)
-        u_0_func(1,1,1,0)
+        self.assertEqual(u_0_func(1,2,3),1+2+3)
         
         tup = (t,)
         u_2_func=numerical_function_from_expression(u_2_expr,tup,parameter_set,func_set)
-        u_2_func(0)
-        raise Exception("check the actual values")
+        self.assertEqual(u_2_func(2),2)
+        
+        # wrong tup 
+        tup = (C_1,t,)
+        with self.assertRaises(Exception) as e:
+            u_2_func=numerical_function_from_expression(u_2_expr,tup,parameter_set,func_set)
 
     def test_func_subs(self):
         # t is in the third position
