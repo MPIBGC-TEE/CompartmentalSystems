@@ -41,7 +41,7 @@ class TestHelpers_reservoir(unittest.TestCase):
             internal_fluxes
         )
         tup = (C_0,C_1) + (t,)
-        u_0_func=numerical_function_from_expression(u_0_expr,tup,parameter_set,func_set)
+        u_0_func = numerical_function_from_expression(u_0_expr,tup,parameter_set,func_set)
         self.assertEqual(u_0_func(1,2,3),1+2+3)
         
         tup = (t,)
