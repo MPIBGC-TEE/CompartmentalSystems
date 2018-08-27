@@ -155,8 +155,8 @@ def numerical_function_from_expression(expr,tup,parameter_set,func_set):
     
     ss_expr=expr.free_symbols
     ss_tup=set([s for s in tup])
-    if ss_expr!=ss_tup:
-        raise Exception('The free symbols of the expression: {0} differ from the symbols in the tuple argument:{1}'.format(ss_expr,ss_tup))
+    if not(ss_expr.issubset(ss_tup)):
+        raise Exception("The free symbols of the expression: {0} are not a subset of the symbols in the tuple argument:{1}".format(ss_expr,ss_tup))
 
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
     return expr_func

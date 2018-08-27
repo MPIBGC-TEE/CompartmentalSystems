@@ -2,12 +2,42 @@ from sympy import Matrix
 import numpy as np 
 from scipy.linalg import inv, LinAlgError
 from scipy.special import factorial
+from scipy.optimize import root,fsolve
 from CompartmentalSystems.helpers_reservoir import jacobian, func_subs, numerical_function_from_expression,pe
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 
 def start_age_moments_from_zero_initial_content(srm,max_order):
     return [ np.zeros(srm.nr_pools,1) for n in range(1, max_order+1)]
+
+def compute_fixedpoint_numerically(srm,t0,x0,parameter_set,func_set,max_order):
+    B_sym = srm.compartmental_matrix
+    u_sym=srm.external_inputs
+
+    t=srm.time_symbol
+     
+    tup = tuple(srm.state_vector) + (t,)
+    # since we are in the linear case B can not depend on the state variables
+    #tup = (t,)
+    u_func=numerical_function_from_expression(u_sym,tup,parameter_set,func_set)
+    B_func=numerical_function_from_expression(B_sym,tup,parameter_set,func_set)
+    
+    B0=B_func(*x0,t0)
+    pe('B0',locals())
+    u0=u_func(*x0,t0)
+    pe('u0',locals())
+
+    # build the kind of function that scipy.optimize.root expects 
+    # it has to have a single vector like argument
+    def ex_func(x):
+        tup=tuple(x)+(t0,)
+        return B_func(*tup)@x+u_func(*tup).reshape(x.shape)
+    
+    res1 = root(fun=ex_func,jac=False,x0=x0)
+    pe('res1',locals())
+    # chose a method that does not use the jacobian
+    res2 = root(fun=ex_func,method='krylov',x0=x0)
+    pe('res2',locals())
 
 def start_age_moments_from_empty_spin_up(srm,parameter_set,func_set,a_max,max_order):
     # to do:

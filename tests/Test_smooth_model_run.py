@@ -3,9 +3,9 @@
 
 from concurrencytest import ConcurrentTestSuite, fork_for_tests
 import inspect
-import matplotlib
 import sys 
 import unittest
+import matplotlib
 matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 import numpy as np

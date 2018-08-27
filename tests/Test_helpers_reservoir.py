@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # vim:set ff=unix expandtab ts=4 sw=4:
 from concurrencytest import ConcurrentTestSuite, fork_for_tests
 import sys
@@ -48,10 +49,19 @@ class TestHelpers_reservoir(unittest.TestCase):
         u_2_func=numerical_function_from_expression(u_2_expr,tup,parameter_set,func_set)
         self.assertEqual(u_2_func(2),2)
         
-        # wrong tup 
+        # wrong tup: C_1 is not necessary but it does not hurt
+        # this behavior is convinient to make everything a variable of 
+        # ALL statevariables and time 
         tup = (C_1,t,)
+        u_2_func=numerical_function_from_expression(u_2_expr,tup,parameter_set,func_set)
+        # the superflous first argument just does not have any influence
+        self.assertEqual(u_2_func(1002103413131,2),2)
+        
+        # wrong tup: C_0 is missing but necessary
+        # this is a real error
+        tup = (C_1,t)
         with self.assertRaises(Exception) as e:
-            u_2_func=numerical_function_from_expression(u_2_expr,tup,parameter_set,func_set)
+            u_0_func=numerical_function_from_expression(u_0_expr,tup,parameter_set,func_set)
 
     def test_func_subs(self):
         # t is in the third position
@@ -76,59 +86,6 @@ class TestHelpers_reservoir(unittest.TestCase):
         res=u_0_part(2,3)
         self.assertEqual(ref,res)
     
-    def test_compute_start_age_moments_from_steady_state(self):
-        # two-dimensional linear autonomous
-        C_0, C_1 = symbols('C_0 C_1')
-        state_vector = [C_0, C_1]
-        t = Symbol('t')
-        input_fluxes = {0: 1, 1: 2}
-        output_fluxes = {0: C_0, 1: C_1}
-        internal_fluxes = {}
-        srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
-        age_moment_vector=start_age_moments_from_steady_state(srm,t0=0,parameter_set={},func_set={},max_order=2)
-        self.assertEqual(age_moment_vector.shape,(2,2))
-        # we only check the #expectation values since B is the identity the number are the same as in the input fluxes 
-        ref_ex=np.array([1,2]) 
-        for pool in range(srm.nr_pools):
-            self.assertTrue(np.allclose(age_moment_vector[:,pool], ref_ex))
-        
-        # two-dimensional linear non-autonomous
-        C_0, C_1 = symbols('C_0 C_1')
-        state_vector = [C_0, C_1]
-        t = Symbol('t')
-        input_fluxes = {0: 1*(sin(t)+1), 1: 2}
-        output_fluxes = {0: C_0, 1: C_1}
-        internal_fluxes = {}
-        srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
-        age_moment_vector=start_age_moments_from_steady_state(srm,t0=0,parameter_set={},func_set={},max_order=2)
-        self.assertEqual(age_moment_vector.shape,(2,2))
-        # we only check the #expectation values since B is the identity the number are the same as in the input fluxes 
-        ref_ex=np.array([1,2]) 
-        for pool in range(srm.nr_pools):
-            self.assertTrue(np.allclose(age_moment_vector[:,pool], ref_ex))
-        
-        # two-dimensional linear but state dependent input non-autonomous 
-        C_0, C_1 = symbols('C_0 C_1')
-        state_vector = [C_0, C_1]
-        t = Symbol('t')
-        input_fluxes = {0: 0.5*C_0+sin(t)+1, 1: 2}
-        output_fluxes = {0: 1.5*C_0, 1: C_1}
-        internal_fluxes = {}
-        srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
-        age_moment_vector=start_age_moments_from_steady_state(srm,t0=0,parameter_set={},func_set={},max_order=2)
-        self.assertEqual(age_moment_vector.shape,(2,2))
-        # we only check the #expectation values since B is the identity the number are the same as in the input fluxes 
-        ref_ex=np.array([1,2]) 
-        for pool in range(srm.nr_pools):
-            self.assertTrue(np.allclose(age_moment_vector[:,pool], ref_ex))
-
-        # two-dimensional nonlinear 
-        output_fluxes = {0: (C_0-1)**2, 1: C_1}
-        internal_fluxes = {}
-        srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
-        with self.assertRaises(Exception) as e:
-        # not implemented yet
-            res_1=start_age_moments_from_steady_state(srm,t0=0,parameter_set={},max_order=1)
 
     def test_parse_input_function(self):
         t = symbols('t')
