@@ -1,4 +1,4 @@
-from sympy import Matrix
+from sympy import Matrix,Function
 import numpy as np 
 from scipy.linalg import inv, LinAlgError
 from scipy.special import factorial
@@ -10,34 +10,35 @@ from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 def start_age_moments_from_zero_initial_content(srm,max_order):
     return [ np.zeros(srm.nr_pools,1) for n in range(1, max_order+1)]
 
-def compute_fixedpoint_numerically(srm,t0,x0,parameter_set,func_set,max_order):
+def compute_fixedpoint_numerically(srm,t0,x0,parameter_set,func_set):
     B_sym = srm.compartmental_matrix
     u_sym=srm.external_inputs
 
     t=srm.time_symbol
      
     tup = tuple(srm.state_vector) + (t,)
-    # since we are in the linear case B can not depend on the state variables
-    #tup = (t,)
     u_func=numerical_function_from_expression(u_sym,tup,parameter_set,func_set)
     B_func=numerical_function_from_expression(B_sym,tup,parameter_set,func_set)
-    
-    B0=B_func(*x0,t0)
-    pe('B0',locals())
-    u0=u_func(*x0,t0)
-    pe('u0',locals())
+   
+    # get functions of x1,...,xn bu partly applying to t0 
+    B0_func=func_subs(t,Function("B")(*tup),B_func,t0)
+    pe('B0_func(*x0)',locals())
+    u0_func=func_subs(t,Function("u")(*tup),u_func,t0)
+    pe('u0_func(*x0)',locals())
 
     # build the kind of function that scipy.optimize.root expects 
     # it has to have a single vector like argument
     def ex_func(x):
-        tup=tuple(x)+(t0,)
-        return B_func(*tup)@x+u_func(*tup).reshape(x.shape)
+        tup=tuple(x)
+        return B0_func(*tup)@x+u0_func(*tup).reshape(x.shape)
     
-    res1 = root(fun=ex_func,jac=False,x0=x0)
-    pe('res1',locals())
+    #res = root(fun=ex_func,jac=False,x0=x0)
+    #assert(res.success)
+    #pe('res',locals())
     # chose a method that does not use the jacobian
-    res2 = root(fun=ex_func,method='krylov',x0=x0)
-    pe('res2',locals())
+    res = root(fun=ex_func,method='krylov',x0=x0)
+    #pe('res',locals())
+    return res.x
 
 def start_age_moments_from_empty_spin_up(srm,parameter_set,func_set,a_max,max_order):
     # to do:

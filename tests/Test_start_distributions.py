@@ -21,7 +21,10 @@ class TestStartDistributions(unittest.TestCase):
         output_fluxes = {0: C_0**2, 1: C_1}
         internal_fluxes = {}
         srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
-        res_1=compute_fixedpoint_numerically(srm,t0=0,x0=np.array([1,1]),parameter_set={},func_set={},max_order=1)
+        res=compute_fixedpoint_numerically(srm,t0=0,x0=np.array([1,1]),parameter_set={},func_set={})
+        ref=np.array([2,2])
+        self.assertTrue(np.allclose(res,ref))
+        self.assertTupleEqual(res.shape,ref.shape)
 
     def test_compute_start_age_moments_from_steady_state(self):
         # two-dimensional linear autonomous
