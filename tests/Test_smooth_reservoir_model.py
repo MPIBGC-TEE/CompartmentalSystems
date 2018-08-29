@@ -23,14 +23,14 @@ class TestSmoothReservoirModel(InDirTest):
     def test_jacobian(self):
         C_0, C_1  = symbols('C_0 C_1')
         state_vars = [C_0, C_1]
-        time_symbol = Symbol('t')
+        t= Symbol('t')
         # linear compartmental matrix 
         # constant input
         # The result is the compartmental matrix
         input_fluxes = {0:50,1:60}
         internal_fluxes = {}
         output_fluxes = {0: C_0, 1: 6*C_1}
-        rm = SmoothReservoirModel(state_vars, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        rm = SmoothReservoirModel(state_vars, t, input_fluxes, output_fluxes, internal_fluxes)
         self.assertEqual(rm.jacobian,-diag(1,6))
         
         # linear compartmental matrix 
@@ -42,7 +42,7 @@ class TestSmoothReservoirModel(InDirTest):
         M=Matrix([[1,2],[3,4]])
         I0=Matrix(2,1,[50,60])
         I=M*sv+I0
-        rm=SmoothReservoirModel.from_B_u(sv,time_symbol,-diag(1,6),I)
+        rm=SmoothReservoirModel.from_B_u(sv,t,-diag(1,6),I)
         self.assertEqual(rm.jacobian,B+M)
         
         # non linear compartmental matrix 
@@ -52,13 +52,31 @@ class TestSmoothReservoirModel(InDirTest):
         output_fluxes = {0: C_0**3}
         #input_fluxes = {0:50,1:60}
         input_fluxes = {}
-        rm = SmoothReservoirModel(state_vars, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        rm = SmoothReservoirModel(state_vars, t, input_fluxes, output_fluxes, internal_fluxes)
         J=rm.jacobian
         CM=Matrix([-3*C_0**2])
         print(CM)
         # the next line breaks 
         self.assertEqual(J,CM)
 
+        # non linear compartmental matrix 
+        # with (linear) external function in input
+        state_vars = [C_0]
+        output_fluxes = {0: C_0**3}
+        
+        f_expr = Function('f')( t)
+        def f_func( t_val):
+            return t_val
+        
+        func_set = {f_expr: f_func}
+
+        input_fluxes = {0: C_0*f_expr}
+        #input_fluxes = {0:50,1:60}
+        internal_fluxes = {}
+        rm = SmoothReservoirModel(state_vars, t, input_fluxes, output_fluxes, internal_fluxes)
+        J=rm.jacobian
+        CM=Matrix([-3*C_0**2+f_expr])
+        self.assertEqual(J,CM)
 
         
     def test_input_flux_type(self):

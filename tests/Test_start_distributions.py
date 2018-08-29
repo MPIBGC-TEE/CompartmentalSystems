@@ -7,7 +7,7 @@ matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 import numpy as np
 from sympy import Symbol,Matrix, symbols, sin, Piecewise, DiracDelta, Function
-from CompartmentalSystems.helpers_reservoir import factor_out_from_matrix, parse_input_function, melt, MH_sampling, stride, is_compartmental, func_subs, numerical_function_from_expression
+from CompartmentalSystems.helpers_reservoir import factor_out_from_matrix, parse_input_function, melt, MH_sampling, stride, is_compartmental, func_subs, numerical_function_from_expression,pe
 from CompartmentalSystems.start_distributions import start_age_moments_from_empty_spin_up,start_age_moments_from_steady_state,compute_fixedpoint_numerically
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
@@ -17,7 +17,10 @@ class TestStartDistributions(unittest.TestCase):
         C_0, C_1 = symbols('C_0 C_1')
         state_vector = [C_0, C_1]
         t = Symbol('t')
-        input_fluxes = {0: 4, 1: 2}
+
+
+
+        input_fluxes = {0: 4 , 1: 2}
         output_fluxes = {0: C_0**2, 1: C_1}
         internal_fluxes = {}
         srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
@@ -25,6 +28,60 @@ class TestStartDistributions(unittest.TestCase):
         ref=np.array([2,2])
         self.assertTrue(np.allclose(res,ref))
         self.assertTupleEqual(res.shape,ref.shape)
+       
+
+        # two-dimensional with external functions
+        # although linear the code will assume u(C_1,C_2,t) to be nonlinear since it can not check
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        t = Symbol('t')
+
+
+        f_expr = Function('f')(C_0, t)
+        def f_func(C_0_val,  t_val):
+            return C_0_val+t_val
+        
+        func_set = {f_expr: f_func}
+
+
+        input_fluxes = {0: f_expr, 1: 2}
+        output_fluxes = {0: 2*C_0, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+        res=compute_fixedpoint_numerically(srm,t0=2,x0=np.array([4,4]),parameter_set={},func_set=func_set)
+        ref=np.array([2,2])
+        self.assertTrue(np.allclose(res,ref))
+        self.assertTupleEqual(res.shape,ref.shape)
+
+        # two-dimensional with coupled with linear external functions 
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        t = Symbol('t')
+
+
+        f_expr = Function('f')(t)
+        def f_func( t_val):
+            return np.sin(t_val)
+        
+        func_set = {f_expr: f_func}
+
+
+        input_fluxes = {0: C_0*f_expr, 1: 2}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {(0,1):0.5*C_0**3}
+        srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+        t0=2
+        res=compute_fixedpoint_numerically(srm,t0=t0,x0=np.array([1,2]),parameter_set={},func_set=func_set)
+        # make sure that the righthandside of the ode is zero
+        F_sym=srm.F
+        F_func=numerical_function_from_expression(F_sym,tup=(C_0,C_1,t),parameter_set={},func_set=func_set)
+        F_res=F_func(*res,t0)
+        ref=np.array([0,0])
+        self.assertTrue(np.allclose(F_res,ref))
+        self.assertTupleEqual(res.shape,ref.shape)
+        
+
+
 
     def test_compute_start_age_moments_from_steady_state(self):
         # two-dimensional linear autonomous

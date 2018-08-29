@@ -32,15 +32,6 @@ class TestHelpers_reservoir(unittest.TestCase):
         parameter_set={}
         func_set = {u_0_expr: u0_func, u_2_expr: u2_func}
         
-        output_fluxes = {}
-        internal_fluxes = {(0,1): 5*C_0, (1,0): 4*C_1**2}
-        srm = SmoothReservoirModel(
-            X, 
-            t, 
-            symbolic_input_fluxes, 
-            output_fluxes, 
-            internal_fluxes
-        )
         tup = (C_0,C_1) + (t,)
         u_0_func = numerical_function_from_expression(u_0_expr,tup,parameter_set,func_set)
         self.assertEqual(u_0_func(1,2,3),1+2+3)

@@ -20,11 +20,9 @@ def compute_fixedpoint_numerically(srm,t0,x0,parameter_set,func_set):
     u_func=numerical_function_from_expression(u_sym,tup,parameter_set,func_set)
     B_func=numerical_function_from_expression(B_sym,tup,parameter_set,func_set)
    
-    # get functions of x1,...,xn bu partly applying to t0 
+    # get functions of x1,...,xn by partly applying to t0 
     B0_func=func_subs(t,Function("B")(*tup),B_func,t0)
-    pe('B0_func(*x0)',locals())
     u0_func=func_subs(t,Function("u")(*tup),u_func,t0)
-    pe('u0_func(*x0)',locals())
 
     # build the kind of function that scipy.optimize.root expects 
     # it has to have a single vector like argument
@@ -32,11 +30,10 @@ def compute_fixedpoint_numerically(srm,t0,x0,parameter_set,func_set):
         tup=tuple(x)
         return B0_func(*tup)@x+u0_func(*tup).reshape(x.shape)
     
-    #res = root(fun=ex_func,jac=False,x0=x0)
-    #assert(res.success)
-    #pe('res',locals())
+    res = root(fun=ex_func,jac=False,x0=x0)
+    assert(res.success)
     # chose a method that does not use the jacobian
-    res = root(fun=ex_func,method='krylov',x0=x0)
+    #res = root(fun=ex_func,method='krylov',x0=x0,tol=1e-5)
     #pe('res',locals())
     return res.x
 
