@@ -6,6 +6,37 @@ from scipy.optimize import root,fsolve
 from CompartmentalSystems.helpers_reservoir import jacobian, func_subs, numerical_function_from_expression,pe
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
+def start_age_distributions_from_zero_age_initial_content(srm,start_values):
+    """
+    The function returns a vector valued function f(a) of the age a 
+    that returns the startvector for a=0 and a zero vector of the same size everywhere else.
+    This represents the age distribution of mass a compartmental system where the age of all
+    pool contents is zero.
+    Obviously the distribution is NOT normalized.
+    """
+    svs=start_values.shape
+    n=srm.nr_pools
+    # first check that the start vector has the correct size
+    assert svs==(n,) ,"The initial_values had shape {0} while The reservoir model had s {1} pools".format(svs,n)
+    def dist(a):
+        if a == 0:
+            return start_values
+        else:
+            return np.zeros(n)
+
+    return dist
+
+def start_age_distributions_from_zero_initial_content(srm):
+    """
+    The function returns a vector valued function f(a) of the age a 
+    that is zero everywhere f(a)=0 for all a.
+    This represents the age distribution of a compartmental system with all
+    pools empty.
+    """
+    def dist(a):
+        return np.zeros(srm.nr_pools)
+
+    return dist
 
 def start_age_moments_from_zero_initial_content(srm,max_order):
     return [ np.zeros(srm.nr_pools,1) for n in range(1, max_order+1)]
