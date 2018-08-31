@@ -1,24 +1,107 @@
+
 # vim:set ff=unix expandtab ts=4 sw=4:
 from concurrencytest import ConcurrentTestSuite, fork_for_tests
 import sys
 import unittest
+import plotly.graph_objs as go
+from plotly.offline import plot
 import matplotlib
 matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 import numpy as np
 from sympy import Symbol,Matrix, symbols, sin, Piecewise, DiracDelta, Function
 from CompartmentalSystems.helpers_reservoir import factor_out_from_matrix, parse_input_function, melt, MH_sampling, stride, is_compartmental, func_subs, numerical_function_from_expression,pe
-from CompartmentalSystems.start_distributions import start_age_moments_from_empty_spin_up,start_age_moments_from_steady_state,compute_fixedpoint_numerically
+from CompartmentalSystems.start_distributions import start_age_moments_from_empty_spin_up,start_age_moments_from_steady_state,compute_fixedpoint_numerically,start_age_distributions_from_steady_state,start_age_distributions_from_empty_spinup
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
 class TestStartDistributions(unittest.TestCase):
+    def test_start_age_distribuions_from_empty_spinup(self):
+        # two-dimensional nonlinear 
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        t = Symbol('t')
+        
+        f_expr = Function('f')(t)
+        def f_func( t_val):
+            return np.sin(t_val)+1.0
+        
+        func_set = {f_expr: f_func}
+        
+        
+        input_fluxes = {0: C_0*f_expr+2, 1: 2}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {(0,1):0.5*C_0**3}
+        srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+        t0=3/2*np.pi
+        parameter_set={}
+        a_dens_function,pool_contents=start_age_distributions_from_empty_spinup(srm,t0=t0,parameter_set=parameter_set,func_set=func_set)
+        pe('pool_contents',locals())
+
+        #compute the start age distribution
+    def test_start_age_distribuions_from_steady_state(self):
+        # two-dimensional nonlinear 
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        t = Symbol('t')
+        
+        f_expr = Function('f')(t)
+        def f_func( t_val):
+            return np.sin(t_val)+1.0
+        
+        func_set = {f_expr: f_func}
+        
+        
+        input_fluxes = {0: C_0*f_expr+2, 1: 2}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {(0,1):0.5*C_0**3}
+        srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+        t0=3/2*np.pi
+        x0=np.array([1,2])
+        parameter_set={}
+        x_fix=compute_fixedpoint_numerically(srm,t0=t0,x0=x0,parameter_set=parameter_set,func_set=func_set)
+
+        #compute the start age distribution
+        a_dens_function = start_age_distributions_from_steady_state(srm,t0=t0,x0=np.array([1,2]),parameter_set={},func_set=func_set)
+        # create a model run that starts at x_fix and t0
+        times = np.linspace(t0, 8*np.pi,41)
+        smr = SmoothModelRun(srm, parameter_set=parameter_set, start_values=x_fix, times=times,func_set=func_set)
+
+        # construct a function p that takes an age array "ages" as argument
+        # and gives back a three-dimensional ndarray (ages x times x pools)
+        # from the a array-valued function of a single age a_dens_function
+        p=smr.pool_age_densities_func(a_dens_function)
+        ages=np.linspace(0,3,31)
+        pool_dens_data=p(ages)
+        system_dens_data=smr.system_age_density(pool_dens_data)
+        fig=smr.plot_3d_density_plotly('pool 1',pool_dens_data[:,:,0],ages)
+        trace_on_surface = go.Scatter3d(
+            #name=name,
+            #x=-strided_times, y=strided_data, z=strided_z,
+            #x=[-times[5:10]],
+            #y=ages,
+            x=np.array([-times[0] for a in ages]),
+            y=np.array([a for a in ages]),
+            z=np.array([a_dens_function(a)[0] for a in ages]),
+            #z=np.array([2 for a in ages]),
+            mode = 'lines',
+            line=dict(
+                color='#FF0000',
+                width=15
+                )
+            #,
+            #showlegend = legend_on_surface
+        )
+        smr.add_equilibrium_surface_plotly(fig)
+        fig['data'] += [trace_on_surface]
+        plot(fig,filename='test.html')
+
+
     def test_numeric_staedy_state(self):
         # two-dimensional nonlinear 
         C_0, C_1 = symbols('C_0 C_1')
         state_vector = [C_0, C_1]
         t = Symbol('t')
-
-
 
         input_fluxes = {0: 4 , 1: 2}
         output_fluxes = {0: C_0**2, 1: C_1}

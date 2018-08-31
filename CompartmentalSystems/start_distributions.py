@@ -6,6 +6,46 @@ from scipy.optimize import root,fsolve
 from CompartmentalSystems.helpers_reservoir import jacobian, func_subs, numerical_function_from_expression,pe
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
+
+def start_age_distributions_from_empty_spinup(srm,t0,parameter_set,func_set):
+    a_dist_at_start_of_spinup= start_age_distributions_from_zero_initial_content(srm)
+    spin_up_mr = SmoothModelRun(srm, parameter_set=parameter_set, start_values=np.zeros(srm.nr_pools), times=[0,t0],func_set=func_set)
+    
+    # p_sv(a,t) returns the mass of age a at time t
+    p_sv = spin_up_mr.pool_age_densities_single_value(a_dist_at_start_of_spinup)
+    sol=spin_up_mr.solve()
+
+    def a_dist_at_end_of_spinup(a):
+        return p_sv(age,t0)
+
+    return a_dist_at_end_of_spinup,sol
+
+def start_age_distributions_from_steady_state(srm,t0,x0,parameter_set,func_set):
+    x_fix= compute_fixedpoint_numerically(srm,t0,x0,parameter_set,func_set)
+    pe('x_fix',locals())
+    B_sym = srm.compartmental_matrix
+    u_sym=srm.external_inputs
+
+    t=srm.time_symbol
+    tup = tuple(srm.state_vector)+(t,)
+    u_func=numerical_function_from_expression(u_sym,tup,parameter_set,func_set)
+    B_func=numerical_function_from_expression(B_sym,tup,parameter_set,func_set)
+    B0=B_func(*x_fix,t0)
+    u0=u_func(*x_fix,t0)
+
+    lapm=LinearAutonomousPoolModel(Matrix(u0),Matrix(B0))
+    def a_dist_function(age): 
+        mat_func=lapm.a_density 
+        # Lapm returns a function that returns a sympy.Matrix
+        # of NORMALIZED functions per pool
+        # we have to transform it to a numpy array and 
+        # then multiply it with the start values (which we have to set to x_fix)  
+        mat=mat_func(age) 
+        arr=np.array(mat).astype(np.float).reshape(srm.nr_pools)
+        return x_fix*arr
+
+    return a_dist_function
+
 def start_age_distributions_from_zero_age_initial_content(srm,start_values):
     """
     The function returns a vector valued function f(a) of the age a 
@@ -37,9 +77,6 @@ def start_age_distributions_from_zero_initial_content(srm):
         return np.zeros(srm.nr_pools)
 
     return dist
-
-def start_age_moments_from_zero_initial_content(srm,max_order):
-    return [ np.zeros(srm.nr_pools,1) for n in range(1, max_order+1)]
 
 def compute_fixedpoint_numerically(srm,t0,x0,parameter_set,func_set):
     B_sym = srm.compartmental_matrix
@@ -73,6 +110,10 @@ def start_age_moments_from_empty_spin_up(srm,parameter_set,func_set,a_max,max_or
     # run a spin up and observe the age distribution at the end
     # then compute the moments numerically
     raise Exception("Not implemented yet")
+
+def start_age_moments_from_zero_initial_content(srm,max_order):
+    return [ np.zeros(srm.nr_pools,1) for n in range(1, max_order+1)]
+
 
 def start_age_moments_from_steady_state(srm,t0,parameter_set,func_set,max_order):
     """

@@ -531,13 +531,13 @@ class SmoothModelRun(object):
     # and gives back a three-dimensional ndarray (ages x times x pools)
     # start_age_densities is a array-valued function of age
     def pool_age_densities_func(self, start_age_densities=None):
-        """Return a function based on an age array that returns the 
+        """Return a function that takes an array of ages and returns the 
         pool age densities.
 
         Args:
             start_age_densities (Python function, optional): A function of age 
                 that returns a numpy.array containing the masses with the given 
-                age at time :math:`t_0`. 
+                age at time :math:`t_0` for every pool. 
                 Defaults to None, meaning that all initial mass is considered 
                 to have zero age.
         
