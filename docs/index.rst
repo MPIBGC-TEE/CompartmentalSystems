@@ -36,6 +36,7 @@ Table of Contents
 
     ~CompartmentalSystems.smooth_reservoir_model
     ~CompartmentalSystems.smooth_model_run
+    ~CompartmentalSystems.start_distributions
 
 
 Jupyter notebook examples

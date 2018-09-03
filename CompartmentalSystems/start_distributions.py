@@ -125,44 +125,44 @@ def start_age_moments_from_zero_initial_content(srm,max_order):
 
 
 def start_age_moments_from_steady_state(srm,t0,parameter_set,func_set,max_order):
-    """
-    The age distribution at the start :math`t_0` is NOT 
-    defined by the constituents of objects of class SmoothModelRun. 
-    In fact EVERY age distribution can be chosen. 
-    The implemented algorithms will correcly project it 
-    to any time :math`t`.
-    The distributions eaisiest to imagine are the one with all pools empty or the one where all initial mass has age zero.
-    However often one is interested in the CHANGE of an age distribution that has been ESTABLISHED over a long period of time.        
-    There are several ways to generate such an established
-    distribution.
+    #"""
+    #The age distribution at the start :math `t_0` is NOT 
+    #defined by the constituents of objects of class SmoothModelRun. 
+    #In fact EVERY age distribution can be chosen. 
+    #The implemented algorithms will correcly project it 
+    #to any time :math`t`.
+    #The distributions eaisiest to imagine are the one with all pools empty or the one where all initial mass has age zero.
+    #However often one is interested in the CHANGE of an age distribution that has been ESTABLISHED over a long period of time.        
+    #There are several ways to generate such an established
+    #distribution.
 
-    1 ) Finite age spin up from empty pools ( see function start_age_moments_from_empty_spin_up)
-    Start the computation with all pools empty at time 
-    :math `t_0` and run it till time :math `t = a_{max}` where :math `a_max` is the oldest age you care about about in your interpretation of the results. 
-    The resulting distribution will be non zero only in the interval :math `[0,a_max]`. This has to be considere regarding the questions that can be asked. 
-    It would for instance not make sense to mistake the fact that the percentage of material older than :math `a_max` will increase over time as a property of the system, where it is actually a property of the (spun up) start distribution.  
-    
-    2 ) find a steady state  of the autonumuous system
-    If you take the term ESTABLISHED to the limit of infinity you can look for a related system that has persisted unchanged for all  times :math `t<t_0` and start with the age distribution created by this system.
-      1.) Transform the general nonlinear non-autonomous system into a nonlinear autonomous system by freezing it at time :math `t=t_0`: 
-    Compute :math `u_0(x)=u(t_0,x_0)` and :math `B_0(x)=B(t_0,x_0)` 
-    Numerically look for an equilibrium :math `x*` of the nonlinear system :math `0=B_0(x*)+u_0(x*).
-    :math `x*` is the compatible startvalue for the following simulation. 
-    A special case occures for linear systems where B(x,t)=B(t)
-    and u(x,t) = u(t)
-    We can compute the :math `x*` in one step: `x*=B_0**-1 u_0`.
-    
+    #1 ) Finite age spin up from empty pools ( see function start_age_moments_from_empty_spin_up)
+    #Start the computation with all pools empty at time 
+    #:math `t_0` and run it till time :math `t = a_{max}` where :math `a_max` is the oldest age you care about about in your interpretation of the results. 
+    #The resulting distribution will be non zero only in the interval :math `[0,a_max]`. This has to be considere regarding the questions that can be asked. 
+    #It would for instance not make sense to mistake the fact that the percentage of material older than :math `a_max` will increase over time as a property of the system, where it is actually a property of the (spun up) start distribution.  
+    #
+    #2 ) find a steady state  of the autonumuous system
+    #If you take the term ESTABLISHED to the limit of infinity you can look for a related system that has persisted unchanged for all  times :math `t<t_0` and start with the age distribution created by this system.
+    #  1.) Transform the general nonlinear non-autonomous system into a nonlinear autonomous system by freezing it at time :math `t=t_0`: 
+    #Compute :math `u_0(x)=u(t_0,x_0)` and :math `B_0(x)=B(t_0,x_0)` 
+    #Numerically look for an equilibrium :math `x*` of the nonlinear system :math `0=B_0(x*)+u_0(x*).
+    #:math `x*` is the compatible startvalue for the following simulation. 
+    #A special case occures for linear systems where B(x,t)=B(t)
+    #and u(x,t) = u(t)
+    #We can compute the :math `x*` in one step: `x*=B_0**-1 u_0`.
+    #
 
-    Args:
-        srm (SmoothReservoirModel) : The (symbolic) model
-        par_set : The parameter set that transforms the symbolic model into a numeric one. 
-        max_order (int): The highest order up to which moments are
-        to be computed.
+    #Args:
+    #    srm (SmoothReservoirModel) : The (symbolic) model
+    #    par_set : The parameter set that transforms the symbolic model into a numeric one. 
+    #    max_order (int): The highest order up to which moments are
+    #    to be computed.
 
-    Returns:
-        numpy.ndarray: moments x pools, containing the moments of the
-        pool ages in equilibrium.
-    """
+    #Returns:
+    #    numpy.ndarray: moments x pools, containing the moments of the
+    #    pool ages in equilibrium.
+    #"""
     
     # check for linearity, note that some state dependent input counts
     # as linear too (because it leads to a linear system) 
