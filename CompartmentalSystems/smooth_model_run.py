@@ -45,6 +45,7 @@ from scipy.optimize import newton, brentq, minimize
 from tqdm import tqdm
 
 from .smooth_reservoir_model import SmoothReservoirModel
+from .helpers_reservoir import deprecation_warning
 from .helpers_reservoir import (has_pw, numsol_symbolic_system, 
     arrange_subplots, melt, generalized_inverse_CDF, draw_rv, 
     stochastic_collocation_transform, numerical_rhs, MH_sampling, save_csv, 
@@ -1992,11 +1993,31 @@ class SmoothModelRun(object):
         return fig
 
     def add_equilibrium_surface_plotly(self, fig, opacity=0.7, index=0):
-        """Add a grey and transparent equilibrium density surface to an existing
+        """
+        The function has been renamed since 
+            1. It is not certain that the system has an equilibrium at all. 
+            2. The age distribution at the beginning of a model run does not have to 
+               represent an equilibrium age distribution
+               (even if the system was in equilibrium at t0 in the sense that the pool contents do not change any more the age distribution still could.)
+               
+            please call add_constant_age_distribution_surface_plotly instead! 
+        """
+        txt=self.add_equilibrium_surface_plotly.__doc__
+        deprecation_warning(txt)
+        self.add_constant_age_distribution_surface_plotly(fig, opacity, index)
+
+    def add_constant_age_distribution_surface_plotly(self, fig, opacity=0.7, index=0):
+        """Add a grey and transparent density surface to an existing
         Plotly density plot.
 
-        The 'equilibrium' values are taken from the time zero index such that 
-        the system is supposed to be in equlibrium at time :math:`t_0`.
+        If index is not specified it is assumed to be 0 and the values correspond to the first time in the times porperty of the model run (the age distribution at the beginning) 
+        and repeated for all times.
+        The plotted surface represents an age distribution that is constant in time.
+        It is intended to increase the visibility of changes in the age distribution with time.
+        Note that this constant age distribution does NOT necessarily correspond to a 
+        possible (constant) development of the system. 
+        This would only be true if the system was in equilibrium and the age distribution was the equilibrium age distribution.
+        While this special case is a very interesting application this function does not 
 
         Args:
             fig (Plotly figure): The existing density plot to which the 

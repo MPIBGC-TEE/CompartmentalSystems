@@ -2,6 +2,7 @@
 from __future__ import division
 
 import numpy as np 
+import inspect
 from scipy.integrate import odeint
 from scipy.interpolate import lagrange
 from scipy.optimize import brentq
@@ -10,6 +11,13 @@ from string import Template
 from sympy import flatten, gcd, lambdify, DiracDelta, solve, Matrix,diff
 from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction
+
+def deprecation_warning(txt):
+    print('############################################')
+    calling_frame=inspect.getouterframes(inspect.currentframe(),2)
+    func_name=calling_frame[1][3]
+    print("The function {0} is deprecated".format(func_name))
+    print(txt)
 
 def pp(strng,env,comment=""):
     pe(strng,env,comment)

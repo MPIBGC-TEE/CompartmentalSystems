@@ -1,3 +1,6 @@
+
+"""Module for computing start distributions.
+"""
 from sympy import Matrix,Function
 import numpy as np 
 from scipy.linalg import inv, LinAlgError
@@ -9,13 +12,22 @@ from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 
 def start_age_distributions_from_empty_spinup(srm,t0,parameter_set,func_set):
     a_dist_at_start_of_spinup= start_age_distributions_from_zero_initial_content(srm)
-    spin_up_mr = SmoothModelRun(srm, parameter_set=parameter_set, start_values=np.zeros(srm.nr_pools), times=[0,t0],func_set=func_set)
+    # unfortunately the numer of timesteps has some influence on accuracy
+    # although the ode solver guarantees a minimum it gets better if you force it to make smaller steps...
+    #times=[0,t0]
+    times=np.linspace(0,t0,101) 
+    spin_up_mr = SmoothModelRun(
+            srm, 
+            parameter_set=parameter_set, 
+            start_values=np.zeros(srm.nr_pools), 
+            times=times,
+            func_set=func_set)
     
     # p_sv(a,t) returns the mass of age a at time t
     p_sv = spin_up_mr.pool_age_densities_single_value(a_dist_at_start_of_spinup)
-    sol=spin_up_mr.solve()
+    sol=spin_up_mr.solve()[-1,:]
 
-    def a_dist_at_end_of_spinup(a):
+    def a_dist_at_end_of_spinup(age):
         return p_sv(age,t0)
 
     return a_dist_at_end_of_spinup,sol
@@ -73,10 +85,7 @@ def start_age_distributions_from_zero_initial_content(srm):
     This represents the age distribution of a compartmental system with all
     pools empty.
     """
-    def dist(a):
-        return np.zeros(srm.nr_pools)
-
-    return dist
+    return start_age_distributions_from_zero_age_initial_content(srm,np.zeros(srm.nr_pools))
 
 def compute_fixedpoint_numerically(srm,t0,x0,parameter_set,func_set):
     B_sym = srm.compartmental_matrix
