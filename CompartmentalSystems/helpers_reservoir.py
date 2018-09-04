@@ -12,6 +12,13 @@ from sympy import flatten, gcd, lambdify, DiracDelta, solve, Matrix,diff
 from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction
 
+def warning(txt):
+    print('############################################')
+    calling_frame=inspect.getouterframes(inspect.currentframe(),2)
+    func_name=calling_frame[1][3]
+    print("Warning in function {0}:".format(func_name))
+    print(txt)
+
 def deprecation_warning(txt):
     print('############################################')
     calling_frame=inspect.getouterframes(inspect.currentframe(),2)

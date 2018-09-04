@@ -97,7 +97,42 @@ class TestStartDistributions(InDirTest):
 
         #compute the start age distribution
     def test_start_age_distribuions_from_steady_state(self):
-        # two-dimensional nonlinear 
+        # two-dimensional non-autonomous linear 
+        # we can ommit the initial guess for the fixedpoint
+        # since the function can employ an explicit formula
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        t = Symbol('t')
+        
+        f_expr = Function('f')(t)
+        def f_func( t_val):
+            return np.sin(t_val)+1.0
+        
+        func_set = {f_expr: f_func}
+        
+        
+        input_fluxes = {0: C_0*f_expr+2, 1: 2}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+        t0=3/2*np.pi
+        parameter_set={}
+
+        #compute the start age distribution
+        a_dens_function,x_fix = start_age_distributions_from_steady_state(srm,t0=t0,parameter_set={},func_set=func_set)
+        # create a model run that starts at x_fix and t0
+        times = np.linspace(t0, 8*np.pi,41)
+        smr = SmoothModelRun(srm, parameter_set=parameter_set, start_values=x_fix, times=times,func_set=func_set)
+
+        # construct a function p that takes an age array "ages" as argument
+        # and gives back a three-dimensional ndarray (ages x times x pools)
+        # from the a array-valued function of a single age a_dens_function
+        p=smr.pool_age_densities_func(a_dens_function)
+        ages=np.linspace(0,3,31)
+        pool_dens_data=p(ages)
+        system_dens_data=smr.system_age_density(pool_dens_data)
+        fig=smr.plot_3d_density_plotly('pool 1',pool_dens_data[:,:,0],ages)
+        # two-dimensional non-autonomous nonlinear 
         C_0, C_1 = symbols('C_0 C_1')
         state_vector = [C_0, C_1]
         t = Symbol('t')
@@ -116,10 +151,9 @@ class TestStartDistributions(InDirTest):
         t0=3/2*np.pi
         x0=np.array([1,2])
         parameter_set={}
-        x_fix=compute_fixedpoint_numerically(srm,t0=t0,x0=x0,parameter_set=parameter_set,func_set=func_set)
 
         #compute the start age distribution
-        a_dens_function = start_age_distributions_from_steady_state(srm,t0=t0,x0=np.array([1,2]),parameter_set={},func_set=func_set)
+        a_dens_function,x_fix = start_age_distributions_from_steady_state(srm,t0=t0,parameter_set={},func_set=func_set,x0=np.array([1,2]))
         # create a model run that starts at x_fix and t0
         times = np.linspace(t0, 8*np.pi,41)
         smr = SmoothModelRun(srm, parameter_set=parameter_set, start_values=x_fix, times=times,func_set=func_set)
@@ -268,6 +302,21 @@ class TestStartDistributions(InDirTest):
         ref_ex=np.array([1,2]) 
         for pool in range(srm.nr_pools):
             self.assertTrue(np.allclose(age_moment_vector[:,pool], ref_ex))
+
+        # two-dimensional nonlinear state dependent input non-autonomous 
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        t = Symbol('t')
+        input_fluxes = {0: 0.5*C_0+sin(t)+1, 1: 2}
+        output_fluxes = {0: 1.5*C_0**3, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+        age_moment_vector=start_age_moments_from_steady_state(srm,t0=0,parameter_set={},func_set={},max_order=2)
+        self.assertEqual(age_moment_vector.shape,(2,2))
+        # we only check the #expectation values since B is the identity the number are the same as in the input fluxes 
+        #ref_ex=np.array([1,2]) 
+        #for pool in range(srm.nr_pools):
+        #    self.assertTrue(np.allclose(age_moment_vector[:,pool], ref_ex))
 
 
 
