@@ -2016,20 +2016,21 @@ class SmoothModelRun(object):
         It is intended to increase the visibility of changes in the age distribution with time.
         Note that this constant age distribution does NOT necessarily correspond to a 
         possible (constant) development of the system. 
-        This would only be true if the system was in equilibrium and the age distribution was the equilibrium age distribution.
+        This would only be true if the system was in equilibrium and the age distribution 
+        was the equilibrium age distribution.
         While this special case is a very interesting application this function does not 
+        assertain that such an equlibrium situation is even possible.
 
         Args:
             fig (Plotly figure): The existing density plot to which the 
-                equilibrium surface is added.
+                surface is added.
             opacity (between 0 and 1, optional): The opacity of the new surface.
                 Defaults to 0.9.
                 Unfortunately, the opacity option does not seem to work 
                 properly.
-            index (int, optional): The time index from which the equilibrium 
+            index (int, optional): The time index from which the age distribution 
                 data is taken.
-                Defaults to 0 such that the system is supposed to be in 
-                equlibrium at time :math:`t_0`.
+                Defaults to 0 such that the constant distribution is computed  at time :math:`t_0`.
     
         Returns:
             None.
