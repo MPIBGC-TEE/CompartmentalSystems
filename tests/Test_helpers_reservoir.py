@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sympy import Symbol,Matrix, symbols, sin, Piecewise, DiracDelta, Function
 from CompartmentalSystems.helpers_reservoir import factor_out_from_matrix, parse_input_function, melt, MH_sampling, stride, is_compartmental, func_subs, numerical_function_from_expression
-from CompartmentalSystems.start_distributions import start_age_moments_from_empty_spin_up,start_age_moments_from_steady_state 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 class TestHelpers_reservoir(unittest.TestCase):

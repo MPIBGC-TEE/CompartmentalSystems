@@ -45,7 +45,7 @@ from scipy.optimize import newton, brentq, minimize
 from tqdm import tqdm
 
 from .smooth_reservoir_model import SmoothReservoirModel
-from .helpers_reservoir import deprecation_warning
+from .helpers_reservoir import deprecation_warning,warning
 from .helpers_reservoir import (has_pw, numsol_symbolic_system, 
     arrange_subplots, melt, generalized_inverse_CDF, draw_rv, 
     stochastic_collocation_transform, numerical_rhs, MH_sampling, save_csv, 
@@ -255,6 +255,11 @@ class SmoothModelRun(object):
         return linearized_smr
 
     @staticmethod
+    #fixme mm 2018-9-5:
+    # Why is this is mehtod of class SmoothModelRun?
+    # It does not rely on the class definition in any 
+    # way. 
+    # Is it because the helper module is not exposed in the API?
     def moments_from_densities(max_order, densities):
         """Compute the moments up to max_order of the given densities.
 
@@ -778,9 +783,31 @@ class SmoothModelRun(object):
         """
         n = self.nr_pools
         times = self.times
+
         
         if start_age_moments is None:
             start_age_moments = np.zeros((order, n))
+        
+        max_order=start_age_moments.shape[0]
+        if order>max_order:
+            raise Error("""
+                To solve the moment system with order{0}
+                start_age_moments up to (at least) the same order have to be
+                provided. But the start_age_moments.shape was
+                {1}""".format(order,start_age_moments.shape)
+            )
+        if order<max_order:
+            warning("""
+                Start_age_moments contained higher order values than needed.
+                start_age_moments order was {0} while the requested order was
+                {1}. This is no problem but possibly unintended. The higer
+                order moments will be clipped """.format(max_order,order)
+            )
+            # make sure that the start age moments are clipped to the order
+            # (We do not need start values for higher moments and the clipping
+            # avoids problems with recasting if higher order moments are given 
+            # by the user)
+            start_age_moments=start_age_moments[0:order,:]
 
         if not (0 in self.start_values):
             ams = self._solve_age_moment_system(order, start_age_moments)
