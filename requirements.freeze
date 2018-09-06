@@ -1,3 +1,5 @@
 sympy==1.0.0
+# developer shoul install the following packages also in develop mode 
+# but here we fetch them from GitHub
 -e git+https://git@github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
 -e git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 

@@ -1,2 +1,4 @@
 sympy==1.0.0
--e git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
+# for developer the following package should be installed in develop mode also 
+# so we do not fetch it
+#-e git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
