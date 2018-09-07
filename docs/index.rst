@@ -32,6 +32,7 @@ Table of Contents
 -----------------
 
 .. autosummary::
+    :template: autosummary/module.rst
     :toctree: _autosummary
 
     ~CompartmentalSystems.smooth_reservoir_model

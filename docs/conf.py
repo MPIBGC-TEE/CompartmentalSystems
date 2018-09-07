@@ -102,6 +102,7 @@ napoleon_use_rtype = True
 
 # activate autosummary
 autosummary_generate = True
+#autosummary_imported_members= False
 
 # for classes show the class docstring and the __init__ docstring
 autoclass_content = 'both'

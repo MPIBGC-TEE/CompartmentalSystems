@@ -268,7 +268,7 @@ def start_age_distributions_from_zero_initial_content(srm):
         srm (SmoothReservoirModel) : The (symbolic) model
 
     Returns: 
-        dist (callable):a vector valued function of age. 
+        callable: dist, a vector valued function of age. 
         dist(a)[i] reflects the mass of age :math:`a` 
         in pool i.
     """
