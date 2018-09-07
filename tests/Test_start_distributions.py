@@ -133,7 +133,8 @@ class TestStartDistributions(InDirTest):
 
             fig=smr.plot_3d_density_plotly("pool {0}".format(n),pool_dens_data[:,:,n],ages)
             # plot the computed start age density for t0 on top
-            trace_on_surface = go.Scatter3d(
+            #trace_on_surface = go.Scatter3d(
+            fig.add_scatter3d(
                 x=np.array([-t0 for a in ages]),
                 y=np.array([a for a in ages]),
                 z=np.array([a_dens_func_t0(a)[n] for a in ages]),
@@ -146,7 +147,6 @@ class TestStartDistributions(InDirTest):
                 #showlegend = legend_on_surface
             )
             #smr.add_equilibrium_surface_plotly(fig)
-            fig['data'] += [trace_on_surface]
             plot(fig,filename="test_{0}.html".format(n),auto_open=False)
            
             # make sure that the values for the model run at t0 conince with the values computed by the             # function returned by the function under test
@@ -229,7 +229,9 @@ class TestStartDistributions(InDirTest):
         pool_dens_data=p(ages)
         system_dens_data=smr.system_age_density(pool_dens_data)
         fig=smr.plot_3d_density_plotly('pool 1',pool_dens_data[:,:,0],ages)
-        trace_on_surface = go.Scatter3d(
+
+        #trace_on_surface = go.Scatter3d(
+        fig.add_scatter3d(
             #name=name,
             #x=-strided_times, y=strided_data, z=strided_z,
             #x=[-times[5:10]],
@@ -247,7 +249,7 @@ class TestStartDistributions(InDirTest):
             #showlegend = legend_on_surface
         )
         smr.add_equilibrium_surface_plotly(fig)
-        fig['data'] += [trace_on_surface]
+        #fig['data'] += [trace_on_surface]
         plot(fig,filename='test.html',auto_open=False)
 
 
