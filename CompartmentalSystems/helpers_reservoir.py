@@ -168,7 +168,7 @@ def numerical_function_from_expression(expr,tup,parameter_set,func_set):
     # we check that the argument tup corresponds to free symbols in the expression
     # and refuse to give the function more arguments (lambdify would not complain)
     
-    ss_expr=expr.free_symbols
+    ss_expr=expr_par.free_symbols
     ss_tup=set([s for s in tup])
     if not(ss_expr.issubset(ss_tup)):
         raise Exception("The free symbols of the expression: {0} are not a subset of the symbols in the tuple argument:{1}".format(ss_expr,ss_tup))

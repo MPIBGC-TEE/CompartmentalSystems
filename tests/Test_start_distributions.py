@@ -230,7 +230,6 @@ class TestStartDistributions(InDirTest):
         system_dens_data=smr.system_age_density(pool_dens_data)
         fig=smr.plot_3d_density_plotly('pool 1',pool_dens_data[:,:,0],ages)
 
-        #trace_on_surface = go.Scatter3d(
         fig.add_scatter3d(
             #name=name,
             #x=-strided_times, y=strided_data, z=strided_z,
@@ -241,15 +240,11 @@ class TestStartDistributions(InDirTest):
             z=np.array([a_dens_function(a)[0] for a in ages]),
             #z=np.array([2 for a in ages]),
             mode = 'lines',
-            line=dict(
-                color='#FF0000',
-                width=15
-                )
+            line=dict( color='#FF0000', width=15)
             #,
             #showlegend = legend_on_surface
         )
         smr.add_equilibrium_surface_plotly(fig)
-        #fig['data'] += [trace_on_surface]
         plot(fig,filename='test.html',auto_open=False)
 
 
