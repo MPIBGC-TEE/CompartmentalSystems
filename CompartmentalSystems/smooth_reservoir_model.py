@@ -333,10 +333,10 @@ It gave up for the following expression: ${e}."""
 
         Returns:
             tuple:
-            - J (skew symmetric SymPy dxd-matrix): Internal of internal fluxbalances. 
-                :math:`J_{i,j}=r_{j,i}-r_{i,j)` 
-            - Q (SymPy dxd-matrix): Diagonal matrix describing the dissipation (outfluxes) 
-            rates.
+            - J (skew symmetric SymPy dxd-matrix) of internal fluxbalances: 
+              :math:`J_{i,j}=r_{j,i}-r_{i,j}`
+            - Q (SymPy dxd-matrix): Diagonal matrix describing the dissipation
+              rates (outfluxes). 
             - x (SymPy dx1-matrix): The model's state vector.
             - u (SymPy dx1-matrix): The model's external input vector.
         """

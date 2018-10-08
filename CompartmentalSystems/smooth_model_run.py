@@ -2,7 +2,7 @@
 
 An abstract 
 :class:`~.smooth_reservoir_model.SmoothReservoirModel` is 
-filled with live by giving initial values, a parameter set, a time grid, 
+filled with life by giving initial values, a parameter set, a time grid, 
 and potentially additional involved functions to it.
 
 The model can then be run and as long as the model is linear,
@@ -1920,7 +1920,8 @@ class SmoothModelRun(object):
         strided_times = stride(times, time_stride)
     
         if bottom:
-            trace_bottom = go.Scatter3d(
+            #trace_bottom = go.Scatter3d(
+            fig.add_scatter3d(
             name=name,
             x=-strided_times, y=strided_data, z=0*strided_times,
             mode = 'lines',
@@ -1930,7 +1931,7 @@ class SmoothModelRun(object):
                 ),
             showlegend = legend_bottom
             )
-            fig['data'] += [trace_bottom]
+            #fig['data'] += [trace_bottom]
 
         if on_surface:
             # compute the density values on the surface
@@ -1976,7 +1977,18 @@ class SmoothModelRun(object):
                                     (top_density_value-bottom_density_value))
                     strided_z.append(density_value)
 
-            trace_on_surface = go.Scatter3d(
+            #trace_on_surface = go.Scatter3d(
+            #    name=name,
+            #    x=-strided_times, y=strided_data, z=strided_z,
+            #    mode = 'lines',
+            #    line=dict(
+            #        color=color,
+            #        width=width
+            #        ),
+            #    showlegend = legend_on_surface
+            #)
+            #fig['data'] += [trace_on_surface]
+            fig.add_scatter3d(
                 name=name,
                 x=-strided_times, y=strided_data, z=strided_z,
                 mode = 'lines',
@@ -1986,7 +1998,6 @@ class SmoothModelRun(object):
                     ),
                 showlegend = legend_on_surface
             )
-            fig['data'] += [trace_on_surface]
 
     def plot_3d_density_plotly(self, title, density_data, ages, 
             age_stride=1, time_stride=1):
@@ -2069,13 +2080,15 @@ class SmoothModelRun(object):
         z = data['z'].copy()
         for ti in range(z.shape[1]):
             z[:,ti] = z[:,index]
-        eq_surface_data = go.Surface(x=x, 
-                                      y=y, 
-                                      z=z, 
-                                      showscale=False,
-                                      opacity = opacity,
-                                      surfacecolor=np.zeros_like(z))
-        fig['data'].append(eq_surface_data)
+        #eq_surface_data = go.Surface(
+        fig.add_surface(
+            x=x, 
+            y=y, 
+            z=z, 
+            showscale=False,
+            opacity = opacity,
+            surfacecolor=np.zeros_like(z))
+        #fig['data'].append(eq_surface_data)
 
 
     ##### cumulative distribution methods #####
