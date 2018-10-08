@@ -26,16 +26,6 @@ def deprecation_warning(txt):
     print("The function {0} is deprecated".format(func_name))
     print(txt)
 
-def pp(strng,env,comment=""):
-    pe(strng,env,comment)
-    
-
-def pe(strng,env,comment=""):
-    print('############################################')
-    print(comment+"\n"+strng+"=:")
-    print(eval(strng,env))
-    print('############################################')
-
 def flux_dict_string(d,indent=0):
     s=""
     for k,val in d.items():
