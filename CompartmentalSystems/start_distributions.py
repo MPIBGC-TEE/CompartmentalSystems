@@ -111,9 +111,10 @@ import numpy as np
 from scipy.linalg import inv, LinAlgError
 from scipy.special import factorial
 from scipy.optimize import root,fsolve
+from testinfrastructure.helpers import pe
 from CompartmentalSystems.helpers_reservoir import \
     jacobian, func_subs,\
-    numerical_function_from_expression,pe,\
+    numerical_function_from_expression,\
     warning,deprecation_warning
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
