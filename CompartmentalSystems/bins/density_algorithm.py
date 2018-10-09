@@ -1,5 +1,5 @@
 # vim: set ff=unix expandtab ts=4 sw=4:
-from ..helpers_reservoir import pp
+from testinfrastructure.helpers import pp,pe
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")

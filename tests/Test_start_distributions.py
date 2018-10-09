@@ -10,7 +10,8 @@ matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 import numpy as np
 from sympy import Symbol,Matrix, symbols, sin, Piecewise, DiracDelta, Function
-from CompartmentalSystems.helpers_reservoir import factor_out_from_matrix, parse_input_function, melt, MH_sampling, stride, is_compartmental, func_subs, numerical_function_from_expression,pe
+from CompartmentalSystems.helpers_reservoir import factor_out_from_matrix, parse_input_function, melt, MH_sampling, stride, is_compartmental, func_subs, numerical_function_from_expression
+
 from CompartmentalSystems.start_distributions import \
     start_age_moments_from_empty_spinup, \
     start_age_moments_from_steady_state, \
@@ -22,6 +23,7 @@ from CompartmentalSystems.start_distributions import \
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from testinfrastructure.InDirTest import InDirTest
+from testinfrastructure.helpers import pe
 
 class TestStartDistributions(InDirTest):
     def test_start_age_moments_from_empty_spinup(self):
