@@ -57,7 +57,36 @@ class SmoothReservoirModel(object):
             ``{key1: flux1, key2: flux2}`` with ``key = (pool_from, pool_to)``
             and *flux* a SymPy expression for the flux.
     """
-
+    @classmethod
+    def from_state_variable_indexed_fluxes(cls,state_vector, time_symbol, 
+            input_fluxes, output_fluxes, internal_fluxes):
+        """Return an instance of SmoothReservoirModel.
+    
+        Args:
+            state_vector (SymPy dx1-matrix): The model's state vector 
+                :math:`x`.
+                Its entries are SymPy symbols.
+            time_symbol (SymPy symbol): The model's time symbol.
+            input_fluxes (dict): The model's external input fluxes.
+                ``{key1: flux1, key2: flux2}`` with ``key`` the symbol of the target pool. (as used in the state vector)
+                and ``flux`` a SymPy expression for the influx.
+            output_fluxes (dict): The model's external output fluxes.
+                ``{key1: flux1, key2: flux2}`` with ``key`` the symbols for the source pool (as used in the state vector)
+                and ``flux`` a SymPy expression for the outflux.
+            internal_fluxes (dict): The model's internal_fluxes.
+                ``{key1: flux1, key2: flux2}`` with 
+                ``key = (source pool symbol, target pool symbol)`` and ``flux`` a SymPy expression 
+                for the flux.
+    
+        Returns:
+            :class:`SmoothReservoirModel`
+        """
+        # transform to integer indexed dicts
+        int_input={state_vector.index(k):v for k,v in input_fluxes.items()}
+        int_output={state_vector.index(k):v for k,v in output_fluxes.items()}
+        int_internal={(state_vector.index(k[0]),state_vector.index(k[1])):v for k,v in internal_fluxes.items()}
+        # call normal init
+        return cls( state_vector, time_symbol, int_input, int_output, int_internal)
 
     def __init__(self, state_vector, time_symbol, 
                        input_fluxes, output_fluxes, internal_fluxes):

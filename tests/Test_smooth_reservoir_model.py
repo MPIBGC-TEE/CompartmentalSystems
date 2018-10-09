@@ -9,6 +9,7 @@ from sympy import Symbol, Matrix, symbols, diag, zeros, simplify, Function
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from testinfrastructure.InDirTest import InDirTest
+from testinfrastructure.helpers import  pe,pp
 
 
 ######### TestClass #############
@@ -19,6 +20,22 @@ class TestSmoothReservoirModel(InDirTest):
         # test that state_vector is a sympy matrix
         # test simple cases
         pass
+
+    def test_from_symbolic_fluxes(self):
+        # we allow the fluxes also be indexed by the state variables
+        # rather that their position in the statevector
+        C_0, C_1, C_2  = symbols('C_0 C_1 C_2')
+        k=symbols('k')
+        state_vector = [C_0, C_1, C_2]
+        time_symbol = Symbol('t')
+        input_fluxes = {C_0: C_0+5, C_1: 0, C_2:C_0**2+C_1}
+        output_fluxes = {C_0:k*C_0}
+
+        internal_fluxes = {(C_0,C_1):k*C_0}
+        rm = SmoothReservoirModel.from_state_variable_indexed_fluxes(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        pe('rm',locals())
+
+        
 
     def test_jacobian(self):
         C_0, C_1  = symbols('C_0 C_1')
