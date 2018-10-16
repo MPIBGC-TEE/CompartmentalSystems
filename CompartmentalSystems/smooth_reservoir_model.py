@@ -136,7 +136,7 @@ class SmoothReservoirModel(object):
 
     @property
     def free_symbols(self):
-        """ Returns the superset of the free symbols of the flux expressions.
+        """ Returns the superset of the free symbols of the flux expressions including the state variables.
         """
         flux_exprs=self.all_fluxes().values()
         free_sym_sets=[ sym_set for sym_set in map(lambda sym:sym.free_symbols,flux_exprs)] 
