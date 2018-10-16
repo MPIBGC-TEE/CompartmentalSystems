@@ -22,7 +22,8 @@ from copy import copy, deepcopy
 from string import Template
 from functools import reduce
 from sympy import (zeros, Matrix, simplify, diag, eye, gcd, latex, Symbol, 
-                   flatten, Function, solve, limit, oo , ask , Q, assuming )
+                   flatten, Function, solve, limit, oo , ask , Q, assuming
+                   ,sympify)
 from sympy.printing import pprint
 import numpy as np
 import multiprocessing
@@ -133,13 +134,29 @@ class SmoothReservoirModel(object):
     
 
         
+    @property
+    def function_expressions(self):
+        """ Returns the superset of the free symbols of the flux expressions.
+        """
+        flux_list=self.all_fluxes()
+        fun_sets=[ fun_set 
+                # the sympification in the next line is only necessary for
+                # fluxexpressions that are integers
+                for fun_set in map(lambda
+                    flux:sympify(flux).atoms(Function),flux_list)] 
+        return reduce( lambda A,B: A.union(B),fun_sets)
+
 
     @property
     def free_symbols(self):
         """ Returns the superset of the free symbols of the flux expressions.
         """
-        flux_exprs=self.all_fluxes().values()
-        free_sym_sets=[ sym_set for sym_set in map(lambda sym:sym.free_symbols,flux_exprs)] 
+        flux_exprs=self.all_fluxes()
+        free_sym_sets=[ sym_set 
+                # the sympification in the next line is only necessary for
+                # fluxexpressions that are numbers
+                # It does no harm on expressions 
+                for sym_set in map(lambda sym:sympify(sym).free_symbols,flux_exprs)] 
         return reduce( lambda A,B: A.union(B),free_sym_sets)
 
  
@@ -174,10 +191,10 @@ class SmoothReservoirModel(object):
         return s 
 
     def all_fluxes(self): 
-        allFluxDict=deepcopy(self.input_fluxes)
-        allFluxDict.update(self.internal_fluxes)
-        allFluxDict.update(self.output_fluxes)
-        return allFluxDict
+        # since input and output fluxes are indexed by integers they could
+        # overload each other in a common dictionary
+        # to avoid this we create a list
+        return [v for v in self.input_fluxes.values()] + [v for v in self.output_fluxes.values()] + [v for v in self.internal_fluxes.values()]
 
     @property
     def jacobian(self):
@@ -234,7 +251,7 @@ It gave up for the following expression: ${e}."""
 
         with assuming(*predList):
             # under this assumption eveluate all fluxes
-            all_fluxes_nonnegative=all(map(f,[val for val in self.all_fluxes().values()]))
+            all_fluxes_nonnegative=all(map(f,self.all_fluxes()))
 
         return all_fluxes_nonnegative
         
