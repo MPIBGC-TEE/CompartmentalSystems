@@ -118,6 +118,7 @@ from CompartmentalSystems.helpers_reservoir import \
     warning,deprecation_warning
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
+from testinfrastructure.helpers import pe
 
 def start_age_distributions_from_empty_spinup(srm,t_max,parameter_set,func_set):
     """
@@ -469,7 +470,12 @@ def lapm_for_steady_state(srm,t0,parameter_set,func_set,x0=None):
         B0=B_func(*x_fix,t0)
         u0=u_func(*x_fix,t0)
 
-    lapm=LinearAutonomousPoolModel(Matrix(u0),Matrix(B0))
+
+    B0_m=Matrix(B0) 
+    u0_m=Matrix(u0) 
+    pe('B0',locals())
+    pe('u0',locals())
+    lapm=LinearAutonomousPoolModel(u0_m,B0_m,force_numerical=True)
     return lapm,x_fix
 
 def start_age_moments_from_steady_state(srm,t0,parameter_set,func_set,max_order):
