@@ -147,8 +147,7 @@ class SmoothReservoirModel(object):
         if len(fun_sets)==0:
             res=set()
         else:
-            reduce( lambda A,B: A.union(B),fun_sets)
-
+            res=reduce( lambda A,B: A.union(B),fun_sets)
         return res 
 
 
@@ -166,8 +165,7 @@ class SmoothReservoirModel(object):
         if len(free_sym_sets)==0:
             res=set()
         else:
-            reduce( lambda A,B: A.union(B),free_sym_sets)
-
+            res=reduce( lambda A,B: A.union(B),free_sym_sets)
         return res 
 
  
