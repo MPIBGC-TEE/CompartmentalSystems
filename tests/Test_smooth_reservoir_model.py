@@ -55,6 +55,11 @@ class TestSmoothReservoirModel(InDirTest):
         rm = SmoothReservoirModel.from_state_variable_indexed_fluxes(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
 
         self.assertEqual(rm.function_expressions, {f(t),f(4)})
+        # now test with no function expressions
+        input_fluxes = {C_0: C_0+5, C_1: 0, C_2:C_0**2+C_1}
+        rm = SmoothReservoirModel.from_state_variable_indexed_fluxes(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+
+        self.assertEqual(rm.function_expressions, set())
 
     def test_free_symbols(self):
         C_0, C_1, C_2  = symbols('C_0 C_1 C_2')

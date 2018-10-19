@@ -90,7 +90,7 @@ class SmoothReservoirModel(object):
         return cls( state_vector, time_symbol, int_input, int_output, int_internal)
 
     def __init__(self, state_vector, time_symbol, 
-                       input_fluxes, output_fluxes, internal_fluxes):
+                       input_fluxes={}, output_fluxes={}, internal_fluxes={}):
         """Return an instance of SmoothReservoirModel.
     
         Args:
@@ -140,11 +140,16 @@ class SmoothReservoirModel(object):
         """
         flux_list=self.all_fluxes()
         fun_sets=[ fun_set 
-                # the sympification in the next line is only necessary for
-                # fluxexpressions that are integers
+                # the sympify in the next line is only necessary for
+                # fluxexpressions that are integers (which have no atoms method) 
                 for fun_set in map(lambda
                     flux:sympify(flux).atoms(Function),flux_list)] 
-        return reduce( lambda A,B: A.union(B),fun_sets)
+        if len(fun_sets)==0:
+            res=set()
+        else:
+            reduce( lambda A,B: A.union(B),fun_sets)
+
+        return res 
 
 
     @property
@@ -157,7 +162,13 @@ class SmoothReservoirModel(object):
                 # fluxexpressions that are numbers
                 # It does no harm on expressions 
                 for sym_set in map(lambda sym:sympify(sym).free_symbols,flux_exprs)] 
-        return reduce( lambda A,B: A.union(B),free_sym_sets)
+
+        if len(free_sym_sets)==0:
+            res=set()
+        else:
+            reduce( lambda A,B: A.union(B),free_sym_sets)
+
+        return res 
 
  
     def subs(self,par_set):
