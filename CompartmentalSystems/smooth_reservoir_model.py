@@ -22,12 +22,14 @@ from copy import copy, deepcopy
 from string import Template
 from functools import reduce
 from sympy import (zeros, Matrix, simplify, diag, eye, gcd, latex, Symbol, 
-                   flatten, Function, solve, limit, oo , ask , Q, assuming )
+                   flatten, Function, solve, limit, oo , ask , Q, assuming
+                   ,sympify)
 from sympy.printing import pprint
 import numpy as np
 import multiprocessing
 
-from .helpers_reservoir import factor_out_from_matrix, has_pw, flux_dict_string, jacobian, pe
+from .helpers_reservoir import factor_out_from_matrix, has_pw, flux_dict_string, jacobian
+from testinfrastructure.helpers import  pe
 
 
 class Error(Exception):
@@ -56,10 +58,39 @@ class SmoothReservoirModel(object):
             ``{key1: flux1, key2: flux2}`` with ``key = (pool_from, pool_to)``
             and *flux* a SymPy expression for the flux.
     """
-
+    @classmethod
+    def from_state_variable_indexed_fluxes(cls,state_vector, time_symbol, 
+            input_fluxes, output_fluxes, internal_fluxes):
+        """Return an instance of SmoothReservoirModel.
+    
+        Args:
+            state_vector (SymPy dx1-matrix): The model's state vector 
+                :math:`x`.
+                Its entries are SymPy symbols.
+            time_symbol (SymPy symbol): The model's time symbol.
+            input_fluxes (dict): The model's external input fluxes.
+                ``{key1: flux1, key2: flux2}`` with ``key`` the symbol of the target pool. (as used in the state vector)
+                and ``flux`` a SymPy expression for the influx.
+            output_fluxes (dict): The model's external output fluxes.
+                ``{key1: flux1, key2: flux2}`` with ``key`` the symbols for the source pool (as used in the state vector)
+                and ``flux`` a SymPy expression for the outflux.
+            internal_fluxes (dict): The model's internal_fluxes.
+                ``{key1: flux1, key2: flux2}`` with 
+                ``key = (source pool symbol, target pool symbol)`` and ``flux`` a SymPy expression 
+                for the flux.
+    
+        Returns:
+            :class:`SmoothReservoirModel`
+        """
+        # transform to integer indexed dicts
+        int_input={state_vector.index(k):v for k,v in input_fluxes.items()}
+        int_output={state_vector.index(k):v for k,v in output_fluxes.items()}
+        int_internal={(state_vector.index(k[0]),state_vector.index(k[1])):v for k,v in internal_fluxes.items()}
+        # call normal init
+        return cls( state_vector, time_symbol, int_input, int_output, int_internal)
 
     def __init__(self, state_vector, time_symbol, 
-                       input_fluxes, output_fluxes, internal_fluxes):
+                       input_fluxes={}, output_fluxes={}, internal_fluxes={}):
         """Return an instance of SmoothReservoirModel.
     
         Args:
@@ -103,14 +134,39 @@ class SmoothReservoirModel(object):
     
 
         
+    @property
+    def function_expressions(self):
+        """ Returns the superset of the free symbols of the flux expressions.
+        """
+        flux_list=self.all_fluxes()
+        fun_sets=[ fun_set 
+                # the sympify in the next line is only necessary for
+                # fluxexpressions that are integers (which have no atoms method) 
+                for fun_set in map(lambda
+                    flux:sympify(flux).atoms(Function),flux_list)] 
+        if len(fun_sets)==0:
+            res=set()
+        else:
+            res=reduce( lambda A,B: A.union(B),fun_sets)
+        return res 
+
 
     @property
     def free_symbols(self):
-        """ Returns the superset of the free symbols of the flux expressions.
+        """ Returns the superset of the free symbols of the flux expressions including the state variables.
         """
-        flux_exprs=self.all_fluxes().values()
-        free_sym_sets=[ sym_set for sym_set in map(lambda sym:sym.free_symbols,flux_exprs)] 
-        return reduce( lambda A,B: A.union(B),free_sym_sets)
+        flux_exprs=self.all_fluxes()
+        free_sym_sets=[ sym_set 
+                # the sympification in the next line is only necessary for
+                # fluxexpressions that are numbers
+                # It does no harm on expressions 
+                for sym_set in map(lambda sym:sympify(sym).free_symbols,flux_exprs)] 
+
+        if len(free_sym_sets)==0:
+            res=set()
+        else:
+            res=reduce( lambda A,B: A.union(B),free_sym_sets)
+        return res 
 
  
     def subs(self,par_set):
@@ -144,10 +200,10 @@ class SmoothReservoirModel(object):
         return s 
 
     def all_fluxes(self): 
-        allFluxDict=deepcopy(self.input_fluxes)
-        allFluxDict.update(self.internal_fluxes)
-        allFluxDict.update(self.output_fluxes)
-        return allFluxDict
+        # since input and output fluxes are indexed by integers they could
+        # overload each other in a common dictionary
+        # to avoid this we create a list
+        return [v for v in self.input_fluxes.values()] + [v for v in self.output_fluxes.values()] + [v for v in self.internal_fluxes.values()]
 
     @property
     def jacobian(self):
@@ -204,7 +260,7 @@ It gave up for the following expression: ${e}."""
 
         with assuming(*predList):
             # under this assumption eveluate all fluxes
-            all_fluxes_nonnegative=all(map(f,[val for val in self.all_fluxes().values()]))
+            all_fluxes_nonnegative=all(map(f,self.all_fluxes()))
 
         return all_fluxes_nonnegative
         

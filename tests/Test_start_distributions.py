@@ -10,7 +10,8 @@ matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 import numpy as np
 from sympy import Symbol,Matrix, symbols, sin, Piecewise, DiracDelta, Function
-from CompartmentalSystems.helpers_reservoir import factor_out_from_matrix, parse_input_function, melt, MH_sampling, stride, is_compartmental, func_subs, numerical_function_from_expression,pe
+from CompartmentalSystems.helpers_reservoir import factor_out_from_matrix, parse_input_function, melt, MH_sampling, stride, is_compartmental, func_subs, numerical_function_from_expression
+
 from CompartmentalSystems.start_distributions import \
     start_age_moments_from_empty_spinup, \
     start_age_moments_from_steady_state, \
@@ -22,6 +23,7 @@ from CompartmentalSystems.start_distributions import \
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from testinfrastructure.InDirTest import InDirTest
+from testinfrastructure.helpers import pe
 
 class TestStartDistributions(InDirTest):
     def test_start_age_moments_from_empty_spinup(self):
@@ -133,7 +135,8 @@ class TestStartDistributions(InDirTest):
 
             fig=smr.plot_3d_density_plotly("pool {0}".format(n),pool_dens_data[:,:,n],ages)
             # plot the computed start age density for t0 on top
-            trace_on_surface = go.Scatter3d(
+            #trace_on_surface = go.Scatter3d(
+            fig.add_scatter3d(
                 x=np.array([-t0 for a in ages]),
                 y=np.array([a for a in ages]),
                 z=np.array([a_dens_func_t0(a)[n] for a in ages]),
@@ -146,7 +149,6 @@ class TestStartDistributions(InDirTest):
                 #showlegend = legend_on_surface
             )
             #smr.add_equilibrium_surface_plotly(fig)
-            fig['data'] += [trace_on_surface]
             plot(fig,filename="test_{0}.html".format(n),auto_open=False)
            
             # make sure that the values for the model run at t0 conince with the values computed by the             # function returned by the function under test
@@ -229,7 +231,8 @@ class TestStartDistributions(InDirTest):
         pool_dens_data=p(ages)
         system_dens_data=smr.system_age_density(pool_dens_data)
         fig=smr.plot_3d_density_plotly('pool 1',pool_dens_data[:,:,0],ages)
-        trace_on_surface = go.Scatter3d(
+
+        fig.add_scatter3d(
             #name=name,
             #x=-strided_times, y=strided_data, z=strided_z,
             #x=[-times[5:10]],
@@ -239,15 +242,11 @@ class TestStartDistributions(InDirTest):
             z=np.array([a_dens_function(a)[0] for a in ages]),
             #z=np.array([2 for a in ages]),
             mode = 'lines',
-            line=dict(
-                color='#FF0000',
-                width=15
-                )
+            line=dict( color='#FF0000', width=15)
             #,
             #showlegend = legend_on_surface
         )
         smr.add_equilibrium_surface_plotly(fig)
-        fig['data'] += [trace_on_surface]
         plot(fig,filename='test.html',auto_open=False)
 
 

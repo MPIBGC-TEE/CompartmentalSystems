@@ -9,6 +9,7 @@ from sympy import Symbol, Matrix, symbols, diag, zeros, simplify, Function
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from testinfrastructure.InDirTest import InDirTest
+from testinfrastructure.helpers import  pe,pp
 
 
 ######### TestClass #############
@@ -17,8 +18,63 @@ class TestSmoothReservoirModel(InDirTest):
     def test_init(self):
         #fixme:
         # test that state_vector is a sympy matrix
-        # test simple cases
+
+        # reject cases without fluxes
         pass
+    
+
+
+    def test_from_symbolic_fluxes(self):
+        # we allow the fluxes also be indexed by the state variables
+        # rather that their position in the statevector
+        C_0, C_1, C_2  = symbols('C_0 C_1 C_2')
+        k=symbols('k')
+        state_vector = [C_0, C_1, C_2]
+        time_symbol = Symbol('t')
+        input_fluxes = {C_0: C_0+5, C_1: 0, C_2:C_0**2+C_1}
+        output_fluxes = {C_0:k*C_0}
+        internal_fluxes = {(C_0,C_1):k*C_0}
+
+        rm = SmoothReservoirModel.from_state_variable_indexed_fluxes(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+
+        self.assertEqual(rm.input_fluxes , {0: C_0+5, 1: 0, 2:C_0**2+C_1})
+        self.assertEqual(rm.output_fluxes , {0:k*C_0})
+        self.assertEqual(rm.internal_fluxes , {(0,1):k*C_0})
+
+        
+    def test_function_expressions(self):
+        C_0, C_1, C_2  = symbols('C_0 C_1 C_2')
+        k=symbols('k')
+        t = Symbol('t')
+        f= Function('f')
+        state_vector = [C_0, C_1, C_2]
+        input_fluxes = {C_0: C_0+5*f(4), C_1: 0, C_2:C_0**2+C_1*f(t)}
+        output_fluxes = {C_0:k*C_0}
+        internal_fluxes = {(C_0,C_1):k*C_0}
+
+        rm = SmoothReservoirModel.from_state_variable_indexed_fluxes(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+
+        self.assertEqual(rm.function_expressions, {f(t),f(4)})
+        # now test with no function expressions
+        input_fluxes = {C_0: C_0+5, C_1: 0, C_2:C_0**2+C_1}
+        rm = SmoothReservoirModel.from_state_variable_indexed_fluxes(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+
+        self.assertEqual(rm.function_expressions, set())
+
+    def test_free_symbols(self):
+        C_0, C_1, C_2  = symbols('C_0 C_1 C_2')
+        k=symbols('k')
+        t = Symbol('t')
+        f= Function('f')
+        state_vector = [C_0, C_1, C_2]
+        input_fluxes = {C_0: C_0+5*f(4), C_1: 0, C_2:C_0**2+C_1*f(t)}
+        output_fluxes = {C_0:k*C_0}
+        internal_fluxes = {(C_0,C_1):k*C_0}
+
+        rm = SmoothReservoirModel.from_state_variable_indexed_fluxes(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+
+        self.assertEqual(rm.free_symbols, {k,t,C_0,C_1})
+
 
     def test_jacobian(self):
         C_0, C_1  = symbols('C_0 C_1')
