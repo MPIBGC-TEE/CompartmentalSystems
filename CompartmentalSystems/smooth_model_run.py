@@ -366,7 +366,7 @@ class SmoothModelRun(object):
         The resulting functions base on sol_funcs and are linear interpolations.
 
         Returns:
-            ditc: ``{key: func}`` with ``key=(pool_from, pool_to)`` representing
+            dict: ``{key: func}`` with ``key=(pool_from, pool_to)`` representing
             the pools involved and ``func`` a function of time that returns 
             a ``float``.
         """
