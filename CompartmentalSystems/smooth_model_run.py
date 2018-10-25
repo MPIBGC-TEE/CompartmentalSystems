@@ -45,7 +45,7 @@ from scipy.optimize import newton, brentq, minimize
 from tqdm import tqdm
 
 from .smooth_reservoir_model import SmoothReservoirModel
-from .helpers_reservoir import deprecation_warning,warning
+from .helpers_reservoir import deprecation_warning,warning ,make_cut_func_set
 from .helpers_reservoir import (has_pw, numsol_symbolic_system, 
     arrange_subplots, melt, generalized_inverse_CDF, draw_rv, 
     stochastic_collocation_transform, numerical_rhs, MH_sampling, save_csv, 
@@ -176,8 +176,9 @@ class SmoothModelRun(object):
             # is this here the right place to do it??
             cm_par = self.model.compartmental_matrix.subs(self.parameter_set)
             tup = tuple(self.model.state_vector)+(self.model.time_symbol.name,)
-            cut_func_set = {key[:key.index('(')]: val 
-                                for key, val in self.func_set.items()}
+            # cut_func_set = {key[:key.index('(')]: val 
+            #                    for key, val in self.func_set.items()}
+            cut_func_set=make_cut_func_set(self.func_set)
             B_func = lambdify(tup, cm_par, [cut_func_set, 'numpy'])
         
             def _B(t):
@@ -3186,8 +3187,9 @@ class SmoothModelRun(object):
         
         flux_vec_symbolic = sympify(flux_vec_symbolic, locals = _clash)
         flux_vec_symbolic = flux_vec_symbolic.subs(self.parameter_set)
-        cut_func_set = {key[:key.index('(')]: val 
-                            for key, val in self.func_set.items()}
+        #cut_func_set = {key[:key.index('(')]: val 
+        #                    for key, val in self.func_set.items()}
+        cut_func_set=make_cut_func_set(self.func_set)
         flux_vec_fun = lambdify(tup, 
                                 flux_vec_symbolic, 
                                 modules=[cut_func_set, 'numpy'])
@@ -3373,8 +3375,9 @@ class SmoothModelRun(object):
         tup = tuple(m.state_variables) + (m.time_symbol,)
         for key, value in expr_dict.items():
             o_par = sympify(value, locals=_clash).subs(self.parameter_set)
-            cut_func_set = {key[:key.index('(')]: val for key, val in 
-                                    self.func_set.items()}
+            #cut_func_set = {key[:key.index('(')]: val for key, val in 
+            #                        self.func_set.items()}
+            cut_func_set=make_cut_func_set(self.func_set)
             ol = lambdify(tup, o_par, modules = [cut_func_set, 'numpy'])
             flux_funcs[key] = self._f_of_t_maker(sol_funcs, ol)
 

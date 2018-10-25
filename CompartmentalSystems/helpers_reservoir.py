@@ -10,7 +10,9 @@ from scipy.stats import norm
 from string import Template
 from sympy import flatten, gcd, lambdify, DiracDelta, solve, Matrix,diff
 from sympy.polys.polyerrors import PolynomialError
-from sympy.core.function import UndefinedFunction
+from sympy.core.function import UndefinedFunction, Function, sympify
+from sympy import Symbol
+from testinfrastructure.helpers import pe
 
 def warning(txt):
     print('############################################')
@@ -149,8 +151,10 @@ def numerical_function_from_expression(expr,tup,parameter_set,func_set):
     # since lambdify wants the dictionary indexed by
     # the function name only
     # after this step we have the key 'u_1'
-    cut_func_set = {key[:key.index('(')]: val 
-        for key, val in str_func_set.items()}
+    #cut_func_set = {key[:key.index('(')]: val 
+    #    for key, val in str_func_set.items()}
+
+    cut_func_set=make_cut_func_set(func_set)
    
 
     expr_par=expr.subs(parameter_set)
@@ -185,11 +189,12 @@ def numerical_rhs(state_vector, time_symbol, rhs,
         tup = tuple(state_vector) + (time_symbol,)
         #     b) use lambdify
 
-        # cut off the parentheses from the keys, because lamdify wants it
-        #print('fs', func_set)
-        cut_func_set = {key[:key.index('(')]: val 
-                            for key, val in func_set.items()}
-        #print('cfs', cut_func_set)
+        # unify the funcset so that it indexed only by the funcname
+        # not the funcexpression
+        # {f(x,y):f_num} is transformed to {f:f_num}
+        pe('func_set',locals())
+        cut_func_set=make_cut_func_set(func_set)
+        print('cfs', cut_func_set)
         #print('rhs_par', [(a, type(a)) for a in rhs_par.atoms()])
         #print('rhs_par', rhs_par)
         #FL = lambdify(tup, rhs_par, modules=[cut_func_set,"numpy"])
@@ -483,5 +488,28 @@ def is_compartmental(M):
     gen=range(M.shape[0])
     return all([M.is_square,all([M[i,i]<=0 for i in gen]), all([sum(M[i,:])<=0 for i in gen])])    
     
+def make_cut_func_set(func_set):
+    def unify_index(expr):
+        print(expr)
+        print(type(expr))
+        # for the case Function('f'):f_numeric
+        if isinstance(expr,UndefinedFunction):
+            res=str(expr)
+        # for the case {f(x,y):f_numeric} f(x,y) 
+        elif isinstance(expr,Symbol):
+            res=str(expr)
+        elif isinstance(expr,Function):
+            res=str(type(expr))
+        elif isinstance(expr,str):
+            expr=sympify(expr)
+            pe('expr',locals())
+            res=unify_index(expr)
+        else:
+            print(type(expr))
+            raise(TypeError("funcset indices should be indexed by instances of sympy.core.functions.UndefinedFunction"))
+        return res
+
+    cut_func_set={unify_index(key):val for key,val in func_set.items()}
+    return cut_func_set
 
 
