@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 # all array-like data structures are numpy.array
 import  os
+import inspect
 import numpy as np
 
 # for 2d plots we use Matplotlib
 import matplotlib.pyplot as plt
 
 from copy import copy,deepcopy
-from sympy import Matrix, symbols, Symbol, Function, latex, atan ,pi,sin,lambdify
+from sympy import Matrix, symbols, Symbol, Function, latex, atan ,pi,sin,lambdify,Piecewise
 from scipy.interpolate import interp1d
 # load the compartmental model packages
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
-from CompartmentalSystems.helpers_reservoir import  numsol_symbolic_system 
+from CompartmentalSystems.helpers_reservoir import  numsol_symbolic_system ,numerical_function_from_expression
 from testinfrastructure.helpers  import pe
 
 ########## symbol definitions ##########
@@ -31,10 +32,9 @@ def phi_maker(epsilon):
     return phi
 class BastinModel():
     # Bastonification of a reservoir model
-    def __init__(self,srm,phi_eps,z_sym):
+    def __init__(self,srm,u_expr,z_sym):
         self.z_sym=z_sym
-        self.phi_eps=phi_eps
-        u=phi_eps(z_sym)
+        self.u_expr=u_expr
         crm=deepcopy(srm)
         cof= crm.output_fluxes
         cif= crm.input_fluxes
@@ -47,19 +47,15 @@ class BastinModel():
         #index of the single input receiving pool
         ii=list(cif.items())[0][0]
         d=cif[ii]
-        cif[ii] = u*d
+        cif[ii] = u_expr*d
         crm.input_fluxes=cif
     
         self.state_vector=Matrix(list(srm.state_vector)+[z_sym])
-        #z_dot=Net_sym(F_SD,F_DS)-phi_eps(z_sym)*d
-        z_dot=F_SD-phi_eps(z_sym)*d
+        z_dot=F_SD-u_expr*d
         #rhs
         self.F=Matrix(list(crm.F)+[z_dot])
-        self.time_symbol=srm.time_symbol,
+        self.time_symbol=srm.time_symbol
 
-    def phi_num(self):
-        z=self.z_sym
-        return lambdify(z,self.phi_eps(z),modules='numpy')
 
 
 class BastinModelRun():
@@ -82,6 +78,10 @@ class BastinModelRun():
             self.times
         )
         return soln
+    def phi_num(self,tup):
+        bm=self.bm
+        u_num= numerical_function_from_expression(bm.u_expr,tup,self.par_dict,self.func_set)
+        return u_num
 
 # time symbol
 time_symbol = symbols('t')
@@ -150,6 +150,7 @@ limited_srm = SmoothReservoirModel(state_vector,
 
 # define the time windows of interest
 start_year = 1765
+#start_year = 1900
 #end_year =1800 
 end_year = 2500
 #end_year = 2015
@@ -198,8 +199,6 @@ par_dict_v1 = {alpha: 0.2, beta: 10.0} # nonlinear
 
 #Net_SD_DS=F_SD-F_DS
 
-nonlinear_smr = SmoothModelRun(nonlinear_srm, par_dict_v1, start_values, times, func_set)
-limited_smr = SmoothModelRun(limited_srm, par_dict_v1, start_values, times, func_set)
 ### solve the model
 #soln = nonlinear_smr.solve()
 #limited_soln = limited_smr.solve()
@@ -218,42 +217,85 @@ def poolsizes(ax,soln):
     ax.legend(loc=2)
     return(ax)
 
-def plot_all_in_one(nonlinear_smr,limited_smr,bmr):
+def my_func_name():
+    cf=inspect.currentframe()
+    callerName=cf.f_back.f_code.co_name
+    return callerName
+
+def panel_one(limited_smr,bmr):
+    soln_uncontrolled = limited_smr.solve()
+
+    soln_controlled = bmr.solve()
+    fig=plt.figure(figsize=(10,10))
+    #fig1.title('Total carbon'+title_suffs[version])
+    ax1=fig.add_subplot(2,1,1)
+    ax1.plot(times, soln_uncontrolled[:,0],color='blue' ,label='Atmosphere')
+    ax1.plot(times, soln_uncontrolled[:,1],color='green',label='Terrestrial Biosphere')
+    ax1.plot(times, soln_uncontrolled[:,2],color='red'  ,label='Surface ocean')
+    ax1.set_ylabel('Mass (PgC)')
+    ax1.legend(loc=2)
+    ax1.set_title("Uncontrolled")
+
+    ax2=fig.add_subplot(2,1,2)
+    ax2.plot(times, soln_controlled[:,0],color='blue' ,label='Atmosphere')
+    ax2.plot(times, soln_controlled[:,1],color='green',label='Terrestrial Biosphere')
+    ax2.plot(times, soln_controlled[:,2],color='red'  ,label='Surface ocean')
+    ax2.set_ylabel('Carbon stocks (PgC)')
+    ax2.set_xlabel('Time (yr)')
+    ax2.set_ylim(ax1.get_ylim())
+    ax2.set_title("Controlled")
+    
+    #limited_soln_uncontrolled 
+    fig.savefig(my_func_name()+'.pdf')
+
+
+def all_in_one(nonlinear_smr,limited_smr,bmr):
     rhs=nonlinear_srm.F 
     soln = nonlinear_smr.solve()
     limited_soln_uncontrolled = limited_smr.solve()
 
     limited_soln = bmr.solve()
-    fig1=plt.figure(figsize=(18,30))
-    #fig1.title('Total carbon'+title_suffs[version])
-    ax1=fig1.add_subplot(5,1,1)
-    ax2=fig1.add_subplot(5,1,2)
-    ax3=fig1.add_subplot(5,1,3)
-    ax4=fig1.add_subplot(5,1,4)
-    ax5=fig1.add_subplot(5,1,5)
+    fig=plt.figure(figsize=(18,30))
+    #fig.title('Total carbon'+title_suffs[version])
+    ax1=fig.add_subplot(5,1,1)
+    ax2=fig.add_subplot(5,1,2)
+    ax3=fig.add_subplot(5,1,3)
+    ax4=fig.add_subplot(5,1,4)
+    ax5=fig.add_subplot(5,1,5)
     
     ax1=poolsizes(ax1,soln)
-    ax1.set_title="unlimited uncontrolled"
+    ax1.set_title("unlimited uncontrolled")
 
     ax2=poolsizes(ax2,limited_soln_uncontrolled)
-    ax2.set_title="limited uncontrolled"
+    ax2.set_title("limited uncontrolled")
 
     ax3=poolsizes(ax3,limited_soln)
-    ax3.set_title="limited controlled"
+    ax3.set_title("limited controlled")
     
-    #limited_soln_uncontrolled 
+    
+    # since we do not know the actual phi of the bastin model run 
+    # we assume the most general case that after all paramteters
+    # and functions have been substituted t,z remain as arguments
+    # The actual expression might not even contain t but that is no
+    # problem
     bm=bmr.bm
-    phi_eps_num=bm.phi_num()
+    tup=(bm.time_symbol,bm.z_sym)
+    times=bmr.times
+    phi_num=bmr.phi_num(tup)
     ax4.set_title("control")
-    ax4.plot(times, phi_eps_num(limited_soln[:,3]), label='u')
+    zval=limited_soln[:,3]
+    u_vals=phi_num(times,zval)
+    pe('times.shape',locals())
+    pe('zval.shape',locals())
+    ax4.plot(times, u_vals, label='u')
     ax4.legend(loc=3)
     
     ax5.plot(times, u_A_func(times),label='u_A')
     ax5.legend(loc=2)
     ax5.set_xlabel('Time (yr)')
     ax5.set_ylabel('Mass (PgC)')
+    fig.savefig(my_func_name()+'.pdf')
     
-    fig1.savefig('poolcontents.pdf')
 
 #def as_sa_fluxes(mr):
 #    fig=plt.figure()
@@ -287,8 +329,8 @@ def plot_epsilon_family(
     for eps in epsilons:
         phi_eps=phi_maker(eps)
         z=Symbol('z')
-        bm=BastinModel(limited_srm,phi_eps,z)
-        phi_eps_num=bm.phi_num()
+        u_z_exp=phi_eps(z)
+        bm=BastinModel(limited_srm,u_z_exp,z)
         bmr=BastinModelRun(
             bm, 
             par_dict,
@@ -296,8 +338,12 @@ def plot_epsilon_family(
             times,
             func_set
         )
+        phi_num=bmr.phi_num((z,))
         soln=bmr.solve() 
-        ax1.plot(times, phi_eps_num(soln[:,3]))
+        z=soln[:,3]
+        pe('bm.u_expr',locals())
+        u=phi_num(z)
+        ax1.plot(times,u)
         ax1.legend(loc=3)
      
     pe('__name__',locals())
@@ -306,7 +352,7 @@ def plot_epsilon_family(
     
 
     
-epsilons=[1,10,100,1000]
+epsilons=[1,100,1000]
 ###
 #fig2 = plt.figure()
 #nonlinear_smr.plot_internal_fluxes(fig2,fontsize=20)
@@ -326,9 +372,23 @@ plot_epsilon_family(
         func_set,
         epsilons)    
 
+nonlinear_smr = SmoothModelRun(nonlinear_srm, par_dict_v1, start_values, times, func_set)
+limited_smr = SmoothModelRun(limited_srm, par_dict_v1, start_values, times, func_set)
+eps_val=10
 phi_eps=phi_maker(10)
-z=Symbol('z')
-bm=BastinModel(limited_srm,phi_eps,z)
+u_z_exp=phi_eps(z)
+control_start=1900
+phi_sym=Function('phi')
+u_t_z_exp=Piecewise((1,time_symbol<control_start),(u_z_exp,True))
+u_t_z_num=lambdify((time_symbol,z),u_t_z_exp,modules='numpy')
+func_set[phi_sym]=u_t_z_num
+
+# we implement the kick in of the control by defining phi_eps as a piecewise function
+# with respect to time 
+        
+
+#bm=BastinModel(limited_srm,u_z_exp,z)
+bm=BastinModel(limited_srm,phi_sym(time_symbol,z),z)
 bmr=BastinModelRun(
     bm, 
     par_dict_v1,
@@ -336,4 +396,5 @@ bmr=BastinModelRun(
     times,
     func_set
 )
-plot_all_in_one(nonlinear_smr,limited_smr,bmr)
+all_in_one(nonlinear_smr,limited_smr,bmr)
+panel_one(limited_smr,bmr)

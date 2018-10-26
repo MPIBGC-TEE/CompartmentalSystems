@@ -144,15 +144,6 @@ def factor_out_from_matrix(M):
         return 1
 
 def numerical_function_from_expression(expr,tup,parameter_set,func_set):
-    # the indices in funset are exressions of the form u_1(x,..)
-    # Firstly we convert them to strings 'u_1(x,...)'
-    str_func_set = {str(key): val for key, val in func_set.items()}
-    # Secondly we remove the parenthesis and there content
-    # since lambdify wants the dictionary indexed by
-    # the function name only
-    # after this step we have the key 'u_1'
-    #cut_func_set = {key[:key.index('(')]: val 
-    #    for key, val in str_func_set.items()}
 
     cut_func_set=make_cut_func_set(func_set)
    
