@@ -14,8 +14,8 @@ def poolsizes(ax,times,soln):
     ax.plot(times, soln[:,0:3].sum(1), label='lim Total')
     ax.set_xlabel('Time (yr)')
     ax.set_ylabel('Mass (PgC)')
-    if soln.shape[1]>3:
-        ax.plot(times, soln[:,3], color='black', label='z')
+    #if soln.shape[1]>3:
+    #    ax.plot(times, soln[:,3], color='black', label='z')
 
     ax.legend(loc=2)
     return(ax)
@@ -65,7 +65,7 @@ def all_in_one(unlimited_srm,limited_srm,bm,par_dict_v1, control_start_values, t
     soln = unlimited_smr.solve()
     limited_soln_uncontrolled = limited_smr.solve()
 
-    limited_soln = bmr.solve()
+    limited_soln_controlled = bmr.solve()
     fig=plt.figure(figsize=(18,30))
     #fig.title('Total carbon'+title_suffs[version])
     ax1=fig.add_subplot(5,1,1)
@@ -80,7 +80,7 @@ def all_in_one(unlimited_srm,limited_srm,bm,par_dict_v1, control_start_values, t
     ax2=poolsizes(ax2,times,limited_soln_uncontrolled)
     ax2.set_title("limited uncontrolled")
 
-    ax3=poolsizes(ax3,times,limited_soln)
+    ax3=poolsizes(ax3,times,limited_soln_controlled)
     ax3.set_title("limited controlled")
     
     
@@ -94,7 +94,7 @@ def all_in_one(unlimited_srm,limited_srm,bm,par_dict_v1, control_start_values, t
     times=bmr.times
     phi_num=bmr.phi_num(tup)
     ax4.set_title("control")
-    zval=limited_soln[:,3]
+    zval=limited_soln_controlled[:,3]
     u_vals=phi_num(times,zval)
     pe('times.shape',locals())
     pe('zval.shape',locals())

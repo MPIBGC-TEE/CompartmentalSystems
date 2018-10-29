@@ -3,7 +3,8 @@
 import numpy as np
 from copy import copy
 from sympy import Matrix, symbols, Symbol, Function, latex, atan ,pi,sin,lambdify,Piecewise
-
+import matplotlib.pyplot as plt
+from plotFuncs import poolsizes
 # load the compartmental model packages
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
@@ -87,9 +88,10 @@ lim_inf_90  = {
         #(2,0): F_SA
       }
 # create the Models
-nonlinear_srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+unlimited_srm= SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
 
 limited_srm_300 = SmoothReservoirModel(state_vector, time_symbol, net_input_fluxes, net_output_fluxes, lim_inf_300)
+limited_srm_90 = SmoothReservoirModel(state_vector, time_symbol, net_input_fluxes, net_output_fluxes, lim_inf_90)
 
 phi_sym=Function('phi_sym')
 u_z_eps_exp=phi_eps(z,epsilon)
@@ -101,6 +103,7 @@ u_t_z_exp=Piecewise((1,time_symbol<control_start),(u_z_eps_exp,True))
 bm_phi_num=BastinModel(limited_srm_300,phi_sym(time_symbol,z),z)
 
 bm_300=BastinModel(limited_srm_300,u_t_z_exp,z)
+bm_90=BastinModel(limited_srm_90,u_t_z_exp,z)
 
 
 
@@ -132,9 +135,83 @@ func_dict_phi_num.update({phi_sym:u_t_z_num})
 
     
 #f.savefig("limited_fluxes_ast.pdf")
-z0=200000
+z0=20
 control_start_values = np.array(list(start_values)+[z0])
+control_start_values_z20 = np.array(list(start_values)+[20])
+control_start_values_z20000 = np.array(list(start_values)+[20000])
 
+#def all_in_one(unlimited_srm,limited_srm_300,bm_300,par_dict_v1, control_start_values, times, func_dict,u_A):
+start_values=control_start_values[:-1]
+unlimited_smr = SmoothModelRun(unlimited_srm, par_dict_v1, start_values, times, func_dict)
+limited_smr_300 = SmoothModelRun(limited_srm_300, par_dict_v1, start_values, times, func_dict)
+limited_smr_90 = SmoothModelRun(limited_srm_90, par_dict_v1, start_values, times, func_dict)
+bmr_300=BastinModelRun( bm_300, par_dict_v1, control_start_values, times, func_dict)
+bmr_300_z20=BastinModelRun( bm_300, par_dict_v1, control_start_values, times, func_dict)
+bmr_90=BastinModelRun( bm_90, par_dict_v1, control_start_values, times, func_dict)
+bmr_90_z20=BastinModelRun( bm_90, par_dict_v1, control_start_values, times, func_dict)
+
+soln = unlimited_smr.solve()
+limited_soln_uncontrolled_300 = limited_smr_300.solve()
+limited_soln_uncontrolled_90 = limited_smr_90.solve()
+
+limited_soln_controlled_300 = bmr_300.solve()
+limited_soln_controlled_300_z20 = bmr_300_z20.solve()
+limited_soln_controlled_90 = bmr_90.solve()
+limited_soln_controlled_90_z20 = bmr_90_z20.solve()
+
+fig=plt.figure(figsize=(18,40))
+#fig.title('Total carbon'+title_suffs[version])
+ax_1_1=fig.add_subplot(7,1,1)
+ax_2_1=fig.add_subplot(7,1,2)
+ax_3_1=fig.add_subplot(7,1,3)
+ax_4_1=fig.add_subplot(7,1,4)
+ax_5_1=fig.add_subplot(7,1,5)
+ax_6_1=fig.add_subplot(7,1,6)
+ax_7_1=fig.add_subplot(7,1,7)
+
+ax_1_1=poolsizes(ax_1_1,times,soln)
+ax_1_1.set_title("unlimited uncontrolled")
+
+ax_2_1=poolsizes(ax_2_1,times,limited_soln_uncontrolled_300)
+ax_2_1.set_title("limited 300 uncontrolled")
+ax_2_1.set_ylim(ax_1_1.get_ylim())
+
+ax_3_1=poolsizes(ax_3_1,times,limited_soln_controlled_300)
+ax_3_1.set_title("limited 300 controlled")
+ax_3_1.set_ylim(ax_1_1.get_ylim())
+
+ax_4_1=poolsizes(ax_4_1,times,limited_soln_uncontrolled_90)
+ax_4_1.set_title("limited 90 uncontrolled")
+ax_4_1.set_ylim(ax_1_1.get_ylim())
+
+ax_5_1=poolsizes(ax_5_1,times,limited_soln_controlled_90)
+ax_5_1.set_title("limited 90 controlled")
+ax_5_1.set_ylim(ax_1_1.get_ylim())
+
+
+# since we do not know the actual phi of the bastin model run 
+# we assume the most general case that after all paramteters
+# and functions have been substituted t,z remain as arguments
+# The actual expression might not even contain t but that is no
+# problem
+bm=bmr_300.bm
+tup=(bm.time_symbol,bm.z_sym)
+times=bmr_300.times
+phi_num=bmr_300.phi_num(tup)
+ax_6_1.set_title("control for limited300")
+zval=limited_soln_controlled_300[:,3]
+u_vals=phi_num(times,zval)
+pe('times.shape',locals())
+pe('zval.shape',locals())
+ax_6_1.plot(times, u_vals, label='u')
+ax_6_1.legend(loc=3)
+
+
+ax_7_1.plot(times, func_dict[u_A](times),label='u_A')
+ax_7_1.legend(loc=2)
+ax_7_1.set_xlabel('Time (yr)')
+ax_7_1.set_ylabel('Mass (PgC)')
+fig.savefig('compare_FluxLimiters.pdf')
 
 
 # we implement the kick in of the control by defining phi_eps as a piecewise function
@@ -142,8 +219,3 @@ control_start_values = np.array(list(start_values)+[z0])
         
 # call the plot functions you want and comment the remaining ones
 # each of them creates a pdf with the name of the function
-all_in_one(nonlinear_srm,limited_srm_300,bm_300, par_dict_v1, control_start_values, times, func_dict,u_A)
-#all_in_one(nonlinear_srm,limited_srm,bm_phi_num, par_dict_v1, control_start_values, times, func_dict_phi_num,u_A)
-#epsilons=[1,100,1000]
-#plot_epsilon_family( limited_srm, par_dict_v1, control_start_values, times, func_dict, epsilons)    
-#panel_one(limited_srm,bm_300, par_dict_v1, control_start_values, times, func_dict)
