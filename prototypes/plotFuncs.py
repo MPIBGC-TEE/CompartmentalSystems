@@ -1,17 +1,24 @@
 
 import inspect
-from sympy import Symbol
+from sympy import Symbol,lambdify
+from copy import copy
+import numpy as np
 # for 2d plots we use Matplotlib
 import matplotlib.pyplot as plt
 from testinfrastructure.helpers  import pe
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+from CompartmentalSystems.helpers_reservoir import  numsol_symbolic_system ,numerical_function_from_expression
+from testinfrastructure.helpers  import pe
 from Classes import BastinModel,BastinModelRun
+import drivers #contains the fossil fuel interpolating functions
+from string import Template
 
 def poolsizes(ax,times,soln):
     ax.plot(times, soln[:,0],label='Atmosphere')
     ax.plot(times, soln[:,1],label='Terrestrial Biosphere')
     ax.plot(times, soln[:,2],label='Surface ocean')
-    ax.plot(times, soln[:,0:3].sum(1), label='lim Total')
+    #ax.plot(times, soln[:,0:3].sum(1), label='lim Total')
     ax.set_xlabel('Time (yr)')
     ax.set_ylabel('Mass (PgC)')
     #if soln.shape[1]>3:
@@ -159,8 +166,100 @@ def plot_epsilon_family(
         ax1.plot(times,u)
         ax1.legend(loc=3)
      
-    pe('__name__',locals())
-    fig.savefig("epsilon_famamly.pdf")
+    fig.savefig(my_func_name()+'.pdf')
+
+def model_run(
+        state_vector, 
+        time_symbol, 
+        net_input_fluxes, 
+        lim_inf_300, 
+        net_output_fluxes, 
+        internal_fluxes,
+        z_sym,
+        epsilon_sym,
+        u_t_z_exp,
+        u_A,
+        f_TA,
+        func_dict,
+        par_dict_v1,
+        start_values, 
+        z0,
+        times
+        ):
+    # create the Models
+
+    limited_srm = SmoothReservoirModel(state_vector, time_symbol, net_input_fluxes, net_output_fluxes, lim_inf_300)
+    bm=BastinModel(limited_srm,u_t_z_exp,z_sym)
+    
+    # the systems start a little higher than the equilibrium
+    # of the system with unconstrained fluxes
     
     
+    # possibly nonlinear effects as a parameter dictionary
+    u_t_z_exp_par=u_t_z_exp.subs(par_dict_v1)
+    
+        
+    #f.savefig("limited_fluxes_ast.pdf")
+    control_start_values = np.array(list(start_values)+[z0])
+    control_start_values_z20 = np.array(list(start_values)+[20])
+    control_start_values_z20000 = np.array(list(start_values)+[20000])
+    legend_dict={
+        'z0':z0,
+        'epsilon':par_dict_v1[epsilon_sym]
+    }
+    parameter_str="\n".join([key+"="+str(val) for key,val in legend_dict.items()])
+    file_name_str="__".join([key+"_"+str(val) for key,val in legend_dict.items()])
+    start_values=control_start_values[:-1]
+    bmr=BastinModelRun( bm, par_dict_v1, control_start_values, times, func_dict)
+    
+    #soln = unlimited_smr.solve()
+    #limited_soln_uncontrolled = limited_smr.solve()
+    
+    limited_soln_controlled = bmr.solve()
+    
+    fig=plt.figure(figsize=(12,16))
+    #fig.title('Total carbon'+title_suffs[version])
+    ax_1_1=fig.add_subplot(4,1,1)
+    ax_2_1=fig.add_subplot(4,1,2)
+    ax_3_1=fig.add_subplot(4,1,3)
+    ax_4_1=fig.add_subplot(4,1,4)
+    
+    ax_1_1=poolsizes(ax_1_1,times,limited_soln_controlled)
+    ax_1_1.set_title("limited controlled_"+parameter_str)
+    #ax_1_1.set_ylim(ax_1_1.get_ylim())
+    
+    ax_2_1.set_title("accounting pool z and sum")
+    z_vals=limited_soln_controlled[:,3]
+    sum_vals=limited_soln_controlled[:,0:3].sum(1)
+    ax_2_1.plot(times, z_vals, label='u')
+    ax_2_1.plot(times, sum_vals, label='sum ')
+    ax_2_1.legend(loc=3)
+    #ax_4_1.set_ylim(ax_1_1.get_ylim())
+    
+    
+    # since we do not know the actual phi of the bastin model run 
+    # we assume the most general case that after all paramteters
+    # and functions have been substituted t,z remain as arguments
+    # The actual expression might not even contain t but that is no
+    # problem
+    tup=(bm.time_symbol,bm.z_sym)
+    times=bmr.times
+    phi_num=bmr.phi_num(tup)
+    ax_3_1.set_title("control u for limited")
+    zval=limited_soln_controlled[:,3]
+    u_vals=phi_num(times,zval)
+    pe('times.shape',locals())
+    pe('zval.shape',locals())
+    ax_3_1.plot(times, u_vals, label='u')
+    ax_3_1.legend(loc=3)
+    ax_3_1.set_ylim([0,1])
+    
+    
+    ax_4_1.plot(times, func_dict[u_A](times),label='u_A')
+    ax_4_1.legend(loc=2)
+    ax_4_1.set_xlabel('Time (yr)')
+    ax_4_1.set_ylabel('Mass (PgC)')
+    plt.subplots_adjust(hspace=0.4)
+    file_name=my_func_name()+'_'+file_name_str+'.pdf'
+    fig.savefig(file_name)
 
