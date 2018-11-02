@@ -184,9 +184,12 @@ def model_run(
         par_dict_v1,
         start_values, 
         z0,
-        times
+        times,
+        subplots
         ):
     # create the Models
+
+    ax_1_1, ax_2_1, ax_3_1, ax_4_1 =subplots
 
     limited_srm = SmoothReservoirModel(state_vector, time_symbol, net_input_fluxes, net_output_fluxes, lim_inf_300)
     bm=BastinModel(limited_srm,u_t_z_exp,z_sym)
@@ -203,12 +206,10 @@ def model_run(
     control_start_values = np.array(list(start_values)+[z0])
     control_start_values_z20 = np.array(list(start_values)+[20])
     control_start_values_z20000 = np.array(list(start_values)+[20000])
-    legend_dict={
-        'z0':z0,
-        'epsilon':par_dict_v1[epsilon_sym]
-    }
-    parameter_str="\n".join([key+"="+str(val) for key,val in legend_dict.items()])
-    file_name_str="__".join([key+"_"+str(val) for key,val in legend_dict.items()])
+    legend_dict=copy(par_dict_v1)
+    legend_dict.update({'z0':z0})
+    parameter_str="\n".join([str(key)+"="+str(val) for key,val in legend_dict.items()])
+    file_name_str="__".join([str(key)+"_"+str(val) for key,val in legend_dict.items()])
     start_values=control_start_values[:-1]
     bmr=BastinModelRun( bm, par_dict_v1, control_start_values, times, func_dict)
     
@@ -217,12 +218,9 @@ def model_run(
     
     limited_soln_controlled = bmr.solve()
     
-    fig=plt.figure(figsize=(12,16))
+    
+    #fig=plt.figure(figsize=(12,16))
     #fig.title('Total carbon'+title_suffs[version])
-    ax_1_1=fig.add_subplot(4,1,1)
-    ax_2_1=fig.add_subplot(4,1,2)
-    ax_3_1=fig.add_subplot(4,1,3)
-    ax_4_1=fig.add_subplot(4,1,4)
     
     ax_1_1=poolsizes(ax_1_1,times,limited_soln_controlled)
     ax_1_1.set_title("limited controlled_"+parameter_str)
@@ -231,7 +229,7 @@ def model_run(
     ax_2_1.set_title("accounting pool z and sum")
     z_vals=limited_soln_controlled[:,3]
     sum_vals=limited_soln_controlled[:,0:3].sum(1)
-    ax_2_1.plot(times, z_vals, label='u')
+    ax_2_1.plot(times, z_vals, label='z')
     ax_2_1.plot(times, sum_vals, label='sum ')
     ax_2_1.legend(loc=3)
     #ax_4_1.set_ylim(ax_1_1.get_ylim())
@@ -259,7 +257,7 @@ def model_run(
     ax_4_1.legend(loc=2)
     ax_4_1.set_xlabel('Time (yr)')
     ax_4_1.set_ylabel('Mass (PgC)')
-    plt.subplots_adjust(hspace=0.4)
-    file_name=my_func_name()+'_'+file_name_str+'.pdf'
-    fig.savefig(file_name)
+    #plt.subplots_adjust(hspace=0.4)
+    #file_name=my_func_name()+'_'+file_name_str+'.pdf'
+    #fig.savefig(file_name)
 

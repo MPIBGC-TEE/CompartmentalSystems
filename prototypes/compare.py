@@ -15,7 +15,8 @@ from testinfrastructure.helpers  import pe
 # load other files in the same directory that support this script
 from Classes import BastinModel,BastinModelRun
 import plotFuncs #panel_one,all_in_one,plot_epsilon_family
-import drivers #contains the fossil fuel interpolating functions
+import drivers #contains the fossil fuel and TB->At interpolating functions
+from limiters import cubic,deceleration,atan_ymax,half_saturation #
 
 
 ########## symbol and symbolic function definitions ##########
@@ -88,14 +89,15 @@ lim_inf_90  = {
         #(2,0): F_SA
       }
 
-phi_sym=Function('phi_sym')
-u_z_eps_exp=phi_eps(z,epsilon)
+#phi_sym=Function('phi_sym')
+u_z_exp=phi_eps(z,epsilon)
+z_max=Symbol("z_max")
+u_z_exp=cubic(z,z_max)
 control_start=1900
 
 
-u_t_z_exp=Piecewise((1,time_symbol<control_start),(u_z_eps_exp,True))
+u_t_z_exp=Piecewise((1,time_symbol<control_start),(u_z_exp,True))
 
-z0=20
 start_values = 1.01*np.array([A_eq, T_eq, S_eq])
 # define a dictionary to connect the symbolic function  with the according implementations 
 func_dict = {
@@ -105,13 +107,18 @@ func_dict = {
 }
 par_dict_v1 = {alpha: 0.2, beta: 10.0} # nonlinear
 #par_dict_v2 = {alpha: 1.0, beta:  1.0} # linear
+par_dict_v2 = copy(par_dict_v1)
 par_dict_v1.update({epsilon:10})
 # define the time windows of interest
-start_year = 100
-#start_year = 1765
+#start_year = 100
+start_year = 1765
 end_year = 2500
 times = np.arange(start_year, end_year+1,1)# (end_year-start_year)/1000)
 
+fig=plt.figure(figsize=(24,16))
+subplotArr=fig.subplots(4,3)
+# the following call has a (desired) side effect on the subplots
+par_dict_v2.update({z_max:100})
 plotFuncs.model_run(
         state_vector, 
         time_symbol, 
@@ -125,46 +132,60 @@ plotFuncs.model_run(
         u_A,
         f_TA,
         func_dict,
-        par_dict_v1,
-        start_values, 
-        z0=0,
-        times=times
-)
-plotFuncs.model_run(
-        state_vector, 
-        time_symbol, 
-        net_input_fluxes, 
-        lim_inf_300, 
-        net_output_fluxes, 
-        internal_fluxes,
-        z,
-        epsilon,
-        u_t_z_exp,
-        u_A,
-        f_TA,
-        func_dict,
-        par_dict_v1,
-        start_values, 
-        z0=200,
-        times=times
-)
-par_dict_v2=copy(par_dict_v1)
-par_dict_v2[epsilon]=100
-plotFuncs.model_run(
-        state_vector, 
-        time_symbol, 
-        net_input_fluxes, 
-        lim_inf_300, 
-        net_output_fluxes, 
-        internal_fluxes,
-        z,
-        epsilon,
-        u_t_z_exp,
-        u_A,
-        f_TA,
-        func_dict,
+        #par_dict_v1,
         par_dict_v2,
         start_values, 
-        z0=2000,
-        times=times
+        z0=par_dict_v2[z_max],
+        #z0=0,
+        times=times,
+        subplots=subplotArr[:,0]
 )
+par_dict_v2.update({z_max:500})
+plotFuncs.model_run(
+        state_vector, 
+        time_symbol, 
+        net_input_fluxes, 
+        lim_inf_300, 
+        net_output_fluxes, 
+        internal_fluxes,
+        z,
+        epsilon,
+        u_t_z_exp,
+        u_A,
+        f_TA,
+        func_dict,
+        #par_dict_v1,
+        par_dict_v2,
+        start_values, 
+        #z0=200,
+        z0=par_dict_v2[z_max],
+        times=times,
+        subplots=subplotArr[:,1]
+)
+#par_dict_v2[epsilon]=100
+par_dict_v2.update({z_max:2500})
+plotFuncs.model_run(
+        state_vector, 
+        time_symbol, 
+        net_input_fluxes, 
+        lim_inf_300, 
+        net_output_fluxes, 
+        internal_fluxes,
+        z,
+        epsilon,
+        u_t_z_exp,
+        u_A,
+        f_TA,
+        func_dict,
+        #par_dict_v1,
+        par_dict_v2,
+        start_values, 
+        #z0=2000,
+        z0=par_dict_v2[z_max],
+        times=times,
+        subplots=subplotArr[:,2]
+)
+plt.subplots_adjust(hspace=0.4)
+#file_name=my_func_name()+'_'+file_name_str+'.pdf'
+file_name='compare.pdf'
+fig.savefig(file_name)
