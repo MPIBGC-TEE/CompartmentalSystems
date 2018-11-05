@@ -144,6 +144,6 @@ control_start_values = np.array(list(start_values)+[z0])
 # each of them creates a pdf with the name of the function
 all_in_one(nonlinear_srm,limited_srm_300,bm_300, par_dict_v1, control_start_values, times, func_dict,u_A)
 #all_in_one(nonlinear_srm,limited_srm,bm_phi_num, par_dict_v1, control_start_values, times, func_dict_phi_num,u_A)
-#epsilons=[1,100,1000]
-#plot_epsilon_family( limited_srm, par_dict_v1, control_start_values, times, func_dict, epsilons)    
-#panel_one(limited_srm,bm_300, par_dict_v1, control_start_values, times, func_dict)
+
+plot_epsilon_family( limited_srm_300, par_dict_v1, control_start_values, times, func_dict,epsilons=[1,100,1000] )    
+panel_one(limited_srm_300,bm_300, par_dict_v1, control_start_values, times, func_dict)

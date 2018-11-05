@@ -13,6 +13,7 @@ from testinfrastructure.helpers  import pe
 from Classes import BastinModel,BastinModelRun
 import drivers #contains the fossil fuel interpolating functions
 from string import Template
+from limiters import cubic,deceleration,half_saturation,atan_ymax
 
 def poolsizes(ax,times,soln):
     ax.plot(times, soln[:,0],label='Atmosphere')
@@ -134,23 +135,62 @@ def all_in_one(unlimited_srm,limited_srm,bm,par_dict_v1, control_start_values, t
 #    ax3.plot(times,fl_ta(times))
 #    ax4.plot(times,fl_as(times)-fl_sa(times))
 #    return fig
-def plot_epsilon_family(
+def deceleration_family(
         limited_srm,
         par_dict,
-        control_start_values, 
+        start_values, 
         times,
         func_dict,
-        epsilons
+        zs,
+        alphas
     ):    
+    z=Symbol('z')
+    z_max=Symbol('z_max')
+    alpha=Symbol('alpha')
+    u_z_exp=deceleration(z,z_max,alpha)
+    bm=BastinModel(limited_srm,u_z_exp,z)
     fig=plt.figure()
     ax1=fig.add_subplot(1,1,1)
-    ax1.set_title("control u for different values of epsilon")
-    for eps_val in epsilons:
-        z=Symbol('z')
-        eps=Symbol('eps')
-        u_z_exp=z/(eps+z)
-        par_dict[eps]=eps_val
-        bm=BastinModel(limited_srm,u_z_exp,z)
+    ax1.set_title("control u with deceleration limiter for different values of alpha")
+    for z_max_val in zs:
+        for alpha_val in alphas:
+            control_start_values=np.array(list(start_values)+[z_max_val])
+            par_dict[z_max]=z_max_val
+            par_dict[alpha]=alpha_val
+            bmr=BastinModelRun(
+                bm, 
+                par_dict,
+                control_start_values, 
+                times,
+                func_dict
+            )
+            phi_num=bmr.phi_num((z,))
+            soln=bmr.solve() 
+            z_sol=soln[:,3]
+            pe('bm.u_expr',locals())
+            u=phi_num(z_sol)
+            ax1.plot(times,u,label="alpha:"+str(alpha_val)+",z_max="+str(z_max_val))
+    ax1.legend(loc=3)
+     
+    fig.savefig(my_func_name()+'.pdf')
+def cubic_family(
+        limited_srm,
+        par_dict,
+        start_values, 
+        times,
+        func_dict,
+        zs
+    ):    
+    z=Symbol('z')
+    z_max=Symbol('z_max')
+    u_z_exp=cubic(z,z_max)
+    bm=BastinModel(limited_srm,u_z_exp,z)
+    fig=plt.figure()
+    ax1=fig.add_subplot(1,1,1)
+    ax1.set_title("control u for different values of z_max")
+    for z_max_val in zs:
+        control_start_values=np.array(list(start_values)+[z_max_val])
+        par_dict[z_max]=z_max_val
         bmr=BastinModelRun(
             bm, 
             par_dict,
@@ -160,11 +200,83 @@ def plot_epsilon_family(
         )
         phi_num=bmr.phi_num((z,))
         soln=bmr.solve() 
-        z=soln[:,3]
+        z_sol=soln[:,3]
         pe('bm.u_expr',locals())
-        u=phi_num(z)
+        u=phi_num(z_sol)
+        ax1.plot(times,u,label="z_max="+str(z_max_val))
+        ax1.legend(loc=3)
+     
+    fig.savefig(my_func_name()+'.pdf')
+def epsilon_family(
+        limited_srm,
+        par_dict,
+        control_start_values, 
+        times,
+        func_dict,
+        epsilons
+    ):    
+    z=Symbol('z')
+    eps=Symbol('eps')
+    u_z_exp=half_saturation(z,eps)
+    bm=BastinModel(limited_srm,u_z_exp,z)
+    fig=plt.figure()
+    ax1=fig.add_subplot(1,1,1)
+    ax1.set_title("control u for different values of epsilon")
+    for eps_val in epsilons:
+        par_dict[eps]=eps_val
+        bmr=BastinModelRun(
+            bm, 
+            par_dict,
+            control_start_values, 
+            times,
+            func_dict
+        )
+        phi_num=bmr.phi_num((z,))
+        soln=bmr.solve() 
+        z_sol=soln[:,3]
+        pe('bm.u_expr',locals())
+        u=phi_num(z_sol)
         ax1.plot(times,u)
         ax1.legend(loc=3)
+     
+    fig.savefig(my_func_name()+'.pdf')
+
+def epsilon_family_2(
+        limited_srm,
+        par_dict,
+        start_values, 
+        times,
+        func_dict,
+        zs,
+        epsilons
+    ):    
+    z=Symbol('z')
+    eps=Symbol('eps')
+    z0=Symbol('z0')
+    u_z_exp=half_saturation(z,eps)
+    bm=BastinModel(limited_srm,u_z_exp,z)
+    fig=plt.figure()
+    ax1=fig.add_subplot(1,1,1)
+    ax1.set_title("control u for different values of epsilon")
+    for z0_val in zs:
+        for eps_val in epsilons:
+            control_start_values=np.array(list(start_values)+[z0_val])
+            par_dict[eps]=eps_val
+            par_dict[z0]=z0_val,
+            bmr=BastinModelRun(
+                bm, 
+                par_dict,
+                control_start_values, 
+                times,
+                func_dict
+            )
+            phi_num=bmr.phi_num((z,))
+            soln=bmr.solve() 
+            z_sol=soln[:,3]
+            pe('bm.u_expr',locals())
+            u=phi_num(z_sol)
+            ax1.plot(times,u,label="eps:"+str(eps_val)+",z0="+str(z0_val))
+    ax1.legend(loc=3)
      
     fig.savefig(my_func_name()+'.pdf')
 
@@ -243,7 +355,7 @@ def model_run(
     tup=(bm.time_symbol,bm.z_sym)
     times=bmr.times
     phi_num=bmr.phi_num(tup)
-    ax_3_1.set_title("control u for limited")
+    ax_3_1.set_title("control u ")
     zval=limited_soln_controlled[:,3]
     u_vals=phi_num(times,zval)
     pe('times.shape',locals())

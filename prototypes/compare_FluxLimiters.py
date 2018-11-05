@@ -14,7 +14,7 @@ from testinfrastructure.helpers  import pe
 
 # load other files in the same directory that support this script
 from Classes import BastinModel,BastinModelRun
-from plotFuncs import panel_one,all_in_one,plot_epsilon_family
+from plotFuncs import panel_one,all_in_one,epsilon_family
 import drivers #contains the fossil fuel interpolating functions
 
 

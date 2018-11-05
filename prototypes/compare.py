@@ -105,7 +105,8 @@ func_dict = {
     f_TA: drivers.f_TA_func, 
     assert_non_negative_sym:assert_non_negative_num
 }
-par_dict_v1 = {alpha: 0.2, beta: 10.0} # nonlinear
+par_dict= {alpha: 0.2, beta: 10.0} # nonlinear
+par_dict_v1 = copy(par_dict)
 #par_dict_v2 = {alpha: 1.0, beta:  1.0} # linear
 par_dict_v2 = copy(par_dict_v1)
 par_dict_v1.update({epsilon:10})
@@ -189,3 +190,23 @@ plt.subplots_adjust(hspace=0.4)
 #file_name=my_func_name()+'_'+file_name_str+'.pdf'
 file_name='compare.pdf'
 fig.savefig(file_name)
+par_dict_v2 = copy(par_dict)
+par_dict_v1.update({epsilon:10})
+par_dict_v2.update({z_max:1000})
+#control_start_values = np.array(list(start_values)+[par_dict_v2[z_max}])
+
+nonlinear_srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+limited_srm_300 = SmoothReservoirModel(state_vector, time_symbol, net_input_fluxes, net_output_fluxes, lim_inf_300)
+bm_300=BastinModel(limited_srm_300,u_t_z_exp,z)
+#plotFuncs.panel_one(
+#        limited_srm_300,
+#        bm_300, 
+#        par_dict_v2, 
+#        control_start_values= np.array(list(start_values)+[par_dict_v2[z_max]]), 
+#        times=times, 
+#        func_dict=func_dict)
+#plotFuncs.epsilon_family( limited_srm_300, par_dict_v1, control_start_values=np.array(list(start_values)+[2000]), times=times, func_dict=func_dict,epsilons=[1,100,1000] )    
+#plotFuncs.cubic_family( limited_srm_300, par_dict, start_values, times=times, func_dict=func_dict,zs=[100,1000,10000] )    
+#plotFuncs.deceleration_family( limited_srm_300, par_dict, start_values, times=times, func_dict=func_dict,zs=[100,1000,10000],alphas=[1.5,2.5,3.5] )    
+#plotFuncs.epsilon_family_2( limited_srm_300, par_dict, start_values, times=times, func_dict=func_dict,zs=[100,1000,10000],epsilons=[1.5,2.5,3.5] )    
+#plotFuncs.all_in_one(nonlinear_srm,limited_srm_300,bm_300, par_dict_v2, control_start_values=np.array(list(start_values)+[2000]), times=times, func_dict=func_dict,u_A=u_A)
