@@ -3,6 +3,7 @@ from __future__ import division
 
 import numpy as np 
 import inspect
+from numbers import Number
 from scipy.integrate import odeint
 from scipy.interpolate import lagrange
 from scipy.optimize import brentq
@@ -79,7 +80,7 @@ def has_pw(expr):
             return True
     return False
 
-
+ 
 def is_DiracDelta(expr):
     """Check if expr is a Dirac delta function."""
     if len(expr.args) != 1: 
@@ -144,7 +145,7 @@ def factor_out_from_matrix(M):
         return 1
 
 def numerical_function_from_expression(expr,tup,parameter_set,func_set):
-
+    
     cut_func_set=make_cut_func_set(func_set)
    
 
@@ -156,7 +157,7 @@ def numerical_function_from_expression(expr,tup,parameter_set,func_set):
     ss_expr=expr_par.free_symbols
     ss_tup=set([s for s in tup])
     if not(ss_expr.issubset(ss_tup)):
-        raise Exception("The free symbols of the expression: {0} are not a subset of the symbols in the tuple argument:{1}".format(ss_expr,ss_tup))
+        warning("The free symbols of the expression: ${0} are not a subset of the symbols in the tuple argument:${1}".format(ss_expr,ss_tup))
 
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
     return expr_func
@@ -165,8 +166,8 @@ def numerical_rhs(state_vector, time_symbol, rhs,
         parameter_set, func_set, times):
 
     rhs_par = rhs.subs(parameter_set)
-    pe('rhs_par.free_symbols',locals())
-    pe('func_set',locals())
+    #pe('rhs_par.free_symbols',locals())
+    #pe('func_set',locals())
 
     # first check if the rhs is defined piecewise since lambdify does not work
     #if not has_pw(rhs):
@@ -186,7 +187,6 @@ def numerical_rhs(state_vector, time_symbol, rhs,
     # not the funcexpression
     # {f(x,y):f_num} is transformed to {f:f_num}
     cut_func_set=make_cut_func_set(func_set)
-    print('cfs', cut_func_set)
     #print('rhs_par', [(a, type(a)) for a in rhs_par.atoms()])
     #print('rhs_par', rhs_par)
     #FL = lambdify(tup, rhs_par, modules=[cut_func_set,"numpy"])
@@ -482,8 +482,6 @@ def is_compartmental(M):
     
 def make_cut_func_set(func_set):
     def unify_index(expr):
-        print(expr)
-        print(type(expr))
         # for the case Function('f'):f_numeric
         if isinstance(expr,UndefinedFunction):
             res=str(expr)
@@ -494,7 +492,6 @@ def make_cut_func_set(func_set):
             res=str(type(expr))
         elif isinstance(expr,str):
             expr=sympify(expr)
-            pe('expr',locals())
             res=unify_index(expr)
         else:
             print(type(expr))
@@ -505,3 +502,10 @@ def make_cut_func_set(func_set):
     return cut_func_set
 
 
+def f_of_t_maker(sol_funcs,ol):
+    def ot(t):
+        sv = [sol_funcs[i](t) for i in range(len(sol_funcs))]
+        tup = tuple(sv)+(t,)
+        res = ol(*tup)
+        return(res)
+    return(ot)

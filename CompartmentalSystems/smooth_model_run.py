@@ -16,7 +16,7 @@ total number of pools is :math:`d`.
 """
 
 from __future__ import division
-
+from numbers import Number
 from copy import copy, deepcopy
 from matplotlib import cm
 import matplotlib.patches as mpatches
@@ -49,7 +49,7 @@ from .helpers_reservoir import deprecation_warning,warning ,make_cut_func_set
 from .helpers_reservoir import (has_pw, numsol_symbolic_system, 
     arrange_subplots, melt, generalized_inverse_CDF, draw_rv, 
     stochastic_collocation_transform, numerical_rhs, MH_sampling, save_csv, 
-    load_csv, stride)
+    load_csv, stride ,f_of_t_maker,numerical_function_from_expression)
 
 
 class Error(Exception):
@@ -3360,13 +3360,6 @@ class SmoothModelRun(object):
 
  
     #fixme: test and move
-    def _f_of_t_maker(self,sol_funcs,ol):
-        def ot(t):
-            sv = [sol_funcs[i](t) for i in range(self.nr_pools)]
-            tup = tuple(sv)+(t,)
-            res = ol(*tup)
-            return(res)
-        return(ot)
 
     def _flux_funcs(self, expr_dict):
         m = self.model
@@ -3374,12 +3367,19 @@ class SmoothModelRun(object):
         flux_funcs = {}
         tup = tuple(m.state_variables) + (m.time_symbol,)
         for key, value in expr_dict.items():
-            o_par = sympify(value, locals=_clash).subs(self.parameter_set)
-            #cut_func_set = {key[:key.index('(')]: val for key, val in 
-            #                        self.func_set.items()}
-            cut_func_set=make_cut_func_set(self.func_set)
-            ol = lambdify(tup, o_par, modules = [cut_func_set, 'numpy'])
-            flux_funcs[key] = self._f_of_t_maker(sol_funcs, ol)
+            # fixme mm 11-5-2018 
+            # the sympify in the next line should be unnecesary since 
+            # the expressions are already expressions and not strings
+            #o_par = sympify(value, locals=_clash).subs(self.parameter_set)
+            #cut_func_set=make_cut_func_set(self.func_set)
+            if isinstance(value,Number):
+                def expr_func(arg_arr):
+                    return value*np.ones_like(arg_arr)
+                flux_funcs[key]=expr_func
+            else:
+                #ol = lambdify(tup, o_par, modules = [cut_func_set, 'numpy'])
+                ol = numerical_function_from_expression(value,tup,self.parameter_set,self.func_set) 
+                flux_funcs[key] = f_of_t_maker(sol_funcs, ol)
 
         return flux_funcs
 

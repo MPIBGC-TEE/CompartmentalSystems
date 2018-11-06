@@ -64,77 +64,8 @@ def panel_one(limited_srm,bm, par_dict_v1, control_start_values, times, func_dic
     fig.savefig(my_func_name()+'.pdf')
 
 
-def all_in_one(unlimited_srm,limited_srm,bm,par_dict_v1, control_start_values, times, func_dict,u_A):
-    start_values=control_start_values[:-1]
-    unlimited_smr = SmoothModelRun(unlimited_srm, par_dict_v1, start_values, times, func_dict)
-    limited_smr = SmoothModelRun(limited_srm, par_dict_v1, start_values, times, func_dict)
-    bmr=BastinModelRun( bm, par_dict_v1, control_start_values, times, func_dict)
-
-    soln = unlimited_smr.solve()
-    limited_soln_uncontrolled = limited_smr.solve()
-
-    limited_soln_controlled = bmr.solve()
-    fig=plt.figure(figsize=(18,30))
-    #fig.title('Total carbon'+title_suffs[version])
-    ax1=fig.add_subplot(5,1,1)
-    ax2=fig.add_subplot(5,1,2)
-    ax3=fig.add_subplot(5,1,3)
-    ax4=fig.add_subplot(5,1,4)
-    ax5=fig.add_subplot(5,1,5)
-    
-    ax1=poolsizes(ax1,times,soln)
-    ax1.set_title("unlimited uncontrolled")
-
-    ax2=poolsizes(ax2,times,limited_soln_uncontrolled)
-    ax2.set_title("limited uncontrolled")
-
-    ax3=poolsizes(ax3,times,limited_soln_controlled)
-    ax3.set_title("limited controlled")
-    
-    
-    # since we do not know the actual phi of the bastin model run 
-    # we assume the most general case that after all paramteters
-    # and functions have been substituted t,z remain as arguments
-    # The actual expression might not even contain t but that is no
-    # problem
-    bm=bmr.bm
-    tup=(bm.time_symbol,bm.z_sym)
-    times=bmr.times
-    phi_num=bmr.phi_num(tup)
-    ax4.set_title("control")
-    zval=limited_soln_controlled[:,3]
-    u_vals=phi_num(times,zval)
-    pe('times.shape',locals())
-    pe('zval.shape',locals())
-    ax4.plot(times, u_vals, label='u')
-    ax4.legend(loc=3)
-   
-    
-    ax5.plot(times, func_dict[u_A](times),label='u_A')
-    ax5.legend(loc=2)
-    ax5.set_xlabel('Time (yr)')
-    ax5.set_ylabel('Mass (PgC)')
-    fig.savefig(my_func_name()+'.pdf')
     
 
-#def as_sa_fluxes(mr):
-#    fig=plt.figure()
-#    fl_at=mr.internal_flux_funcs()[(0,1)]
-#    fl_ta=mr.internal_flux_funcs()[(1,0)]
-#    fl_as=mr.internal_flux_funcs()[(0,2)]
-#    fl_sa=mr.internal_flux_funcs()[(2,0)]
-#    ax1=fig.add_subplot(4,1,1)
-#    ax2=fig.add_subplot(4,1,2)
-#    ax3=fig.add_subplot(4,1,3)
-#    ax4=fig.add_subplot(4,1,4)
-#    ax1.plot(times,fl_as(times))
-#    ax1.plot(times,fl_sa(times))
-#    ax2.plot(times,fl_as(times)-fl_sa(times))
-#
-#    ax3.plot(times,fl_at(times))
-#    ax3.plot(times,fl_ta(times))
-#    ax4.plot(times,fl_as(times)-fl_sa(times))
-#    return fig
 def deceleration_family(
         limited_srm,
         par_dict,
@@ -146,17 +77,17 @@ def deceleration_family(
     ):    
     z=Symbol('z')
     z_max=Symbol('z_max')
-    alpha=Symbol('alpha')
-    u_z_exp=deceleration(z,z_max,alpha)
+    alph=Symbol('alph')
+    u_z_exp=deceleration(z,z_max,alph)
     bm=BastinModel(limited_srm,u_z_exp,z)
     fig=plt.figure()
     ax1=fig.add_subplot(1,1,1)
-    ax1.set_title("control u with deceleration limiter for different values of alpha")
+    ax1.set_title("control u with deceleration limiter for different values of alph")
     for z_max_val in zs:
         for alpha_val in alphas:
             control_start_values=np.array(list(start_values)+[z_max_val])
             par_dict[z_max]=z_max_val
-            par_dict[alpha]=alpha_val
+            par_dict[alph]=alpha_val
             bmr=BastinModelRun(
                 bm, 
                 par_dict,
@@ -169,7 +100,7 @@ def deceleration_family(
             z_sol=soln[:,3]
             pe('bm.u_expr',locals())
             u=phi_num(z_sol)
-            ax1.plot(times,u,label="alpha:"+str(alpha_val)+",z_max="+str(z_max_val))
+            ax1.plot(times,u,label="alph:"+str(alpha_val)+",z_max="+str(z_max_val))
     ax1.legend(loc=3)
      
     fig.savefig(my_func_name()+'.pdf')
@@ -280,96 +211,78 @@ def epsilon_family_2(
      
     fig.savefig(my_func_name()+'.pdf')
 
-def model_run(
-        state_vector, 
-        time_symbol, 
-        net_input_fluxes, 
-        lim_inf_300, 
-        net_output_fluxes, 
-        internal_fluxes,
-        z_sym,
-        epsilon_sym,
-        u_t_z_exp,
-        u_A,
-        f_TA,
-        func_dict,
-        par_dict_v1,
-        start_values, 
-        z0,
-        times,
-        subplots
-        ):
-    # create the Models
 
-    ax_1_1, ax_2_1, ax_3_1, ax_4_1 =subplots
-
-    limited_srm = SmoothReservoirModel(state_vector, time_symbol, net_input_fluxes, net_output_fluxes, lim_inf_300)
-    bm=BastinModel(limited_srm,u_t_z_exp,z_sym)
-    
-    # the systems start a little higher than the equilibrium
-    # of the system with unconstrained fluxes
-    
-    
-    # possibly nonlinear effects as a parameter dictionary
-    u_t_z_exp_par=u_t_z_exp.subs(par_dict_v1)
-    
+def compare_model_runs(mr_dict,u_A_func):
+    nc=len(mr_dict) 
+    if nc==1:
+        # the subplot array would become one dimensional 
+        nc=nc+1 
+    fig=plt.figure(figsize=(nc*3,20))
+    subplotArr=fig.subplots(7,nc)
+    for ind,key in enumerate(mr_dict):
+        ax0=subplotArr[0,ind]
+        mr=mr_dict[key]
+        soln = mr.solve()
+        times=mr.times
         
-    #f.savefig("limited_fluxes_ast.pdf")
-    control_start_values = np.array(list(start_values)+[z0])
-    control_start_values_z20 = np.array(list(start_values)+[20])
-    control_start_values_z20000 = np.array(list(start_values)+[20000])
-    legend_dict=copy(par_dict_v1)
-    legend_dict.update({'z0':z0})
-    parameter_str="\n".join([str(key)+"="+str(val) for key,val in legend_dict.items()])
-    file_name_str="__".join([str(key)+"_"+str(val) for key,val in legend_dict.items()])
-    start_values=control_start_values[:-1]
-    bmr=BastinModelRun( bm, par_dict_v1, control_start_values, times, func_dict)
+        ax0=poolsizes(ax0,times,soln)
+        ax0.set_title(key)
+
+        ax1=subplotArr[1,ind]
+        ax1.plot(times, u_A_func(times),label='u_A')
+        ax1.legend(loc=2)
+        ax1.set_xlabel('Time (yr)')
+        ax1.set_ylabel('Mass (PgC)')
+        
+        ax2=subplotArr[2,ind]
+        ax2.set_title("solutions")
+        eifl=mr.sol_funcs()
+        for i,f in enumerate(eifl):
+            values=f(times)
+            ax2.plot(times,values,label=str(i))
+        ax2.legend(loc=0)
+
+        ax3=subplotArr[3,ind]
+        ax3.set_title("external inputs")
+        eifl=mr.external_input_flux_funcs()
+        for key in eifl.keys():
+            f=eifl[key]
+            values=f(times)
+            ax3.plot(times,values,label=key)
+        ax3.legend(loc=0)
+
+
+        #ax3.legend(loc=0)
+        ax4=subplotArr[4,ind]
+        ax4.set_title("internal fluxes")
+        ifl=mr.internal_flux_funcs()
+        for key,fluxFunc in ifl.items():
+            ax4.plot(times,fluxFunc(times),label=key)
+        ax4.legend(loc=0)
+        
+        ax5=subplotArr[5,ind]
+        ax5.set_title("external outputs")
+        ofl=mr.output_flux_funcs()
+        for key in ofl.keys():
+            f=ofl[key]
+            values=f(times)
+            ax5.plot(times,values,label=key)
+        ax5.legend(loc=0)
+
+        if type(mr)==BastinModelRun:
+            ax6=subplotArr[6,ind]
+            ax6.set_title("control ")
+            bm=mr.bm
+            tup=(bm.time_symbol,bm.z_sym)
+            phi_num=mr.phi_num(tup)
+            z_vals=soln[:,3]
+            u_vals=phi_num(times,z_vals)
+            #sum_vals=limited_soln_controlled[:,0:3].sum(1)
+            ax6.plot(times, u_vals, label='u')
+            ax6.legend(loc=0)
+        #ax6.set_ylim(ax_1_1.get_ylim())
+        plt.subplots_adjust(hspace=0.6)
+
     
-    #soln = unlimited_smr.solve()
-    #limited_soln_uncontrolled = limited_smr.solve()
-    
-    limited_soln_controlled = bmr.solve()
-    
-    
-    #fig=plt.figure(figsize=(12,16))
-    #fig.title('Total carbon'+title_suffs[version])
-    
-    ax_1_1=poolsizes(ax_1_1,times,limited_soln_controlled)
-    ax_1_1.set_title("limited controlled_"+parameter_str)
-    #ax_1_1.set_ylim(ax_1_1.get_ylim())
-    
-    ax_2_1.set_title("accounting pool z and sum")
-    z_vals=limited_soln_controlled[:,3]
-    sum_vals=limited_soln_controlled[:,0:3].sum(1)
-    ax_2_1.plot(times, z_vals, label='z')
-    ax_2_1.plot(times, sum_vals, label='sum ')
-    ax_2_1.legend(loc=3)
-    #ax_4_1.set_ylim(ax_1_1.get_ylim())
-    
-    
-    # since we do not know the actual phi of the bastin model run 
-    # we assume the most general case that after all paramteters
-    # and functions have been substituted t,z remain as arguments
-    # The actual expression might not even contain t but that is no
-    # problem
-    tup=(bm.time_symbol,bm.z_sym)
-    times=bmr.times
-    phi_num=bmr.phi_num(tup)
-    ax_3_1.set_title("control u ")
-    zval=limited_soln_controlled[:,3]
-    u_vals=phi_num(times,zval)
-    pe('times.shape',locals())
-    pe('zval.shape',locals())
-    ax_3_1.plot(times, u_vals, label='u')
-    ax_3_1.legend(loc=3)
-    ax_3_1.set_ylim([0,1])
-    
-    
-    ax_4_1.plot(times, func_dict[u_A](times),label='u_A')
-    ax_4_1.legend(loc=2)
-    ax_4_1.set_xlabel('Time (yr)')
-    ax_4_1.set_ylabel('Mass (PgC)')
-    #plt.subplots_adjust(hspace=0.4)
-    #file_name=my_func_name()+'_'+file_name_str+'.pdf'
-    #fig.savefig(file_name)
+    fig.savefig(my_func_name()+'.pdf')
 

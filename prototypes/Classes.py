@@ -1,7 +1,9 @@
 from sympy import Matrix
-from CompartmentalSystems.helpers_reservoir import  numsol_symbolic_system ,numerical_function_from_expression
+from numbers import Number
+from CompartmentalSystems.helpers_reservoir import  numsol_symbolic_system ,numerical_function_from_expression ,make_cut_func_set,f_of_t_maker
 from copy import copy,deepcopy
 from testinfrastructure.helpers  import pe
+from scipy.interpolate import interp1d, UnivariateSpline
 class BastinModel():
     # Bastonification of a reservoir model
     def __init__(self,srm,u_expr,z_sym):
@@ -27,6 +29,7 @@ class BastinModel():
         #rhs
         self.F=Matrix(list(crm.F)+[z_dot])
         self.time_symbol=srm.time_symbol
+        self.srm=crm
 
 
 
@@ -50,6 +53,83 @@ class BastinModelRun():
             self.times
         )
         return soln
+    def _flux_funcs(self, expr_dict):
+        bm = self.bm
+        srm=bm.srm
+        sol_funcs = self.sol_funcs()
+        flux_funcs = {}
+        pe('(bm.state_vector)',locals())
+        tup = tuple(bm.state_vector) + (bm.time_symbol,)
+        for key, expr in expr_dict.items():
+            pe('expr',locals())
+
+            if isinstance(expr,Number):
+                # if expr is a number like 5.1 lambdify does not create a vectorized function 
+                # so the output is always a number and not an array with identical exprs which is a problem in plots
+                def expr_func(arg_arr):
+                    return expr*np.ones_like(arg_arr)
+                flux_funcs[key]=expr_func
+
+            else:
+                ol=numerical_function_from_expression(expr,tup,self.par_dict,self.func_dict)
+                flux_funcs[key] = f_of_t_maker(sol_funcs, ol)
+
+        return flux_funcs
+        
+        
+    def sol_funcs(self):
+        """Return linearly interpolated solution functions.
+
+        Returns:
+            Python function ``f``: ``f(times)`` returns a numpy.array containing the
+            pool contents at times ``times``.
+        """
+        sol = self.solve()
+        times = self.times
+        sol_funcs = []
+        for i in range(sol.shape[1]):
+            sol_inter = interp1d(times, sol[:,i])
+            sol_funcs.append(sol_inter)
+
+        return sol_funcs
+    
+    def external_input_flux_funcs(self):
+        """Return a dictionary of the external input fluxes.
+        
+        The resulting functions base on sol_funcs and are linear interpolations.
+
+        Returns:
+            dict: ``{key: func}`` with ``key`` representing the pool which 
+            receives the input and ``func`` a function of time that returns 
+            a ``float``.
+        """
+        return self._flux_funcs(self.bm.srm.input_fluxes)
+
+    def internal_flux_funcs(self):
+        """Return a dictionary of the internal fluxes.
+        
+        The resulting functions base on sol_funcs and are linear interpolations.
+
+        Returns:
+            dict: ``{key: func}`` with ``key=(pool_from, pool_to)`` representing
+            the pools involved and ``func`` a function of time that returns 
+            a ``float``.
+        """
+        return self._flux_funcs(self.bm.srm.internal_fluxes)
+
+    def output_flux_funcs(self):
+        """Return a dictionary of the external output fluxes.
+        
+        The resulting functions base on sol_funcs and are linear interpolations.
+
+        Returns:
+            dict: ``{key: func}`` with ``key`` representing the pool from which
+            the output comes and ``func`` a function of time that returns a 
+            ``float``.
+        """
+        return self._flux_funcs(self.bm.srm.output_fluxes)
+    
+
     def phi_num(self,tup):
         bm=self.bm
         u_num= numerical_function_from_expression(bm.u_expr,tup,self.par_dict,self.func_dict)

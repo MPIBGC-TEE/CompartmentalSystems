@@ -22,7 +22,8 @@ from limiters import cubic,deceleration,atan_ymax,half_saturation #
 ########## symbol and symbolic function definitions ##########
 assert_non_negative_sym=Function('assert_non_negative_sym')
 def assert_non_negative_num(Net_SD_DS): # asserts that the netflux is non negative
-    assert(Net_SD_DS>0) 
+    
+    assert(np.array(Net_SD_DS>0).all()) 
     return Net_SD_DS
 
 def phi_eps(z_sym,eps_sym):
@@ -37,12 +38,10 @@ time_symbol = symbols('t')
 # Atmosphere, Terrestrial Carbon and Surface ocean
 C_A, C_T, C_S = symbols('C_A C_T C_S')
 z= symbols('z') #virtual pool for controller
-epsilon=Symbol('epsilon')# parameter for 
 # fossil fuel inputs
 u_A = Function('u_A')(time_symbol)
 #u = 1+sin(time_symbol/50)
 
-eps=Symbol("epsilon")
 # land use change flux
 f_TA = Function('f_TA')
 # nonlinear effects
@@ -90,13 +89,15 @@ lim_inf_90  = {
       }
 
 #phi_sym=Function('phi_sym')
-u_z_exp=phi_eps(z,epsilon)
+epsilon=Symbol('epsilon')# parameter for 
 z_max=Symbol("z_max")
-u_z_exp=cubic(z,z_max)
+alph=Symbol('alph')
 control_start=1900
 
 
-u_t_z_exp=Piecewise((1,time_symbol<control_start),(u_z_exp,True))
+half_saturation_utz_exp=Piecewise((1,time_symbol<control_start),(half_saturation(z,epsilon),True))
+cubic_utz_exp=Piecewise((1,time_symbol<control_start),(cubic(z,z_max),True))
+deceleration_utz_exp=Piecewise((1,time_symbol<control_start),(deceleration(z,z_max,alph),True))
 
 start_values = 1.01*np.array([A_eq, T_eq, S_eq])
 # define a dictionary to connect the symbolic function  with the according implementations 
@@ -108,105 +109,53 @@ func_dict = {
 par_dict= {alpha: 0.2, beta: 10.0} # nonlinear
 par_dict_v1 = copy(par_dict)
 #par_dict_v2 = {alpha: 1.0, beta:  1.0} # linear
-par_dict_v2 = copy(par_dict_v1)
+par_dict_v2 = copy(par_dict)
+par_dict_v2_200 = copy(par_dict)
+par_dict_v3 = copy(par_dict)
 par_dict_v1.update({epsilon:10})
+par_dict_v2.update({z_max:10})
+par_dict_v2_200.update({z_max:200})
+par_dict_v3.update({z_max:10,alph:10})
 # define the time windows of interest
 #start_year = 100
 start_year = 1765
 end_year = 2500
 times = np.arange(start_year, end_year+1,1)# (end_year-start_year)/1000)
 
-fig=plt.figure(figsize=(24,16))
-subplotArr=fig.subplots(4,3)
-# the following call has a (desired) side effect on the subplots
-par_dict_v2.update({z_max:100})
-plotFuncs.model_run(
-        state_vector, 
-        time_symbol, 
-        net_input_fluxes, 
-        lim_inf_300, 
-        net_output_fluxes, 
-        internal_fluxes,
-        z,
-        epsilon,
-        u_t_z_exp,
-        u_A,
-        f_TA,
-        func_dict,
-        #par_dict_v1,
-        par_dict_v2,
-        start_values, 
-        z0=par_dict_v2[z_max],
-        #z0=0,
-        times=times,
-        subplots=subplotArr[:,0]
-)
-par_dict_v2.update({z_max:500})
-plotFuncs.model_run(
-        state_vector, 
-        time_symbol, 
-        net_input_fluxes, 
-        lim_inf_300, 
-        net_output_fluxes, 
-        internal_fluxes,
-        z,
-        epsilon,
-        u_t_z_exp,
-        u_A,
-        f_TA,
-        func_dict,
-        #par_dict_v1,
-        par_dict_v2,
-        start_values, 
-        #z0=200,
-        z0=par_dict_v2[z_max],
-        times=times,
-        subplots=subplotArr[:,1]
-)
-#par_dict_v2[epsilon]=100
-par_dict_v2.update({z_max:2500})
-plotFuncs.model_run(
-        state_vector, 
-        time_symbol, 
-        net_input_fluxes, 
-        lim_inf_300, 
-        net_output_fluxes, 
-        internal_fluxes,
-        z,
-        epsilon,
-        u_t_z_exp,
-        u_A,
-        f_TA,
-        func_dict,
-        #par_dict_v1,
-        par_dict_v2,
-        start_values, 
-        #z0=2000,
-        z0=par_dict_v2[z_max],
-        times=times,
-        subplots=subplotArr[:,2]
-)
-plt.subplots_adjust(hspace=0.4)
-#file_name=my_func_name()+'_'+file_name_str+'.pdf'
-file_name='compare.pdf'
-fig.savefig(file_name)
-par_dict_v2 = copy(par_dict)
-par_dict_v1.update({epsilon:10})
-par_dict_v2.update({z_max:1000})
-#control_start_values = np.array(list(start_values)+[par_dict_v2[z_max}])
 
-nonlinear_srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+unlimited_srm = SmoothReservoirModel(state_vector, time_symbol,net_input_fluxes, net_output_fluxes, internal_fluxes)
 limited_srm_300 = SmoothReservoirModel(state_vector, time_symbol, net_input_fluxes, net_output_fluxes, lim_inf_300)
-bm_300=BastinModel(limited_srm_300,u_t_z_exp,z)
-#plotFuncs.panel_one(
-#        limited_srm_300,
-#        bm_300, 
-#        par_dict_v2, 
-#        control_start_values= np.array(list(start_values)+[par_dict_v2[z_max]]), 
-#        times=times, 
-#        func_dict=func_dict)
-#plotFuncs.epsilon_family( limited_srm_300, par_dict_v1, control_start_values=np.array(list(start_values)+[2000]), times=times, func_dict=func_dict,epsilons=[1,100,1000] )    
-#plotFuncs.cubic_family( limited_srm_300, par_dict, start_values, times=times, func_dict=func_dict,zs=[100,1000,10000] )    
-#plotFuncs.deceleration_family( limited_srm_300, par_dict, start_values, times=times, func_dict=func_dict,zs=[100,1000,10000],alphas=[1.5,2.5,3.5] )    
-#plotFuncs.epsilon_family_2( limited_srm_300, par_dict, start_values, times=times, func_dict=func_dict,zs=[100,1000,10000],epsilons=[1.5,2.5,3.5] )    
-#plotFuncs.all_in_one(nonlinear_srm,limited_srm_300,bm_300, par_dict_v2, control_start_values=np.array(list(start_values)+[2000]), times=times, func_dict=func_dict,u_A=u_A)
+half_saturation_bm_300=BastinModel(limited_srm_300,half_saturation_utz_exp,z)
+cubic_bm_300=BastinModel(limited_srm_300,cubic_utz_exp,z)
+deceleration_bm_300=BastinModel(limited_srm_300,deceleration_utz_exp,z)
+plotFuncs.panel_one(
+        limited_srm_300,
+        cubic_bm_300, 
+        par_dict_v2, 
+        control_start_values= np.array(list(start_values)+[par_dict_v2[z_max]]), 
+        times=times, 
+        func_dict=func_dict)
+plotFuncs.epsilon_family( limited_srm_300, par_dict_v1, control_start_values=np.array(list(start_values)+[2000]), times=times, func_dict=func_dict,epsilons=[1,100,1000] )    
+plotFuncs.cubic_family( limited_srm_300, par_dict, start_values, times=times, func_dict=func_dict,zs=[100,1000,10000] )    
+plotFuncs.deceleration_family( limited_srm_300, par_dict, start_values, times=times, func_dict=func_dict,zs=[100,1000,10000],alphas=[1.5,2.5,3.5] )    
+plotFuncs.epsilon_family_2( limited_srm_300, par_dict, start_values, times=times, func_dict=func_dict,zs=[100,1000,10000],epsilons=[1.5,2.5,3.5] )    
+
+# create a dictionary of model runs
+all_mrs={ 
+        "unlimited_smr" : SmoothModelRun(unlimited_srm, par_dict, start_values, times, func_dict), 
+        "limited_300_smr":SmoothModelRun(limited_srm_300, par_dict, start_values ,times, func_dict),
+        "limited_300_controlled_half_saturation":BastinModelRun(
+            half_saturation_bm_300, par_dict_v1, start_values=np.array(list(start_values)+[20]), 
+            times=times, func_dict=func_dict),
+        "limited_300_controlled_cubic":BastinModelRun(cubic_bm_300, par_dict_v2, start_values=np.array(list(start_values)+[par_dict_v2[z_max]]), times=times, func_dict=func_dict),
+        "limited_300_controlled_cubic_200":BastinModelRun(cubic_bm_300, par_dict_v2_200, start_values=np.array(list(start_values)+[par_dict_v2[z_max]]), times=times, func_dict=func_dict),
+        "limited_300_controlled_deceleration":BastinModelRun(deceleration_bm_300, par_dict_v3, start_values=np.array(list(start_values)+[par_dict_v2[z_max]]), times=times, func_dict=func_dict)
+        }
+pf=plotFuncs.compare_model_runs({
+    "unlimited_uncontrolled":all_mrs["unlimited_smr"],
+    "limited_uncontrolled":all_mrs["limited_300_smr"],
+    "limited_300_controlled_cubic":all_mrs["limited_300_controlled_cubic"],
+    "limited_300_controlled_cubic_200":all_mrs["limited_300_controlled_cubic_200"],
+    "limited_300_controlled_deceleration":all_mrs["limited_300_controlled_deceleration"],
+    "limited_300_controlled_half_suturation":all_mrs["limited_300_controlled_half_saturation"]
+    },drivers.u_A_func)
