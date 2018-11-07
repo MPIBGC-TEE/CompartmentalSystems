@@ -3,7 +3,7 @@
 import numpy as np
 from copy import copy
 from string import Template
-from sympy import Matrix, symbols, Symbol, Function, latex, atan ,pi,sin,lambdify,Piecewise 
+from sympy import Matrix, symbols, Symbol, Function, latex, atan, pi, sin, lambdify, Piecewise 
 import matplotlib.pyplot as plt
 # load the compartmental model packages
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
@@ -13,7 +13,7 @@ from CompartmentalSystems.helpers_reservoir import  numsol_symbolic_system ,nume
 from testinfrastructure.helpers  import pe
 
 # load other files in the same directory that support this script
-from Classes import BastinModel,BastinModelRun
+from Classes import BastinModel, BastinModelRun
 import plotFuncs #panel_one,all_in_one,plot_epsilon_family
 import drivers #contains the fossil fuel and TB->At interpolating functions
 import  limiters # module of different phi expression
@@ -55,8 +55,6 @@ A_eq, T_eq, S_eq = (700.0, 3000.0, 1000.0)
 state_vector = Matrix([C_A, C_T, C_S])
 
 # fluxes
-    
-
 F_AT = 60.0*(C_A/A_eq)**alpha
 F_AS = 100.0*C_A/A_eq
 F_TA = 60.0*C_T/T_eq + f_TA(time_symbol)
@@ -69,24 +67,24 @@ net_input_fluxes = {0: u_A }
 net_output_fluxes = {2: assert_non_negative_sym(F_SD-F_DS)}
 internal_fluxes = {(0,1): F_AT, (0,2): F_AS,
                    (1,0): F_TA, (2,0): F_SA}
-3
-lim_inf_300  = {
-        (0,1): FluxLimiter(F_AT,70),#120
-        (0,2): FluxLimiter(F_AS,300), #90-110
-        (1,0): FluxLimiter(F_TA,70), #120
+
+lim_inf  = {
+        (0,1): FluxLimiter(F_AT,90),#120
+        (0,2): FluxLimiter(F_AS,200), #90-110
+        (1,0): FluxLimiter(F_TA,90), #120
         #(1,0): F_TA, 
-        (2,0): FluxLimiter(F_SA,300) #90-110
+        (2,0): FluxLimiter(F_SA,200) #90-110
         #(2,0): F_SA
       }
 
-lim_inf_90  = {
-        (0,1): FluxLimiter(F_AT,70),#120
-        (0,2): FluxLimiter(F_AS,90), #90-110
-        (1,0): FluxLimiter(F_TA,70), #120
-        #(1,0): F_TA, 
-        (2,0): FluxLimiter(F_SA,90) #90-110
-        #(2,0): F_SA
-      }
+#lim_inf_90  = {
+#        (0,1): FluxLimiter(F_AT,70),#120
+#        (0,2): FluxLimiter(F_AS,90), #90-110
+#        (1,0): FluxLimiter(F_TA,70), #120
+#        #(1,0): F_TA, 
+#        (2,0): FluxLimiter(F_SA,90) #90-110
+#        #(2,0): F_SA
+#      }
 
 #phi_sym=Function('phi_sym')
 epsilon=Symbol('epsilon')# parameter for 
@@ -112,12 +110,12 @@ par_dict= {alpha: 0.2, beta: 10.0} # nonlinear
 par_dict_half_saturation_10 = copy(par_dict)
 par_dict_half_saturation_10.update({epsilon:10})
 
-par_dict_cubic_10 = copy(par_dict)
-par_dict_cubic_10.update({z_max:10})
-par_dict_cubic_200 = copy(par_dict)
-par_dict_cubic_200.update({z_max:200})
-par_dict_cubic_2000 = copy(par_dict)
-par_dict_cubic_2000.update({z_max:2000})
+par_dict_cubic_fast = copy(par_dict)
+par_dict_cubic_fast.update({z_max:50})
+par_dict_cubic_mid = copy(par_dict)
+par_dict_cubic_mid.update({z_max:500})
+par_dict_cubic_slow = copy(par_dict)
+par_dict_cubic_slow.update({z_max:1000})
 
 par_dict_deceleration_10_10 = copy(par_dict)
 par_dict_deceleration_10_10.update({z_max:10,alph:10})
@@ -134,87 +132,87 @@ unlimited_srm = SmoothReservoirModel(
         state_vector, time_symbol,
         net_input_fluxes, net_output_fluxes, internal_fluxes
 )
-limited_srm_300 = SmoothReservoirModel(
+limited_srm = SmoothReservoirModel(
         state_vector, time_symbol, net_input_fluxes, net_output_fluxes, 
-        lim_inf_300
+        lim_inf
 )
-limited_srm_90 = SmoothReservoirModel(
-        state_vector, time_symbol, net_input_fluxes, net_output_fluxes, 
-        lim_inf_90
+#limited_srm_90 = SmoothReservoirModel(
+#        state_vector, time_symbol, net_input_fluxes, net_output_fluxes, 
+#        lim_inf_90
+#)
+#half_saturation_bm_300=BastinModel(
+#        limited_srm_300,half_saturation_utz_exp,z
+#)
+cubic_bm=BastinModel(
+        limited_srm,cubic_utz_exp,z
 )
-half_saturation_bm_300=BastinModel(
-        limited_srm_300,half_saturation_utz_exp,z
-)
-cubic_bm_300=BastinModel(
-        limited_srm_300,cubic_utz_exp,z
-)
-deceleration_bm_300=BastinModel(
-        limited_srm_300,deceleration_utz_exp,z
-)
+#deceleration_bm_300=BastinModel(
+#        limited_srm_300,deceleration_utz_exp,z
+#)
 
 # create a dictionary of model runs
 all_mrs={ 
         "unlimited_smr" : 
             SmoothModelRun(
                 unlimited_srm, par_dict, start_values, times, func_dict), 
-        "limited_300_smr":
+        "limited_smr":
             SmoothModelRun(
-                limited_srm_300, par_dict, start_values , times, func_dict),
-        "limited_90_smr":
-            SmoothModelRun(
-                limited_srm_90, par_dict, start_values , times, func_dict),
-        "limited_300_controlled_half_saturation_10_20":
-            BastinModelRun( 
-                half_saturation_bm_300, par_dict_half_saturation_10, 
-                start_values=np.array(list(start_values)+[20]), 
-                times=times, func_dict=func_dict),
-        "limited_300_controlled_cubic_10":
+                limited_srm, par_dict, start_values , times, func_dict),
+#        "limited_90_smr":
+#            SmoothModelRun(
+#                limited_srm_90, par_dict, start_values , times, func_dict),
+#        "limited_300_controlled_half_saturation_10_20":
+#            BastinModelRun( 
+#                half_saturation_bm_300, par_dict_half_saturation_10, 
+#                start_values=np.array(list(start_values)+[20]), 
+#                times=times, func_dict=func_dict),
+        "limited_controlled_cubic_fast":
             BastinModelRun(
-                cubic_bm_300, par_dict_cubic_10, 
+                cubic_bm, par_dict_cubic_fast, 
                 start_values=np.array(list(start_values)
-                    +[par_dict_cubic_10[z_max]]), 
+                    +[par_dict_cubic_fast[z_max]]), 
                 times=times, func_dict=func_dict),
-        "limited_300_controlled_cubic_200":
+        "limited_controlled_cubic_mid":
             BastinModelRun(
-                cubic_bm_300, par_dict_cubic_200, 
+                cubic_bm, par_dict_cubic_mid, 
                 start_values=np.array(list(start_values)
-                    +[par_dict_cubic_200[z_max]]), 
+                    +[par_dict_cubic_mid[z_max]]), 
                 times=times, func_dict=func_dict),
-        "limited_300_controlled_cubic_2000":
+        "limited_controlled_cubic_slow":
             BastinModelRun(
-                cubic_bm_300, par_dict_cubic_2000, 
+                cubic_bm, par_dict_cubic_slow, 
                 start_values=np.array(list(start_values)
-                    +[par_dict_cubic_2000[z_max]]), 
-                times=times, func_dict=func_dict),
-        "limited_300_controlled_deceleration_10_10":
-            BastinModelRun(
-                deceleration_bm_300, par_dict_deceleration_10_10, 
-                start_values=np.array(list(start_values)
-                    +[par_dict_deceleration_10_10[z_max]]), 
+                    +[par_dict_cubic_slow[z_max]]), 
                 times=times, func_dict=func_dict)
+#        "limited_300_controlled_deceleration_10_10":
+#            BastinModelRun(
+#                deceleration_bm_300, par_dict_deceleration_10_10, 
+#                start_values=np.array(list(start_values)
+#                    +[par_dict_deceleration_10_10[z_max]]), 
+#                times=times, func_dict=func_dict)
         }
 
 # make plots
 # comment the ones you do not need and add new ones using the components
 # there is actually not much need to delete
-#plotFuncs.limiter_comparison()
-#plotFuncs.panel_one(
-#        limited_srm_300,
-#        cubic_bm_300, 
-#        par_dict_cubic_10, 
-#        control_start_values= np.array(list(start_values)+[par_dict_cubic_10[z_max]]), 
-#        times=times, 
-#        func_dict=func_dict)
-#
+plotFuncs.limiter_comparison()
+plotFuncs.panel_one(
+        limited_srm,
+        cubic_bm, 
+        par_dict_cubic_fast, 
+        control_start_values= np.array(list(start_values)+[par_dict_cubic_fast[z_max]]), 
+        times=times, 
+        func_dict=func_dict)
+
 #plotFuncs.epsilon_family(
 #        limited_srm_300, par_dict_half_saturation_10, 
 #        control_start_values=np.array(list(start_values)+[2000]), 
 #        times=times, func_dict=func_dict,epsilons=[1,100,1000] )    
-#
-#plotFuncs.cubic_family(
-#        limited_srm_300, par_dict, start_values, 
-#        times=times, func_dict=func_dict,zs=[100,1000,10000] )    
-#
+
+plotFuncs.cubic_family(
+        limited_srm, par_dict, start_values, 
+        times=times, func_dict=func_dict,zs=[50,500,1000] )    
+
 #plotFuncs.deceleration_family(
 #        limited_srm_300, par_dict, start_values, 
 #        times=times, func_dict=func_dict,zs=[100,1000,10000],alphas=[1.5,2.5,3.5] )    
@@ -222,25 +220,27 @@ all_mrs={
 #        limited_srm_300, par_dict, start_values, 
 #        times=times, func_dict=func_dict,zs=[100,1000,10000],epsilons=[1.5,2.5,3.5] )    
 
-#pf=plotFuncs.compare_model_runs(
-#    {
+pf=plotFuncs.compare_model_runs(
+    {
 #        "limited_uncontrolled_90":all_mrs["limited_90_smr"]
 #        ,
-#        "limited_uncontrolled_300":all_mrs["limited_300_smr"]
-#        ,
-#        "unlimited_uncontrolled":all_mrs["unlimited_smr"]
-#    },
-#    drivers.u_A_func
-#)
+        "limited_uncontrolled":all_mrs["limited_smr"]
+        ,
+        "unlimited_uncontrolled":all_mrs["unlimited_smr"]
+    },
+    drivers.u_A_func
+)
 pf=plotFuncs.compare_model_runs(
     { 
         key:all_mrs[key] for key in [
-            "limited_300_controlled_cubic_10" , 
-            "limited_300_controlled_cubic_200",
-            "limited_300_controlled_cubic_2000",
-            "limited_300_controlled_deceleration_10_10",
-            "limited_300_controlled_half_saturation_10_20"
+            "limited_controlled_cubic_fast" , 
+            "limited_controlled_cubic_mid",
+            "limited_controlled_cubic_slow"
+#            "limited_300_controlled_deceleration_10_10",
+#            "limited_300_controlled_half_saturation_10_20"
         ]
     },
     drivers.u_A_func
 )
+
+

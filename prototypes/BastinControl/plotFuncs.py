@@ -33,66 +33,86 @@ def my_func_name():
     callerName=cf.f_back.f_code.co_name
     return callerName
 
+
 def limiter_comparison():
     z,z_max=symbols('z,z_max')
     f_piece=cubic(z,z_max)
-    fig=plt.figure(figsize=(9,15))
-    ax1=fig.add_subplot(5,1,1)
-    ax2=fig.add_subplot(5,1,2)
-    ax3=fig.add_subplot(5,1,3)
-    ax4=fig.add_subplot(5,1,4)
-    ax5=fig.add_subplot(5,1,5)
+    fig=plt.figure()
+    ax1=fig.add_subplot(1,1,1)
     plt.subplots_adjust(hspace=0.4)
     
-    zms=[10,20,30]
-    z_val=1.5*np.linspace(0,max(zms),101)
-    ax1.set_title("cubic with slope=1/z_max")
+    zms=[50,500,1000]
+    z_val=1.5*np.linspace(0,max(zms),1001)
+    ax1.set_title("cubic limiter")
+    ax1.set_xlabel('z (Pg C)')
+    ax1.set_ylabel('Limiter (unitless)')
     
     for z_max_val in zms: 
         f_par=f_piece.subs({z_max:z_max_val})
         f_num=lambdify(z,f_par,modules='numpy')
         ax1.plot(z_val,f_num(z_val))
-    
-    
-    z,z_max,alpha =symbols('z,z_max,alpha')
-    f_piece=deceleration(z,z_max,alpha)
-    ax2.set_title("decelaration with constant alpha and varying z_max")
-    for z_max_val in zms: 
-        pd1={z_max:z_max_val,alpha:2}
-        f_par=f_piece.subs(pd1)
-        f_num=lambdify(z,f_par)
-        ax2.plot(z_val,f_num(z_val))
-    
-    ax3.set_title("decelaration with constant z_max and varying alpha  ")
-    z_max_val=max(zms)
-    for alpha_val in [1.5,2.5,4,8]: 
-        pd1={z_max:z_max_val,alpha:alpha_val}
-        f_par=f_piece.subs(pd1)
-        f_num=lambdify(z,f_par)
-        ax3.plot(z_val,f_num(z_val))
-    
-    eps,z,z_max=symbols('eps,z,z_max')
-    f=half_saturation(z,eps)
-    ax4.set_title("half saturation with different epsilons")
-    z_max_val=max(zms)
-    for eps_val in [1,100,1000]: 
-        pd1={eps:eps_val}
-        f_par=f.subs(pd1)
-        f_num=lambdify(z,f_par)
-        ax4.plot(z_val,f_num(z_val))
-    
-    
-    z,sfz,y_max=symbols('z,sfz,y_max')
-    f=atan_ymax(z,y_max,sfz)
-    ax5.set_title("atan with different sfz")
-    z_max_val=max(zms)
-    for sfz_val in [.1,.5,1,2]: 
-        pd1={y_max:1,sfz:sfz_val}
-        f_par=f.subs(pd1)
-        f_num=lambdify(z,f_par,modules=['numpy'])
-        ax5.plot(z_val,f_num(z_val))
-
     fig.savefig(my_func_name()+'.pdf')
+
+#def limiter_comparison():
+#    z,z_max=symbols('z,z_max')
+#    f_piece=cubic(z,z_max)
+#    fig=plt.figure(figsize=(9,15))
+#    ax1=fig.add_subplot(5,1,1)
+#    ax2=fig.add_subplot(5,1,2)
+#    ax3=fig.add_subplot(5,1,3)
+#    ax4=fig.add_subplot(5,1,4)
+#    ax5=fig.add_subplot(5,1,5)
+#    plt.subplots_adjust(hspace=0.4)
+#    
+#    zms=[50,500,1000]
+#    z_val=1.5*np.linspace(0,max(zms),101)
+#    ax1.set_title("cubic with slope=1/z_max")
+#    
+#    for z_max_val in zms: 
+#        f_par=f_piece.subs({z_max:z_max_val})
+#        f_num=lambdify(z,f_par,modules='numpy')
+#        ax1.plot(z_val,f_num(z_val))
+#    
+#    
+#    z,z_max,alpha =symbols('z,z_max,alpha')
+#    f_piece=deceleration(z,z_max,alpha)
+#    ax2.set_title("decelaration with constant alpha and varying z_max")
+#    for z_max_val in zms: 
+#        pd1={z_max:z_max_val,alpha:2}
+#        f_par=f_piece.subs(pd1)
+#        f_num=lambdify(z,f_par)
+#        ax2.plot(z_val,f_num(z_val))
+#    
+#    ax3.set_title("decelaration with constant z_max and varying alpha  ")
+#    z_max_val=max(zms)
+#    for alpha_val in [1.5,2.5,4,8]: 
+#        pd1={z_max:z_max_val,alpha:alpha_val}
+#        f_par=f_piece.subs(pd1)
+#        f_num=lambdify(z,f_par)
+#        ax3.plot(z_val,f_num(z_val))
+#    
+#    eps,z,z_max=symbols('eps,z,z_max')
+#    f=half_saturation(z,eps)
+#    ax4.set_title("half saturation with different epsilons")
+#    z_max_val=max(zms)
+#    for eps_val in [1,100,1000]: 
+#        pd1={eps:eps_val}
+#        f_par=f.subs(pd1)
+#        f_num=lambdify(z,f_par)
+#        ax4.plot(z_val,f_num(z_val))
+#    
+#    
+#    z,sfz,y_max=symbols('z,sfz,y_max')
+#    f=atan_ymax(z,y_max,sfz)
+#    ax5.set_title("atan with different sfz")
+#    z_max_val=max(zms)
+#    for sfz_val in [.1,.5,1,2]: 
+#        pd1={y_max:1,sfz:sfz_val}
+#        f_par=f.subs(pd1)
+#        f_num=lambdify(z,f_par,modules=['numpy'])
+#        ax5.plot(z_val,f_num(z_val))
+#
+#    fig.savefig(my_func_name()+'.pdf')
 
 def panel_one(limited_srm,bm, par_dict_v1, control_start_values, times, func_dict):
     start_values=control_start_values[:-1]
@@ -108,17 +128,19 @@ def panel_one(limited_srm,bm, par_dict_v1, control_start_values, times, func_dic
     ax1.plot(times, soln_uncontrolled[:,0],color='blue' ,label='Atmosphere')
     ax1.plot(times, soln_uncontrolled[:,1],color='green',label='Terrestrial Biosphere')
     ax1.plot(times, soln_uncontrolled[:,2],color='red'  ,label='Surface ocean')
-    ax1.set_ylabel('Mass (PgC)')
+    ax1.set_ylabel('Carbon stocks (Pg C)')
     ax1.legend(loc=2)
     ax1.set_title("Uncontrolled")
+    ax1.set_xlim(1900, 2500)
 
     ax2=fig.add_subplot(2,1,2)
     ax2.plot(times, soln_controlled[:,0],color='blue' ,label='Atmosphere')
     ax2.plot(times, soln_controlled[:,1],color='green',label='Terrestrial Biosphere')
     ax2.plot(times, soln_controlled[:,2],color='red'  ,label='Surface ocean')
-    ax2.set_ylabel('Carbon stocks (PgC)')
+    ax2.set_ylabel('Carbon stocks (Pg C)')
     ax2.set_xlabel('Time (yr)')
     ax2.set_ylim(ax1.get_ylim())
+    ax2.set_xlim(1900, 2500)
     ax2.set_title("Controlled")
     
     #limited_soln_uncontrolled 
@@ -348,4 +370,6 @@ def compare_model_runs(mr_dict,u_A_func):
         
     suffix="__"+"__".join(mr_dict.keys())
     fig.savefig(my_func_name()+suffix+'.pdf')
+
+
 
