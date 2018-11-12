@@ -43,7 +43,7 @@ u_A = Function('u_A')(time_symbol)
 #u = 1+sin(time_symbol/50)
 
 # land use change flux
-f_TA = Function('f_TA')
+#f_TA = Function('f_TA')
 # nonlinear effects
 alpha, beta = symbols('alpha beta')
 
@@ -57,7 +57,7 @@ state_vector = Matrix([C_A, C_T, C_S])
 # fluxes
 F_AT = 60.0*(C_A/A_eq)**alpha
 F_AS = 100.0*C_A/A_eq
-F_TA = 60.0*C_T/T_eq + f_TA(time_symbol)
+F_TA = 60.0*C_T/T_eq #+ f_TA(time_symbol)
 F_SA = 100.0*(C_S/S_eq)**beta
 F_DS = 45.0
 F_SD=F_DS*C_S/S_eq
@@ -101,7 +101,7 @@ start_values = 1.01*np.array([A_eq, T_eq, S_eq])
 # define a dictionary to connect the symbolic function  with the according implementations 
 func_dict = {
     u_A: drivers.u_A_func, 
-    f_TA: drivers.f_TA_func, 
+#    f_TA: drivers.f_TA_func, 
     assert_non_negative_sym:assert_non_negative_num
 }
 par_dict= {alpha: 0.2, beta: 10.0} # nonlinear
@@ -202,6 +202,13 @@ plotFuncs.panel_one(
         par_dict_cubic_fast, 
         control_start_values= np.array(list(start_values)+[par_dict_cubic_fast[z_max]]), 
         times=times, 
+        func_dict=func_dict)
+
+plotFuncs.panel_two(
+        cubic_bm,
+        par_dict_cubic_fast,
+        control_start_values= np.array(list(start_values)+[par_dict_cubic_fast[z_max]]),
+        times=times,
         func_dict=func_dict)
 
 #plotFuncs.epsilon_family(

@@ -130,7 +130,7 @@ def panel_one(limited_srm,bm, par_dict_v1, control_start_values, times, func_dic
     ax1.plot(times, soln_uncontrolled[:,2],color='red'  ,label='Surface ocean')
     ax1.set_ylabel('Carbon stocks (Pg C)')
     ax1.legend(loc=2)
-    ax1.set_title("Uncontrolled")
+    ax1.set_title("a")
     ax1.set_xlim(1900, 2500)
 
     ax2=fig.add_subplot(2,1,2)
@@ -141,12 +141,44 @@ def panel_one(limited_srm,bm, par_dict_v1, control_start_values, times, func_dic
     ax2.set_xlabel('Time (yr)')
     ax2.set_ylim(ax1.get_ylim())
     ax2.set_xlim(1900, 2500)
-    ax2.set_title("Controlled")
+    ax2.set_title("b")
     
     #limited_soln_uncontrolled 
     fig.savefig(my_func_name()+'.pdf')
 
 
+def panel_two(bm, par_dict_v1, control_start_values, times, func_dict):
+    start_values=control_start_values[:-1]
+    bmr=BastinModelRun( bm, par_dict_v1, control_start_values, times, func_dict)
+    soln_controlled = bmr.solve()
+
+    tup=(bm.time_symbol,bm.z_sym)
+    phi_num=bmr.phi_num(tup)
+    z_vals=soln_controlled[:,3]
+    u_vals=phi_num(times,z_vals)
+    
+    efl=bmr.external_input_flux_funcs()
+    f=efl[0]
+    values=f(times)
+
+    fig=plt.figure(figsize=(10,10))
+    #fig1.title('Total carbon'+title_suffs[version])
+    ax1=fig.add_subplot(2,1,1)
+    ax1.plot(times, u_vals,color='green',label='u')
+    ax1.set_ylabel('u(t)')
+    #ax1.legend(loc=2)
+    ax1.set_title("a")
+    ax1.set_xlim(1900, 2500)
+
+    ax2=fig.add_subplot(2,1,2)
+    ax2.plot(times, values,color='blue' ,label='u d')
+    ax2.set_ylabel('Allowed carbon emissions (Pg C/yr)')
+    ax2.set_xlabel('Time (yr)')
+    ax2.set_ylim(ax1.get_ylim())
+    ax2.set_xlim(1900, 2500)
+    ax2.set_title("b")
+    
+    fig.savefig(my_func_name()+'.pdf')
     
 
 def deceleration_family(
