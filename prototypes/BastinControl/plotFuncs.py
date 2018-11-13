@@ -43,14 +43,15 @@ def limiter_comparison():
     
     zms=[50,500,1000]
     z_val=1.5*np.linspace(0,max(zms),1001)
-    ax1.set_title("cubic limiter")
-    ax1.set_xlabel('z (Pg C)')
-    ax1.set_ylabel('Limiter (unitless)')
+    #ax1.set_title("cubic limiter")
+    ax1.set_xlabel('$z$ (Pg C)')
+    ax1.set_ylabel('$\Phi (z)$ (unitless)')
     
     for z_max_val in zms: 
         f_par=f_piece.subs({z_max:z_max_val})
         f_num=lambdify(z,f_par,modules='numpy')
-        ax1.plot(z_val,f_num(z_val))
+        ax1.plot(z_val,f_num(z_val), label='$z_{max}=$'+str(z_max_val))
+        ax1.legend(loc=0)
     fig.savefig(my_func_name()+'.pdf')
 
 #def limiter_comparison():
@@ -165,7 +166,7 @@ def panel_two(bm, par_dict_v1, control_start_values, times, func_dict):
     #fig1.title('Total carbon'+title_suffs[version])
     ax1=fig.add_subplot(2,1,1)
     ax1.plot(times, u_vals,color='green',label='u')
-    ax1.set_ylabel('u(t)')
+    ax1.set_ylabel('$u(t)$ (unitless)')
     #ax1.legend(loc=2)
     ax1.set_title("a")
     ax1.set_xlim(1900, 2500)
@@ -234,7 +235,7 @@ def cubic_family(
     bm=BastinModel(limited_srm,u_z_exp,z)
     fig=plt.figure()
     ax1=fig.add_subplot(1,1,1)
-    ax1.set_title("control u for different values of z_max")
+    #ax1.set_title("control u for different values of z_max")
     for z_max_val in zs:
         control_start_values=np.array(list(start_values)+[z_max_val])
         par_dict[z_max]=z_max_val
@@ -250,7 +251,9 @@ def cubic_family(
         z_sol=soln[:,3]
         pe('bm.u_expr',locals())
         u=phi_num(z_sol)
-        ax1.plot(times,u,label="z_max="+str(z_max_val))
+        ax1.plot(times,u,label="$z_{max}$="+str(z_max_val))
+        ax1.set_ylabel('$u(t)$ (unitless)')
+        ax1.set_xlabel('Time (years)')
         ax1.legend(loc=3)
      
     fig.savefig(my_func_name()+'.pdf')
