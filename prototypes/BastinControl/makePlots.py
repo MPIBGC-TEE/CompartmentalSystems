@@ -237,17 +237,27 @@ pf=plotFuncs.compare_model_runs(
     },
     drivers.u_A_func
 )
-pf=plotFuncs.compare_model_runs(
+#pf=plotFuncs.compare_model_runs(
+#    { 
+#        key:all_mrs[key] for key in [
+#            "limited_controlled_cubic_fast" , 
+#            "limited_controlled_cubic_mid",
+#            "limited_controlled_cubic_slow"
+##            "limited_300_controlled_deceleration_10_10",
+##            "limited_300_controlled_half_saturation_10_20"
+#        ]
+#    },
+#    drivers.u_A_func
+#)
+
+
+pf=plotFuncs.compare_controlers(
     { 
         key:all_mrs[key] for key in [
             "limited_controlled_cubic_fast" , 
             "limited_controlled_cubic_mid",
             "limited_controlled_cubic_slow"
-#            "limited_300_controlled_deceleration_10_10",
-#            "limited_300_controlled_half_saturation_10_20"
         ]
     },
     drivers.u_A_func
 )
-
-

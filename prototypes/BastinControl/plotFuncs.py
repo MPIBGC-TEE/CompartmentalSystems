@@ -408,3 +408,46 @@ def compare_model_runs(mr_dict,u_A_func):
 
 
 
+def compare_controlers(mr_dict,u_A_func):
+    nc=len(mr_dict) 
+    if nc==1:
+        # the subplot array would become one dimensional 
+        nc=nc+1 
+    fig=plt.figure(figsize=(15,10))
+    subplotArr=fig.subplots(3,nc)
+    for ind,key in enumerate(mr_dict):
+        ax0=subplotArr[0,ind]
+        mr=mr_dict[key]
+        soln = mr.solve()
+        times=mr.times
+        
+        ax0=poolsizes(ax0,times,soln)
+        #ax0.set_title(key)
+        ax0.set_ylim((0,6000))
+        ax0.set_ylabel('Carbon stocks (Pg C)')
+
+        ax3=subplotArr[1,ind]
+        ax3.set_xlabel('Time (yr)')
+        ax3.set_ylabel('$u(t) \cdot d(t)$ (Pg C/yr)')
+        ax3.set_ylim((0,11))
+        eifl=mr.external_input_flux_funcs()
+        for key in eifl.keys():
+            f=eifl[key]
+            values=f(times)
+            ax3.plot(times,values,label=key)
+
+        if type(mr)==BastinModelRun:
+            ax6=subplotArr[2,ind]
+            ax6.set_xlabel('Time (yr)')
+            ax6.set_ylabel('$(u(t)$')
+            bm=mr.bm
+            tup=(bm.time_symbol,bm.z_sym)
+            phi_num=mr.phi_num(tup)
+            z_vals=soln[:,3]
+            u_vals=phi_num(times,z_vals)
+            ax6.plot(times, u_vals, label='u')
+            ax6.set_ylim((0,1))
+        plt.subplots_adjust(hspace=0.6)
+        
+    suffix="__"+"__".join(mr_dict.keys())
+    fig.savefig(my_func_name()+suffix+'.pdf')
