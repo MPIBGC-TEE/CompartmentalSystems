@@ -214,20 +214,29 @@ class TestSmoothModelRun(InDirTest):
     def test_flux_funcs(self):
         # one-dimensional case, check that constant values do not lead
         # to problems like 1.subs({...})
-        C = Symbol('C')
-        state_vector = [C]
+        C_0 = Symbol('C_0')
+        C_1 = Symbol('C_1')
+        state_vector = [C_0,C_1]
         time_symbol = Symbol('t')
-        input_fluxes = {0: 1}
-        output_fluxes = {0: C}
+        input_fluxes = {0: time_symbol,1:1}
+        output_fluxes = {0: C_1}
         internal_fluxes = {}
         srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
 
-        start_values = np.array([5])
+        start_values = np.array([5,5])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
         
         u = smr.external_input_flux_funcs()
-        self.assertEqual(u[0](0.5), 1)
+        o = smr.output_flux_funcs()
+        # check the scalar versions
+        self.assertTrue(np.allclose(u[0](0.5), 0.5))
+        self.assertTrue(np.allclose(u[1](0.5), 1))
+        # check the vectorized versions
+        self.assertTrue(np.allclose(u[0](times), times))
+        self.assertTrue(np.allclose(u[1](times), np.ones_like(times)))
+        #print(u[0](np.linspace(0,1,11)))
+        #print(o[0](np.linspace(0,1,11)))
         
 
     def test_output_vector_func(self):
@@ -626,7 +635,9 @@ class TestSmoothModelRun(InDirTest):
 
         a_ref = a1_ref + a2_ref
         ref = np.sum(np.ndarray((3,6,2), np.float, a_ref), axis=2)
-
+        pe('system_age_density',locals())
+        pe('ref',locals())
+        pe('ref-system_age_density',locals())
         self.assertTrue(np.allclose(ref, system_age_density))
 
 

@@ -3,6 +3,7 @@ from __future__ import division
 
 import numpy as np 
 import inspect
+from numbers import Number
 from scipy.integrate import odeint
 from scipy.interpolate import lagrange
 from scipy.optimize import brentq
@@ -79,7 +80,7 @@ def has_pw(expr):
             return True
     return False
 
-
+ 
 def is_DiracDelta(expr):
     """Check if expr is a Dirac delta function."""
     if len(expr.args) != 1: 
@@ -144,119 +145,110 @@ def factor_out_from_matrix(M):
         return 1
 
 def numerical_function_from_expression(expr,tup,parameter_set,func_set):
-    # the indices in funset are exressions of the form u_1(x,..)
-    # Firstly we convert them to strings 'u_1(x,...)'
-    str_func_set = {str(key): val for key, val in func_set.items()}
-    # Secondly we remove the parenthesis and there content
-    # since lambdify wants the dictionary indexed by
-    # the function name only
-    # after this step we have the key 'u_1'
-    #cut_func_set = {key[:key.index('(')]: val 
-    #    for key, val in str_func_set.items()}
-
+    
     cut_func_set=make_cut_func_set(func_set)
    
 
     expr_par=expr.subs(parameter_set)
     # To avoid to accidentally create a function func(x1,x2,x3) for an expression that only depends on x1
     # we check that the argument tup corresponds to free symbols in the expression
-    # and refuse to give the function more arguments (lambdify would not complain)
+    # and warn if  the function is given more arguments (lambdify would not complain)
     
     ss_expr=expr_par.free_symbols
     ss_tup=set([s for s in tup])
     if not(ss_expr.issubset(ss_tup)):
-        raise Exception("The free symbols of the expression: {0} are not a subset of the symbols in the tuple argument:{1}".format(ss_expr,ss_tup))
+        raise Exception("The free symbols of the expression: ${0} are not a subset of the symbols in the tuple argument:${1}".format(ss_expr,ss_tup))
 
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
     return expr_func
 
 def numerical_rhs(state_vector, time_symbol, rhs, 
         parameter_set, func_set, times):
+
     rhs_par = rhs.subs(parameter_set)
+    #pe('rhs_par.free_symbols',locals())
+    #pe('func_set',locals())
 
     # first check if the rhs is defined piecewise since lambdify does not work
-    if not has_pw(rhs):
-    #if False:
-        #https://www.python.org/dev/peps/pep-0008/ 
-        # we have an expression for the derivative
-        # but the ode solver wants a function 
-        # operating on lists.
-        # We proceed in steps to construct this function:
-        # 1.)  Create a Matrix valued function from the Matrix valued expression
-        #  Fpar
-        #      which we can do  automatically with sympys lambdify function
-        #      a) assemble tuple for lambdify 
-        tup = tuple(state_vector) + (time_symbol,)
-        #     b) use lambdify
+    #if not has_pw(rhs):
+    #https://www.python.org/dev/peps/pep-0008/ 
+    # we have an expression for the derivative
+    # but the ode solver wants a function 
+    # operating on lists.
+    # We proceed in steps to construct this function:
+    # 1.)  Create a Matrix valued function from the Matrix valued expression
+    #  Fpar
+    #      which we can do  automatically with sympys lambdify function
+    #      a) assemble tuple for lambdify 
+    tup = tuple(state_vector) + (time_symbol,)
+    #     b) use lambdify
 
-        # unify the funcset so that it indexed only by the funcname
-        # not the funcexpression
-        # {f(x,y):f_num} is transformed to {f:f_num}
-        pe('func_set',locals())
-        cut_func_set=make_cut_func_set(func_set)
-        print('cfs', cut_func_set)
-        #print('rhs_par', [(a, type(a)) for a in rhs_par.atoms()])
-        #print('rhs_par', rhs_par)
-        #FL = lambdify(tup, rhs_par, modules=[cut_func_set,"numpy"])
-        
-        #FL = lambdify(tup, rhs_par, modules=[cut_func_set, TRANSLATIONS])
-        FL = lambdify(tup, rhs_par, modules=[cut_func_set, 'numpy'])
-        
-        # 2.) Write a wrapper that transformes Matrices to lists 
-        # (or numpy.ndarrays)
-        # 
-        def num_rhs(X,t):
-            # the ode solver delivers X as numpy.ndarray 
-            # however, our FL requires a tuple of arguments
-            Xt = tuple(X) + (t,)
-            #print('Xt', Xt)
-            #cut_func_set
-            #print('num_rhs', tup, Xt)
-            Fval = FL(*Xt)
-            #print(Fval)
-            #pp("Fval",locals())
-            return flatten(Fval.tolist())
+    # unify the funcset so that it indexed only by the funcname
+    # not the funcexpression
+    # {f(x,y):f_num} is transformed to {f:f_num}
+    cut_func_set=make_cut_func_set(func_set)
+    #print('rhs_par', [(a, type(a)) for a in rhs_par.atoms()])
+    #print('rhs_par', rhs_par)
+    #FL = lambdify(tup, rhs_par, modules=[cut_func_set,"numpy"])
     
-    else:
-        def funcmaker(expr, state_vector, time_symbol):
-            # parse out the signatures of involved functions
-            name_tup = (tuple([sv.name for sv in state_vector]) + 
-                            (time_symbol.name,))
-            signature_indices = {}
-            for key, func in func_set.items():
-                # find the signature of func
-                pars = [s.strip() 
-                    for s in key[key.index('(')+1:key.index(')')].split(',')]
-                signature_indices[key] = np.array([s in pars for s in name_tup])
+    #FL = lambdify(tup, rhs_par, modules=[cut_func_set, TRANSLATIONS])
+    FL = lambdify(tup, rhs_par, modules=[cut_func_set, 'numpy'])
+    
+    # 2.) Write a wrapper that transformes Matrices to lists 
+    # (or numpy.ndarrays)
+    # 
+    def num_rhs(X,t):
+        # the ode solver delivers X as numpy.ndarray 
+        # however, our FL requires a tuple of arguments
+        Xt = tuple(X) + (t,)
+        #print('Xt', Xt)
+        #cut_func_set
+        #print('num_rhs', tup, Xt)
+        Fval = FL(*Xt)
+        #print(Fval)
+        #pp("Fval",locals())
+        return flatten(Fval.tolist())
+    
+    #else:
+    #    def funcmaker(expr, state_vector, time_symbol):
+    #        # parse out the signatures of involved functions
+    #        name_tup = (tuple([sv.name for sv in state_vector]) + 
+    #                        (time_symbol.name,))
+    #        signature_indices = {}
+    #        for key, func in func_set.items():
+    #            # find the signature of func
+    #            pars = [s.strip() 
+    #                for s in key[key.index('(')+1:key.index(')')].split(',')]
+    #            signature_indices[key] = np.array([s in pars for s in name_tup])
 
-            #print('expr', expr)
-            #print('fs', func_set)
-            #print(signature_indices)
+    #        #print('expr', expr)
+    #        #print('fs', func_set)
+    #        #print(signature_indices)
 
-            def f(X,t):
-                Xt = np.array(tuple(X) + (t,))
-                #create the dictionary for substitute
-                edict = {sv: X[i] for i, sv in enumerate(state_vector)}
-                edict.update({time_symbol: t})
+    #        def f(X,t):
+    #            Xt = np.array(tuple(X) + (t,))
+    #            #create the dictionary for substitute
+    #            edict = {sv: X[i] for i, sv in enumerate(state_vector)}
+    #            edict.update({time_symbol: t})
 
-                # evaluate the functions in func_set at X,t
-                func_vals = {}
-                for key, func in func_set.items():
-                    Y = Xt[signature_indices[key]]
-                    #print(key, Xt, Y, func)
-                    ft = func(*Y)
-                    func_vals[key] = np.float(ft) 
-               
-                #substitute
-                eval_expr = expr.subs(func_vals)
-                eval_expr = eval_expr.subs(edict)
-                #transform the resulting matrix to a list
-                #return(list(eval_expr))
-                return np.array(list(eval_expr), dtype='float64')
+    #            # evaluate the functions in func_set at X,t
+    #            func_vals = {}
+    #            for key, func in func_set.items():
+    #                Y = Xt[signature_indices[key]]
+    #                #print(key, Xt, Y, func)
+    #                ft = func(*Y)
+    #                func_vals[key] = np.float(ft) 
+    #           
+    #            #substitute
+    #            eval_expr = expr.subs(func_vals)
+    #            eval_expr = eval_expr.subs(edict)
+    #            #transform the resulting matrix to a list
+    #            #return(list(eval_expr))
+    #            return np.array(list(eval_expr), dtype='float64')
 
-            return f
-        
-        num_rhs = funcmaker(rhs_par, state_vector, time_symbol) 
+    #        return f
+    #    
+    #    num_rhs = funcmaker(rhs_par, state_vector, time_symbol) 
 
     def bounded_num_rhs(X,t):
         # fixme 1:
@@ -490,8 +482,6 @@ def is_compartmental(M):
     
 def make_cut_func_set(func_set):
     def unify_index(expr):
-        print(expr)
-        print(type(expr))
         # for the case Function('f'):f_numeric
         if isinstance(expr,UndefinedFunction):
             res=str(expr)
@@ -502,7 +492,6 @@ def make_cut_func_set(func_set):
             res=str(type(expr))
         elif isinstance(expr,str):
             expr=sympify(expr)
-            pe('expr',locals())
             res=unify_index(expr)
         else:
             print(type(expr))
@@ -513,3 +502,18 @@ def make_cut_func_set(func_set):
     return cut_func_set
 
 
+def f_of_t_maker(sol_funcs,ol):
+    def ot(t):
+        sv = [sol_funcs[i](t) for i in range(len(sol_funcs))]
+        tup = tuple(sv)+(t,)
+        res = ol(*tup)
+        return(res)
+    return(ot)
+def const_of_t_maker(const):
+    
+    def const_arr_fun(possible_vec_arg):
+        if isinstance(possible_vec_arg,Number):
+            return const #also a number
+        else:
+            return(const*np.ones_like(possible_vec_arg))
+    return const_arr_fun
