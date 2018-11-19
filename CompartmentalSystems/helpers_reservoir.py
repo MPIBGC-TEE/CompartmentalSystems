@@ -152,12 +152,12 @@ def numerical_function_from_expression(expr,tup,parameter_set,func_set):
     expr_par=expr.subs(parameter_set)
     # To avoid to accidentally create a function func(x1,x2,x3) for an expression that only depends on x1
     # we check that the argument tup corresponds to free symbols in the expression
-    # and refuse to give the function more arguments (lambdify would not complain)
+    # and warn if  the function is given more arguments (lambdify would not complain)
     
     ss_expr=expr_par.free_symbols
     ss_tup=set([s for s in tup])
     if not(ss_expr.issubset(ss_tup)):
-        warning("The free symbols of the expression: ${0} are not a subset of the symbols in the tuple argument:${1}".format(ss_expr,ss_tup))
+        raise Exception("The free symbols of the expression: ${0} are not a subset of the symbols in the tuple argument:${1}".format(ss_expr,ss_tup))
 
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
     return expr_func
@@ -509,3 +509,11 @@ def f_of_t_maker(sol_funcs,ol):
         res = ol(*tup)
         return(res)
     return(ot)
+def const_of_t_maker(const):
+    
+    def const_arr_fun(possible_vec_arg):
+        if isinstance(possible_vec_arg,Number):
+            return const #also a number
+        else:
+            return(const*np.ones_like(possible_vec_arg))
+    return const_arr_fun

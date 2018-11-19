@@ -49,7 +49,7 @@ from .helpers_reservoir import deprecation_warning,warning ,make_cut_func_set
 from .helpers_reservoir import (has_pw, numsol_symbolic_system, 
     arrange_subplots, melt, generalized_inverse_CDF, draw_rv, 
     stochastic_collocation_transform, numerical_rhs, MH_sampling, save_csv, 
-    load_csv, stride ,f_of_t_maker,numerical_function_from_expression)
+    load_csv, stride ,f_of_t_maker,const_of_t_maker,numerical_function_from_expression)
 
 
 class Error(Exception):
@@ -3360,25 +3360,31 @@ class SmoothModelRun(object):
 
  
     #fixme: test and move
+    
 
     def _flux_funcs(self, expr_dict):
         m = self.model
         sol_funcs = self.sol_funcs()
         flux_funcs = {}
         tup = tuple(m.state_variables) + (m.time_symbol,)
-        for key, value in expr_dict.items():
-            # fixme mm 11-5-2018 
-            # the sympify in the next line should be unnecesary since 
-            # the expressions are already expressions and not strings
-            #o_par = sympify(value, locals=_clash).subs(self.parameter_set)
-            #cut_func_set=make_cut_func_set(self.func_set)
-            if isinstance(value,Number):
-                def expr_func(arg_arr):
-                    return value*np.ones_like(arg_arr)
-                flux_funcs[key]=expr_func
+        for key, expression in expr_dict.items():
+            if isinstance(expression,Number):
+                # in this case (constant flux) lambdify for some reason 
+                # does not return a vectorized function but one that
+                # allways returns a number even when it is called with 
+                # an array argument. We therfore create such a function 
+                # ourselves
+                flux_funcs[key]=const_of_t_maker(expression)
             else:
-                #ol = lambdify(tup, o_par, modules = [cut_func_set, 'numpy'])
-                ol = numerical_function_from_expression(value,tup,self.parameter_set,self.func_set) 
+                # fixme mm 11-5-2018 
+                # the sympify in the next line should be unnecesary since 
+                # the expressions are already expressions and not strings
+                # and now also not Numbers
+                #o_par = sympify(expression, locals=_clash).subs(self.parameter_set)
+                o_par = expression.subs(self.parameter_set)
+                cut_func_set=make_cut_func_set(self.func_set)
+                ol = lambdify(tup, o_par, modules = [cut_func_set, 'numpy'])
+                #ol = numerical_function_from_expression(expression,tup,self.parameter_set,self.func_set) 
                 flux_funcs[key] = f_of_t_maker(sol_funcs, ol)
 
         return flux_funcs
