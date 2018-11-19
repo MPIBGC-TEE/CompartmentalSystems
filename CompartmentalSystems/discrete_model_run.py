@@ -72,6 +72,7 @@ class DiscreteModelRun(object):
     #        B = cls.reconstruct_B(xs[k], Fs[k+shift], rs[k+shift])
             B = cls.reconstruct_B(x, Fs[k], rs[k])
             x = B @ x + us[k]
+    #        print(x[11], x2[11])
             Bs[k,:,:] = B
     
         return Bs
