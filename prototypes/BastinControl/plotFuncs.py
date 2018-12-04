@@ -132,7 +132,7 @@ def panel_one(limited_srm,bm, par_dict_v1, control_start_values, times, func_dic
     ax1.plot(times, soln_uncontrolled[:,2],color='red'  ,label='Surface ocean')
     ax1.set_ylabel('Carbon stocks (Pg C)', fontsize=15)
     ax1.legend(loc=2)
-    ax1.set_title("a")
+    ax1.set_title("(a)")
     ax1.set_xlim(1900, 2500)
 
     ax2=fig.add_subplot(2,1,2)
@@ -144,10 +144,10 @@ def panel_one(limited_srm,bm, par_dict_v1, control_start_values, times, func_dic
     ax2.set_xlabel('Time (yr)', fontsize=15)
     ax2.set_ylim(ax1.get_ylim())
     ax2.set_xlim(1900, 2500)
-    ax2.set_title("b")
+    ax2.set_title("(b)")
     
     #limited_soln_uncontrolled 
-    fig.savefig(my_func_name()+'.pdf')
+    fig.savefig(my_func_name()+'.pdf', bbox_inches='tight')
 
 
 def panel_two(bm, par_dict_v1, control_start_values, times, func_dict):
@@ -171,7 +171,7 @@ def panel_two(bm, par_dict_v1, control_start_values, times, func_dict):
     ax1.plot(times, u_vals,color='green',label='u')
     ax1.set_ylabel('$u(t)$ (unitless)', fontsize=15)
     #ax1.legend(loc=2)
-    ax1.set_title("a")
+    ax1.set_title("(a)")
     ax1.set_xlim(1900, 2500)
 
     ax2=fig.add_subplot(2,1,2)
@@ -181,9 +181,9 @@ def panel_two(bm, par_dict_v1, control_start_values, times, func_dict):
     ax2.set_xlabel('Time (yr)', fontsize=15)
     ax2.set_ylim(ax1.get_ylim())
     ax2.set_xlim(1900, 2500)
-    ax2.set_title("b")
+    ax2.set_title("(b)")
     
-    fig.savefig(my_func_name()+'.pdf')
+    fig.savefig(my_func_name()+'.pdf', bbox_inches='tight')
     
 
 def deceleration_family(
@@ -454,4 +454,4 @@ def compare_controlers(mr_dict,u_A_func):
         plt.subplots_adjust(hspace=0.6)
         
     suffix="__"+"__".join(mr_dict.keys())
-    fig.savefig(my_func_name()+suffix+'.pdf')
+    fig.savefig(my_func_name()+suffix+'.pdf', bbox_inches='tight')
