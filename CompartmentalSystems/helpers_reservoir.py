@@ -13,7 +13,7 @@ from sympy import flatten, gcd, lambdify, DiracDelta, solve, Matrix,diff
 from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
-from testinfrastructure.helpers import pe
+#from testinfrastructure.helpers import pe
 
 def warning(txt):
     print('############################################')

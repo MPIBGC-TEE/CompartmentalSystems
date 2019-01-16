@@ -2907,7 +2907,7 @@ class SmoothModelRun(object):
         par_set_14C = copy(self.parameter_set)
         par_set_14C['lamda_14C'] = decay_rate
 
-        nr_pools =self.nr_pools
+        nr_pools = self.nr_pools
         start_values_14C = np.ones(nr_pools*2)
         start_values_14C[:nr_pools] = self.start_values
         start_values_14C[nr_pools:] = self.start_values
