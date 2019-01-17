@@ -3701,6 +3701,62 @@ class SmoothModelRun(object):
         return (A+B)/(C+D)
 
 
+    def _fake_discretized_output(self, data_times):
+        ## prepare some fake output data
+        x = self.solve_single_value()
+        xs = [x(ti) for ti in data_times]
+    
+        nr_pools = self.nr_pools
+        
+        Fs = []
+        for k in range(len(data_times)-1):
+            a = data_times[k]
+            b = data_times[k+1]
+    
+            F = np.zeros((nr_pools, nr_pools))
+            for j in range(nr_pools):
+                for i in range(nr_pools):
+                    if i != j:
+                        def integrand(s):
+                            return self.B(s)[i,j] * x(s)[j]
+    
+                        F[i,j] = quad(integrand, a, b)[0]
+                        
+            Fs.append(F)
+    
+        rs = []
+        for k in range(len(data_times)-1):
+            a = data_times[k]
+            b = data_times[k+1]
+    
+            r = np.zeros((nr_pools,))
+            for j in range(nr_pools):
+                def integrand(s):
+                    return -sum(self.B(s)[:,j]) * x(s)[j]
+    
+                r[j] = quad(integrand, a, b)[0]
+    
+            rs.append(r)
+    
+        us = []
+        for k in range(len(data_times)-1):
+            a = data_times[k]
+            b = data_times[k+1]
+    
+            u = np.zeros((nr_pools,))
+            u_func = self.external_input_vector_func()
+            for j in range(nr_pools):
+                def integrand(s):
+                    return u_func(s)[j]
+    
+                u[j] = quad(integrand, a, b)[0]
+    
+            us.append(u)
+    
+        return xs, Fs, rs, us
+
+
+
 class SmoothModelRun_14C(SmoothModelRun):
 
     def __init__(self, srm, par_set, start_values, times, func_set, decay_rate):

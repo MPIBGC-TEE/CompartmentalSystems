@@ -559,7 +559,6 @@ It gave up for the following expression: ${e}."""
         outputs =  self.output_fluxes
         internal_fluxes = self.internal_fluxes
 
-
         pool_alpha = 0.3
         pool_color = 'blue'
         pipe_colors = {'linear': 'blue', 'nonlinear': 'green', 

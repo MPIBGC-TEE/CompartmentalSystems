@@ -29,8 +29,6 @@ class DiscreteModelRun(object):
 
     @classmethod
     def reconstruct_from_data(cls, times, start_values, xs, Fs, rs, us):
-        nr_pools = len(start_values)
-    
         Bs = cls.reconstruct_Bs(times, xs, Fs, rs, us)
     
         dmr = cls(start_values, times, Bs, us)
@@ -55,6 +53,7 @@ class DiscreteModelRun(object):
             if x[j] != 0:
                 B[j,j] = 1 - (sum(B[:,j]) - B[j,j] + r[j] / x[j])
                 if B[j,j] < 0:
+                    print(j, x, F, r)
                     raise(Error('Reconstructed diagonal value is negative: %d' % j))
             else:
                 B[j,j] = 1
