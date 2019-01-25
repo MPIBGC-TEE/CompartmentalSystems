@@ -35,14 +35,15 @@ class DiscreteModelRun(object):
         return dmr
 
     @classmethod
-    def reconstruct_B(cls, x, F, r):
+    def reconstruct_B(cls, x, F, r, k):
         nr_pools = len(x)
         B = np.identity(nr_pools)
+        print(k, np.where(F<0), '\n\n')
     
         # construct off-diagonals
         for j in range(nr_pools):
             if x[j] < 0:
-                raise(Error('Reconstructed compartment content negative: %d' % j))
+                raise(Error('Reconstructed compartment content negative: pool %d, time %d ' % (j,k)))
             if x[j] != 0:
                 B[:,j] = F[:,j] / x[j]
             else:
@@ -53,8 +54,9 @@ class DiscreteModelRun(object):
             if x[j] != 0:
                 B[j,j] = 1 - (sum(B[:,j]) - B[j,j] + r[j] / x[j])
                 if B[j,j] < 0:
-                    print(j, x, F, r)
-                    raise(Error('Reconstructed diagonal value is negative: %d' % j))
+                    print(j, x, F, r, '\n\n')
+                    print(np.where(F<0), '\n\n')
+                    raise(Error('Reconstructed diagonal value is negative: pool %d, time %d' % (j,k)))
             else:
                 B[j,j] = 1
     
@@ -69,7 +71,7 @@ class DiscreteModelRun(object):
         x = xs[start_index]
         for k in range(start_index, len(data_times)-1):
     #        B = cls.reconstruct_B(xs[k], Fs[k+shift], rs[k+shift])
-            B = cls.reconstruct_B(x, Fs[k], rs[k])
+            B = cls.reconstruct_B(x, Fs[k], rs[k], k)
             x = B @ x + us[k]
     #        print(x[11], x2[11])
             Bs[k,:,:] = B
