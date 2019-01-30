@@ -38,7 +38,9 @@ class DiscreteModelRun(object):
     def reconstruct_B(cls, x, F, r, k):
         nr_pools = len(x)
         B = np.identity(nr_pools)
-        print(k, np.where(F<0), '\n\n')
+        if len(np.where(F<0)[0]) > 0:
+            print('\n\n', np.where(F<0), '\n\n')
+            raise(Error('Negative flux detected: time step %d' % k))
     
         # construct off-diagonals
         for j in range(nr_pools):
@@ -54,8 +56,9 @@ class DiscreteModelRun(object):
             if x[j] != 0:
                 B[j,j] = 1 - (sum(B[:,j]) - B[j,j] + r[j] / x[j])
                 if B[j,j] < 0:
-                    print(j, x, F, r, '\n\n')
-                    print(np.where(F<0), '\n\n')
+                    #print(j, x, F, r, '\n\n')
+                    print('diagonal value = ', B[j,j])
+                    print('pool content = ', x[j])
                     raise(Error('Reconstructed diagonal value is negative: pool %d, time %d' % (j,k)))
             else:
                 B[j,j] = 1
@@ -73,7 +76,6 @@ class DiscreteModelRun(object):
     #        B = cls.reconstruct_B(xs[k], Fs[k+shift], rs[k+shift])
             B = cls.reconstruct_B(x, Fs[k], rs[k], k)
             x = B @ x + us[k]
-    #        print(x[11], x2[11])
             Bs[k,:,:] = B
     
         return Bs
