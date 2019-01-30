@@ -324,6 +324,10 @@ It gave up for the following expression: ${e}."""
         return srm
 
     @property
+    def state_variable_set(self):
+        return set(self.state_vector)
+
+    @property
     def F(self):
         """SymPy dx1-matrix: The right hand side of the differential equation 
         :math:`\\dot{x}=B\\,x+u`."""
