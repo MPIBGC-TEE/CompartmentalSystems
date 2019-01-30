@@ -32,10 +32,10 @@ class TestStartDistributions(InDirTest):
         state_vector = [C_0, C_1]
         t = Symbol('t')
         
-        f_expr = Function('f')(t)
+        f= Function('f')
         
         
-        input_fluxes = {0: C_0*f_expr+2, 1: 2}
+        input_fluxes = {0: C_0*f(t)+2, 1: 2}
         output_fluxes = {0: C_0, 1: C_1}
         internal_fluxes = {(0,1):0.5*C_0**3}
         srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
@@ -44,7 +44,7 @@ class TestStartDistributions(InDirTest):
         def f_func( t_val):
             return np.sin(t_val)+1.0
         
-        func_set = {f_expr: f_func}
+        func_set = {f: f_func}
 
         t_min = 0
         t_max = 2*np.pi
@@ -93,11 +93,10 @@ class TestStartDistributions(InDirTest):
         C_0, C_1 = symbols('C_0 C_1')
         state_vector = [C_0, C_1]
         t = Symbol('t')
+        f=Function("f") 
         
-        f_expr = Function('f')(t)
         
-        
-        input_fluxes = {0: C_0*f_expr+2, 1: 2}
+        input_fluxes = {0: C_0*f(t)+2, 1: 2}
         output_fluxes = {0: C_0, 1: C_1}
         internal_fluxes = {(0,1):0.5*C_0**3}
         srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
@@ -106,7 +105,7 @@ class TestStartDistributions(InDirTest):
         def f_func( t_val):
             return np.sin(t_val)+1.0
         
-        func_set = {f_expr: f_func}
+        func_set = {f: f_func}
 
         t_min = 0
         t_max = 2*np.pi
@@ -169,11 +168,12 @@ class TestStartDistributions(InDirTest):
         state_vector = [C_0, C_1]
         t = Symbol('t')
         
-        f_expr = Function('f')(t)
+        f= Function('f')
+        f_expr = f(t)
         def f_func( t_val):
             return np.sin(t_val)+1.0
         
-        func_set = {f_expr: f_func}
+        func_set = {f: f_func}
         
         
         input_fluxes = {0: C_0*f_expr+2, 1: 2}
