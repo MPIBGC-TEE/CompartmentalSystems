@@ -32,6 +32,7 @@ import mpmath
 
 from sympy import lambdify, flatten, latex, Function, sympify, sstr, solve, \
                   ones, Matrix
+from sympy.core.function import UndefinedFunction
 from sympy.abc import _clash
 
 import scipy.linalg
@@ -144,7 +145,13 @@ class SmoothModelRun(object):
         self.start_values = np.asarray(start_values) * np.ones(1)
         if not(isinstance(start_values, np.ndarray)):
             raise(Error("start_values should be a numpy array"))
-        func_set = {str(key): val for key, val in func_set.items()}
+        # fixme mm: 
+        #func_set = {str(key): val for key, val in func_set.items()}
+        # The conversion to string is not desirable here
+        # should rather implement a stricter check (which fails at the moment because some tests use the old syntax
+        #for f in func_set.keys():
+        #    if not isinstance(f,UndefinedFunction):
+        #        raise(Error("The keys of the func_set should be of type:  sympy.core.function.UndefinedFunction"))
         self.func_set = func_set
         self._state_transition_operator_values = None
         self._external_input_vector_func = None
