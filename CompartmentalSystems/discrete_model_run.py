@@ -62,7 +62,13 @@ class DiscreteModelRun(object):
                     raise(Error('Reconstructed diagonal value is negative: pool %d, time %d' % (j,k)))
             else:
                 B[j,j] = 1
-    
+   
+#        for i in range(nr_pools):
+#            for j in range(nr_pools):
+#                if i != j:
+#                    d = B[i,j]*x[j] - F[i,j]
+#                    if d != 0: print(d)
+
         return B
 
     @classmethod   
