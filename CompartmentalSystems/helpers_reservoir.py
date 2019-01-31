@@ -154,13 +154,62 @@ def numerical_function_from_expression(expr,tup,parameter_set,func_set):
     # we check that the argument tup corresponds to free symbols in the expression
     # and warn if  the function is given more arguments (lambdify would not complain)
     
-    ss_expr=expr_par.free_symbols
-    ss_tup=set([s for s in tup])
-    if not(ss_expr.issubset(ss_tup)):
-        raise Exception("The free symbols of the expression: ${0} are not a subset of the symbols in the tuple argument:${1}".format(ss_expr,ss_tup))
+    #ss_expr=expr_par.free_symbols
+    #ss_tup=set([s for s in tup])
+    #if not(ss_expr.issubset(ss_tup)):
+    #    raise Exception("The free symbols of the expression: ${0} are not a subset of the symbols in the tuple argument:${1}".format(ss_expr,ss_tup))
 
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
     return expr_func
+
+def numerical_rhs2(state_vector, time_symbol, rhs, 
+        parameter_set, func_set):
+
+    rhs_par = rhs.subs(parameter_set)
+    #pe('rhs_par.free_symbols',locals())
+    #pe('func_set',locals())
+
+    # first check if the rhs is defined piecewise since lambdify does not work
+    #if not has_pw(rhs):
+    #https://www.python.org/dev/peps/pep-0008/ 
+    # we have an expression for the derivative
+    # but the ode solver wants a function 
+    # operating on lists.
+    # We proceed in steps to construct this function:
+    # 1.)  Create a Matrix valued function from the Matrix valued expression
+    #  Fpar
+    #      which we can do  automatically with sympys lambdify function
+    #      a) assemble tuple for lambdify 
+    tup = tuple(state_vector) + (time_symbol,)
+    #     b) use lambdify
+
+    # unify the funcset so that it indexed only by the funcname
+    # not the funcexpression
+    # {f(x,y):f_num} is transformed to {f:f_num}
+    cut_func_set=make_cut_func_set(func_set)
+    #print('rhs_par', [(a, type(a)) for a in rhs_par.atoms()])
+    #print('rhs_par', rhs_par)
+    #FL = lambdify(tup, rhs_par, modules=[cut_func_set,"numpy"])
+    
+    #FL = lambdify(tup, rhs_par, modules=[cut_func_set, TRANSLATIONS])
+    FL = lambdify(tup, rhs_par, modules=[cut_func_set, 'numpy'])
+    
+    # 2.) Write a wrapper that transformes Matrices to lists 
+    # (or numpy.ndarrays)
+    # 
+    def num_rhs(X,t):
+        # the ode solver delivers X as numpy.ndarray 
+        # however, our FL requires a tuple of arguments
+        Xt = tuple(X) + (t,)
+        #print('Xt', Xt)
+        #cut_func_set
+        #print('num_rhs', tup, Xt)
+        Fval = FL(*Xt)
+        #print(Fval)
+        #pp("Fval",locals())
+        return flatten(Fval.tolist())
+
+    return num_rhs    
 
 def numerical_rhs(state_vector, time_symbol, rhs, 
         parameter_set, func_set, times):
@@ -304,6 +353,7 @@ def numsol_symbolic_system(
         times
     )
 
+    #return odeint(num_rhs, start_values, times, mxstep=10000)
     return odeint(num_rhs, start_values, times, mxstep=10000)
 
 
