@@ -355,6 +355,21 @@ class SmoothModelRun(object):
             sol_funcs.append(sol_inter)
 
         return sol_funcs
+
+    def sol_funcs_dict_by_symbol(self):
+        """Return linearly interpolated solution functions. as a dictionary indexed by the symbols of the
+        state variables"""
+        sol_funcs=self.sol_funcs()
+        state_vector=self.model.state_vector
+        n=len(state_vector)
+        sol_dict_by_smybol={state_vector[i]:sol_funcs[i] for i in range(n)}
+        return sol_dict_by_smybol
+
+    def sol_funcs_dict_by_name(self):
+        """Return linearly interpolated solution functions. as a dictionary indexed by the name (string) of the
+        state variables"""
+        sol_dict_by_name={k.name:v for k,v in self.sol_funcs_dict_by_symbol().items()}
+        return sol_dict_by_name
         
     def external_input_flux_funcs(self):
         """Return a dictionary of the external input fluxes.
