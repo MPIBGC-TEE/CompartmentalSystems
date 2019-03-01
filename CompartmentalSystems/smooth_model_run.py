@@ -93,7 +93,7 @@ class SmoothModelRun(object):
     Attributes:
         model (:class:`~.smooth_reservoir_model.SmoothReservoirModel`): 
             The reservoir model on which the model run bases.
-        parameter set (dict): ``{x: y}`` with ``x`` being a SymPy symbol 
+        parameter_dict (dict): ``{x: y}`` with ``x`` being a SymPy symbol 
             and ``y`` being a numerical value.
         start_values (numpy.array): The vector of start values.
         times (numpy.array): The time grid used for the simulation.

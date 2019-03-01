@@ -4,6 +4,7 @@ from numpy.linalg import matrix_power, pinv
 from scipy.linalg import inv
 from scipy.misc import factorial
 from scipy.special import binom
+from sympy import Matrix
 
 from tqdm import tqdm
 
@@ -26,6 +27,28 @@ class DiscreteModelRun(object):
         self.Bs = Bs
         self.us = us
         self.dts = np.diff(self.times).astype(np.float64)
+
+    @classmethod
+    def from_SmoothModelRun(cls,smr): 
+        #fake something for the test
+        nr_pools=smr.nr_pools
+        data_times=smr.times
+        n=len(data_times)
+        Bs = np.zeros((n-1, nr_pools, nr_pools)) 
+        us = np.zeros((n-1, nr_pools)) 
+        start_index = 0
+        for k in range(start_index, n-1):
+            delta_t=data_times[k+1]-data_times[k]
+
+            #fixme mm replace with Phi(data_times[k])
+            B=np.identity(nr_pools)*(np.exp(-delta_t))
+            Bs[k,:,:] = B
+            #fixme: replace with integral over phi*u(t)
+            u=np.ones(nr_pools)*delta_t
+            us[k,:] = u
+
+        return cls(smr.start_values,data_times,Bs,us)
+
 
     @classmethod
     def reconstruct_from_data(cls, times, start_values, xs, Fs, rs, us):
