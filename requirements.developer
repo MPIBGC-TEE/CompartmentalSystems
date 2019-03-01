@@ -1,4 +1,4 @@
-sympy==1.0.0
+#sympy==1.0.0
 plotly >=3.3.0
 # for developer the following package should be installed in develop mode also 
 # so we do not fetch it
