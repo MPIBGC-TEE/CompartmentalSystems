@@ -15,9 +15,11 @@ class TestHelpers_reservoir(unittest.TestCase):
     def test_numerical_function_from_expression(self):
         C_0, C_1, C_2 = symbols('C_0 C_1 C_2')
         t = Symbol('t')
+        u_0_sym = Function('u_0')
+        u_2_sym = Function('u_2')
         
-        u_0_expr = Function('u_0')(C_0, C_1, t)
-        u_2_expr = Function('u_2')(t)
+        u_0_expr = u_0_sym(C_0, C_1, t)
+        u_2_expr = u_2_sym(t)
         
         X = Matrix([C_0, C_1, C_2])
         t_min, t_max = 0, 10
@@ -28,22 +30,22 @@ class TestHelpers_reservoir(unittest.TestCase):
         
         def u2_func(t_val):
             return t_val
-        parameter_set={}
+        parameter_dict={}
         func_set = {u_0_expr: u0_func, u_2_expr: u2_func}
         
         tup = (C_0,C_1) + (t,)
-        u_0_func = numerical_function_from_expression(u_0_expr,tup,parameter_set,func_set)
+        u_0_func = numerical_function_from_expression(u_0_expr,tup,parameter_dict,func_set)
         self.assertEqual(u_0_func(1,2,3),1+2+3)
         
         tup = (t,)
-        u_2_func=numerical_function_from_expression(u_2_expr,tup,parameter_set,func_set)
+        u_2_func=numerical_function_from_expression(u_2_expr,tup,parameter_dict,func_set)
         self.assertEqual(u_2_func(2),2)
         
         # wrong tup: C_1 is not necessary but it does not hurt
         # this behavior is convinient to make everything a variable of 
         # ALL statevariables and time 
         tup = (C_1,t,)
-        u_2_func=numerical_function_from_expression(u_2_expr,tup,parameter_set,func_set)
+        u_2_func=numerical_function_from_expression(u_2_expr,tup,parameter_dict,func_set)
         # the superflous first argument just does not have any influence
         self.assertEqual(u_2_func(1002103413131,2),2)
         
@@ -51,7 +53,7 @@ class TestHelpers_reservoir(unittest.TestCase):
         # this is a real error
         tup = (C_1,t)
         with self.assertRaises(Exception) as e:
-            u_0_func=numerical_function_from_expression(u_0_expr,tup,parameter_set,func_set)
+            u_0_func=numerical_function_from_expression(u_0_expr,tup,parameter_dict,func_set)
 
     def test_func_subs(self):
         # t is in the third position

@@ -144,28 +144,33 @@ def factor_out_from_matrix(M):
         # we could make it work...if we really wanted to
         return 1
 
-def numerical_function_from_expression(expr,tup,parameter_set,func_set):
+def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
+    # the function returns a function that given numeric arguments
+    # returns a numeric result.
+    # This is more specific requirement than a function returned lambdify 
+    # which can still return symbolic
+    # results if the tuple argument to lambdify does not contain all free
+    # symbols of the lambdified expression.
+    # To avoid this case here we check this.
+    expr_par=expr.subs(parameter_dict)
+    ss_expr=expr_par.free_symbols
+    ss_tup=set([s for s in tup])
+    if not(ss_expr.issubset(ss_tup)):
+        raise Exception("The free symbols of the expression: ${0} are not a subset of the symbols in the tuple argument:${1}".format(ss_expr,ss_tup))
+
+
     
     cut_func_set=make_cut_func_set(func_set)
    
 
-    expr_par=expr.subs(parameter_set)
-    # To avoid to accidentally create a function func(x1,x2,x3) for an expression that only depends on x1
-    # we check that the argument tup corresponds to free symbols in the expression
-    # and warn if  the function is given more arguments (lambdify would not complain)
-    
-    #ss_expr=expr_par.free_symbols
-    #ss_tup=set([s for s in tup])
-    #if not(ss_expr.issubset(ss_tup)):
-    #    raise Exception("The free symbols of the expression: ${0} are not a subset of the symbols in the tuple argument:${1}".format(ss_expr,ss_tup))
-
+    expr_par=expr.subs(parameter_dict)
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
     return expr_func
 
 def numerical_rhs2(state_vector, time_symbol, rhs, 
-        parameter_set, func_set):
+        parameter_dict, func_set):
 
-    rhs_par = rhs.subs(parameter_set)
+    rhs_par = rhs.subs(parameter_dict)
     #pe('rhs_par.free_symbols',locals())
     #pe('func_set',locals())
 
@@ -212,9 +217,9 @@ def numerical_rhs2(state_vector, time_symbol, rhs,
     return num_rhs    
 
 def numerical_rhs(state_vector, time_symbol, rhs, 
-        parameter_set, func_set, times):
+        parameter_dict, func_set, times):
 
-    rhs_par = rhs.subs(parameter_set)
+    rhs_par = rhs.subs(parameter_dict)
     #pe('rhs_par.free_symbols',locals())
     #pe('func_set',locals())
 
@@ -334,7 +339,7 @@ def numsol_symbolic_system(
         state_vector, 
         time_symbol, 
         rhs, 
-        parameter_set, 
+        parameter_dict, 
         func_set, 
         start_values, 
         times
@@ -348,7 +353,7 @@ def numsol_symbolic_system(
         state_vector,
         time_symbol,
         rhs, 
-        parameter_set,
+        parameter_dict,
         func_set,
         times
     )

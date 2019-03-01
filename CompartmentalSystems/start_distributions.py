@@ -120,7 +120,7 @@ from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 from testinfrastructure.helpers import pe
 
-def start_age_distributions_from_empty_spinup(srm,t_max,parameter_set,func_set):
+def start_age_distributions_from_empty_spinup(srm,t_max,parameter_dict,func_set):
     """
     Finite age spin up from empty pools 
  
@@ -133,7 +133,7 @@ def start_age_distributions_from_empty_spinup(srm,t_max,parameter_set,func_set):
         t_max (float):
             The end of the spinup (which starts at t=0 and runs until t=t_max)
 
-        parameter_set (dict) : 
+        parameter_dict (dict) : 
             The parameter set that transforms the symbolic model into a numeric one. 
             The keys are the sympy symbols, the values are the values used for the simulation.
         func_set (dict): 
@@ -159,7 +159,7 @@ def start_age_distributions_from_empty_spinup(srm,t_max,parameter_set,func_set):
     times=np.linspace(0,t_max,101) 
     spin_up_mr = SmoothModelRun(
             srm, 
-            parameter_set=parameter_set, 
+            parameter_dict=parameter_dict, 
             start_values=np.zeros(srm.nr_pools), 
             times=times,
             func_set=func_set)
@@ -175,7 +175,7 @@ def start_age_distributions_from_empty_spinup(srm,t_max,parameter_set,func_set):
 
 
 
-def start_age_distributions_from_steady_state(srm,t0,parameter_set,func_set,x0=None):
+def start_age_distributions_from_steady_state(srm,t0,parameter_dict,func_set,x0=None):
     """
     Compute the age distribution of the system at equilibrium :math:`x_{fix}`
     , by means of a linear autonomous pool model with identical age
@@ -186,7 +186,7 @@ def start_age_distributions_from_steady_state(srm,t0,parameter_set,func_set,x0=N
 
     Args:
         srm (SmoothReservoirModel) : The (symbolic) model
-        parameter_set (dict) : 
+        parameter_dict (dict) : 
             The parameter set that transforms the symbolic model into a numeric one. 
             The keys are the sympy symbols, the values are the values used for the simulation.
         func_set (dict): 
@@ -212,7 +212,7 @@ def start_age_distributions_from_steady_state(srm,t0,parameter_set,func_set,x0=N
         simulation for which the start distributions has been computed.
         (The computed distribution assumes the system to be in this state.) 
     """
-    lapm,x_fix= lapm_for_steady_state(srm,t0,parameter_set,func_set,x0=None)
+    lapm,x_fix= lapm_for_steady_state(srm,t0,parameter_dict,func_set,x0=None)
     def a_dist_function(age): 
         mat_func=lapm.a_density 
         # LAPM returns a function that returns a sympy.Matrix
@@ -276,15 +276,15 @@ def start_age_distributions_from_zero_initial_content(srm):
     """
     return start_age_distributions_from_zero_age_initial_content(srm,np.zeros(srm.nr_pools))
 
-def compute_fixedpoint_numerically(srm,t0,x0,parameter_set,func_set):
+def compute_fixedpoint_numerically(srm,t0,x0,parameter_dict,func_set):
     B_sym = srm.compartmental_matrix
     u_sym=srm.external_inputs
 
     t=srm.time_symbol
      
     tup = tuple(srm.state_vector) + (t,)
-    u_func=numerical_function_from_expression(u_sym,tup,parameter_set,func_set)
-    B_func=numerical_function_from_expression(B_sym,tup,parameter_set,func_set)
+    u_func=numerical_function_from_expression(u_sym,tup,parameter_dict,func_set)
+    B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_set)
    
     # get functions of x1,...,xn by partly applying to t0 
     B0_func=func_subs(t,Function("B")(*tup),B_func,t0)
@@ -303,11 +303,11 @@ def compute_fixedpoint_numerically(srm,t0,x0,parameter_set,func_set):
     #pe('res',locals())
     return res.x
 
-def start_age_moments_from_empty_spinup(srm,t_max,parameter_set,func_set,max_order):
+def start_age_moments_from_empty_spinup(srm,t_max,parameter_dict,func_set,max_order):
     times=np.linspace(0,t_max,101) 
     spin_up_mr = SmoothModelRun(
             srm, 
-            parameter_set=parameter_set, 
+            parameter_dict=parameter_dict, 
             start_values=np.zeros(srm.nr_pools), 
             times=times,
             func_set=func_set)
@@ -343,7 +343,7 @@ def start_age_moments_from_zero_initial_content(srm,max_order):
     return  start_age_moments 
 
 
-def lapm_for_steady_state(srm,t0,parameter_set,func_set,x0=None):
+def lapm_for_steady_state(srm,t0,parameter_dict,func_set,x0=None):
     """
     If a fixedpoint of the frozen system can be found, create a linear
     autonomous model as an equivalent for the frozen (generally nonlinear)
@@ -422,8 +422,8 @@ def lapm_for_steady_state(srm,t0,parameter_set,func_set,x0=None):
         
         t=srm.time_symbol
         tup = (t,)
-        u_func=numerical_function_from_expression(u_sym,tup,parameter_set,func_set)
-        B_func=numerical_function_from_expression(B_sym,tup,parameter_set,func_set)
+        u_func=numerical_function_from_expression(u_sym,tup,parameter_dict,func_set)
+        B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_set)
         B0=B_func(t0)
         u0=u_func(t0)
         try:
@@ -460,13 +460,13 @@ def lapm_for_steady_state(srm,t0,parameter_set,func_set,x0=None):
             )
             
 
-        x_fix= compute_fixedpoint_numerically(srm,t0,x0,parameter_set,func_set)
+        x_fix= compute_fixedpoint_numerically(srm,t0,x0,parameter_dict,func_set)
         pe('x_fix',locals())
 
         t=srm.time_symbol
         tup = tuple(srm.state_vector)+(t,)
-        u_func=numerical_function_from_expression(u_sym,tup,parameter_set,func_set)
-        B_func=numerical_function_from_expression(B_sym,tup,parameter_set,func_set)
+        u_func=numerical_function_from_expression(u_sym,tup,parameter_dict,func_set)
+        B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_set)
         B0=B_func(*x_fix,t0)
         u0=u_func(*x_fix,t0)
 
@@ -478,7 +478,7 @@ def lapm_for_steady_state(srm,t0,parameter_set,func_set,x0=None):
     lapm=LinearAutonomousPoolModel(u0_m,B0_m,force_numerical=True)
     return lapm,x_fix
 
-def start_age_moments_from_steady_state(srm,t0,parameter_set,func_set,max_order):
+def start_age_moments_from_steady_state(srm,t0,parameter_dict,func_set,max_order):
     """
     Compute the age moments of the system at equilibrium :math:`x_{fix}`
     , by means of a linear autonomous pool model with identical age
@@ -488,7 +488,7 @@ def start_age_moments_from_steady_state(srm,t0,parameter_set,func_set,max_order)
     
     Args:
         srm (SmoothReservoirModel) : The (symbolic) model
-        parameter_set (dict) : 
+        parameter_dict (dict) : 
             The parameter set that transforms the symbolic model into a numeric one. 
             The keys are the sympy symbols, the values are the values used for the simulation.
         func_set (dict): 
@@ -510,7 +510,7 @@ def start_age_moments_from_steady_state(srm,t0,parameter_set,func_set,max_order)
         pool ages in equilibrium.
     """
     
-    lapm,x_fix= lapm_for_steady_state(srm,t0,parameter_set,func_set,x0=None)
+    lapm,x_fix= lapm_for_steady_state(srm,t0,parameter_dict,func_set,x0=None)
     start_age_moments = []
     for n in range(1, max_order+1):
         start_age_moment_sym=lapm.a_nth_moment(n)

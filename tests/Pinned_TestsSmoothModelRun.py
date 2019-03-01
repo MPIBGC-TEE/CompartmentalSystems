@@ -61,7 +61,7 @@ class Pinned_TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1, 2, 3])
         times = np.linspace(t_min,t_max, 11)
-        smr = SmoothModelRun(srm, parameter_set={lambda_0:.2}, start_values=start_values, times=times,func_set=func_set)
+        smr = SmoothModelRun(srm, parameter_dict={lambda_0:.2}, start_values=start_values, times=times,func_set=func_set)
         
         soln = smr.solve()
 

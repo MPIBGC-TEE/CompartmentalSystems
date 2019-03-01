@@ -57,22 +57,22 @@ class Error(Exception):
     """Generic error occurring in this module."""
     pass
 
-def check_parameter_set_complete(model, parameter_set, func_set):
+def check_parameter_dict_complete(model, parameter_dict, func_set):
     """Check if the parameter set  the function set are complete 
        to enable a model run.
 
     Args:
         model (:class:`~.smooth_reservoir_model.SmoothReservoirModel`): 
             The reservoir model on which the model run bases.
-        parameter_set (dict): ``{x: y}`` with ``x`` being a SymPy symbol 
+        parameter_dict (dict): ``{x: y}`` with ``x`` being a SymPy symbol 
             and ``y`` being a numerical value.
         func_set (dict): ``{f: func}`` with ``f`` being a SymPy symbol and 
             ``func`` being a Python function. Defaults to ``dict()``.
     Returns:
-        free_symbols (set): set of free symbols, parameter_set is complete if
+        free_symbols (set): set of free symbols, parameter_dict is complete if
                             ``free_symbols`` is the empty set
     """
-    free_symbols = model.F.subs(parameter_set).free_symbols
+    free_symbols = model.F.subs(parameter_dict).free_symbols
     #print('fs', free_symbols)
     free_symbols -= {model.time_symbol}
     #print(free_symbols)
@@ -105,14 +105,14 @@ class SmoothModelRun(object):
     system, the system is at the position of a ``(d+1)`` st pool.
     """
 
-    def __init__(self, model, parameter_set, 
+    def __init__(self, model, parameter_dict, 
                         start_values, times, func_set=None):
         """Return a SmoothModelRun instance.
 
         Args:
             model (:class:`~.smooth_reservoir_model.SmoothReservoirModel`): 
                 The reservoir model on which the model run bases.
-            parameter_set (dict): ``{x: y}`` with ``x`` being a SymPy symbol 
+            parameter_dict (dict): ``{x: y}`` with ``x`` being a SymPy symbol 
                 and ``y`` being a numerical value.
             start_values (numpy.array): The vector of start values.
             times (numpy.array): The time grid used for the simulation.
@@ -125,20 +125,20 @@ class SmoothModelRun(object):
         """
         # we cannot use dict() as default because the test suite makes weird 
         # things with it! But that is bad style anyways
-        if parameter_set is None: parameter_set = dict()
+        if parameter_dict is None: parameter_dict = dict()
         if func_set is None: func_set = dict()
         
-        # check parameter_set + func_set for completeness
-        free_symbols = check_parameter_set_complete(
+        # check parameter_dict + func_set for completeness
+        free_symbols = check_parameter_dict_complete(
                             model, 
-                            parameter_set, 
+                            parameter_dict, 
                             func_set)
         if free_symbols != set():
             raise(Error('Missing parameter values for ' + str(free_symbols)))
 
 
         self.model = model
-        self.parameter_set = parameter_set
+        self.parameter_dict = parameter_dict
         self.times = times
         # make sure that start_values are an array,
         # even a one-dimensional one
@@ -181,7 +181,7 @@ class SmoothModelRun(object):
         if not hasattr(self, '_B'):
             #fixme: what about a piecewise in the matrix?
             # is this here the right place to do it??
-            cm_par = self.model.compartmental_matrix.subs(self.parameter_set)
+            cm_par = self.model.compartmental_matrix.subs(self.parameter_dict)
             tup = tuple(self.model.state_vector)+(self.model.time_symbol.name,)
             # cut_func_set = {key[:key.index('(')]: val 
             #                    for key, val in self.func_set.items()}
@@ -254,7 +254,7 @@ class SmoothModelRun(object):
 
         linearized_smr = self.__class__(
             linearized_srm, 
-            self.parameter_set,
+            self.parameter_dict,
             self.start_values, 
             self.times, 
             func_set=func_set
@@ -2885,7 +2885,7 @@ class SmoothModelRun(object):
         srm_14C = self.model.to_14C_only('lamda_14C', 'Fa_14C')
 
         # create SmoothModelRun for 14C
-        par_set_14C = copy(self.parameter_set)
+        par_set_14C = copy(self.parameter_dict)
         par_set_14C['lamda_14C'] = decay_rate
         #fixme: use 14C equilibrium start values
         start_values_14C = self.start_values
@@ -2926,7 +2926,7 @@ class SmoothModelRun(object):
         srm_14C = self.model.to_14C_explicit('lamda_14C', 'Fa_14C')
 
         # create SmoothModelRun for 14C
-        par_set_14C = copy(self.parameter_set)
+        par_set_14C = copy(self.parameter_dict)
         par_set_14C['lamda_14C'] = decay_rate
 
         nr_pools = self.nr_pools
@@ -3028,7 +3028,7 @@ class SmoothModelRun(object):
             state_vector,
             srm.time_symbol,
             rhs,
-            self.parameter_set,
+            self.parameter_dict,
             self.func_set,
             new_start_values, 
             times
@@ -3067,7 +3067,7 @@ class SmoothModelRun(object):
                 m_no_inputs.state_vector, 
                 m_no_inputs.time_symbol, 
                 m_no_inputs.F, 
-                self.parameter_set,
+                self.parameter_dict,
                 self.func_set,
                 self.times)
     
@@ -3208,7 +3208,7 @@ class SmoothModelRun(object):
         res = np.zeros((len(times), n))
         
         flux_vec_symbolic = sympify(flux_vec_symbolic, locals = _clash)
-        flux_vec_symbolic = flux_vec_symbolic.subs(self.parameter_set)
+        flux_vec_symbolic = flux_vec_symbolic.subs(self.parameter_dict)
         #cut_func_set = {key[:key.index('(')]: val 
         #                    for key, val in self.func_set.items()}
         cut_func_set=make_cut_func_set(self.func_set)
@@ -3402,11 +3402,11 @@ class SmoothModelRun(object):
                 # the sympify in the next line should be unnecesary since 
                 # the expressions are already expressions and not strings
                 # and now also not Numbers
-                #o_par = sympify(expression, locals=_clash).subs(self.parameter_set)
-                o_par = expression.subs(self.parameter_set)
+                #o_par = sympify(expression, locals=_clash).subs(self.parameter_dict)
+                o_par = expression.subs(self.parameter_dict)
                 cut_func_set=make_cut_func_set(self.func_set)
                 ol = lambdify(tup, o_par, modules = [cut_func_set, 'numpy'])
-                #ol = numerical_function_from_expression(expression,tup,self.parameter_set,self.func_set) 
+                #ol = numerical_function_from_expression(expression,tup,self.parameter_dict,self.func_set) 
                 flux_funcs[key] = f_of_t_maker(sol_funcs, ol)
 
         return flux_funcs
@@ -3584,7 +3584,7 @@ class SmoothModelRun(object):
     #fixme: should be possible only for autonomous, possibly nonlinear,
     # models
     #fixme: test?
-        ss = solve(self.model.F.subs(self.parameter_set), 
+        ss = solve(self.model.F.subs(self.parameter_dict), 
                    self.model.state_vector, 
                    dict=True)
         

@@ -148,7 +148,7 @@ class TestSmoothModelRun(InDirTest):
                     [ 0,-2]])
         u = Matrix(2, 1, [0,1])
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
-        smr = SmoothModelRun(srm, parameter_set={}, start_values=np.array([1,1]), times=np.linspace(0,1,10))
+        smr = SmoothModelRun(srm, parameter_dict={}, start_values=np.array([1,1]), times=np.linspace(0,1,10))
         a_ref = np.array([[ 1.        ,  1.        ], 
                           [ 0.89483932,  0.90036872],
                           [ 0.80073741,  0.82059019],
@@ -203,7 +203,7 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1, 2, 3])
         times = np.linspace(t_min,t_max, 11)
-        smr = SmoothModelRun(srm, parameter_set={}, start_values=start_values, times=times,func_set=func_set)
+        smr = SmoothModelRun(srm, parameter_dict={}, start_values=start_values, times=times,func_set=func_set)
         
         soln = smr.solve()
 
@@ -655,7 +655,7 @@ class TestSmoothModelRun(InDirTest):
         times = np.linspace(0,1,3)
 
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
-        smr = SmoothModelRun(srm, parameter_set={}, start_values=start_values, times=times)
+        smr = SmoothModelRun(srm, parameter_dict={}, start_values=start_values, times=times)
 
         start_age_densities = lambda a: 2*np.exp(-2*a)*start_values
 
@@ -1048,7 +1048,7 @@ class TestSmoothModelRun(InDirTest):
         times = np.linspace(0,1,3)
 
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
-        smr = SmoothModelRun(srm, parameter_set={}, start_values=start_values, times=times)
+        smr = SmoothModelRun(srm, parameter_dict={}, start_values=start_values, times=times)
 
         start_age_densities = lambda a: 2*np.exp(-2*a)*start_values
 

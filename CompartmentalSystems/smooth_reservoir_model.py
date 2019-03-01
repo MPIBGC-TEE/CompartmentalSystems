@@ -30,6 +30,7 @@ import multiprocessing
 
 from .helpers_reservoir import factor_out_from_matrix, has_pw, flux_dict_string, jacobian
 from testinfrastructure.helpers import  pe
+from typing import TypeVar
 
 
 class Error(Exception):
@@ -60,7 +61,7 @@ class SmoothReservoirModel(object):
     """
     @classmethod
     def from_state_variable_indexed_fluxes(cls,state_vector, time_symbol, 
-            input_fluxes, output_fluxes, internal_fluxes):
+            input_fluxes, output_fluxes, internal_fluxes)->"SmoothReservoirModel":
         """Return an instance of SmoothReservoirModel.
     
         Args:
@@ -91,7 +92,7 @@ class SmoothReservoirModel(object):
 
     def __init__(self, state_vector, time_symbol, 
                        input_fluxes={}, output_fluxes={}, internal_fluxes={}):
-        """Return an instance of SmoothReservoirModel.
+        """Initialize an instance of SmoothReservoirModel.
     
         Args:
             state_vector (SymPy dx1-matrix): The model's state vector 
@@ -169,18 +170,18 @@ class SmoothReservoirModel(object):
         return res 
 
  
-    def subs(self,par_set):
-        """ Returns a new instance of class: `SmoothReservoirModel` with all parameters in the parameter_set replaced 
+    def subs(self,parameter_dict):
+        """ Returns a new instance of class: `SmoothReservoirModel` with all parameters in the parameter_dict replaced 
             by their values by calling subs on all the flux expressions. 
             Args:
-                par_set: A dictionary with the structure {parameter_symbol:parameter_value,....}
+                parameter_dict: A dictionary with the structure {parameter_symbol:parameter_value,....}
         """
         return SmoothReservoirModel(
             self.state_vector,
             self.time_symbol,
-            {k:fl.subs(par_set) for k,fl in    self.input_fluxes.items()},
-            {k:fl.subs(par_set) for k,fl in   self.output_fluxes.items()},
-            {k:fl.subs(par_set) for k,fl in self.internal_fluxes.items()}
+            {k:fl.subs(parameter_dict) for k,fl in    self.input_fluxes.items()},
+            {k:fl.subs(parameter_dict) for k,fl in   self.output_fluxes.items()},
+            {k:fl.subs(parameter_dict) for k,fl in self.internal_fluxes.items()}
         )
 
     def __str__(self):
@@ -267,7 +268,7 @@ It gave up for the following expression: ${e}."""
     
     # alternative constructor based on the formulation f=u+Bx
     @classmethod
-    def from_B_u(cls, state_vector, time_symbol, B, u):
+    def from_B_u(cls, state_vector, time_symbol, B, u)->'SmoothReservoirModel':
         """Construct and return a :class:`SmoothReservoirModel` instance from 
            :math:`\\dot{x}=B\\,x+u`
     
