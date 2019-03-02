@@ -4,6 +4,7 @@ from numpy.linalg import matrix_power, pinv
 from scipy.linalg import inv
 from scipy.misc import factorial
 from scipy.special import binom
+from scipy.integrate import solve_ivp,OdeSolver,odeint
 from sympy import Matrix
 
 from tqdm import tqdm
@@ -30,7 +31,9 @@ class DiscreteModelRun(object):
 
     @classmethod
     def from_SmoothModelRun(cls,smr): 
-        #fake something for the test
+        # fake a model t for the test and gradually remove the faked parts
+        # fake the statetransition operator
+        phi=lambda t_e,t_s: np.identity(nr_pools)*np.exp(-(t_e-t_s))
         nr_pools=smr.nr_pools
         data_times=smr.times
         n=len(data_times)
@@ -41,10 +44,11 @@ class DiscreteModelRun(object):
             delta_t=data_times[k+1]-data_times[k]
 
             #fixme mm replace with Phi(data_times[k])
-            B=np.identity(nr_pools)*(np.exp(-delta_t))
+            B=phi(data_times[k+1],data_times[k])
             Bs[k,:,:] = B
-            #fixme: replace with integral over phi*u(t)
+            #fixme: replace with int_{t_k}^{t_{k+1}} phi(t)*u(t) dt
             u=np.ones(nr_pools)*delta_t
+
             us[k,:] = u
 
         return cls(smr.start_values,data_times,Bs,us)
