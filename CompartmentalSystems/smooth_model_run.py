@@ -3051,17 +3051,39 @@ class SmoothModelRun(object):
 
         return soln
 
+
+    @property
+    def no_input_model(self):
+        return SmoothReservoirModel(
+            m.state_vector,
+            m.time_symbol,
+            {},
+            m.output_fluxes,
+            m.internal_fluxes
+        )
+    def skew_product_numerical_rhs(self,additionalVector,PhiSymb):
+        m_no_inputs=self.no_input_model
+        # build the numerical rhs for the solution of the Matrix ivp 
+        # for the state transition operator
+        # since the solver only accepts vetors we have 
+        # to reshape the matrix PHI into a 1d vector
+
+
+        
+
+
     #fixme: test
     @property
     def _no_input_sol(self):
         if not hasattr(self, '_saved_no_input_sol'):
             m = self.model
-            m_no_inputs = SmoothReservoirModel(
-                    m.state_vector,
-                    m.time_symbol,
-                    {},
-                    m.output_fluxes,
-                    m.internal_fluxes)
+            #m_no_inputs = SmoothReservoirModel(
+            #        m.state_vector,
+            #        m.time_symbol,
+            #        {},
+            #        m.output_fluxes,
+            #        m.internal_fluxes)
+            m_no_inputs=self.no_input_model
             
             no_inputs_num_rhs = numerical_rhs(
                 m_no_inputs.state_vector, 
