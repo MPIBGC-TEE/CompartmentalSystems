@@ -3054,6 +3054,7 @@ class SmoothModelRun(object):
 
     @property
     def no_input_model(self):
+        m=self.model
         return SmoothReservoirModel(
             m.state_vector,
             m.time_symbol,
