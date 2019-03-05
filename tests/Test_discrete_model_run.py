@@ -173,6 +173,7 @@ class TestDiscreteModelRun(InDirTest):
         }
         internal_fluxes={}
         srm=SmoothReservoirModel([x_0,x_1],t,inputs,outputs,internal_fluxes)
+        m_no_inputs=srm.no_input_model
         t_max=4
         times = np.linspace(0, t_max, 11)
         pardict = {
@@ -181,17 +182,31 @@ class TestDiscreteModelRun(InDirTest):
             ,u:1
 
         }
-        B=srm.compartmental_matrix
+        #B=srm.compartmental_matrix
         nr_poools=srm.nr_pools
-        tup=(t,)+tuple(srm.state_vector)
+        #tup=(t,)+tuple(srm.state_vector)
         #B_num=numerical_function_from_expression(B,tup,pardict,{})
-        rhs=srm.F
-        num_rhs=numerical_rhs2(
-             srm.state_vector
-            ,srm.time_symbol
-            ,rhs 
+        vec_num_rhs=numerical_rhs2(
+             m_no_inputs.state_vector
+            ,m_no_inputs.time_symbol
+            ,m_no_inputs.F
             ,pardict
             ,{}
         )
+        # for the numerical rhs we have to create a vector valued function, but we want all columns of 
+        # the state transition operator we have to rearange it as one long vector
+        # since B in the nonlinear case also depends on x we also have to compute B for every portion seperately      
+        def mat_num_rhs(t,X):
+            # cut X in chunks
+            xs=[X[i*nr_pools:(i+1)*nr_pools] for i in range(nr_pools)]
+            ys=[vec_num_rhs(t,x) for x in xs]
+            res=np.empty_like(X)
+            for i in range(nr_pools):
+                res[[i*nr_pools:(i+1)*nr_pools]=yx[i]
+            return res
+
+
+
+
         
 

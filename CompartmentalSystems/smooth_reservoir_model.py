@@ -134,6 +134,15 @@ class SmoothReservoirModel(object):
         #     self.model_runs.append(mr)
     
 
+    @property
+    def no_input_model(self):
+        return SmoothReservoirModel(
+            self.state_vector,
+            self.time_symbol,
+            {},# no input fluxes
+            self.output_fluxes,
+            self.internal_fluxes
+        )
         
     @property
     def function_expressions(self):
