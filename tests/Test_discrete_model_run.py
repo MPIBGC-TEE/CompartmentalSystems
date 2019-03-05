@@ -83,6 +83,7 @@ class TestDiscreteModelRun(InDirTest):
         fig.savefig("pool_contents.pdf")
         self.assertTrue(True)
 
+#--------------------------------------------------------------------------
     def test_SkewProductSystem(self):
         nr_pools=2 
         nq=nr_pools*nr_pools
@@ -101,7 +102,6 @@ class TestDiscreteModelRun(InDirTest):
                 res=np.zeros((nr_pools,nr_pools))
                 res[0,0]=np.exp(k_1_val*times)
                 res[1,1]=np.exp(k_2_val*times)
-
             return(res)
         
         #build a system that has this solution and solve it
@@ -196,14 +196,18 @@ class TestDiscreteModelRun(InDirTest):
         # for the numerical rhs we have to create a vector valued function, but we want all columns of 
         # the state transition operator we have to rearange it as one long vector
         # since B in the nonlinear case also depends on x we also have to compute B for every portion seperately      
-        def mat_num_rhs(t,X):
+        def mat_num_rhs_1d(t,X):
             # cut X in chunks
             xs=[X[i*nr_pools:(i+1)*nr_pools] for i in range(nr_pools)]
             ys=[vec_num_rhs(t,x) for x in xs]
             res=np.empty_like(X)
+            # combine to one array again
             for i in range(nr_pools):
-                res[[i*nr_pools:(i+1)*nr_pools]=yx[i]
+                res[i*nr_pools:(i+1)*nr_pools]=ys[i]
             return res
+        
+        start_matrix_1d=np.identity(nr_pools).reshape(nq,)
+        sf=solve_ivp(fun=mat_num_rhs_1d,t_span=[0,t_max],y0=start_matrix_1d,max_step=delta_t,vectorized=False,method='LSODA')
 
 
 

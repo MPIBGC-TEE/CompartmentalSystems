@@ -1,3 +1,3 @@
 #!/bin/bash
-#tox -e freeze 
-./runMyPy.sh
+tox -e bleadingEdge
+#./runMyPy.sh
