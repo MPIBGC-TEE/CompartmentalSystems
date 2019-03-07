@@ -25,8 +25,56 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun
 from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs2
+from typing import Callable,Iterable,Union,Optional,List
+
+class BlockRhs:
+    def __init__(self,f:Callable[[np.double,List[np.ndarray]],np.ndarray],dims:List[int]):
+        self.f       =f
+        self.dims    =dims
+    
+    def __call__(self,t,XS):
+        return self.f(t,*XS)
+
+    def skew(self,other:'BlockRhs'):
+        sl=len(self.dims)
+        ol=len(other.dims)
+        if ol!=(sl+1):
+            raise Exception("Dimension mismatch")
+
+        #def skew_rhs(t,X):
+        #    X1=X[0:self.dim]
+        #    X2=X[self.dim:]
+        #    R1=self.f(t,X1)
+        #    R2=b(t,X1,X2)
+        #    return np.append(R1,R2)
+        #
+        #return self.__class__(skew_rhs,b.dim1+b.dim2)
+
+         
 
 
+
+
+class IVP:
+    def __init__(self,rhs:BlockRhs,start_vec):
+        if start_vec.shape!=(rhs.dim,):
+            raise Exception("Dimension mismatch")
+        self.rhs      =rhs
+        self.start_vec=start_vec
+    def skew(
+             self
+             # the new rhs accepts two blocks X1 and X2 and would not work as a single rhs for the solver it distinguishes the 
+            ,b:BlockRhs
+            ,additional_start_vec:np.ndarray
+        ):
+        if additional_start_vec.shape!=(b.dim2,):
+            raise Exception("Dimension mismatch")
+        ssv=self.start_vec
+        srhs=self.rhs
+        return self.__class__(srhs.skew(b),np.append(ssv,additional_start_vec))
+
+
+        
 
 class TestDiscreteModelRun(InDirTest):
     def test_from_SmoothModelRun(self):
@@ -266,6 +314,7 @@ class TestDiscreteModelRun(InDirTest):
             ,parameter_dict
             ,func_dict
         )
+        rr=BlockRhs(sol_num_rhs,[nr_pools])
         # for the rhs of the complete system have to creat a vector valued function, 
         # The first part of the vector will be the solution x
         # Then the components of the state transition operator follow
@@ -301,14 +350,22 @@ class TestDiscreteModelRun(InDirTest):
                 res[(i+1)*nr_pools:(i+2)*nr_pools]=Phi_ress[i]
             return res
 
+        def bf(t,x,Phi_1d):
+            B=B_func(t,*x)
+            Phi_cols=[Phi_1d[i*nr_pools:(i+1)*nr_pools] for i in range(nr_pools)]
+            Phi_ress=[np.matmul(B,pc) for pc in Phi_cols]
+            return np.stack([np.matmul(B,pc) for pc in Phi_cols]).flatten()
+        br=BlockRhs(bf,[nr_pools,nq])
+        #mat_num_rhs_1d=rr.skew(br)
+
         start_Phi_1d=np.identity(nr_pools).reshape(nq,)
         start_skew=np.append(start_x,start_Phi_1d)
         pe('start_skew',locals())
-        s_skew=solve_ivp(fun=mat_num_rhs_1d,t_span=[0,t_max],y0=start_skew,max_step=delta_t,vectorized=False,method='LSODA')
+        #s_skew=solve_ivp(fun=mat_num_rhs_1d,t_span=[0,t_max],y0=start_skew,max_step=delta_t,vectorized=False,method='LSODA')
         # extract the solution for x, and Phi
-        sol_skew=s_skew.y[x_i_start:x_i_end,:]
-        Phi_skew=s_skew.y[Phi_1d_i_start:Phi_1d_i_end,:]
-        Phi_skew_mat=Phi_skew.reshape(nr_pools,nr_pools,len(s_skew.t))
+        #sol_skew=s_skew.y[x_i_start:x_i_end,:]
+        #Phi_skew=s_skew.y[Phi_1d_i_start:Phi_1d_i_end,:]
+        #Phi_skew_mat=Phi_skew.reshape(nr_pools,nr_pools,len(s_skew.t))
 
         def Phi_ref(times):
             if isinstance(times,np.ndarray): 
@@ -345,7 +402,15 @@ class TestDiscreteModelRun(InDirTest):
             #the according state (only indirectly via Phi ..)
             res_int=np.matmul(Phi_mat,u_num(t))
             return np.append(res_x_and_Phi,res_int)
+       
+        def bfu(t,x,Phi_1d,integrand):
+            Phi_mat=Phi_1d.reshape(nr_pools,nr_pools)
 
+            # in this case we do not even need the integrand values since for this application 
+            # the derivative only depends on t
+            res_int=np.matmul(Phi_mat,u_num(t))
+
+        #mat_num_rhs_1d.skew(bfu)
         start_skew_skew=np.append(start_skew,np.zeros(nr_pools))
         s_skew_skew=solve_ivp(fun=skew_skew_num_rhs_1d,t_span=[0,t_max],y0=start_skew_skew,max_step=delta_t,vectorized=False,method='LSODA')
         t_skew_skew=s_skew_skew.t
