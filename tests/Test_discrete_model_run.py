@@ -45,6 +45,11 @@ class BlockRhs:
         pe('indices',locals())
         def rhs(t,X):
             XS=[X[indices[i]:indices[i+1]] for i in range(nb)]
+            # the arglists of the functions increase
+            #res0=self.function[0](t,XS[0])
+            #res1=self.function[1](t,XS[0],XS[1])
+            #res2=self.function[2](t,XS[0],XS[1],XS[2])
+            arglists=[XS[:(i+1)] for i in range(nb)]
             return X
 
         return rhs
