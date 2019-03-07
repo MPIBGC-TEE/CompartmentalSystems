@@ -25,23 +25,31 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun
 from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs2
-from typing import Callable,Iterable,Union,Optional,List
+from typing import Callable,Iterable,Union,Optional,List,Tuple
 
 class BlockRhs:
-    def __init__(self,f:Callable[[np.double,List[np.ndarray]],np.ndarray],dims:List[int]):
-        self.f       =f
-        self.dims    =dims
-    
-    def __call__(self,t,XS):
-        return self.f(t,*XS)
+    def __init__(self,l:List[Tuple[Callable,int]]):
+        self.functions=[t[0] for t in l]
+        self.dims     =[t[1] for t in l]
 
-    def skew(self,other:'BlockRhs'):
-        sl=len(self.dims)
-        ol=len(other.dims)
-        if ol!=(sl+1):
-            raise Exception("Dimension mismatch")
+    @property 
+    def vector_rhs(self):
+        # creates a function that accepts a complete vector X
+        # and cuts it into the different parts feeds it to
+        # the appropirate function 
+        # and recombined the results to a vector again
+        # the resulting function can then be used by an ode solver
+        # first compute the indices of cuts in X by summing the dimensions
+        nb=len(self.dims)
+        indices=[0]+[ sum(self.dims[:(i+1)]) for i in range(nb)]
+        pe('indices',locals())
+        def rhs(t,X):
+            XS=[X[indices[i]:indices[i+1]] for i in range(nb)]
+            return X
 
-        #def skew_rhs(t,X):
+        return rhs
+
+
         #    X1=X[0:self.dim]
         #    X2=X[self.dim:]
         #    R1=self.f(t,X1)
@@ -73,8 +81,36 @@ class IVP:
         srhs=self.rhs
         return self.__class__(srhs.skew(b),np.append(ssv,additional_start_vec))
 
+class TestBlockRhs(InDirTest):
+    def test_skew(self):
+        n_1=1
+        def x_1_dot(t,X1):
+            # in general do something with t,X1 
+            # X_1_dot=f(t,X1)
+            # but here only return constant 
+            return n_1*np.ones(n_1)
 
+
+        n_2=2
+        def x_2_dot(t:np.double,X1:np.ndarray,X2:np.ndarray):
+            # in general do something with t,X1 and X2 
+            # X_2_dot=g(t,X1,X2)
+            # but here only return constant 
+            return n_2*np.ones(n_2) 
         
+        
+        n_3=3
+        def x_3_dot(t:np.double,X1:np.ndarray,X2:np.ndarray,X3:np.ndarray):
+            # in general do something with t,X1 and X2, X3
+            # X_3_dot=h(t,X1,X2,X3)
+            # but here only return constant 
+            return nh*np.ones(n_3) 
+        
+        # build the combined System
+        b_s=BlockRhs([(x_1_dot,n_1),(x_2_dot,n_2),(x_3_dot,n_3)])
+        # it should take time and 
+        print(b_s.vector_rhs(0,np.ones(n_1+n_2+n_3)))
+        #self.assertEqual(b_s.vector_rhs(0,np.ones(n_1+n_2+n_3)),np.array([1,2,2,3,3,3]))
 
 class TestDiscreteModelRun(InDirTest):
     def test_from_SmoothModelRun(self):
