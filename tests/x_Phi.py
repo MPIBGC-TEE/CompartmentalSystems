@@ -52,6 +52,23 @@ ts   =x_phi_ivp.get_values("t",t_span=t_span,max_step=1)
 xs   =x_phi_ivp.get_values("sol",t_span=t_span)
 phis =x_phi_ivp.get_values("Phi_1d",t_span=t_span)
 
+sol_rhs=numerical_rhs2(
+     srm.state_vector
+    ,srm.time_symbol
+    ,srm.F
+    ,parameter_dict
+    ,func_dict
+)
+x_func=solve_ivp(sol_rhs,y0=start_x,t_span=t_span,dense_output=True).sol
+def check_phi_args(t,s):
+    # first check 
+    if t < t_0:
+        raise(Error("Evaluation of Phi(t,s) with t before t0 is not possible"))
+    if s < t_0 :
+        raise(Error("Evaluation of Phi(t,s) wiht s before t0 is not possible"))
+    
+    if s == t:
+        return np.identity(srm.nr_pools)
 
 def Phi(t,s):
     # this whole function would make sense if 
@@ -72,17 +89,10 @@ def Phi(t,s):
     We can reconstruct Phi(t,s)=Phi(t,t_0)* Phi(s,t_0)^-1
     This is what this function does.
     """
-    # first check 
-    if t < t_0:
-        raise(Error("Evaluation of Phi(t,s) with t before t0 is not possible"))
-    if s < t_0 :
-        raise(Error("Evaluation of Phi(t,s) wiht s before t0 is not possible"))
-    
-    if s == t:
-        return np.identity(srm.nr_pools)
+    check_phi_args(t,s):
 
     if s>t:
-        return Phi(s,t)
+        return np.linalg.inv(Phi(s,t))
 
     t_span=(t_0,max(s,t,t_max))
     # the next call will cost nothing if s and t are smaller than t_max
@@ -97,6 +107,45 @@ def Phi(t,s):
     # the following inversion is very expensive and should be cached or avoided
     # to save space in a linear succession state Transition operators from step to step
     # then everything can be reached by a 
+    return np.matmul(Phi_t0_mat(t),np.linalg.inv(Phi_t0_mat(s)))
+
+
+def Phi_direct(t,s):
+    """
+    For t_0 <s <t we have
+    
+    compute Phi(t,s) directly
+    by integrating 
+    d Phi/dt= B(x(tau))  from s to t with the startvalue Phi(s)=UnitMatrix
+    It assumes the existence of a solution x 
+    """
+
+    check_phi_args(t,s):
+    # the next call will cost nothing if s and t are smaller than t_max
+    # since the ivp caches the solutions up to t_0 after the first call.
+    Phi_t0 =x_phi_ivp.get_function("Phi_1d",t_span=t_span)
+    
+    if s == t_0:
+        return Phi_t0_mat(t)
+    
+    def Phi_rhs(tau,Phi_1d):
+        B=B_func(tau,*x_func(tau))
+        #Phi_cols=[Phi_1d[i*nr_pools:(i+1)*nr_pools] for i in range(nr_pools)]
+        #Phi_ress=[np.matmul(B,pc) for pc in Phi_cols]
+        #return np.stack([np.matmul(B,pc) for pc in Phi_cols]).flatten()
+        return np.matmul(B,Phi_1d.reshape(nr_pools,nr_pools)).flatten()
+     
+    Phi_values=solve_ivp(Phi_rhs,y0=np.identity(srm.nr_pools),t_span=(s,t)).y
+    val=y[:,-1].reshape(srm.nr_pools,srm.nr_pools)
+    
+    if s>t:
+        return np.linalg.inv(val)
+    else: 
+        return val
+
+
+
+
     return np.matmul(Phi_t0_mat(t),np.linalg.inv(Phi_t0_mat(s)))
 
 nr_pools=srm.nr_pools
@@ -125,14 +174,14 @@ def trapez_integral(i):
     #pe('val',locals())
     return val
 
-def continiuous_integral(t):
+def continiuous_integral(t,Phi_func):
     # We compute the integral of the continious function
     # With an integration rule that 
     #print(phi_vals)
     def rhs(tau,X):
         # although we do not need X we have to provide a 
         # righthandside suitable for solve_ivp
-        return np.matmul(Phi(t,tau),u_num(tau)).flatten()
+        return np.matmul(Phi_func(t,tau),u_num(tau)).flatten()
 
     #pe('integrand_vals',locals())
     ys= solve_ivp(rhs,y0=np.zeros(nr_pools),t_span=(t_0,t)).y
@@ -140,22 +189,14 @@ def continiuous_integral(t):
     val=ys[:,-1].reshape(nr_pools,1)
     #pe('val',locals())
     return val
-def continiuous_integral2(t):
-    # for this we do not even need the Matrix Phi but only a solution for 
-    # We compute the integral of the continious function
-    # With an integration rule that avoids the 
-    # expensive inversion of Phi(t,t0)
-    # and computes Phi(tau,t)*u(tau) by integrating B*u(tau) from 
-    # assumes Phi as 
-    #print(phi_vals)
-    return val
 
 ## reconstruct the solution with Phi and the integrand
 # x_t=Phi(t,t0)*x_0+int_t0^t Phi(tau,t0)*u(tau) dtau
 # x_t=a(t)+b(t)
 a_list=[np.matmul(Phi(t,t_0),start_x.reshape(nr_pools,1)) for t in ts]
 b_list=[ trapez_integral(i) for i,t in enumerate(ts)]
-b_cont_list=[continiuous_integral(t) for t in ts]
+b_cont_list=[continiuous_integral(t,Phi) for t in ts]
+b_cont_list=[continiuous_integral(t,Phi) for t in ts]
 x2_list=[a_list[i]+b_list[i] for i,t in enumerate(ts)]
 x3_list=[a_list[i]+b_cont_list[i] for i,t in enumerate(ts)]
 def vectorlist2array(l):
