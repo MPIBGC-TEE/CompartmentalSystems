@@ -13,7 +13,7 @@ from pathlib import Path
 from scipy.integrate import quad
 from scipy.interpolate import interp1d 
 from scipy.misc import factorial
-from scipy.integrate import solve_ivp,OdeSolver,odeint
+from scipy.integrate import solve_ivp,fixed_quad
 from sympy import sin, symbols, Matrix, Symbol, exp, solve, Eq, pi, Piecewise, Function, ones,var
 from typing import Callable,Iterable,Union,Optional,List,Tuple 
 from copy import copy
@@ -66,12 +66,13 @@ def X_Phi_IVP(srm,parameter_dict,func_dict,start_x):
     #
     def Phi_rhs(t,x,Phi_1d):
         B=B_func(t,*x)
-        Phi_cols=[Phi_1d[i*nr_pools:(i+1)*nr_pools] for i in range(nr_pools)]
-        Phi_ress=[np.matmul(B,pc) for pc in Phi_cols]
-        return np.stack([np.matmul(B,pc) for pc in Phi_cols]).flatten()
+        #Phi_cols=[Phi_1d[i*nr_pools:(i+1)*nr_pools] for i in range(nr_pools)]
+        #Phi_ress=[np.matmul(B,pc) for pc in Phi_cols]
+        #return np.stack([np.matmul(B,pc) for pc in Phi_cols]).flatten()
+        return np.matmul(B,Phi_1d.reshape(nr_pools,nr_pools)).flatten()
 
     #create the additional startvecot for the components of Phi
-    start_Phi_1d=np.identity(nr_pools).reshape(nr_pools**2)
+    start_Phi_1d=np.identity(nr_pools).flatten()
 
     block_ivp=BlockIvp(
         time_str='t'
@@ -185,8 +186,8 @@ class BlockIvp:
         names           =[sb[0]   for sb in start_blocks]
         start_arrays    =[sb[1]   for sb in start_blocks]
         shapes          =[a.shape  for a in start_arrays]
-        #assert that we have only vectors as startvalues
-        assert(all([len(s)==1 for s in shapes]))
+        #assert that we have only vectors or n,1 arrays as startvalues
+        assert( all([len(s)==1 or (len(s)==2 and s[1]==1) for s in shapes]))
         #
         dims=[s[0] for s in shapes]
         nb=len(dims)
@@ -209,7 +210,7 @@ class BlockIvp:
         if not(isinstance(t_span,tuple)):
             raise Exception('''
             scipy.solve_ivp actually allows a list for t_span, but we insist 
-            that it should be a tuple, since we want to cache the solution 
+            that it should be an (immutable) tuple, since we want to cache the solution 
             and want to use t_span as a hash.''')
         cache_key=(t_span,dense_output)
         if cache_key in self._cache.keys():
@@ -231,18 +232,21 @@ class BlockIvp:
         )
         self._cache[cache_key]=sol
         return sol
-    #
+    def check_block_exists(self,block_name):
+        if not(block_name in set(self.index_dict.keys()).union(self.time_str)):
+            raise Exception("There is no block with this name")
+
     def get_values(self,block_name,t_span,**kwargs):
+        self.check_block_exists(block_name)
         sol=self.solve(t_span=t_span,**kwargs)
         if block_name==self.time_str:
             return sol.t
-        if block_name in self.index_dict.keys():
-            lower,upper=self.index_dict[block_name] 
-            return sol.y[lower:upper,:]
-        else:
-            raise Exception("There is no block with this name")
+        
+        lower,upper=self.index_dict[block_name] 
+        return sol.y[lower:upper,:]
         
     def get_function(self,block_name,t_span,**kwargs):
+        self.check_block_exists(block_name)
         if block_name==self.time_str:
             print("""
             warning:
@@ -252,13 +256,12 @@ class BlockIvp:
             # so we give back the identiy
             return lambda t:t
 
-        elif block_name in self.index_dict.keys():
-            lower,upper=self.index_dict[block_name] 
-            complete_sol_func=self.solve(t_span=t_span,dense_output=True).sol
-            def block(t):
-                return complete_sol_func(t)[lower:upper]
-            
-            return block
+        lower,upper=self.index_dict[block_name] 
+        complete_sol_func=self.solve(t_span=t_span,dense_output=True).sol
+        def block(t):
+            return complete_sol_func(t)[lower:upper]
+        
+        return block
 
 class TestBlockRhs(InDirTest):
     def test_block_rhs(self):
@@ -427,16 +430,16 @@ class TestDiscreteModelRun(InDirTest):
              ]
         )
         s_block_ivp=block_ivp.solve(t_span=t_span)
-        t_block_rhs    = block_ivp.get("t"         ,t_span=t_span)
-        sol_block_rhs  = block_ivp.get("sol"       ,t_span=t_span)
-        Phi_block_rhs  = block_ivp.get("Phi"       ,t_span=t_span)
+        t_block_rhs    = block_ivp.get_values("t"         ,t_span=t_span)
+        sol_block_rhs  = block_ivp.get_values("sol"       ,t_span=t_span)
+        Phi_block_rhs  = block_ivp.get_values("Phi"       ,t_span=t_span)
         Phi_block_rhs_mat   =Phi_block_rhs.reshape(nr_pools,nr_pools,len(t_block_rhs))
         #print(block_ivp.get("sol",t_span=t_span))
         # for comparison solve the original system 
         sol=solve_ivp(fun=sol_rhs,t_span=(0,t_max),y0=start_x,max_step=delta_t,method='LSODA')
         # and make sure that is identical with the block rhs by using the interpolation function
         # for the block system and apply it to the grid that the solver chose for sol
-        sol_func  = block_ivp.get("sol"       ,t_span=t_span,dense_output=True)
+        sol_func  = block_ivp.get_function("sol"       ,t_span=t_span,dense_output=True)
         self.assertTrue(np.allclose(sol.y,sol_func(sol.t),rtol=1e-2))
         # check Phi
         self.assertTrue(np.allclose(Phi_block_rhs_mat,Phi_ref(t_block_rhs),atol=1e-2))
@@ -509,144 +512,5 @@ class TestDiscreteModelRun(InDirTest):
         
 
     def test_linearization_by_skew_product(self):
-        # The state transition operator Phi is defined for linear systems only
-        # To compute it we have to create a linear system first by substituting
-        # the solution into the righthandside
-        # This could be done in different ways:
-        # 1.)   By solving the ODE with the actual start vector first and then
-        #       substituting the interpolation into the righthandside used to compute the state transition operator
-        # 2.)   Creation of a skewproductsystem whose solution yields
-        #       the solution for the initial value problem and the state transition operator for Phi(t,t_0) simultaniously.
-        k_0_val=1
-        k_1_val=2
-        x0_0=np.float(2)
-        x0_1=np.float(1)
-        delta_t=np.float(1./4.)
-        # 
-        var(["x_0","x_1","k_0","k_1","t","u"])
-        #
-        inputs={
-             0:u
-            ,1:u*t
-        }
-        outputs={
-             0:x_0*k_0
-            ,1:x_1*k_1
-        }
-        internal_fluxes={}
-        svec=Matrix([x_0,x_1])
-        srm=SmoothReservoirModel(
-                 state_vector       =svec
-                ,time_symbol        =t
-                ,input_fluxes       =inputs
-                ,output_fluxes      =outputs
-                ,internal_fluxes    =internal_fluxes
-        )
-        t_max=4
-        times = np.linspace(0, t_max, 11)
-        parameter_dict = {
-             k_0: k_0_val
-            ,k_1: k_1_val
-            ,u:1
-        
-        }
-        func_dict={}
-        start_x= np.array([x0_0,x0_1])
-        x_phi_ivp=X_Phi_IVP(srm,parameter_dict,func_dict,start_x)
-        
-        # we now express the solution as integral expression of the state transition operator
-        # x_t=Phi(t,t0)*x_0+int_t0^t Phi(t,tau)*u(tau) dtau
-        # and check that we get the original solution back
-        t_0=0
-        t_span=(t_0,t_max)
-        Phi_t0 =x_phi_ivp.get_function("Phi_1d",t_span=t_span)
-        times = np.linspace(t_0, t_max, 11)
-        ts   =x_phi_ivp.get_values("t",t_span=t_span,max_step=1)
-        xs   =x_phi_ivp.get_values("sol",t_span=t_span)
-        phis =x_phi_ivp.get_values("Phi_1d",t_span=t_span)
-        
-        def Phi_t0_mat(t):
-            return np.matrix(Phi_t0(t).reshape(srm.nr_pools,srm.nr_pools))
-        
-        def Phi(t,s):
-            # this whole function would make sense if 
-            # one could guarantee that the state transition operator will
-            # be required only for a fixed grid 
-            # (ideally to be determined by the functions unsing it before this function is called)
-            # so that no interpolation takes place (as it is now)
-            # but only cached values would be required
-            # The the cost of computing the inverses for every time step would be
-            # justified
-            """
-            For t_0 <s <t we have
-            
-            Phi(t,t_0)=Phi(t,s)*Phi(s,t_0)
-            
-            If we know $Phi(s,t_0) \forall s \in [t,t_0] $
-            
-            We can reconstruct Phi(t,s)=Phi(t,t_0)* Phi(s,t_0)^-1
-            This is what this function does.
-            """
-            # first check 
-            if t_0 > t:
-                raise(Error("Evaluation before t0 is not possible"))
-            if t_0 == t:
-                return np.identity(srm.nr_pools)
-            # fixme: mm 3/9/2019
-            # the following inversion is very expensive and should be cached 
-            # to save space in a linear succession state Transition operators from step to step
-            # then everything can be reached by a 
-            return np.matmul(Phi_t0_mat(t),np.linalg.inv(Phi_t0_mat(s)))
-        
-        # We compute the integral 
-        # NOT as the solution of an ivp but with an integration rule that 
-        # works with arrays instead of functions
-        nr_pools=srm.nr_pools
-        rs=(nr_pools,len(ts))
-        
-        u_sym=srm.external_inputs
-        u_num=numerical_function_from_expression(u_sym,(t,),parameter_dict,{})
-        #
-        def integral(i,t):
-            if i==0:
-                return np.zeros(nr_pools)
-            # the integrals boundaries grow with time
-            # so the vector for the trapezrule becomes longer and longer
-            taus=ts[0:i]
-            sh=(nr_pools,len(taus)) 
-            #t=taus[-1]
-            phi_vals=np.array([Phi(t,tau) for tau in taus])
-            print(phi_vals)
-            integrand_vals=np.array([np.matmul(Phi(t,tau),u_num(tau)) for tau in taus]).reshape(sh)
-            pe('integrand_vals',locals())
-            return np.trapz(y=integrand_vals,x=taus).reshape(nr_pools)
-
-        
-        ## reconstruct the solution with Phi and the integrand
-        # x_t=Phi(t,t0)*x_0+int_t0^t Phi(tau,t0)*u(tau) dtau
-        a=np.array([np.matmul(Phi_t0_mat(t),start_x) for t in ts]).reshape(rs)
-        b=np.array([ integral(i,t) for i,t in enumerate(ts)]).reshape(rs)
-        xs2=a+b.reshape(rs) 
-        fig=plt.figure(figsize=(10,17))
-        ax1=fig.add_subplot(2,1,1)
-        ax1.plot(ts,xs[0,:],'*',color='blue' ,label="sol[0]")
-        ax1.plot(ts,xs[1,:],'+',color='blue' ,label="sol[1]")
-
-        ax1.plot(ts,xs2[0,:],'o',color='red' ,label="sol2[0]")
-        #ax1.plot(ts,xs2[1,:],'x',color='red' ,label="sol2[1]")
-
-        #ax1.plot(ts,a[0,:],'o',color='orange' ,label="a[0]")
-        #ax1.plot(ts,a[1,:],'x',color='orange' ,label="a[1]")
-
-        #ax1.plot(ts,b[0,:],'o',color='green' ,label="b[0]")
-        #ax1.plot(ts,b[1,:],'x',color='green' ,label="b[1]")
-        ax1.legend()
-
-        #ax2=fig.add_subplot(2,1,2)
-        #ax2.plot(ts,integrand_vals[0,:],'x',color='green' ,label="integrand")
-        #ax2.plot(ts,phi_int_vals1[0,:],'x',color='red' ,label="phi 1")
-        #ax2.plot(ts,phi_int_vals2[0,:],'x',color='red' ,label="phi 2")
-        #ax2.legend()
-        
-        fig.savefig("solutions.pdf")
+        pass # contents in x_Phi.py
 
