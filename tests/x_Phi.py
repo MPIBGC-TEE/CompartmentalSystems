@@ -20,8 +20,8 @@ inputs={
     ,1:u*t
 }
 outputs={
-     0:x_0*k_0
-    ,1:x_1*k_1
+     0:k_0*x_0**2
+    ,1:k_1*x_1
 }
 internal_fluxes={}
 svec=Matrix([x_0,x_1])
@@ -48,7 +48,7 @@ x_phi_ivp=X_Phi_IVP(srm,parameter_dict,func_dict,start_x)
 t_0=0
 t_span=(t_0,t_max)
 times = np.linspace(t_0, t_max, 11)
-ts   =x_phi_ivp.get_values("t",t_span=t_span,max_step=1)
+ts   =x_phi_ivp.get_values("t",t_span=t_span,max_step=.2)
 xs   =x_phi_ivp.get_values("sol",t_span=t_span)
 phis =x_phi_ivp.get_values("Phi_1d",t_span=t_span)
 
