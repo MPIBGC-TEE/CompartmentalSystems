@@ -89,17 +89,24 @@ def Phi(t,s):
     We can reconstruct Phi(t,s)=Phi(t,t_0)* Phi(s,t_0)^-1
     This is what this function does.
     """
-    check_phi_args(t,s):
-
-    if s>t:
-        return np.linalg.inv(Phi(s,t))
-
-    t_span=(t_0,max(s,t,t_max))
+    check_phi_args(t,s)
     # the next call will cost nothing if s and t are smaller than t_max
     # since the ivp caches the solutions up to t_0 after the first call.
+    t_span=(t_0,max(s,t,t_max))
     Phi_t0 =x_phi_ivp.get_function("Phi_1d",t_span=t_span)
     def Phi_t0_mat(t):
         return Phi_t0(t).reshape(srm.nr_pools,srm.nr_pools)
+
+    if s>t:
+        # we could call the function recoursively with exchanged arguments but
+        #
+        # res=np.linalg.inv(Phi(s,t))
+        # 
+        # But this would involve 2 inversions. 
+        # To save one inversion we use (A*B)^-1=B^-1*A^-1
+        return np.matmul(np.linalg.inv(Phi_t0_mat(s)),Phi_t0_mat(t))
+        
+
     
     if s == t_0:
         return Phi_t0_mat(t)
@@ -109,7 +116,8 @@ def Phi(t,s):
     # then everything can be reached by a 
     return np.matmul(Phi_t0_mat(t),np.linalg.inv(Phi_t0_mat(s)))
 
-
+tup=(srm.time_symbol,)+tuple(srm.state_vector)
+B_func=numerical_function_from_expression(srm.compartmental_matrix,tup,parameter_dict,func_dict)
 def Phi_direct(t,s):
     """
     For t_0 <s <t we have
@@ -120,13 +128,10 @@ def Phi_direct(t,s):
     It assumes the existence of a solution x 
     """
 
-    check_phi_args(t,s):
+    check_phi_args(t,s)
     # the next call will cost nothing if s and t are smaller than t_max
     # since the ivp caches the solutions up to t_0 after the first call.
-    Phi_t0 =x_phi_ivp.get_function("Phi_1d",t_span=t_span)
-    
-    if s == t_0:
-        return Phi_t0_mat(t)
+    t_span=(t_0,max(s,t,t_max))
     
     def Phi_rhs(tau,Phi_1d):
         B=B_func(tau,*x_func(tau))
@@ -135,10 +140,11 @@ def Phi_direct(t,s):
         #return np.stack([np.matmul(B,pc) for pc in Phi_cols]).flatten()
         return np.matmul(B,Phi_1d.reshape(nr_pools,nr_pools)).flatten()
      
-    Phi_values=solve_ivp(Phi_rhs,y0=np.identity(srm.nr_pools),t_span=(s,t)).y
-    val=y[:,-1].reshape(srm.nr_pools,srm.nr_pools)
+    Phi_values=solve_ivp(Phi_rhs,y0=np.identity(srm.nr_pools).flatten(),t_span=(s,t)).y
+    val=Phi_values[:,-1].reshape(srm.nr_pools,srm.nr_pools)
     
     if s>t:
+        # we could probably express this by a backward integration
         return np.linalg.inv(val)
     else: 
         return val
@@ -196,13 +202,14 @@ def continiuous_integral(t,Phi_func):
 a_list=[np.matmul(Phi(t,t_0),start_x.reshape(nr_pools,1)) for t in ts]
 b_list=[ trapez_integral(i) for i,t in enumerate(ts)]
 b_cont_list=[continiuous_integral(t,Phi) for t in ts]
-b_cont_list=[continiuous_integral(t,Phi) for t in ts]
+b_cont2_list=[continiuous_integral(t,Phi_direct) for t in ts]
 x2_list=[a_list[i]+b_list[i] for i,t in enumerate(ts)]
 x3_list=[a_list[i]+b_cont_list[i] for i,t in enumerate(ts)]
+x4_list=[a_list[i]+b_cont2_list[i] for i,t in enumerate(ts)]
 def vectorlist2array(l):
     return np.stack( [vec.flatten() for vec in l],1)
 
-a,b,x2,x3=map(vectorlist2array,[a_list,b_list,x2_list,x3_list])
+a,b,x2,x3,x4=map(vectorlist2array,[a_list,b_list,x2_list,x3_list,x4_list])
 fig=plt.figure(figsize=(10,17))
 ax1=fig.add_subplot(2,1,1)
 ax1.plot(ts,xs[0,:],'o',color='blue' ,label="sol[0]")
@@ -213,6 +220,9 @@ ax1.plot(ts,x2[1,:],'+',color='red' ,label="x2[0]")
 
 ax1.plot(ts,x3[0,:],'x',color='green' ,label="x3[0]")
 ax1.plot(ts,x3[1,:],'x',color='green' ,label="x3[1]")
+
+ax1.plot(ts,x3[0,:],'+',color='orange' ,label="x4[0]")
+ax1.plot(ts,x3[1,:],'+',color='orange' ,label="x4[1]")
 #ax1.plot(ts,xs2[1,:],'x',color='red' ,label="sol2[1]")
 
 #ax1.plot(ts,a[0,:],'o',color='orange' ,label="a[0]")
