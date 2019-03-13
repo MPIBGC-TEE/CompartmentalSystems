@@ -1,4 +1,4 @@
-import .SmoothReservoirModel
+from .smooth_reservoir_model import SmoothReservoirModel
 from BlockIvp import BlockIvp
 class ParameterizedSmootReservoirModel:
     # think of the instances as a SymbolicModel applied to a parameter set
@@ -11,7 +11,7 @@ class ParameterizedSmootReservoirModel:
     # a bin model
     # and organize the similarities in a possible interface or abstract 
     # Base class
-    def __init__(self,srm:SmoothReservoirModel,parameter_dict,funct_dict)
+    def __init__(self,srm:SmoothReservoirModel,parameter_dict,funct_dict):
         self.srm=srm
         self.parameter_dict=parameter_dict
 

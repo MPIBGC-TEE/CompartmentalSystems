@@ -1,4 +1,7 @@
-
+import numpy as np
+from sympy import var,Matrix
+from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+from CompartmentalSystems.ParameterizedModel import ParameterizedModel
 # The state transition operator Phi is defined for linear systems only
 # To compute it we have to create a linear system first by substituting
 # the solution into the righthandside
@@ -40,7 +43,9 @@ parameter_dict = {
     ,u:1}
 func_dict={}
 start_x= np.array([x0_0,x0_1]) #make it a column vector for later use
-x_phi_ivp=X_Phi_IVP(srm,parameter_dict,func_dict,start_x)
+pm=ParameterizedModel(parameter_dict,func_dict)
+my_x_phi_ivp=pm.x_phi_ivp(parameter_dict,func_dict,start_x)
+
 
 # we now express the solution as integral expression of the state transition operator
 # x_t=Phi(t,t0)*x_0+int_t0^t Phi(t,tau)*u(tau) dtau
@@ -48,9 +53,9 @@ x_phi_ivp=X_Phi_IVP(srm,parameter_dict,func_dict,start_x)
 t_0=0
 t_span=(t_0,t_max)
 times = np.linspace(t_0, t_max, 11)
-ts   =x_phi_ivp.get_values("t",t_span=t_span,max_step=.2)
-xs   =x_phi_ivp.get_values("sol",t_span=t_span)
-phis =x_phi_ivp.get_values("Phi_1d",t_span=t_span)
+ts   =my_x_phi_ivp.get_values("t",t_span=t_span,max_step=.2)
+xs   =my_x_phi_ivp.get_values("sol",t_span=t_span)
+phis =my_x_phi_ivp.get_values("Phi_1d",t_span=t_span)
 
 sol_rhs=numerical_rhs2(
      srm.state_vector
@@ -93,7 +98,7 @@ def Phi(t,s):
     # the next call will cost nothing if s and t are smaller than t_max
     # since the ivp caches the solutions up to t_0 after the first call.
     t_span=(t_0,max(s,t,t_max))
-    Phi_t0 =x_phi_ivp.get_function("Phi_1d",t_span=t_span)
+    Phi_t0 =my_x_phi_ivp.get_function("Phi_1d",t_span=t_span)
     def Phi_t0_mat(t):
         return Phi_t0(t).reshape(srm.nr_pools,srm.nr_pools)
 
