@@ -1,7 +1,9 @@
 import numpy as np
 from sympy import var,Matrix
+from scipy.integrate import solve_ivp
+from testinfrastructure.helpers import pe
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
-from CompartmentalSystems.ParameterizedModel import ParameterizedModel
+from CompartmentalSystems.helpers_reservoir import x_phi_ivp,numerical_rhs2,numerical_function_from_expression
 # The state transition operator Phi is defined for linear systems only
 # To compute it we have to create a linear system first by substituting
 # the solution into the righthandside
@@ -43,8 +45,7 @@ parameter_dict = {
     ,u:1}
 func_dict={}
 start_x= np.array([x0_0,x0_1]) #make it a column vector for later use
-pm=ParameterizedModel(parameter_dict,func_dict)
-my_x_phi_ivp=pm.x_phi_ivp(parameter_dict,func_dict,start_x)
+my_x_phi_ivp=x_phi_ivp(srm,parameter_dict,func_dict,start_x)
 
 
 # we now express the solution as integral expression of the state transition operator

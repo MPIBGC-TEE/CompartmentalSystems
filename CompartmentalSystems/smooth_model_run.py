@@ -34,24 +34,26 @@ from sympy import lambdify, flatten, latex, Function, sympify, sstr, solve, \
                   ones, Matrix
 from sympy.core.function import UndefinedFunction
 from sympy.abc import _clash
+from sympy.printing import pprint
 
 import scipy.linalg
 from scipy.linalg import inv
 from numpy.linalg import pinv
 from scipy.misc import factorial
-from scipy.integrate import odeint, quad 
+from scipy.integrate import odeint, quad , solve_ivp
 from scipy.interpolate import interp1d, UnivariateSpline
 from scipy.optimize import newton, brentq, minimize
 
 from tqdm import tqdm
+from testinfrastructure.helpers import pe
 
 from .smooth_reservoir_model import SmoothReservoirModel
 from .helpers_reservoir import deprecation_warning,warning ,make_cut_func_set
-from .helpers_reservoir import (has_pw, numsol_symbolic_system, 
-    arrange_subplots, melt, generalized_inverse_CDF, draw_rv, 
-    stochastic_collocation_transform, numerical_rhs, MH_sampling, save_csv, 
-    load_csv, stride ,f_of_t_maker,const_of_t_maker,numerical_function_from_expression)
-
+from .helpers_reservoir import (has_pw, numsol_symbolic_system, numsol_symbolic_system_2
+    ,arrange_subplots, melt, generalized_inverse_CDF, draw_rv
+    ,stochastic_collocation_transform, numerical_rhs, MH_sampling, save_csv
+    ,load_csv, stride ,f_of_t_maker,const_of_t_maker,numerical_function_from_expression
+    ,x_phi_ivp,numerical_rhs2)
 
 class Error(Exception):
     """Generic error occurring in this module."""
@@ -334,6 +336,22 @@ class SmoothModelRun(object):
         return self._solve_age_moment_system(0, None, alternative_times, 
                         alternative_start_values)
 
+    def solve_2(self, alternative_times = None, alternative_start_values=None):
+        """Solve the model and return a solution grid as well as a solution function of time
+
+        Args:
+            alternative_times (numpy.array): If not given, the original time 
+                grid is used.
+            alternative_start_values (numpy.array): If not given, 
+                the original start_values are used.
+
+        Returns:
+            numpy.ndarray: len(times) x nr_pools, contains the pool contents 
+            at the times given in the time grid.
+            funct is a function of time where f(t) is a numpy.ndarray with shape: (nr_pools,)
+        """
+        return self._solve_age_moment_system_2(0, None, alternative_times, 
+                        alternative_start_values)
 
     ##### fluxes as functions #####
     
@@ -2968,7 +2986,8 @@ class SmoothModelRun(object):
                 res[res==0] = np.nan
                 return res
             
-            #fixme: do we really want to cut off here? 
+            # fixme: do we really want to cut off here? 
+            # This could be dangerous
             if t > t_max: t = t_max
 
             new_times = [t0, t]
@@ -2980,6 +2999,85 @@ class SmoothModelRun(object):
             return soln[-1]
 
         return func 
+
+    def _solve_age_moment_system_2(self, max_order, 
+            start_age_moments=None, times=None, start_values=None, store=True):
+        # this function caches the interpolation function instead of the values
+        #store = True
+        if not ((times is None) and (start_values is None)): store = False
+
+        if times is None: 
+            times = self.times
+
+        if start_values is None: start_values = self.start_values
+
+        if not(isinstance(start_values, np.ndarray)):
+            #print(start_values)
+            raise(Error("start_values should be a numpy array"))
+
+        n = self.nr_pools
+        if start_age_moments is None:
+            start_age_moments = np.zeros((max_order, n))
+        
+        start_age_moments_list = flatten([a.tolist() for a in 
+                            [start_age_moments[i,:] 
+                                for i in range(start_age_moments.shape[0])]])
+       
+        storage_key = tuple(start_age_moments_list) + ((max_order,),)
+
+        # return cached result if possible
+        if store:
+            if hasattr(self, "_previously_computed_age_moment_sol2"):
+                if storage_key in self._previously_computed_age_moment_sol2:
+                    #print('using cached age moment system:', storage_key)
+                    #print(
+                    #   self._previously_computed_age_moment_sol2[storage_key])
+                    return self._previously_computed_age_moment_sol2[storage_key]
+            else:
+                self._previously_computed_age_moment_sol2 = {}
+
+        srm = self.model
+        state_vector, rhs = srm.age_moment_system(max_order)
+       
+        # compute solution
+        new_start_values = np.zeros((n*(max_order+1),))
+        new_start_values[:n] = np.array((start_values)).reshape((n,)) 
+        new_start_values[n:] = np.array((start_age_moments_list))
+
+        soln,sol_func = numsol_symbolic_system_2(
+            state_vector,
+            srm.time_symbol,
+            rhs,
+            self.parameter_dict,
+            self.func_set,
+            new_start_values, 
+            times,
+            dense_output=True
+        )
+        def restrictionMaker(order):
+            #pe('soln[:,:]',locals())
+            restrictedSolutionArr=soln[:,:(order+1)*n]
+            def restictedSolutionFunc(t):
+                return sol_func(t)[:(order+1)*n]
+
+            return (restrictedSolutionArr,restictedSolutionFunc)
+            
+        # save all solutions for order <= max_order
+        if store:
+            for order in range(max_order+1):
+                shorter_start_age_moments_list = (
+                    start_age_moments_list[:order*n])
+                #print(start_age_moments_list)
+                #print(shorter_start_age_moments_list)
+                storage_key = (tuple(shorter_start_age_moments_list) 
+                                + ((order,),))
+                #print('saving', storage_key)
+
+                self._previously_computed_age_moment_sol2[storage_key] = restrictionMaker(order)
+                
+                #print(self._previously_computed_age_moment_sol2[storage_key])
+
+        return (soln,sol_func)
 
     def _solve_age_moment_system(self, max_order, 
             start_age_moments=None, times=None, start_values=None, store=True):
@@ -3024,7 +3122,7 @@ class SmoothModelRun(object):
         new_start_values[:n] = np.array((start_values)).reshape((n,)) 
         new_start_values[n:] = np.array((start_age_moments_list))
 
-        soln = numsol_symbolic_system(
+        soln= numsol_symbolic_system(
             state_vector,
             srm.time_symbol,
             rhs,
@@ -3063,12 +3161,12 @@ class SmoothModelRun(object):
         #    m.output_fluxes,
         #    m.internal_fluxes
         #)
-    def skew_product_numerical_rhs(self,additionalVector,PhiSymb):
-        m_no_inputs=self.no_input_model
-        # build the numerical rhs for the solution of the Matrix ivp 
-        # for the state transition operator
-        # since the solver only accepts vetors we have 
-        # to reshape the matrix PHI into a 1d vector
+    #def skew_product_numerical_rhs(self,additionalVector,PhiSymb):
+    #    m_no_inputs=self.no_input_model
+    #    # build the numerical rhs for the solution of the Matrix ivp 
+    #    # for the state transition operator
+    #    # since the solver only accepts vetors we have 
+    #    # to reshape the matrix PHI into a 1d vector
 
 
         
@@ -3161,6 +3259,162 @@ class SmoothModelRun(object):
 
         self._state_transition_operator_values = cache['values']
         self._cache_size = cache['size']
+
+    def check_phi_args(self,t,s):
+        n=self.nr_pools
+        # All functions to compute the state transition operator Phi(t,s)
+        # should check for the following cases
+        t_0=np.min(self.times)
+        if t < t_0:
+            raise(Error("Evaluation of Phi(t,s) with t before t0 is not possible"))
+        if s < t_0 :
+            raise(Error("Evaluation of Phi(t,s) with s before t0 is not possible"))
+        #if t < s : #This can be caused by the ode solvers
+        #    raise(Error("Evaluation of Phi(t,s) with t before s is at the moment switched of"))
+        
+
+    def _state_transition_operator_by_skew_product_system(self, t, s, x=None):
+        """
+        For t_0 <s <t we have
+        
+        Phi(t,t_0)=Phi(t,s)*Phi(s,t_0)
+        
+        If we know $Phi(s,t_0) \forall s \in [t,t_0] $
+        
+        We can reconstruct Phi(t,s)=Phi(t,t_0)* Phi(s,t_0)^-1
+        This is what this function does.
+        """
+        self.check_phi_args(t,s)
+        srm=self.model
+        n=srm.nr_pools
+        if s == t:
+            if x is None:
+                return np.identity(n)
+            else:
+                return x
+
+        time_symbol=srm.time_symbol
+        if not(hasattr(self,'_x_phi_ivp')):
+            self._x_phi_ivp=x_phi_ivp(
+                    srm
+                    ,self.parameter_dict
+                    ,self.func_set
+                    ,self.start_values
+                    ,x_block_name='sol'
+                    ,phi_block_name='Phi_1d'
+                    )
+
+        my_x_phi_ivp=self._x_phi_ivp
+        t_0=np.min(self.times)
+        t_max=np.max(self.times)
+        t_span=(t_0,t_max)
+
+        # ts   =my_x_phi_ivp.get_values(time_symbol.name,t_span=t_span,max_step=.2)
+        # xs   =my_x_phi_ivp.get_values("sol",t_span=t_span)
+        #phis =my_x_phi_ivp.get_values("Phi_1d",t_span=t_span)
+        #pe('phis',locals()) ;raise
+        
+
+        # the next call will cost nothing 
+        # since the ivp caches the solutions up to t_0 after the first call.
+        Phi_t0 =my_x_phi_ivp.get_function("Phi_1d",t_span=t_span)
+
+        def Phi_t0_mat(t):
+            return Phi_t0(t).reshape(srm.nr_pools,srm.nr_pools)
+
+        if s>t:
+            # we could call the function recoursively with exchanged arguments but
+            # as in res=np.linalg.inv(Phi(s,t))
+            # 
+            # But this would involve 2 inversions. 
+            # To save one inversion we use (A*B)^-1=B^-1*A^-1
+            mat =np.matmul(Phi_t0_mat(s),np.linalg.inv(Phi_t0_mat(t)))
+            if x is None:
+                return mat
+            else:
+                return np.matmul(mat,x)
+            
+        
+        
+        if s == t_0:
+            mat=Phi_t0_mat(t)
+            if x is None:
+                return mat
+            else:
+                return np.matmul(mat,x)
+        # fixme: mm 3/9/2019
+        # The following inversion is very expensive 
+        # and should be cached if it can not be avoided
+
+        #pe('t',locals())
+        #pprint(Phi_t0_mat(t))
+        #pe('s',locals())
+        #pprint(Phi_t0_mat(s))
+        #pprint(np.linalg.inv(Phi_t0_mat(s)))
+        #pprint(np.matmul(Phi_t0_mat(t),np.linalg.inv(Phi_t0_mat(s))))
+        
+        mat = np.matmul(Phi_t0_mat(t),np.linalg.inv(Phi_t0_mat(s)))
+        if x is None:
+            return mat
+        else:
+            return np.matmul(mat,x)
+
+    def _state_transition_operator_by_direct_integration(self, t, s, x=None):
+        """
+        For t_0 <s <t we have
+        
+        compute Phi(t,s) directly
+        by integrating 
+        d Phi/dt= B(x(tau))  from s to t with the startvalue Phi(s)=UnitMatrix
+        It assumes the existence of a solution x 
+        """
+        self.check_phi_args(t,s)
+        srm=self.model
+        n=srm.nr_pools
+        if s == t:
+            mat=np.identity(n)
+            if x is None:
+                return mat
+            else:
+                return x
+
+        #sol_rhs=numerical_rhs2(
+        #     srm.state_vector
+        #    ,srm.time_symbol
+        #    ,srm.F
+        #    ,self.parameter_dict
+        #    ,self.func_set
+        #)
+        #t_0=np.min(self.times)
+        #t_max=np.max(self.times)
+        #t_span=(t_0,t_max)
+        #x_func=solve_ivp(sol_rhs,y0=self.start_values,t_span=t_span,dense_output=True).sol
+        x_vals,x_func=self.solve_2()
+        tup=(srm.time_symbol,)+tuple(srm.state_vector)
+        B_func=numerical_function_from_expression(srm.compartmental_matrix,tup,self.parameter_dict,self.func_set)
+        def Phi_rhs(tau,Phi_1d):
+            B=B_func(tau,*x_func(tau))
+            #Phi_cols=[Phi_1d[i*n:(i+1)*n] for i in range(n)]
+            #Phi_ress=[np.matmul(B,pc) for pc in Phi_cols]
+            #return np.stack([np.matmul(B,pc) for pc in Phi_cols]).flatten()
+            return np.matmul(B,Phi_1d.reshape(n,n)).flatten()
+         
+        Phi_values=solve_ivp(Phi_rhs,y0=np.identity(n).flatten(),t_span=(s,t)).y
+        val=Phi_values[:,-1].reshape(n,n)
+        
+        if s>t:
+            # we could probably express this by a backward integration
+            mat=np.linalg.inv(val)
+            if x is None:
+                return mat
+            else:
+                return np.matmul(mat,x)
+        else: 
+            mat=val
+            if x is None:
+                return mat
+            else:
+                return np.matmul(mat,x)
 
     def _state_transition_operator(self, t, t0, x):
         if t0 > t:

@@ -5,6 +5,7 @@ import matplotlib
 matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 from sympy import var,Matrix
+from sympy.printing import pprint
 
 from testinfrastructure.InDirTest import InDirTest
 from testinfrastructure.helpers import pe
@@ -147,7 +148,7 @@ class TestPhi(InDirTest):
             ,1:u*t
         }
         outputs={
-             0:k_0*x_0**2
+             0:k_0*x_0#**2
             ,1:k_1*x_1
         }
         internal_fluxes={}
@@ -176,25 +177,71 @@ class TestPhi(InDirTest):
             ,times=times
             ,func_set=func_dict
         )
-        #now produce the state transition operator by different methods
-        # first check matrix valued versions
-        def Phi(t,s):
-            return smr._state_transition_operator_by_skew_product_system(t, s)
-
-        def Phi_direct(t,s):
-            return smr._state_transition_operator_by_direct_integration(t, s)
-        args=[(s,t) for t in times for s in times if s<=t]
-        pe('args',locals())
-        Phi_vals        =[Phi(*tup) for tup in args]
-        Phi_direct_vals =[Phi_direct(*tup) for tup in args]
-#        ts   =my_x_phi_ivp.get_values("t",t_span=t_span,max_step=.2)
-#        xs   =my_x_phi_ivp.get_values("sol",t_span=t_span)
-#        phis =my_x_phi_ivp.get_values("Phi_1d",t_span=t_span)
-        xs   =smr.solve()
-        pe('xs.shape',locals())
-#        
-#        
         nr_pools=srm.nr_pools
+        # now produce the state transition operator by different methods
+        # if called without x the first two yield a matrix
+        def Phi_skew(t,s,x=None):
+            return smr._state_transition_operator_by_skew_product_system(t,s,x)
+
+        def Phi_direct(t,s,x=None):
+            return smr._state_transition_operator_by_direct_integration(t,s,x)
+
+        # the original implementation requires always a vector phi is applied to 
+        # to avoid the inversion and solve a single system instead
+        def Phi_orig(t,s,x):
+            return smr._state_transition_operator(t,s,x)
+
+        # to be able to compare the results we have to compute them for a 
+        # set of n linear independent vectors
+        def baseVector(i):
+            e_i = np.zeros((nr_pools,1))
+            e_i[i] = 1
+            return e_i
+        bvs = [ baseVector(i) for i in range(nr_pools)]
+        #pe('Phi_skew(2,1,bvs[0])',locals())
+        #raise
+        
+        test_times=np.linspace(t_0, t_max, 11)
+        args=[(t,s,e) for t in test_times for s in test_times if s<=t for e in bvs]
+        resultTupels=[
+            (
+                     np.matmul(   Phi_skew(t,s)    ,e_i) 
+                    ,Phi_skew(t,s,e_i) 
+                    ,np.matmul( Phi_direct(t,s)    ,e_i)
+                    ,Phi_direct(t,s,e_i)
+                    ,Phi_orig(t,s ,e_i)
+            )        
+            for (t,s,e_i) in args
+        ]
+        
+
+        rtol=1e-2
+        def check_tuple(tup):
+            skew_mat,skew_vec,direct_mat,direct_vec,orig_vec=tup
+            if not np.allclose(skew_mat,skew_vec,rtol=rtol):
+                print('skew_mat,skew_vec')
+                pprint((skew_mat,skew_vec))
+                return False
+            if not np.allclose(direct_mat,direct_vec,rtol=rtol):
+                print('direct_mat,direct_vec')
+                pprint((direct_mat,direct_vec))
+                return False
+            if not np.allclose(direct_vec,orig_vec,rtol=rtol):
+                print('direct_vec,orig_vec')
+                pprint((direct_vec,orig_vec))
+                return False
+            return True
+
+        ok=[ check_tuple(tup) for tup in resultTupels ]
+        #ok=[np.allclose(a,b,rtol=rtol) and np.allclose(a,c,rtol=rtol) for (a,b,c) in resultTupels])
+        pe('ok',locals())
+#        ts   =my_x_phi_ivp.get_values("t",t_span=t_span,max_step=.2)
+#        original_sol   =my_x_phi_ivp.get_values("sol",t_span=t_span)
+#        phis =my_x_phi_ivp.get_values("Phi_1d",t_span=t_span)
+        original_sol   =smr.solve()
+        pe('original_sol.shape',locals())
+#        
+#        
 #        rs=(nr_pools,len(ts))
 #        
         u_sym=srm.external_inputs
@@ -204,6 +251,8 @@ class TestPhi(InDirTest):
             # We compute the integral 
             # NOT as the solution of an ivp but with an integration rule that 
             # works with arrays instead of functions
+            # this allows us to predict where we need the state transition operator
+            # but sacrifices precision
             t=times[i]
             if i==0:
                 return np.zeros((nr_pools,1))
@@ -211,13 +260,9 @@ class TestPhi(InDirTest):
             # so the vector for the trapezrule becomes longer and longer
             taus=times[0:i]
             sh=(nr_pools,len(taus)) 
-            #t=taus[-1]
-            phi_vals=np.array([Phi(t,tau) for tau in taus])
-            #print(phi_vals)
-            integrand_vals=np.stack([np.matmul(Phi(t,tau),u_num(tau)).flatten() for tau in taus],1)
-            #pe('integrand_vals',locals())
+            phi_vals=np.array([Phi_skew(t,tau) for tau in taus])
+            integrand_vals=np.stack([np.matmul(Phi_skew(t,tau),u_num(tau)).flatten() for tau in taus],1)
             val=np.trapz(y=integrand_vals,x=taus).reshape(nr_pools,1)
-            #pe('val',locals())
             return val
         
         def continiuous_integral(t,Phi_func):
@@ -228,32 +273,33 @@ class TestPhi(InDirTest):
                 # righthandside suitable for solve_ivp
                 return np.matmul(Phi_func(t,tau),u_num(tau)).flatten()
         
-            #pe('integrand_vals',locals())
             ys= solve_ivp(rhs,y0=np.zeros(nr_pools),t_span=(t_0,t)).y
-            pe('ys.shape',locals())
             val=ys[:,-1].reshape(nr_pools,1)
-            #pe('val',locals())
             return val
         
 
         ## reconstruct the solution with Phi and the integrand
         # x_t=Phi(t,t0)*x_0+int_t0^t Phi(tau,t0)*u(tau) dtau
         # x_t=a(t)+b(t)
-        a_list=[np.matmul(Phi(t,t_0),start_x.reshape(srm.nr_pools,1)) for t in times]
+        a1_list=[np.matmul(  Phi_skew(t,t_0),start_x.reshape(srm.nr_pools,1)) for t in times]
+        a2_list=[np.matmul(Phi_direct(t,t_0),start_x.reshape(srm.nr_pools,1)) for t in times]
         b_list=[ trapez_integral(i) for i,t in enumerate(times)]
-        b_cont_list=[continiuous_integral(t,Phi) for t in times]
+        b_cont1_list=[continiuous_integral(t,Phi_skew) for t in times]
         b_cont2_list=[continiuous_integral(t,Phi_direct) for t in times]
-        x2_list=[a_list[i]+b_list[i] for i,t in enumerate(times)]
-        x3_list=[a_list[i]+b_cont_list[i] for i,t in enumerate(times)]
-        x4_list=[a_list[i]+b_cont2_list[i] for i,t in enumerate(times)]
+        x2_list=[a1_list[i]+b_list[i] for i,t in enumerate(times)]
+        x3_list=[a1_list[i]+b_cont1_list[i] for i,t in enumerate(times)]
+        x4_list=[a2_list[i]+b_cont2_list[i] for i,t in enumerate(times)]
         def vectorlist2array(l):
             return np.stack( [vec.flatten() for vec in l],1)
         
-        a,b,x2,x3,x4=map(vectorlist2array,[a_list,b_list,x2_list,x3_list,x4_list])
+        a1,a2,b,b_cont1,b_cont2,x2,x3,x4=map(
+                vectorlist2array
+                ,[a1_list,a2_list,b_list,b_cont1_list,b_cont2_list,x2_list,x3_list,x4_list])
+        pe('b_cont1-b_cont2',locals())
         fig=plt.figure(figsize=(10,17))
         ax1=fig.add_subplot(2,1,1)
-        ax1.plot(times,xs[:,0],'o',color='blue' ,label="sol[0]")
-        ax1.plot(times,xs[:,1],'o',color='blue' ,label="sol[1]")
+        ax1.plot(times,original_sol[:,0],'o',color='blue' ,label="original_sol[0]")
+        ax1.plot(times,original_sol[:,1],'o',color='blue' ,label="original_sol[1]")
         
         ax1.plot(times,x2[0,:],'+',color='red' ,label="x2[0]")
         ax1.plot(times,x2[1,:],'+',color='red' ,label="x2[0]")
@@ -263,20 +309,22 @@ class TestPhi(InDirTest):
         
         ax1.plot(times,x3[0,:],'+',color='orange' ,label="x4[0]")
         ax1.plot(times,x3[1,:],'+',color='orange' ,label="x4[1]")
-        #ax1.plot(ts,xs2[1,:],'x',color='red' ,label="sol2[1]")
-        
-        #ax1.plot(ts,a[0,:],'o',color='orange' ,label="a[0]")
-        #ax1.plot(ts,a[1,:],'x',color='orange' ,label="a[1]")
-        
-        #ax1.plot(ts,b[0,:],'o',color='green' ,label="b[0]")
-        #ax1.plot(ts,b[1,:],'x',color='green' ,label="b[1]")
         ax1.legend()
         
-        #ax2=fig.add_subplot(2,1,2)
-        #ax2.plot(ts,integrand_vals[0,:],'x',color='green' ,label="integrand")
-        #ax2.plot(ts,phi_int_vals1[0,:],'x',color='red' ,label="phi 1")
-        #ax2.plot(ts,phi_int_vals2[0,:],'x',color='red' ,label="phi 2")
-        #ax2.legend()
+        ax2=fig.add_subplot(2,1,2)
+        ax2.plot(times,b_cont1[0,:],'x',color='green' ,label="b1[0]")
+        ax2.plot(times,b_cont1[1,:],'x',color='green' ,label="b1[0]")
+        
+        ax2.plot(times,b_cont2[0,:],'+',color='orange' ,label="b2[0]")
+        ax2.plot(times,b_cont2[1,:],'+',color='orange' ,label="b2[0]")
+        
+        ax2.plot(times,a1[0,:],'x',color='green' ,label="a1[0]")
+        ax2.plot(times,a1[1,:],'x',color='green' ,label="a1[0]")
+        
+        ax2.plot(times,a2[0,:],'+',color='orange' ,label="a2[0]")
+        ax2.plot(times,a2[1,:],'+',color='orange' ,label="a2[0]")
+        
+        ax2.legend()
         
         fig.savefig("solutions.pdf")
     

@@ -27,11 +27,6 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun
 from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs2
-def X_Phi_IVP(srm,parameter_dict,func_dict,start_x):
-
-
-
-
 
 
 class TestDiscreteModelRun(InDirTest):
@@ -88,49 +83,4 @@ class TestDiscreteModelRun(InDirTest):
         ax2.legend()
         fig.savefig("pool_contents.pdf")
         self.assertTrue(True)
-
-#--------------------------------------------------------------------------
-#
-    def test_block_rhs_versus_block_ivp(self):
-        pass
-        #s_block_rhs=solve_ivp(
-        #    fun=block_rhs(
-        #         time_str='t'
-        #         ,X_blocks  = [('sol',nr_pools),('Phi',nr_pools*nr_pools),('Int_Phi_u',nr_pools)]
-        #         ,functions = [
-        #             (sol_rhs,['t','sol'])
-        #             ,(Phi_rhs,['t','sol','Phi'])
-        #             ,(Int_phi_u_rhs,['t','Phi'])
-        #          ]
-        #    )
-        #    ,t_span=t_span
-        #    ,y0=np.concatenate([ start_x,start_Phi_1d,start_Int_Phi_u])
-        #)
-        #t_block_rhs         =s_block_rhs.t
-        #sol_block_rhs       =s_block_rhs.y[x_i_start:x_i_end,:]
-        #Phi_block_rhs       =s_block_rhs.y[Phi_1d_i_start:Phi_1d_i_end,:]
-        #Phi_block_rhs_mat   =Phi_block_rhs.reshape(nr_pools,nr_pools,len(t_block_rhs))
-        #int_block_rhs       =s_block_rhs.y[int_i_start:int_i_end,:]
-        #
-        ## even more compactly the same system
-        #block_ivp=BlockIvp(
-        #    time_str='t'
-        #    ,start_blocks  = [('sol',start_x),('Phi',start_Phi_1d),('Int_Phi_u',start_Int_Phi_u)]
-        #    ,functions = [
-        #         (sol_rhs,['t','sol'])
-        #        ,(Phi_rhs,['t','sol','Phi'])
-        #        ,(Int_phi_u_rhs,['t','Phi'])
-        #     ]
-        #)
-        ## but we can also acces single blocks of the result
-        #self.assertTrue(np.array_equal( t_block_rhs     ,x_phi_ivp.get("t"         ,t_span=t_span)))
-        #self.assertTrue(np.array_equal( sol_block_rhs   ,x_phi_ivp.get("sol"       ,t_span=t_span)))
-        #self.assertTrue(np.array_equal( Phi_block_rhs   ,x_phi_ivp.get("Phi"       ,t_span=t_span)))
-        #self.assertTrue(np.array_equal( int_block_rhs   ,x_phi_ivp.get("Int_Phi_u" ,t_span=t_span)))
-        ## we can get the same solution object we get from solve_ivp
-        ##print(x_phi_ivp.get("sol",t_span=t_span))
-        ##
-        ##
-        
-
 

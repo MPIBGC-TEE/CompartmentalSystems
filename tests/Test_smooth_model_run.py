@@ -1745,7 +1745,7 @@ class TestSmoothModelRun(InDirTest):
         self.assertTrue(np.all(ca==smr._state_transition_operator_values))
 
 
-    def test_state_transition_operator(self):
+    def test_state_transition_operator_1d(self):
         # one-dimensional case
         C = Symbol('C')
         state_vector = [C]
@@ -1767,6 +1767,7 @@ class TestSmoothModelRun(InDirTest):
         self.assertTrue(abs(Phix-np.exp(-1))<3e-05)
         print(type(Phix))
 
+    def test_state_transition_operator_2d(self):
         # two-dimensional case
         C_0, C_1 = symbols('C_0 C_1')
         state_vector = [C_0, C_1]

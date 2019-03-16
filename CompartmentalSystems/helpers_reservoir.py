@@ -1,11 +1,12 @@
 # vim:set ff=unix expandtab ts=4 sw=4:
 from __future__ import division
 from typing import Callable,Iterable,Union,Optional,List,Tuple 
+from testinfrastructure.helpers import pe
 
 import numpy as np 
 import inspect
 from numbers import Number
-from scipy.integrate import odeint
+from scipy.integrate import odeint,solve_ivp
 from scipy.interpolate import lagrange
 from scipy.optimize import brentq
 from scipy.stats import norm
@@ -14,6 +15,7 @@ from sympy import flatten, gcd, lambdify, DiracDelta, solve, Matrix,diff
 from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
+from .BlockIvp import BlockIvp
 #from testinfrastructure.helpers import pe
 
 def warning(txt):
@@ -168,14 +170,18 @@ def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
     return expr_func
 
-def numerical_rhs2(state_vector, time_symbol, rhs, 
-        parameter_dict, func_set):
+def numerical_rhs2(
+         state_vector
+        ,time_symbol
+        ,rhs 
+        ,parameter_dict
+        ,func_dict):
 
     FL=numerical_function_from_expression(
             rhs
             ,(time_symbol,)+tuple(state_vector)
             ,parameter_dict
-            ,func_set
+            ,func_dict
     )
     
     # 2.) Write a wrapper that transformes Matrices numpy.ndarrays and accepts array instead of the separate arguments for the states)
@@ -259,6 +265,57 @@ def numsol_symbolic_system(
     #return odeint(num_rhs, start_values, times, mxstep=10000)
     return odeint(num_rhs, start_values, times, mxstep=10000)
 
+def numsol_symbolic_system(
+        state_vector, 
+        time_symbol, 
+        rhs, 
+        parameter_dict, 
+        func_set, 
+        start_values, 
+        times
+    ):
+
+    nr_pools = len(state_vector)
+    
+    if times[0] == times[-1]: return start_values.reshape((1, nr_pools))
+
+    num_rhs = numerical_rhs(
+        state_vector,
+        time_symbol,
+        rhs, 
+        parameter_dict,
+        func_set,
+        times
+    )
+    return odeint(num_rhs, start_values, times, mxstep=10000)
+
+def numsol_symbolic_system_2(
+         state_vector
+        ,time_symbol
+        ,rhs
+        ,parameter_dict
+        ,func_set
+        ,start_values
+        ,times
+        ,dense_output
+    ):
+
+    nr_pools = len(state_vector)
+    
+    if times[0] == times[-1]: return start_values.reshape((1, nr_pools))
+
+    num_rhs = numerical_rhs2(
+        state_vector,
+        time_symbol,
+        rhs, 
+        parameter_dict,
+        func_set
+    )
+
+    res=solve_ivp(num_rhs, y0=start_values,t_span=(min(times),max(times)),t_eval=times,dense_output=dense_output)
+    values=res.y.transpose() # adapt to the old interface since our code at the moment expects it
+    func=res.sol
+    return (values,func)
 
 def arrange_subplots(n):
     if n <=3:
@@ -471,90 +528,61 @@ def const_of_t_maker(const):
             return(const*np.ones_like(possible_vec_arg))
     return const_arr_fun
 
-def block_rhs(
-         time_str  : str
-        ,X_blocks  : List[ Tuple[str,int] ]
-        ,functions : List[ Tuple[Callable,List[str]]]
-    )->Callable[[np.double,np.ndarray],np.ndarray]:
-    """
-    The function returns a function dot_X=f(t,X) suitable as the righthandside 
-    for the ode solver scipy.solve_ivp from a collection of vector valued
-    functions that compute blocks of dot_X from time and blocks of X 
-    rather than from single equations.
-
-    A special application is the creation of block triangular systems, to 
-    integrate variables whose time derivative depend on the solution
-    of an original system instantaniously along with it.
+def x_phi_ivp(srm, parameter_dict, func_dict,start_x,x_block_name='x',phi_block_name='phi'):
+        
+    #B=srm.compartmental_matrix
+    pe('srm',locals())
+    nr_pools=srm.nr_pools
+    nq=nr_pools*nr_pools
+    #tup=(t,)+tuple(srm.state_vector)
+    sol_rhs=numerical_rhs2(
+         srm.state_vector
+        ,srm.time_symbol
+        ,srm.F
+        ,parameter_dict
+        ,func_dict
+    )
+    # for comparison solve the original system 
     
-    Assume that
-    X_1(t) is the solution of the initial value problem (ivp)
-    
-    ivp_1:
-    dot_X_1=f_1(t,X) ,X_1(t_0) 
+    B_sym=srm.compartmental_matrix
+    ## now use the interpolation function to compute B in an alternative way.
+    #symbolic_sol_funcs = {sv: Function(sv.name + '_sol')                        for sv in svec}
+    #sol_func_exprs =     {sv: symbolic_sol_funcs[sv](srm.time_symbol)           for sv in svec}# To F add the (t) 
+    #def func_maker(pool):
+    #    def func(t):
+    #        return sol.sol(t)[pool]
+    #
+    #    return(func)
+    #
+    #sol_dict = {symbolic_sol_funcs[svec[pool]]:func_maker(pool) for pool in range(srm.nr_pools)}
+    #lin_func_dict=copy(func_dict)
+    #lin_func_dict.update(sol_dict)
+    #
+    #linearized_B = B_sym.subs(sol_func_exprs)
+    #
+    tup=(srm.time_symbol,)+tuple(srm.state_vector)
+    B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
+    x_i_start=0
+    x_i_end=nr_pools
+    Phi_1d_i_start=x_i_end
+    Phi_1d_i_end=(nr_pools+1)*nr_pools
+    #
+    def Phi_rhs(t,x,Phi_1d):
+        B=B_func(t,*x)
+        #Phi_cols=[Phi_1d[i*nr_pools:(i+1)*nr_pools] for i in range(nr_pools)]
+        #Phi_ress=[np.matmul(B,pc) for pc in Phi_cols]
+        #return np.stack([np.matmul(B,pc) for pc in Phi_cols]).flatten()
+        return np.matmul(B,Phi_1d.reshape(nr_pools,nr_pools)).flatten()
 
-    and X_2(t) the solution of another ivp 
+    #create the additional startvecot for the components of Phi
+    start_Phi_1d=np.identity(nr_pools).flatten()
 
-    ivp_2:
-    dot_X_2=f_2(t,X_1,X_2) ,X_2(t_0) whose righthand side depends on x_1
-    
-    Then we can obtain the solution of both ivps simultaniously by
-    combining the them into one.
-    
-    (dot_X_1, dox_X_2)^t = (f_1(t,X_1),f_2(t,X_1,X_2))^t
-
-    For n instead of 2 variables one has:  
-    (dot_X_1, dox_X_2,...,dot_X_n)^t = (f_1(t,X_1),f_2(t,X_1,X_2),...,f_n(t,X_1,...X_n))^t
-    
-    For a full lower triangular system  the block derivative dot_X_i depend on t,
-    and ALL the blocks X_1,...,X_i but often they will only depend on 
-    SOME of the previous blocks so that f_m has a considerably smaller argument list.
-
-    This function therefore allows to specify WHICH blocks the f_i depend on.
-    Consider the following 7 dimensional block diagonal example:
-
-    b_s=block_rhs(
-         time_str='t'
-        ,X_blocks=[('X1',5),('X2',2)]
-        ,functions=[
-             ((lambda x   : x*2 ),  ['X1']    )
-            ,((lambda t,x : t*x ),  ['t' ,'X2'])
-         ])   
-    
-
-    The first argument 'time_str' denotes the alias for the t argument to be used
-    later in the signature of the blockfunctions.
-    The second argument 'X_blocks' describes the decomposition of X into blocks
-    by a list of tuples of the form ('Name',size)
-    The third argument 'functions' is a list of tuples of the function itself
-    and the list of the names of its block arguments as specified in the
-    'X_blocks' argument. 
-    Order is important for the 'X_blocks' and the 'functions'
-    It is assumed that the i-th function computes the derivative of the i-th block.
-    The names of the blocks itself are arbitrary and have no meaning apart from
-    their correspondence in the X_blocks and functions argument.
-    """
-    block_names=[t[0] for t in X_blocks]
-    dims=[t[1] for t in X_blocks]
-    nb=len(dims)
-    strArgLists=[f[1] for f in functions]
-    # make sure that all argument lists are really lists
-    assert(all([isinstance(l,list) for l in strArgLists])) 
-    # make sure that the function argument lists do not contain block names
-    # that are not mentioned in the Xblocks argument
-    flatArgList=[arg for argList in strArgLists for arg in argList]
-    assert(set(flatArgList).issubset(block_names+[time_str]))
-    
-
-    # first compute the indices of block boundaries in X by summing the dimensions 
-    # of the blocks
-    indices=[0]+[ sum(dims[:(i+1)]) for i in range(nb)]
-    def rhs(t,X):
-        blockDict={block_names[i]: X[indices[i]:indices[i+1]] for i in range(nb)}
-        #pe('blockDict',locals())
-        blockDict[time_str]=t
-        arg_lists=[ [blockDict[k] for k in f[1]] for f in functions]
-        blockResults=[ functions[i][0]( *arg_lists[i] )for i in range(nb)]
-        #pe('blockResults',locals())
-        return np.concatenate(blockResults).reshape(X.shape)
-    
-    return rhs
+    block_ivp=BlockIvp(
+        time_str=srm.time_symbol.name
+        ,start_blocks  = [(x_block_name,start_x),(phi_block_name,start_Phi_1d)]
+        ,functions = [
+             (sol_rhs,[srm.time_symbol.name,x_block_name])
+            ,(Phi_rhs,[srm.time_symbol.name,x_block_name,phi_block_name])
+         ]
+    )
+    return block_ivp
