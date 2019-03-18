@@ -3161,20 +3161,17 @@ class SmoothModelRun(object):
         #    m.output_fluxes,
         #    m.internal_fluxes
         #)
-    #def skew_product_numerical_rhs(self,additionalVector,PhiSymb):
-    #    m_no_inputs=self.no_input_model
-    #    # build the numerical rhs for the solution of the Matrix ivp 
-    #    # for the state transition operator
-    #    # since the solver only accepts vetors we have 
-    #    # to reshape the matrix PHI into a 1d vector
 
 
-        
-
-
-    #fixme: test
     @property
     def _no_input_sol(self):
+        # note that the solution of the no input system 
+        # only coincides with the (application of) 
+        # the statetransition operator if the system is linear
+        # so this function can only compute the state transition operatro 
+        # for a linear(ized) system
+
+
         if not hasattr(self, '_saved_no_input_sol'):
             m = self.model
             m_no_inputs=self.no_input_model
@@ -3200,6 +3197,43 @@ class SmoothModelRun(object):
 
         return self._saved_no_input_sol
 
+    @property
+    def _linearized_no_input_sol(self):
+        # note that the solution of the no input system 
+        # only coincides with the (application of) 
+        # the state transition operator if the system is linear
+        # to compute the state transition operator we therefore 
+        # linearize along the soluion
+        sol_vals,sol_func=self.solve_2()
+
+        srm=self.model
+
+        if not hasattr(self, '_saved_linearized_no_input_sol'):
+            tup=(srm.time_symbol,)+tuple(srm.state_vector)
+            B_func=numerical_function_from_expression(srm.compartmental_matrix,tup,self.parameter_dict,self.func_set)
+            def lin_rhs(tau,x):
+                # we inject the soltution into B to get the linearized version
+                B=B_func(tau,*sol_func(tau))
+                # and then apply it to the actual  vector x to compute Phi*x
+                return np.matmul(B,x).flatten()
+    
+            def sol(times, start_vector):
+                ('nos', times, start_vector)
+                # Start and end time too close together? Do not integrate!
+                s=times[0] # not minimum for backward integrations
+                t=times[-1] # not maximum for backward integrations
+                if abs(s-t) < 1e-14: 
+                    return np.array(start_vector)
+                sv = np.array(start_vector).reshape((self.nr_pools,))
+
+                values=solve_ivp(lin_rhs,y0=sv,t_span=(s,t)).y
+                return values[:,-1]
+                #return odeint(no_inputs_num_rhs, sv, times, mxstep = 10000)[-1]
+        
+            self._saved_linearized_no_input_sol = sol
+
+        return self._saved_linearized_no_input_sol
+
     #fixme: test
     def build_state_transition_operator_cache(self, size = 101):
         if size < 2:
@@ -3216,7 +3250,7 @@ class SmoothModelRun(object):
         print("creating cache")
         ca = np.ndarray((nc, nc, n, n))
         ca = np.zeros((nc, nc, n, n)) 
-        no_input_sol = self._no_input_sol
+        linearized_no_input_sol = self._linearized_no_input_sol
 
         for tm1_index in tqdm(range(nc-1)):
             tm1 = cached_times[tm1_index]
@@ -3225,13 +3259,13 @@ class SmoothModelRun(object):
             for i in range(n):
                 e_i = np.zeros((n,1))
                 e_i[i] = 1
-                #ca[tm1_index,:,:,i] = no_input_sol(sub_cached_times, e_i) 
+                #ca[tm1_index,:,:,i] = linearized_no_input_sol(sub_cached_times, e_i) 
                 # leads to zig-zag functions, 
                 # the ends do not fit together
                 sv = e_i
                 st = tm1
                 for j in range(len(sub_cached_times)):
-                    new_sv = no_input_sol([st, sub_cached_times[j]], sv)
+                    new_sv = linearized_no_input_sol([st, sub_cached_times[j]], sv)
                     ca[tm1_index,j,:,i] = new_sv.reshape((n,))
                     sv = new_sv
                     st = sub_cached_times[j]
@@ -3269,8 +3303,11 @@ class SmoothModelRun(object):
             raise(Error("Evaluation of Phi(t,s) with t before t0 is not possible"))
         if s < t_0 :
             raise(Error("Evaluation of Phi(t,s) with s before t0 is not possible"))
-        #if t < s : #This can be caused by the ode solvers
-        #    raise(Error("Evaluation of Phi(t,s) with t before s is at the moment switched of"))
+        
+        #if t < s : 
+        # This can be caused by the ode solvers for integrals of phi
+        # so we can not exclude it actually the function handle this
+        # case by backward integration 
         
 
     def _state_transition_operator_by_skew_product_system(self, t, s, x=None):
@@ -3283,6 +3320,10 @@ class SmoothModelRun(object):
         
         We can reconstruct Phi(t,s)=Phi(t,t_0)* Phi(s,t_0)^-1
         This is what this function does.
+        It will integrat Phi(t,s) for s=t_0 only once and cache the result.
+        For any s!=t_0 it will compute the inverse or in case x is given solve 
+        a linear system. In many cases this should be mauch faster than 
+        The computation of Phi by direct integration.
         """
         self.check_phi_args(t,s)
         srm=self.model
@@ -3291,7 +3332,7 @@ class SmoothModelRun(object):
             if x is None:
                 return np.identity(n)
             else:
-                return x
+                return x.flatten()
 
         time_symbol=srm.time_symbol
         if not(hasattr(self,'_x_phi_ivp')):
@@ -3325,14 +3366,20 @@ class SmoothModelRun(object):
         if s>t:
             # we could call the function recoursively with exchanged arguments but
             # as in res=np.linalg.inv(Phi(s,t))
-            # 
-            # But this would involve 2 inversions. 
-            # To save one inversion we use (A*B)^-1=B^-1*A^-1
-            mat =np.matmul(Phi_t0_mat(s),np.linalg.inv(Phi_t0_mat(t)))
+            # But this would involve an extra inversions. 
+            # To save one inversion we use (A * B^-1)^-1 = B * A^-1
+            A=Phi_t0_mat(t) 
+            B=Phi_t0_mat(s)
+            mat =np.matmul(B,np.linalg.inv(A))
             if x is None:
                 return mat
             else:
-                return np.matmul(mat,x)
+                # instead of computing the inverse of A
+                # and then compute y = B * A^-1 * x
+                # we compute A^-1 x as the solution of u = A * x
+                # and then y = B * u
+                u = np.linalg.solve(A,x)
+                return np.matmul(B,u).flatten() 
             
         
         
@@ -3341,25 +3388,22 @@ class SmoothModelRun(object):
             if x is None:
                 return mat
             else:
-                return np.matmul(mat,x)
-        # fixme: mm 3/9/2019
-        # The following inversion is very expensive 
-        # and should be cached if it can not be avoided
-
-        #pe('t',locals())
-        #pprint(Phi_t0_mat(t))
-        #pe('s',locals())
-        #pprint(Phi_t0_mat(s))
-        #pprint(np.linalg.inv(Phi_t0_mat(s)))
-        #pprint(np.matmul(Phi_t0_mat(t),np.linalg.inv(Phi_t0_mat(s))))
+                return np.matmul(mat,x).flatten() 
         
-        mat = np.matmul(Phi_t0_mat(t),np.linalg.inv(Phi_t0_mat(s)))
+        A=Phi_t0_mat(t) 
+        B=Phi_t0_mat(s)
+        mat = np.matmul(A,np.linalg.inv(B))
         if x is None:
             return mat
         else:
-            return np.matmul(mat,x)
-
-    def _state_transition_operator_by_direct_integration(self, t, s, x=None):
+            # instead of computing the inverse of B
+            # and then compute y = A * B^-1 * x
+            # we compute B^-1 x as the solution of u = B * x
+            # and then y = A * u
+            u = np.linalg.solve(B,x)
+            return np.matmul(A,u).flatten()
+    
+    def _state_transition_operator_by_direct_integration_vec(self, t, s, x):
         """
         For t_0 <s <t we have
         
@@ -3372,23 +3416,45 @@ class SmoothModelRun(object):
         srm=self.model
         n=srm.nr_pools
         if s == t:
-            mat=np.identity(n)
-            if x is None:
-                return mat
-            else:
-                return x
+            return x.flatten() 
+        
+        # compute the solution of the non linear system
+        sol_vals,sol_func=self.solve_2()
 
-        #sol_rhs=numerical_rhs2(
-        #     srm.state_vector
-        #    ,srm.time_symbol
-        #    ,srm.F
-        #    ,self.parameter_dict
-        #    ,self.func_set
-        #)
-        #t_0=np.min(self.times)
-        #t_max=np.max(self.times)
-        #t_span=(t_0,t_max)
-        #x_func=solve_ivp(sol_rhs,y0=self.start_values,t_span=t_span,dense_output=True).sol
+        # get the compartmental matrix  
+        tup=(srm.time_symbol,)+tuple(srm.state_vector)
+        B_func=numerical_function_from_expression(srm.compartmental_matrix,tup,self.parameter_dict,self.func_set)
+        def x_rhs(tau,x):
+            # we inject the soltution into B to get the linearized version
+            B=B_func(tau,*sol_func(tau))
+            # and then apply it to the actual  vector x to compute Phi*x
+            return np.matmul(B,x).flatten()
+        
+        # note that the next line also works for s>t since the ode solver
+        # will integrate backwards
+        Phi_times_x_values=solve_ivp(x_rhs,y0=x.flatten(),t_span=(s,t)).y
+        val=Phi_times_x_values[:,-1].flatten()
+        
+        return val
+
+    def _state_transition_operator_by_direct_integration(self, t, s, x=None):
+        """
+        For t_0 <s <t we have
+        
+        compute Phi(t,s) directly
+        by integrating 
+        d Phi/dt= B(x(tau))  from s to t with the startvalue Phi(s)=UnitMatrix
+        It assumes the existence of a solution x 
+        """
+        if x is not None:
+            # this is nr_pools times cheaper
+            return self._state_transition_operator_by_direct_integration_vec( t, s, x)
+        self.check_phi_args(t,s)
+        srm=self.model
+        n=srm.nr_pools
+        if s == t:
+            return np.identity(n)
+
         x_vals,x_func=self.solve_2()
         tup=(srm.time_symbol,)+tuple(srm.state_vector)
         B_func=numerical_function_from_expression(srm.compartmental_matrix,tup,self.parameter_dict,self.func_set)
@@ -3398,29 +3464,135 @@ class SmoothModelRun(object):
             #Phi_ress=[np.matmul(B,pc) for pc in Phi_cols]
             #return np.stack([np.matmul(B,pc) for pc in Phi_cols]).flatten()
             return np.matmul(B,Phi_1d.reshape(n,n)).flatten()
-         
+
+        # note that this includes the case s>t since the 
+        # ode solver accepts time to run backwards
         Phi_values=solve_ivp(Phi_rhs,y0=np.identity(n).flatten(),t_span=(s,t)).y
         val=Phi_values[:,-1].reshape(n,n)
         
-        if s>t:
-            # we could probably express this by a backward integration
-            mat=np.linalg.inv(val)
-            if x is None:
-                return mat
-            else:
-                return np.matmul(mat,x)
-        else: 
-            mat=val
-            if x is None:
-                return mat
-            else:
-                return np.matmul(mat,x)
+        # if s>t:
+        #     # we could probably express this by a backward integration
+        #     mat=np.linalg.inv(val)
+        #     if x is None:
+        #         return mat
+        #     else:
+        #         return np.matmul(mat,x).flatten() 
+        # else: 
+
+        return val 
 
     def _state_transition_operator(self, t, t0, x):
         if t0 > t:
             raise(Error("Evaluation before t0 is not possible"))
         if t0 == t:
-            return x
+            return x.flatten() 
+       
+        n = self.nr_pools
+        linearized_no_input_sol = self._linearized_no_input_sol
+
+        if self._state_transition_operator_values is None:
+            # do not use the cache, it has not yet been created
+            #self.build_state_transition_operator_cache()
+            soln = (linearized_no_input_sol([t0, t], x)).reshape((n,))        
+        else:
+            # use the already created cache
+            times = self.times
+            t_min = times[0]
+            t_max = times[-1]
+            nc = self._cache_size
+    
+            cached_times = np.linspace(t_min, t_max, nc)
+            ca = self._state_transition_operator_values
+    
+            # find tm1
+            tm1_ind = cached_times.searchsorted(t0)
+            tm1 = cached_times[tm1_ind]
+    
+            # check if next cached time is already behind t
+            if t <= tm1: return linearized_no_input_sol([t0, t], x)
+    
+            # first integrate x to tm1: y = Phi(tm1, t_0)x
+            y = (linearized_no_input_sol([t0, tm1], x)).reshape((n,1))
+    
+            step_size = (t_max-tm1)/(nc-1)
+            if step_size > 0:
+                tm2_ind = np.int(np.min([np.floor((t-tm1)/step_size), nc-1]))
+                tm2 = tm1 + tm2_ind*step_size
+    
+                #print(t, t0, t==t0, tm1_ind, tm1, tm2_ind, tm2, step_size) 
+                B = ca[tm1_ind,tm2_ind,:,:]
+                #print(t, t0, tm1, tm2, step_size, B)
+                
+                z = np.dot(B, y)
+            else:
+                tm2 = tm1
+                z = y
+            #z = (linearized_no_input_sol([tm1, tm2], y)[-1]).reshape((n,))
+    
+            # integrate z to t: sol=Phi(t,tm2)*z
+            soln = (linearized_no_input_sol([tm2, t],z)).reshape((n,))
+        
+        return np.maximum(soln, np.zeros_like(soln))
+        
+    def _state_transition_operator_for_linear_systems(self, t, t0, x):
+        # this function could be used in a "linear smooth model run class"
+        # At the moment it is only used by the tests to show
+        # why a replacement was necessary for the general case
+        if t0 > t:
+            raise(Error("Evaluation before t0 is not possible"))
+        if t0 == t:
+            return x.flatten() 
+       
+        n = self.nr_pools
+        linearized_no_input_sol = self._linearized_no_input_sol
+
+        if self._state_transition_operator_values is None:
+            # do not use the cache, it has not yet been created
+            #self.build_state_transition_operator_cache()
+            soln = (linearized_no_input_sol([t0, t], x)).reshape((n,))        
+        else:
+            # use the already created cache
+            times = self.times
+            t_min = times[0]
+            t_max = times[-1]
+            nc = self._cache_size
+    
+            cached_times = np.linspace(t_min, t_max, nc)
+            ca = self._state_transition_operator_values
+    
+            # find tm1
+            tm1_ind = cached_times.searchsorted(t0)
+            tm1 = cached_times[tm1_ind]
+    
+            # check if next cached time is already behind t
+            if t <= tm1: return linearized_no_input_sol([t0, t], x)
+    
+            # first integrate x to tm1: y = Phi(tm1, t_0)x
+            y = (linearized_no_input_sol([t0, tm1], x)).reshape((n,1))
+    
+            step_size = (t_max-tm1)/(nc-1)
+            if step_size > 0:
+                tm2_ind = np.int(np.min([np.floor((t-tm1)/step_size), nc-1]))
+                tm2 = tm1 + tm2_ind*step_size
+    
+                #print(t, t0, t==t0, tm1_ind, tm1, tm2_ind, tm2, step_size) 
+                B = ca[tm1_ind,tm2_ind,:,:]
+                #print(t, t0, tm1, tm2, step_size, B)
+                
+                z = np.dot(B, y)
+            else:
+                tm2 = tm1
+                z = y
+            #z = (linearized_no_input_sol([tm1, tm2], y)[-1]).reshape((n,))
+    
+            # integrate z to t: sol=Phi(t,tm2)*z
+            soln = (linearized_no_input_sol([tm2, t],z)).reshape((n,))
+        
+        return np.maximum(soln, np.zeros_like(soln))
+        if t0 > t:
+            raise(Error("Evaluation before t0 is not possible"))
+        if t0 == t:
+            return x.flatten() 
        
         n = self.nr_pools
         no_input_sol = self._no_input_sol
@@ -3468,7 +3640,6 @@ class SmoothModelRun(object):
             soln = (no_input_sol([tm2, t],z)).reshape((n,))
         
         return np.maximum(soln, np.zeros_like(soln))
-        
 
     def _flux_vector(self, flux_vec_symbolic):
         sol = self.solve()
