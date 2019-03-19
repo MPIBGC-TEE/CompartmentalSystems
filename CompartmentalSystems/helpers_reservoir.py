@@ -1,12 +1,12 @@
 # vim:set ff=unix expandtab ts=4 sw=4:
 from __future__ import division
-from typing import Callable,Iterable,Union,Optional,List,Tuple 
+from typing import Callable,Iterable,Union,Optional,List,Tuple,Sequence
 from testinfrastructure.helpers import pe
 
 import numpy as np 
 import inspect
 from numbers import Number
-from scipy.integrate import odeint,solve_ivp
+from scipy.integrate import odeint,solve_ivp,quad
 from scipy.interpolate import lagrange
 from scipy.optimize import brentq
 from scipy.stats import norm
@@ -586,3 +586,92 @@ def x_phi_ivp(srm, parameter_dict, func_dict,start_x,x_block_name='x',phi_block_
          ]
     )
     return block_ivp
+
+def integrate_array_func_for_nested_boundaries(
+         f          :Callable[ [float] ,np.ndarray ]     
+        ,integrator :Callable[
+                        [
+                            Callable[[float],np.ndarray]
+                            ,float 
+                            ,float
+                        ]
+                        ,np.ndarray
+                    ] #e.g. array_quad_result
+                    ,tuples:Sequence[Tuple[float,float]]
+    )->Sequence[float]:
+    # we assume that the first (a,b) tuple contains the second , the second the third and so on from outside to inside
+    def compute(f,tuples,results:Sequence[float]):
+        (a_out,b_out),*tail=tuples
+        if len(tail)==0:
+            #number=quad(f,a_out,b_out)[0]
+            arr=integrator(f,a_out,b_out)
+        else:
+            (a_in ,b_in)=tail[0]
+            results=compute(f,tail,results)
+            arr=  ( integrator(f,a_out,a_in)
+                    +results[0]
+                    +integrator(f,b_in,b_out))
+
+        results=[arr]+results
+        return results
+    
+    return compute(f,tuples,[])
+
+def array_quad_result(
+        f:Callable[[float],np.ndarray]
+        ,a:float
+        ,b:float
+        ,*args
+        ,**kwargs
+    )->np.ndarray:
+    # integrates a vectorvalued function of a single argument
+    # we transform the result array of the function into a one dimensional vector compute the result for every component
+    # and reshape the result to the form of the integrand
+    test=f(a)
+    n=len(test.flatten())
+    vec=np.array([quad(lambda t:f(t).reshape(n,)[i],a,b,*args,**kwargs)[0] for i in range(n)])
+    return vec.reshape(test.shape)
+    
+
+def array_integration_by_ode(
+        f:Callable[[float],np.ndarray]
+        ,a:float
+        ,b:float
+        ,*args
+        ,**kwargs
+    )->np.ndarray:
+    #    another integrator like array_quad_result
+    test=f(a)
+    n=len(test.flatten())
+    
+    def rhs(tau,X):
+        # although we do not need X we have to provide a 
+        # righthandside s uitable for solve_ivp
+
+        # avoid overshooting if the solver 
+        # tries to look where the integrand might not be defined 
+        if tau<a or tau>b: 
+            return 0
+        else:
+            return f(tau).flatten()
+    
+    ys= solve_ivp(rhs,y0=np.zeros(n),t_span=(a,b)).y
+    val=ys[:,-1].reshape(test.shape)
+    return val
+
+def array_integration_by_values(
+        f:Callable[[float],np.ndarray]
+        ,taus:np.ndarray
+        ,*args
+        ,**kwargs
+    )->np.ndarray:
+    #only allow taus as vector
+    assert(len(taus.shape))==1
+    assert(len(taus))>0
+    test=f(taus[0])
+    n=len(test.flatten())
+    #create a big 2 dimensional array suitable for trapz
+    integrand_vals=np.stack([f(tau).flatten() for tau in taus],1)
+    vec=np.trapz(y=integrand_vals,x=taus)
+    return vec.reshape(test.shape)
+

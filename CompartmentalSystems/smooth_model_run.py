@@ -3544,12 +3544,12 @@ class SmoothModelRun(object):
             return x.flatten() 
        
         n = self.nr_pools
-        linearized_no_input_sol = self._linearized_no_input_sol
+        no_input_sol = self._no_input_sol
 
         if self._state_transition_operator_values is None:
             # do not use the cache, it has not yet been created
             #self.build_state_transition_operator_cache()
-            soln = (linearized_no_input_sol([t0, t], x)).reshape((n,))        
+            soln = (no_input_sol([t0, t], x)).reshape((n,))        
         else:
             # use the already created cache
             times = self.times
@@ -3565,10 +3565,10 @@ class SmoothModelRun(object):
             tm1 = cached_times[tm1_ind]
     
             # check if next cached time is already behind t
-            if t <= tm1: return linearized_no_input_sol([t0, t], x)
+            if t <= tm1: return no_input_sol([t0, t], x)
     
             # first integrate x to tm1: y = Phi(tm1, t_0)x
-            y = (linearized_no_input_sol([t0, tm1], x)).reshape((n,1))
+            y = (no_input_sol([t0, tm1], x)).reshape((n,1))
     
             step_size = (t_max-tm1)/(nc-1)
             if step_size > 0:
@@ -3583,10 +3583,10 @@ class SmoothModelRun(object):
             else:
                 tm2 = tm1
                 z = y
-            #z = (linearized_no_input_sol([tm1, tm2], y)[-1]).reshape((n,))
+            #z = (no_input_sol([tm1, tm2], y)[-1]).reshape((n,))
     
             # integrate z to t: sol=Phi(t,tm2)*z
-            soln = (linearized_no_input_sol([tm2, t],z)).reshape((n,))
+            soln = (no_input_sol([tm2, t],z)).reshape((n,))
         
         return np.maximum(soln, np.zeros_like(soln))
         if t0 > t:
