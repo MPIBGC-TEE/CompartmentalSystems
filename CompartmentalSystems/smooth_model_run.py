@@ -366,10 +366,11 @@ class SmoothModelRun(object):
         """
         times = self.times
 
-        sol = self.solve(times)
+        sol,vec_sol_func = self.solve2()
         sol_funcs = []
         for i in range(self.nr_pools):
-            sol_inter = interp1d(times, sol[:,i])
+            #sol_inter = interp1d(times, sol[:,i])
+            sol_restriction=lambda t:vec_sol_func(t)[i]
             sol_funcs.append(sol_inter)
 
         return sol_funcs
@@ -3243,6 +3244,7 @@ class SmoothModelRun(object):
         return self._saved_linearized_no_input_sol
 
     #fixme: test
+
     def build_state_transition_operator_cache(self, size = 101):
         if size < 2:
             raise(Error('Cache size must be at least 2'))
@@ -3328,11 +3330,27 @@ class SmoothModelRun(object):
         
         We can reconstruct Phi(t,s)=Phi(t,t_0)* Phi(s,t_0)^-1
         This is what this function does.
-        It will integrat Phi(t,s) for s=t_0 only once and cache the result.
-        For any s!=t_0 it will compute the inverse or in case x is given solve 
+        It will integrate Phi(t,s) for s=t_0 only once and cache the result.
+        For any s!=t_0 it will compute (and cache) the inverse or in case x is given solve 
         a linear system. In many cases this should be mauch faster than 
-        The computation of Phi by direct integration.
+        The computation of Phi by direct integration, Especially if we use integration methods based on fixed values of time, since they will only hit cached inverses.
         """
+        if not(hasattr(self,'_skewPhiCache')):
+            self._skewPhiCache=dict()
+        
+        cache=self._skewPhiCache
+        def my_inv(t,mat):
+            # before we compute an inverse we try to look it up
+            # in case we have to compute it we store it
+            # since t_0 is fixed min(self.times)
+            # t of phi t,t_0 is the only changig variable
+            # for the computation of the inverses
+            key=t
+            if not(key in cache.keys()):
+                cache[key]=np.linalg.inv(mat)
+                
+            return cache[key]
+
         self.check_phi_args(t,s)
         srm=self.model
         n=srm.nr_pools
@@ -3378,16 +3396,24 @@ class SmoothModelRun(object):
             # To save one inversion we use (A * B^-1)^-1 = B * A^-1
             A=Phi_t0_mat(t) 
             B=Phi_t0_mat(s)
-            mat =np.matmul(B,np.linalg.inv(A))
             if x is None:
+                # inversions are expensive, we cache them
+                A_inv=my_inv(t,A) #costs if it is the firs time
+                mat =np.matmul(B,Ainv)
                 return mat
             else:
-                # instead of computing the inverse of A
-                # and then compute y = B * A^-1 * x
-                # we compute A^-1 x as the solution of u = A * x
-                # and then y = B * u
-                u = np.linalg.solve(A,x)
-                return np.matmul(B,u).flatten() 
+                key=t
+                if (key in cache.keys()):
+                    A_inv=my_inv(t,A) #costs nothing since in cache
+                    mat =np.matmul(B,Ainv)
+                    return np.matmul(mat,x)
+                else:
+                    # instead of computing the inverse of A
+                    # and then compute y = B * A^-1 * x
+                    # we compute A^-1 x as the solution of u = A * x
+                    # and then y = B * u
+                    u = np.linalg.solve(A,x)
+                    return np.matmul(B,u).flatten() 
             
         
         
@@ -3400,16 +3426,23 @@ class SmoothModelRun(object):
         
         A=Phi_t0_mat(t) 
         B=Phi_t0_mat(s)
-        mat = np.matmul(A,np.linalg.inv(B))
         if x is None:
+            B_inv=my_inv(s,B)
+            mat = np.matmul(A,B_inv)
             return mat
         else:
-            # instead of computing the inverse of B
-            # and then compute y = A * B^-1 * x
-            # we compute B^-1 x as the solution of u = B * x
-            # and then y = A * u
-            u = np.linalg.solve(B,x)
-            return np.matmul(A,u).flatten()
+            key=t
+            if (key in cache.keys()):
+                B_inv=my_inv(s,B) #costs nothing since in cache
+                mat = np.matmul(A,B_inv)
+                return np.matmul(mat,x)
+            else:
+                # instead of computing the inverse of B
+                # and then compute y = A * B^-1 * x
+                # we compute B^-1 x as the solution of u = B * x
+                # and then y = A * u
+                u = np.linalg.solve(B,x)
+                return np.matmul(A,u).flatten()
     
     def _state_transition_operator_by_direct_integration_vec(self, t, s, x):
         """
