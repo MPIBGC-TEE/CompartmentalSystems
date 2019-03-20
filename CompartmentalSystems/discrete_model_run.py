@@ -34,6 +34,9 @@ class DiscreteModelRun(object):
         # fake a model t for the test and gradually remove the faked parts
         # fake the statetransition operator
         phi=lambda t_e,t_s: np.identity(nr_pools)*np.exp(-(t_e-t_s))
+        def Phi(t,s,x=None):
+            return smr._state_transition_operator_by_skew_product_system(t,s,x)
+
         nr_pools=smr.nr_pools
         data_times=smr.times
         n=len(data_times)
@@ -44,10 +47,14 @@ class DiscreteModelRun(object):
             delta_t=data_times[k+1]-data_times[k]
 
             #fixme mm replace with Phi(data_times[k])
-            B=phi(data_times[k+1],data_times[k])
+            #B=phi(data_times[k+1],data_times[k])
+            B=Phi(data_times[k+1],data_times[k])
             Bs[k,:,:] = B
             #fixme: replace with int_{t_k}^{t_{k+1}} phi(t)*u(t) dt
-            u=np.ones(nr_pools)*delta_t
+            #or better with u=sol(tk)-phi(t_k,t_k+1)*x(t_k) which is identical but much cheaper
+            soln,sol_func=smr.solve_2()
+            u=sol_func(data_times[k+1])-np.matmul(B,sol_func(data_times[k]))
+            #u=np.ones(nr_pools)*delta_t
 
             us[k,:] = u
 

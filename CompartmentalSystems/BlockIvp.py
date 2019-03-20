@@ -121,7 +121,7 @@ class BlockIvp:
         self._cache=dict()
         print(self.rhs(0,self.start_vec))
         
-    def solve(self,t_span,dense_output=False,**kwargs):
+    def solve(self,t_span,dense_output=True,**kwargs):
         # this is just a caching proxy for scypy.solve_ivp
         # remember the times for the solution
         if not(isinstance(t_span,tuple)):
@@ -129,7 +129,7 @@ class BlockIvp:
             scipy.solve_ivp actually allows a list for t_span, but we insist 
             that it should be an (immutable) tuple, since we want to cache the solution 
             and want to use t_span as a hash.''')
-        cache_key=(t_span,dense_output)
+        cache_key=(t_span)
         if cache_key in self._cache.keys():
             # caching can be made much more sophisticated by
             # starting at the end of previos solution with
@@ -144,7 +144,7 @@ class BlockIvp:
              fun=self.rhs
             ,y0=self.start_vec
             ,t_span=t_span
-            ,dense_output=dense_output
+            ,dense_output=True # only 20%slower 
             ,**kwargs
         )
         self._cache[cache_key]=sol

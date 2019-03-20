@@ -337,7 +337,7 @@ class SmoothModelRun(object):
                         alternative_start_values)
 
     def solve_2(self, alternative_times = None, alternative_start_values=None):
-        """Solve the model and return a solution grid as well as a solution function of time
+        """Solve the model and return a solution grid as well as a solution function of time. If the solution has been computed previously (even by other methods) the cached result will be returned.
 
         Args:
             alternative_times (numpy.array): If not given, the original time 
@@ -3033,6 +3033,14 @@ class SmoothModelRun(object):
                     #print(
                     #   self._previously_computed_age_moment_sol2[storage_key])
                     return self._previously_computed_age_moment_sol2[storage_key]
+                elif max_order==0 and hasattr(self,'_x_phi_ivp'):
+
+                    sol_func=self._x_phi_ivp.get_function('sol')
+                    soln=self._x_phi_ivp.get_values('sol')
+                    return (soln,sol_func)
+
+
+
             else:
                 self._previously_computed_age_moment_sol2 = {}
 
@@ -3358,7 +3366,7 @@ class SmoothModelRun(object):
 
         # the next call will cost nothing 
         # since the ivp caches the solutions up to t_0 after the first call.
-        Phi_t0 =my_x_phi_ivp.get_function("Phi_1d",t_span=t_span)
+        Phi_t0 =my_x_phi_ivp.get_function("Phi_1d",t_span=t_span,t_eval=self.times)
 
         def Phi_t0_mat(t):
             return Phi_t0(t).reshape(srm.nr_pools,srm.nr_pools)

@@ -38,11 +38,11 @@ class TestDiscreteModelRun(InDirTest):
         }
         outputs={
              0:-x_0*k
-            ,1:-x_1*k
+            ,1:-x_1**3*k
         }
         internal_fluxes={}
         srm=SmoothReservoirModel([x_0,x_1],t,inputs,outputs,internal_fluxes)
-        t_max=4
+        t_max=.5
         times = np.linspace(0, t_max, 11)
         x0=np.float(10)
         start_values = np.array([x0,x0])
@@ -63,24 +63,23 @@ class TestDiscreteModelRun(InDirTest):
             parameter_dict,
             {}
         )
-        sf=solve_ivp(fun=num_rhs,t_span=[0,t_max],y0=start_values)#,max_step=delta_t,vectorized=False,method='LSODA')
+        sf=solve_ivp(fun=num_rhs,t_span=[0,t_max],y0=start_values,t_eval=times)
         
         dmr = DiscreteModelRun.from_SmoothModelRun(smr)
         smrs=smr.solve()
         dmrs=dmr.solve()
+        self.assertTrue(np.allclose(dmrs[:,1],sf.y[1,:]))
+        self.assertTrue(np.allclose(dmrs[:,0],sf.y[0,:]))
+        self.assertTrue(np.allclose(dmrs,smrs,rtol=1e-2,atol=1e-3))
         fig=plt.figure(figsize=(7,7))
-        ax1=fig.add_subplot(2,1,1)
-        ax1.plot(times,smrs[:,0],'*',color='red',label="smr")
-        ax1.plot(times,dmrs[:,0],'*',color='blue',label="dmr")
-        n=len(sf.t)
-        ax1.plot(sf.t,sf.y[0].reshape(n,),'*',color='green',label="solve_ivp")
-        ax1.legend()
-        ax2=fig.add_subplot(2,1,2)
-        ax2.plot(times,smrs[:,1],'*',color='red',label="smr")
-        ax2.plot(times,dmrs[:,1],'*',color='blue',label="dmr")
-        n=len(sf.t)
-        ax2.plot(sf.t,sf.y[1].reshape(n,),'*',color='green',label="solve_ivp")
-        ax2.legend()
+        for i in [0,1]:
+            ax=fig.add_subplot(2,1,1+i)
+            plt.title("solutions")
+            ax.plot(times,smrs[:,i],'*',color='red',label="smr"+str(i),markersize=12)
+            ax.plot(times,dmrs[:,i],'*',color='blue',label="dmr"+str(i),markersize=8)
+            n=len(sf.t)
+            ax.plot(sf.t,sf.y[i].reshape(n,),'*',color='green',label="solve_ivp"+str(i),markersize=4)
+            ax.legend()
         fig.savefig("pool_contents.pdf")
         self.assertTrue(True)
 
