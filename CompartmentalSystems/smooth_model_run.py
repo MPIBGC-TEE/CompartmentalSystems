@@ -1110,13 +1110,15 @@ class SmoothModelRun(object):
         return (r*age_moment_vector).sum(1)/r.sum(1)
 
 
-    def forward_transit_time_moment(self, order):
+    def forward_transit_time_moment(self, order,epsrel=1e-2):
         """Compute the ``order`` th forward transit time moment.
 
         Attention! This function integrates over the state transition operator 
         until infinite time.
         The results are going to be weird, since at the end of the time grid 
         some cut- off will happen which biases the result.
+        Be also aware that additionally - to avoid convergence issues in quad - the relative tolerance 
+        is set to 1e-2 by default.
 
         Args:
             order (int): The order of the forward transit time moment to be 
@@ -1146,7 +1148,7 @@ class SmoothModelRun(object):
                 #print(a, Phi(times[ti]+a, times[ti], u), res)
                 return res
             
-            return quad(integrand, 0, np.infty,epsrel=1e-2)[0]
+            return quad(integrand, 0, np.infty,epsrel=epsrel)[0]
             
             # Remark: 
             # We want to compute an inproper integral 
@@ -3592,6 +3594,11 @@ class SmoothModelRun(object):
         # this function could be used in a "linear smooth model run class"
         # At the moment it is only used by the tests to show
         # why a replacement was necessary for the general case
+        
+        srm = self.model
+        if !srm.is_linear:
+            raise Exception("This method can only be applied to linear systems. Maybe you have to linearize along a solution first.")
+
         if t0 > t:
             raise(Error("Evaluation before t0 is not possible"))
         if t0 == t:
