@@ -622,6 +622,8 @@ def array_quad_result(
         ,a:float
         ,b:float
         ,*args
+        #,epsabs=1e3 dangerous as default
+        ,epsrel=1e-3
         ,**kwargs
     )->np.ndarray:
     # integrates a vectorvalued function of a single argument
@@ -629,7 +631,7 @@ def array_quad_result(
     # and reshape the result to the form of the integrand
     test=f(a)
     n=len(test.flatten())
-    vec=np.array([quad(lambda t:f(t).reshape(n,)[i],a,b,*args,**kwargs)[0] for i in range(n)])
+    vec=np.array([quad(lambda t:f(t).reshape(n,)[i],a,b,*args,epsrel,**kwargs)[0] for i in range(n)])
     return vec.reshape(test.shape)
     
 

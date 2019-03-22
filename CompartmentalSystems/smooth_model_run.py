@@ -366,12 +366,12 @@ class SmoothModelRun(object):
         """
         times = self.times
 
-        sol,vec_sol_func = self.solve2()
+        sol,vec_sol_func = self.solve_2()
         sol_funcs = []
         for i in range(self.nr_pools):
             #sol_inter = interp1d(times, sol[:,i])
             sol_restriction=lambda t:vec_sol_func(t)[i]
-            sol_funcs.append(sol_inter)
+            sol_funcs.append(sol_restriction)
 
         return sol_funcs
 
@@ -1145,13 +1145,26 @@ class SmoothModelRun(object):
                 res = (k*a**(k-1)*Phi(times[ti]+a, times[ti], u).sum())/u.sum()
                 #print(a, Phi(times[ti]+a, times[ti], u), res)
                 return res
-
-            # fixme:
-            # it is possible that quad can be replaced by something
-            # that is better suited for the infinite integration domain
-            # that is always required for forward transit times.
-            #print(times[ti], '\n')
-            return quad(integrand, 0, np.infty)[0]
+            
+            return quad(integrand, 0, np.infty,epsrel=1e-2)[0]
+            
+            # Remark: 
+            # We want to compute an inproper integral 
+            # instead of calling res=quad(integrand, 0, np.infty)[0]
+            # we could apply a variable transformation z=a/(c+a) # with an arbitrary c (possibly c=1 but we can optimize the choice  for better performance) 
+            # so we have \int_0^\infty f(a) dx= \int_0^z(a=\infty) f(a(z))*da/dz *dz  =\int_0^1  f(a(z)) c/(1-z**2) dz
+            # to do:
+            # To have the best accuracy we try to find c so that the peak of the integrand is projected to the middle of the new integration interval [0,1]
+            # 1.) find the maximum of the integrand
+            # 2.) find the c that projects this x to z=1/2
+            #c =1000
+            #def a(z):
+            #    return c*z/(1-z) 
+            #def transformed_integrand(z):
+            #    res = integrand(a(z))*c/(1-z**2) 
+            #    return res
+            #
+            #return quad(transformed_integrand, 0, 1)[0]
 
         #res = np.array([moment_at_ti(ti) for ti in range(len(times))])
         res = []
