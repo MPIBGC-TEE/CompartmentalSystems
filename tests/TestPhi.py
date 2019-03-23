@@ -1,7 +1,7 @@
 import numpy as np
 import time
 from collections import OrderedDict
-from sympy import var
+from sympy import var,symbols,Symbol
 from scipy.integrate import solve_ivp, quad
 import matplotlib
 matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
@@ -197,11 +197,14 @@ class TestPhi(InDirTest):
             return smr._state_transition_operator(t,s,x)
         
         # the old implementation assumed linear a system, which would be
-        # disastrous in this case as the plot shows
+        # disastrous if the model had not been linearized
+        with self.assertRaises(Exception) as e:
+            smr._state_transition_operator_for_linear_systems(t_max,t_0,start_x)
+       
+        # to be able to compare it we have to use the linearized_system
+        smr_lin=smr.linearize()
         def Phi_old(t,s,x):
-            return smr._state_transition_operator_for_linear_systems(t,s,x)
-
-        
+            return smr_lin._state_transition_operator_for_linear_systems(t,s,x)
         
         
         # to be able to compare the results we have to compute them for a 
@@ -223,6 +226,7 @@ class TestPhi(InDirTest):
                     ,np.matmul( Phi_direct(t,s)    ,e_i).flatten() 
                     ,Phi_direct(t,s,e_i)
                     ,Phi_orig(t,s ,e_i)
+                    ,Phi_old(t,s ,e_i)
             )        
             for (t,s,e_i) in args
         ]
@@ -230,7 +234,7 @@ class TestPhi(InDirTest):
 
         rtol=2e-2 #2%
         def check_tuple(tup):
-            skew_mat,skew_vec,direct_mat,direct_vec,orig_vec=tup
+            skew_mat,skew_vec,direct_mat,direct_vec,orig_vec,old_vec=tup
             if not np.allclose(skew_mat,skew_vec,rtol=rtol):
                 print('skew_mat,skew_vec')
                 pprint((skew_mat,skew_vec))
@@ -246,6 +250,10 @@ class TestPhi(InDirTest):
             if not np.allclose(direct_vec,orig_vec,rtol=rtol):
                 print('direct_vec,orig_vec')
                 pprint((direct_vec,orig_vec))
+                return False
+            if not np.allclose(direct_vec,orig_vec,rtol=rtol):
+                print('orig_vec','old_vec')
+                pprint((orig_vec,old_vec))
                 return False
             return True
 
@@ -285,8 +293,6 @@ class TestPhi(InDirTest):
         ## reconstruct the solution with Phi and the integrand
         # x_t=Phi(t,t0)*x_0+int_t0^t Phi(tau,t0)*u(tau) dtau
         # x_t=a(t)+b(t)
-        # allthough Phi_old is wrong for this nonlinear system
-        # the reconstruction of the solution works along the solution....
         et=bvs[0]+bvs[1]    
         phi_arrays= {
              'old'   :(times,vectorlist2array([   Phi_old(t,t_0,et).reshape(srm.nr_pools,1) for t in times]))
@@ -337,7 +343,6 @@ class TestPhi(InDirTest):
             for key in styleDict.keys():
                 if key in d.keys(): 
                     val=d[key]
-                    print(len(val))
                     if len(val)==3:
                         time="{:7.1e}".format(val[2])
                     else:
@@ -351,9 +356,9 @@ class TestPhi(InDirTest):
         cpn=2
         r=1
         axl=fig.add_subplot(rpn,cpn,r)
-        plt.title("""phi components, nonlinear part of the system (x[0]) \n the old result does not match """)
+        plt.title("""phi components, nonlinear part of the system (x[0]) """)
         axr=fig.add_subplot(rpn,cpn,r+1)
-        plt.title("""phi components, linear part of the system (x[1]) \nthe old result does match for the """)
+        plt.title("""phi components, linear part of the system (x[1]) """)
         plot_comparison(axl,axr,phi_arrays) 
         axl.legend()
         
@@ -362,7 +367,8 @@ class TestPhi(InDirTest):
         axl=fig.add_subplot(rpn,cpn,r)
         plt.title('''
         original solution and reconstruction via phi, 
-        imprecise for trapez_rule and wrong for the old method'''
+        imprecise for trapez_rule and wrong for the old method
+        '''
         )
         axr=fig.add_subplot(rpn,cpn,r+1)
         axl.plot(times,original_sol[:,0],'o',color='blue' ,label="original_sol[0]")
@@ -405,4 +411,97 @@ class TestPhi(InDirTest):
         fig.savefig("solutions.pdf")
     
         
-        pe('b_arrays["skew"][1]-b_arrays["direct"][1]',locals())
+        #pe('b_arrays["skew"][1]-b_arrays["direct"][1]',locals())
+    def test_save_and_load_state_transition_operator_cache(self):
+        # two-dimensional
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = Matrix([C_0, C_1])
+        time_symbol = Symbol('t')
+        input_fluxes = {0: 1, 1: 2}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+
+        start_values = np.array([5, 3])
+        times = np.linspace(0,1,6)
+
+        smr = SmoothModelRun(srm, {}, start_values, times)
+        
+        ages = np.linspace(-1,1,3)
+        # negative ages will be cut off automatically
+        start_age_densities = lambda a: np.exp(-a)*start_values
+        smr.build_state_transition_operator_cache()
+
+        ca = smr._state_transition_operator_values
+        size = smr._cache_size
+
+        filename = 'sto.cache'
+        smr.save_state_transition_operator_cache(filename)
+        smr.load_state_transition_operator_cache(filename)
+    
+        self.assertEqual(size, smr._cache_size)
+        self.assertTrue(np.all(ca==smr._state_transition_operator_values))
+
+
+    def test_state_transition_operator_1d(self):
+        # one-dimensional case
+        C = Symbol('C')
+        state_vector = [C]
+        time_symbol = Symbol('t')
+        input_fluxes = {0: 1} # are inputs really ignored in the computation of Phi?
+        output_fluxes = {0: C}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+
+        start_values = np.array([5])
+        times = np.linspace(0,1,11)
+        smr = SmoothModelRun(srm, {}, start_values, times)
+
+        x = np.array([1])
+
+        Phix = smr._state_transition_operator(1,0,x)
+
+        self.assertEqual(Phix.shape, (1,))
+        self.assertTrue(abs(Phix-np.exp(-1))<1e-03)
+        print(type(Phix))
+
+    def test_state_transition_operator_2d(self):
+        # two-dimensional case
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        time_symbol = Symbol('t')
+        input_fluxes = {}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+
+        start_values = np.array([5,3])
+        times = np.linspace(0,1,11)
+        smr = SmoothModelRun(srm, {}, start_values, times)
+
+        x = np.array([1,3])
+        Phix = smr._state_transition_operator(1,0,x)
+       
+        self.assertEqual(Phix.shape, (2,))
+        
+        # test t<t_0
+        with self.assertRaises(Exception):
+            Phix = smr._state_transition_operator(0,1,x)
+
+        # test if operator works correctly also late in time
+        C = Symbol('C')
+        state_vector = [C]
+        time_symbol = Symbol('t')
+        input_fluxes = {0: 1} # are inputs really ignored in the computation of Phi?
+        output_fluxes = {0: C}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+
+        start_values = np.array([5])
+        times = np.linspace(0,100,101)
+        smr = SmoothModelRun(srm, {}, start_values, times)
+
+        x = np.array([1])
+
+        Phix = smr._state_transition_operator(91,89,x)
+        self.assertTrue(abs(Phix-np.exp(-2))<1e-03)

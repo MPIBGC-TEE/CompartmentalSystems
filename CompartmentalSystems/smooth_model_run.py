@@ -366,14 +366,15 @@ class SmoothModelRun(object):
         """
         times = self.times
 
-        sol,vec_sol_func = self.solve_2()
-        sol_funcs = []
-        for i in range(self.nr_pools):
-            #sol_inter = interp1d(times, sol[:,i])
-            sol_restriction=lambda t:vec_sol_func(t)[i]
-            sol_funcs.append(sol_restriction)
 
-        return sol_funcs
+        sol,vec_sol_func = self.solve_2()
+        # the factorie is necessary to avoid untstrict evaluation
+        def func_maker(pool):
+            def func(t):
+                return vec_sol_func(t)[pool]
+            return(func)
+       
+        return [func_maker(i) for i in range(self.nr_pools)]
 
     def sol_funcs_dict_by_symbol(self):
         """Return linearly interpolated solution functions. as a dictionary indexed by the symbols of the
@@ -392,7 +393,6 @@ class SmoothModelRun(object):
         
     def external_input_flux_funcs(self):
         """Return a dictionary of the external input fluxes.
-        
         The resulting functions base on sol_funcs and are linear interpolations.
 
         Returns:
@@ -405,7 +405,6 @@ class SmoothModelRun(object):
     def internal_flux_funcs(self):
         """Return a dictionary of the internal fluxes.
         
-        The resulting functions base on sol_funcs and are linear interpolations.
 
         Returns:
             dict: ``{key: func}`` with ``key=(pool_from, pool_to)`` representing
@@ -417,7 +416,6 @@ class SmoothModelRun(object):
     def output_flux_funcs(self):
         """Return a dictionary of the external output fluxes.
         
-        The resulting functions base on sol_funcs and are linear interpolations.
 
         Returns:
             dict: ``{key: func}`` with ``key`` representing the pool from which
@@ -431,8 +429,6 @@ class SmoothModelRun(object):
     def output_vector_func(self, t):
         """Return a vector of the external output fluxes at time ``t``.
         
-        The resulting values base on sol_funcs and come from  linear 
-        interpolations.
 
         Returns:
             numpy.array: The ``i`` th entry is the output from pool ``i`` at 
@@ -449,10 +445,11 @@ class SmoothModelRun(object):
     
 
     #fixme: returns a function
+    # 
+    #this function should be rewritten using the vector values solution 
     def external_input_vector_func(self, cut_off = True):
         """Return a vector valued function for the external inputs.
 
-        The resulting function bases on sol_funcs and is a linear interpolation.
 
         Returns:
             Python function ``u``: ``u(t)`` is a ``numpy.array`` containing the 
@@ -483,6 +480,7 @@ class SmoothModelRun(object):
         return self._external_input_vector_func
 
     # fixme: returns a vector
+    #this function should be rewritten using the vector values solution 
     def output_rate_vector_at_t(self, t):
         """Return a vector of output rates at time ``t``.
 
@@ -511,6 +509,7 @@ class SmoothModelRun(object):
 
 
     @property
+    #this function should be rewritten using the vector values solution 
     def external_input_vector(self):
         """Return the grid of external input vectors.
 
@@ -526,6 +525,7 @@ class SmoothModelRun(object):
         return res
 
     @property
+    #this function should be rewritten using the vector values solution 
     def external_output_vector(self):
         """Return the grid of external output vectors.
 
@@ -3596,8 +3596,8 @@ class SmoothModelRun(object):
         # why a replacement was necessary for the general case
         
         srm = self.model
-        if !srm.is_linear:
-            raise Exception("This method can only be applied to linear systems. Maybe you have to linearize along a solution first.")
+        if not srm.is_linear:
+            raise Exception("This method can only be applied to linear systems. Maybe you have to linearize along a solution first?  ( Consider using the linearize method )"  )
 
         if t0 > t:
             raise(Error("Evaluation before t0 is not possible"))
@@ -3702,6 +3702,7 @@ class SmoothModelRun(object):
         
         return np.maximum(soln, np.zeros_like(soln))
 
+    #this function should be rewritten using the vector values solution 
     def _flux_vector(self, flux_vec_symbolic):
         sol = self.solve()
         srm = self.model
@@ -3747,7 +3748,7 @@ class SmoothModelRun(object):
             else:
                 return np.zeros((self.nr_pools,))
 
-        Phi = self._state_transition_operator
+        Phi = self._state_transition_operator#_for_linear_systems
  
         t0 = self.times[0]
 
@@ -3769,8 +3770,8 @@ class SmoothModelRun(object):
         # for part that comes from initial value
 
         ppp = self._age_densities_1_single_value(start_age_densities)
-        pp = lambda a: np.array([ppp(a,t) for t in self.times], np.float)
-        p1 = lambda ages: np.array([pp(a) for a in ages], np.float)
+        pp = lambda a: np.array( [ ppp(a,t) for t in self.times ], np.float)
+        p1 = lambda ages: np.array( [ pp(a) for a in ages ], np.float)
         
         return p1
         
