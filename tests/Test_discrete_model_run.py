@@ -52,8 +52,8 @@ class TestDiscreteModelRun(InDirTest):
         delta_t=np.float(1)
         
         smr = SmoothModelRun(srm, parameter_dict, start_values, times)
-        
-        # export the ingredients for an different ode solver 
+
+        # export the ingredients for a different ode solver 
         srm = smr.model
         state_vector, rhs = srm.age_moment_system(max_order=0)
         num_rhs = numerical_rhs2(
@@ -82,4 +82,31 @@ class TestDiscreteModelRun(InDirTest):
             ax.legend()
         fig.savefig("pool_contents.pdf")
         self.assertTrue(True)
+
+
+    def test_start_value_format(self):
+
+        ## create ReservoirModel
+        C_1, C_2, C_3 = symbols('C_1 C_2 C_3')
+        state_vector = Matrix(3, 1, [C_1, C_2, C_3]) 
+        t = symbols('t')
+        B = Matrix([[-2, 0, 1], [2, -2, 0], [0, 2, -2]])
+        u = Matrix(3, 1, [1, 0, 0])
+    
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
+    
+        ## create ModelRun
+        ss = (-B**(-1)*u)
+        #start_values = np.array(ss).astype(np.float64).reshape((3,))
+        start_values = np.array(ss).astype(np.float64)
+        times = np.linspace(1919, 2009, 901)
+        parameter_dict = {}
+        smr = SmoothModelRun(srm, parameter_dict, start_values, times)
+
+        dmr = DiscreteModelRun.from_SmoothModelRun(smr)
+
+        
+
+
+
 

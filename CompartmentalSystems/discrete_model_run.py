@@ -30,7 +30,10 @@ class DiscreteModelRun(object):
         self.dts = np.diff(self.times).astype(np.float64)
 
     @classmethod
-    def from_SmoothModelRun(cls,smr): 
+    def from_SmoothModelRun(cls,smr,data_times=None): 
+        if data_times is None:
+            data_times = smr.times
+
         # fake a model t for the test and gradually remove the faked parts
         # fake the statetransition operator
         phi=lambda t_e,t_s: np.identity(nr_pools)*np.exp(-(t_e-t_s))
@@ -38,7 +41,7 @@ class DiscreteModelRun(object):
             return smr._state_transition_operator_by_skew_product_system(t,s,x)
 
         nr_pools=smr.nr_pools
-        data_times=smr.times
+        #data_times=smr.times
         n=len(data_times)
         Bs = np.zeros((n-1, nr_pools, nr_pools)) 
         us = np.zeros((n-1, nr_pools)) 
@@ -48,6 +51,7 @@ class DiscreteModelRun(object):
 
             #fixme mm replace with Phi(data_times[k])
             #B=phi(data_times[k+1],data_times[k])
+
             B=Phi(data_times[k+1],data_times[k])
             Bs[k,:,:] = B
             #fixme: replace with int_{t_k}^{t_{k+1}} phi(t)*u(t) dt
