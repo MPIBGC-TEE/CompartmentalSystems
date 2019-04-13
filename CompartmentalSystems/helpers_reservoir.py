@@ -311,8 +311,11 @@ def numsol_symbolic_system_2(
         parameter_dict,
         func_set
     )
-
-    res=solve_ivp(num_rhs, y0=start_values,t_span=(min(times),max(times)),t_eval=times,dense_output=dense_output)
+    t_min=times[0]
+    t_max=times[-1]
+    #res=solve_ivp(num_rhs, y0=start_values,t_span=(min(times),max(times)),t_eval=times,dense_output=dense_output)
+    res=solve_ivp(num_rhs, y0=start_values,t_span=(t_min,t_max),t_eval=times,dense_output=dense_output)
+    #res=solve_ivp(num_rhs, y0=start_values,t_span=(t_min,t_max),dense_output=dense_output)
     values=res.y.transpose() # adapt to the old interface since our code at the moment expects it
     func=res.sol
     return (values,func)

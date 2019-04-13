@@ -34,9 +34,6 @@ class DiscreteModelRun(object):
         if data_times is None:
             data_times = smr.times
 
-        # fake a model t for the test and gradually remove the faked parts
-        # fake the statetransition operator
-        phi=lambda t_e,t_s: np.identity(nr_pools)*np.exp(-(t_e-t_s))
         def Phi(t,s,x=None):
             return smr._state_transition_operator_by_skew_product_system(t,s,x)
 
@@ -46,19 +43,16 @@ class DiscreteModelRun(object):
         Bs = np.zeros((n-1, nr_pools, nr_pools)) 
         us = np.zeros((n-1, nr_pools)) 
         start_index = 0
+        soln,sol_func=smr.solve_2()
+        print("##################################")
         for k in range(start_index, n-1):
             delta_t=data_times[k+1]-data_times[k]
-
-            #fixme mm replace with Phi(data_times[k])
-            #B=phi(data_times[k+1],data_times[k])
-
             B=Phi(data_times[k+1],data_times[k])
             Bs[k,:,:] = B
-            #fixme: replace with int_{t_k}^{t_{k+1}} phi(t)*u(t) dt
-            #or better with u=sol(tk)-phi(t_k,t_k+1)*x(t_k) which is identical but much cheaper
-            soln,sol_func=smr.solve_2()
+            #u=sol(tk)-phi(t_k,t_k+1)*x(t_k) which is identical but much cheaper
+            #soln,sol_func=smr.solve_2()
+            #print("##################################")
             u=sol_func(data_times[k+1])-np.matmul(B,sol_func(data_times[k]))
-            #u=np.ones(nr_pools)*delta_t
 
             us[k,:] = u
 
