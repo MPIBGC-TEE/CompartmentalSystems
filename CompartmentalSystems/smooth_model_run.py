@@ -144,7 +144,8 @@ class SmoothModelRun(object):
         self.times = times
         # make sure that start_values are an array,
         # even a one-dimensional one
-        self.start_values = np.asarray(start_values) * np.ones(1)
+        self.start_values = np.array(start_values).reshape(model.nr_pools,)
+
         if not(isinstance(start_values, np.ndarray)):
             raise(Error("start_values should be a numpy array"))
         # fixme mm: 
