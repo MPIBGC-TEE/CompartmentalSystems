@@ -62,7 +62,7 @@ class DiscreteModelRun(object):
     @classmethod
     def reconstruct_from_data(cls, times, start_values, xs, Fs, rs, us):
         Bs = cls.reconstruct_Bs(times, xs, Fs, rs, us)
-    
+
         dmr = cls(start_values, times, Bs, us)
         return dmr
 
@@ -107,7 +107,7 @@ class DiscreteModelRun(object):
     def reconstruct_Bs(cls, data_times, xs, Fs, rs, us):
         nr_pools = len(xs[0])
         Bs = np.zeros((len(data_times)-1, nr_pools, nr_pools)) 
-    
+  
         start_index = 0
         x = xs[start_index]
         for k in range(start_index, len(data_times)-1):
@@ -115,7 +115,6 @@ class DiscreteModelRun(object):
             B = cls.reconstruct_B(x, Fs[k], rs[k], k)
             x = B @ x + us[k]
             Bs[k,:,:] = B
-    
         return Bs
 
     def solve(self):
