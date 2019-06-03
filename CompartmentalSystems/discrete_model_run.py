@@ -2,8 +2,7 @@ import numpy as np
 
 from numpy.linalg import matrix_power, pinv
 from scipy.linalg import inv
-from scipy.misc import factorial
-from scipy.special import binom
+from scipy.special import factorial, binom
 from scipy.integrate import solve_ivp,OdeSolver,odeint
 from sympy import Matrix
 

@@ -39,7 +39,7 @@ from sympy.printing import pprint
 import scipy.linalg
 from scipy.linalg import inv
 from numpy.linalg import pinv
-from scipy.misc import factorial
+from scipy.special import factorial
 from scipy.integrate import odeint, quad , solve_ivp
 from scipy.interpolate import interp1d, UnivariateSpline
 from scipy.optimize import newton, brentq, minimize
