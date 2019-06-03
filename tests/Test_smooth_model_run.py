@@ -12,7 +12,7 @@ import numpy as np
 from pathlib import Path
 from scipy.integrate import quad
 from scipy.interpolate import interp1d 
-from scipy.misc import factorial
+from scipy.special import factorial
 from sympy import sin, symbols, Matrix, Symbol, exp, solve, Eq, pi, Piecewise, Function, ones
     
 import example_smooth_reservoir_models as ESRM
