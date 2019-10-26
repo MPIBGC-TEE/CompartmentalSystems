@@ -29,7 +29,6 @@ import numpy as np
 import multiprocessing
 
 from .helpers_reservoir import factor_out_from_matrix, has_pw, flux_dict_string, jacobian
-from testinfrastructure.helpers import  pe
 from typing import TypeVar
 
 

@@ -10,7 +10,7 @@ from sympy import var,Matrix
 from sympy.printing import pprint
 
 from testinfrastructure.InDirTest import InDirTest
-from testinfrastructure.helpers import pe
+#from testinfrastructure.helpers import pe
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 from CompartmentalSystems.BlockIvp import BlockIvp

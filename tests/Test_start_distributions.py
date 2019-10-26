@@ -23,7 +23,7 @@ from CompartmentalSystems.start_distributions import \
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from testinfrastructure.InDirTest import InDirTest
-from testinfrastructure.helpers import pe
+#from testinfrastructure.helpers import pe
 
 class TestStartDistributions(InDirTest):
     def test_start_age_moments_from_empty_spinup(self):
@@ -117,7 +117,7 @@ class TestStartDistributions(InDirTest):
         t0_index = int(n_steps/2)
         t0       = times[t0_index]
         a_dens_func_t0,pool_contents=start_age_distributions_from_empty_spinup(srm,t_max=t0,parameter_dict=parameter_dict,func_set=func_set)
-        pe('pool_contents',locals())
+#        pe('pool_contents',locals())
         
         # construct a function p that takes an age array "ages" as argument
         # and gives back a three-dimensional ndarray (ages x times x pools)

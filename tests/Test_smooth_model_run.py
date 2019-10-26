@@ -19,7 +19,7 @@ import example_smooth_reservoir_models as ESRM
 import example_smooth_model_runs as ESMR
 
 from testinfrastructure.InDirTest import InDirTest
-from testinfrastructure.helpers import pe
+#from testinfrastructure.helpers import pe
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 
@@ -253,7 +253,7 @@ class TestSmoothModelRun(InDirTest):
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
         res=smr.output_vector_func(1)
-        pe('res',locals())
+#        pe('res',locals())
         self.assertTrue(np.allclose(res, np.array([0.36809009, 1.10427026]),rtol=1e-3))
         
 
@@ -636,9 +636,9 @@ class TestSmoothModelRun(InDirTest):
 
         a_ref = a1_ref + a2_ref
         ref = np.sum(np.ndarray((3,6,2), np.float, a_ref), axis=2)
-        pe('system_age_density',locals())
-        pe('ref',locals())
-        pe('ref-system_age_density',locals())
+#        pe('system_age_density',locals())
+#        pe('ref',locals())
+#        pe('ref-system_age_density',locals())
         self.assertTrue(np.allclose(ref, system_age_density,rtol=1e-3))
 
 
@@ -844,8 +844,8 @@ class TestSmoothModelRun(InDirTest):
         order = 2
         start_age_densities = lambda a: np.exp(-a) * start_values
         start_age_moments = smr.moments_from_densities(order, start_age_densities)
-        pe('start_age_moments',locals())
-        pe('start_age_moments.shape',locals())
+#        pe('start_age_moments',locals())
+#        pe('start_age_moments.shape',locals())
 
         system_age_moment = smr.system_age_moment(order, start_age_moments)
         age_moment_vector = smr.age_moment_vector(order, start_age_moments)
@@ -1828,7 +1828,7 @@ class TestSmoothModelRun(InDirTest):
         ref = np.ndarray((3,6,1), np.float, a_ref)
         res_l = [[p1_sv(a, t) for t in times] for a in ages]
         res = np.array(res_l)
-        pe('(res-ref)/res',locals())
+#        pe('(res-ref)/res',locals())
         self.assertTrue(np.allclose(res, ref,rtol=1e-3))
 
         # test missing start_age_densities
@@ -2549,7 +2549,7 @@ class TestSmoothModelRun(InDirTest):
         
         result0 = smr._EFFTT_s_i(s, 0, t1)
         ref=(np.exp(3)-4)/(3*np.exp(3)-3)
-        pe('(result0,ref)',locals())
+#        pe('(result0,ref)',locals())
         self.assertEqual(round(result0,3), 
                          round(ref,3))
         result1 = smr._EFFTT_s_i(s, 1, t1)

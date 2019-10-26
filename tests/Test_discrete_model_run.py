@@ -22,7 +22,7 @@ import example_smooth_reservoir_models as ESRM
 import example_smooth_model_runs as ESMR
 
 from testinfrastructure.InDirTest import InDirTest
-from testinfrastructure.helpers import pe
+#from testinfrastructure.helpers import pe
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun

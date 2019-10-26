@@ -9,7 +9,7 @@ from sympy import Symbol, Matrix, symbols, diag, zeros, simplify, Function
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from testinfrastructure.InDirTest import InDirTest
-from testinfrastructure.helpers import  pe,pp
+#from testinfrastructure.helpers import  pe,pp
 
 
 ######### TestClass #############

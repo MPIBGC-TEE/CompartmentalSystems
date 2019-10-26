@@ -45,7 +45,7 @@ from scipy.interpolate import interp1d, UnivariateSpline
 from scipy.optimize import newton, brentq, minimize
 
 from tqdm import tqdm
-from testinfrastructure.helpers import pe
+#from testinfrastructure.helpers import pe
 
 from .smooth_reservoir_model import SmoothReservoirModel
 from .helpers_reservoir import deprecation_warning,warning ,make_cut_func_set

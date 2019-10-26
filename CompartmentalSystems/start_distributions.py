@@ -111,14 +111,13 @@ import numpy as np
 from scipy.linalg import inv, LinAlgError
 from scipy.special import factorial
 from scipy.optimize import root,fsolve
-from testinfrastructure.helpers import pe
 from CompartmentalSystems.helpers_reservoir import \
     jacobian, func_subs,\
     numerical_function_from_expression,\
     warning,deprecation_warning
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
-from testinfrastructure.helpers import pe
+#from testinfrastructure.helpers import pe
 
 def start_age_distributions_from_empty_spinup(srm,t_max,parameter_dict,func_set):
     """
@@ -428,7 +427,7 @@ def lapm_for_steady_state(srm,t0,parameter_dict,func_set,x0=None):
         u0=u_func(t0)
         try:
             x_fix=(-inv(B0)@u0).reshape(srm.nr_pools)
-            pe('x_fix',locals())
+#            pe('x_fix',locals())
         except LinAlgError as e:
             print("""
             B_0=B(t_0) is not invertable
@@ -461,7 +460,7 @@ def lapm_for_steady_state(srm,t0,parameter_dict,func_set,x0=None):
             
 
         x_fix= compute_fixedpoint_numerically(srm,t0,x0,parameter_dict,func_set)
-        pe('x_fix',locals())
+#        pe('x_fix',locals())
 
         t=srm.time_symbol
         tup = tuple(srm.state_vector)+(t,)
@@ -473,8 +472,8 @@ def lapm_for_steady_state(srm,t0,parameter_dict,func_set,x0=None):
 
     B0_m=Matrix(B0) 
     u0_m=Matrix(u0) 
-    pe('B0',locals())
-    pe('u0',locals())
+#    pe('B0',locals())
+#    pe('u0',locals())
     lapm=LinearAutonomousPoolModel(u0_m,B0_m,force_numerical=True)
     return lapm,x_fix
 

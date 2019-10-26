@@ -1,5 +1,5 @@
 from testinfrastructure.InDirTest import InDirTest
-from testinfrastructure.helpers import pe
+#from testinfrastructure.helpers import pe
 import numpy as np
 
 from CompartmentalSystems.BlockIvp import BlockIvp

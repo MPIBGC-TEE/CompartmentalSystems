@@ -1,7 +1,6 @@
 # vim:set ff=unix expandtab ts=4 sw=4:
 from __future__ import division
 from typing import Callable,Iterable,Union,Optional,List,Tuple,Sequence
-from testinfrastructure.helpers import pe
 
 import numpy as np 
 import inspect
@@ -534,7 +533,7 @@ def const_of_t_maker(const):
 def x_phi_ivp(srm, parameter_dict, func_dict,start_x,x_block_name='x',phi_block_name='phi'):
         
     #B=srm.compartmental_matrix
-    pe('srm',locals())
+#    pe('srm',locals())
     nr_pools=srm.nr_pools
     nq=nr_pools*nr_pools
     #tup=(t,)+tuple(srm.state_vector)
