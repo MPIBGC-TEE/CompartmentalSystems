@@ -139,10 +139,10 @@ class DiscreteModelRun(object):
         return r
 
     # return value in unit "time steps"
-    def compute_start_m_factorial_moment(self, order):
+    def compute_start_m_factorial_moment(self, order, time_index = 0):
         Id = np.identity(self.nr_pools)
-        B = self.Bs[0]
-        x = self.solve()[0]
+        B = self.Bs[time_index]
+        x = self.solve()[time_index]
         X = x * Id
         n = order
 
@@ -152,7 +152,7 @@ class DiscreteModelRun(object):
         return fm
 
     # return value in unit "time steps x dt[0]"
-    def compute_start_age_moments(self, max_order):
+    def compute_start_age_moments(self, max_order, time_index = 0):
         def stirling(n, k):
             n1=n
             k1=k
@@ -173,10 +173,10 @@ class DiscreteModelRun(object):
             return (k1*(stirling(n1-1,k1)))+stirling(n1-1,k1-1)
 
         nr_pools = self.nr_pools
-        Id = np.identity(nr_pools)
-        B0 = self.Bs[0]
-        x0 = self.solve()[0]
-        X0 = x0 * Id
+#        Id = np.identity(nr_pools)
+#        B0 = self.Bs[time_index]
+#        x0 = self.solve()[time_index]
+#        X0 = x0 * Id
         start_age_moments = []
         dt = self.dts[0]
         for n in range(1, max_order+1):
@@ -187,7 +187,7 @@ class DiscreteModelRun(object):
             start_m_moment = np.zeros(nr_pools)
             for k in range(n+1):
                 start_m_moment += stirling(n, k) * \
-                    self.compute_start_m_factorial_moment(k) 
+                    self.compute_start_m_factorial_moment(k, time_index) 
                     
             start_age_moments.append(start_m_moment*dt**n)
 
