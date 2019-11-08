@@ -11,7 +11,7 @@ from tqdm import tqdm
 ################################################################################
 
 
-class Error(Exception):
+class DMRError(Exception):
     """Generic error occurring in this module."""
     pass
 
@@ -68,15 +68,16 @@ class DiscreteModelRun(object):
     @classmethod
     def reconstruct_B(cls, x, F, r, k):
         nr_pools = len(x)
+
         B = np.identity(nr_pools)
         if len(np.where(F<0)[0]) > 0:
-            print('\n\n', np.where(F<0), '\n\n')
-            raise(Error('Negative flux detected: time step %d' % k))
+#            print('\n\n', np.where(F<0), '\n\n')
+            raise(DMRError('Negative flux detected: time step %d' % k))
     
         # construct off-diagonals
         for j in range(nr_pools):
             if x[j] < 0:
-                raise(Error('Reconstructed compartment content negative: pool %d, time %d ' % (j,k)))
+                raise(DMRError('Reconstructed compartment content negative: pool %d, time %d ' % (j,k)))
             if x[j] != 0:
                 B[:,j] = F[:,j] / x[j]
             else:
@@ -88,9 +89,9 @@ class DiscreteModelRun(object):
                 B[j,j] = 1 - (sum(B[:,j]) - B[j,j] + r[j] / x[j])
                 if B[j,j] < 0:
                     #print(j, x, F, r, '\n\n')
-                    print('diagonal value = ', B[j,j])
-                    print('pool content = ', x[j])
-                    raise(Error('Reconstructed diagonal value is negative: pool %d, time %d' % (j,k)))
+#                    print('diagonal value = ', B[j,j])
+#                    print('pool content = ', x[j])
+                    raise(DMRError('Reconstructed diagonal value is negative: pool %d, time %d' % (j,k)))
             else:
                 B[j,j] = 1
    
