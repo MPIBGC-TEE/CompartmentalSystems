@@ -8,6 +8,8 @@ from sympy import Matrix
 
 from tqdm import tqdm
 
+from . import picklegzip
+
 ################################################################################
 
 
@@ -430,6 +432,16 @@ class DiscreteModelRun(object):
             mass += p_sv(age, t)[pools].sum()
 
         return prev_age
+
+
+    @classmethod
+    def load_from_file(cls, filename):
+        cmr = picklegzip.load(filename)
+        return cmr
+
+
+    def save_to_file(self, filename):
+        picklegzip.dump(self, filename)
 
 
     ########## 14C methods #########

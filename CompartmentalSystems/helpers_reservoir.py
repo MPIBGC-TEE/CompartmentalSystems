@@ -187,13 +187,13 @@ def numerical_rhs2(
     # 
     def num_rhs(t,X):
         Fval = FL(t,*X)
+#        print(t)
         return Fval.reshape(X.shape,)
 
     return num_rhs    
 
 def numerical_rhs(state_vector, time_symbol, rhs, 
         parameter_dict, func_set, times):
-
     
     FL=numerical_function_from_expression(
             rhs
@@ -204,6 +204,7 @@ def numerical_rhs(state_vector, time_symbol, rhs,
     # 2.) Write a wrapper that transformes Matrices numpy.ndarrays and accepts array instead of the separate arguments for the states)
     # 
     def num_rhs(X,t):
+#        print(t)
         Fval = FL(*X,t)
         return Fval.reshape(X.shape,)
 
@@ -237,32 +238,6 @@ def numerical_rhs(state_vector, time_symbol, rhs,
 
     return bounded_num_rhs
 
-
-def numsol_symbolic_system(
-        state_vector, 
-        time_symbol, 
-        rhs, 
-        parameter_dict, 
-        func_set, 
-        start_values, 
-        times
-    ):
-
-    nr_pools = len(state_vector)
-    
-    if times[0] == times[-1]: return start_values.reshape((1, nr_pools))
-
-    num_rhs = numerical_rhs(
-        state_vector,
-        time_symbol,
-        rhs, 
-        parameter_dict,
-        func_set,
-        times
-    )
-
-    #return odeint(num_rhs, start_values, times, mxstep=10000)
-    return odeint(num_rhs, start_values, times, mxstep=10000)
 
 def numsol_symbolic_system(
         state_vector, 
