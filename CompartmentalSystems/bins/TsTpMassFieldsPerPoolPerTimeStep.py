@@ -2,7 +2,7 @@
 import numpy as np
 from sympy import latex
 import matplotlib
-matplotlib.use("Agg")
+#matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.animation as manimation
 from .density_algorithm import losses,gains

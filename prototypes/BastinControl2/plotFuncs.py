@@ -348,7 +348,7 @@ def compare_model_runs(mr_dict,u_A_func):
         mr=mr_dict[key]
         soln = mr.solve()
         print("##############################")
-        print(soln.shape)
+        print(soln)
         print("##############################")
         times=mr.times
         

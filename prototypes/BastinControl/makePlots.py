@@ -23,7 +23,7 @@ import  limiters # module of different phi expression
 assert_non_negative_sym=Function('assert_non_negative_sym')
 def assert_non_negative_num(Net_SD_DS): # asserts that the netflux is non negative
     
-    assert(np.array(Net_SD_DS>0).all()) 
+    #assert(np.array(Net_SD_DS>0).all()) 
     return Net_SD_DS
 
 def phi_eps(z_sym,eps_sym):
@@ -227,28 +227,30 @@ plotFuncs.cubic_family(
 #        limited_srm_300, par_dict, start_values, 
 #        times=times, func_dict=func_dict,zs=[100,1000,10000],epsilons=[1.5,2.5,3.5] )    
 
-pf=plotFuncs.compare_model_runs(
-    {
-#        "limited_uncontrolled_90":all_mrs["limited_90_smr"]
-#        ,
-        "limited_uncontrolled":all_mrs["limited_smr"]
-        ,
-        "unlimited_uncontrolled":all_mrs["unlimited_smr"]
-    },
-    drivers.u_A_func
-)
 #pf=plotFuncs.compare_model_runs(
-#    { 
-#        key:all_mrs[key] for key in [
+#    {
+##        "limited_uncontrolled_90":all_mrs["limited_90_smr"]
+##        ,
+#        "limited_uncontrolled":all_mrs["limited_smr"]
+#        ,
+#        "unlimited_uncontrolled":all_mrs["unlimited_smr"]
+#    },
+#    drivers.u_A_func
+#)
+pf=plotFuncs.compare_model_runs(
+    { 
+        key:all_mrs[key] for key in [
+            "limited_smr"
+            ,"limited_controlled_cubic_fast"  
 #            "limited_controlled_cubic_fast" , 
 #            "limited_controlled_cubic_mid",
 #            "limited_controlled_cubic_slow"
 ##            "limited_300_controlled_deceleration_10_10",
 ##            "limited_300_controlled_half_saturation_10_20"
-#        ]
-#    },
-#    drivers.u_A_func
-#)
+        ]
+    },
+    drivers.u_A_func
+)
 
 
 pf=plotFuncs.compare_controlers(
