@@ -149,7 +149,7 @@ def factor_out_from_matrix(M):
 def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
     # the function returns a function that given numeric arguments
     # returns a numeric result.
-    # This is more specific requirement than a function returned lambdify 
+    # This is a more specific requirement than a function returned by lambdify 
     # which can still return symbolic
     # results if the tuple argument to lambdify does not contain all free
     # symbols of the lambdified expression.
@@ -287,9 +287,8 @@ def numsol_symbolic_system_2(
     )
     t_min=times[0]
     t_max=times[-1]
-    #res=solve_ivp(num_rhs, y0=start_values,t_span=(min(times),max(times)),t_eval=times,dense_output=dense_output)
-    res=solve_ivp(num_rhs, y0=start_values,t_span=(t_min,t_max),t_eval=times,dense_output=dense_output)
-    #res=solve_ivp(num_rhs, y0=start_values,t_span=(t_min,t_max),dense_output=dense_output)
+    res=solve_ivp(num_rhs, y0=start_values,t_span=(t_min,t_max),t_eval=times,dense_output=dense_output,method='LSODA')
+    #res=solve_ivp(num_rhs, y0=start_values,t_span=(t_min,t_max),t_eval=times,dense_output=dense_output)
     values=res.y.transpose() # adapt to the old interface since our code at the moment expects it
     func=res.sol
     return (values,func)

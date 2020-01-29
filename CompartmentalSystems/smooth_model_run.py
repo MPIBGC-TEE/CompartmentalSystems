@@ -54,6 +54,7 @@ from .helpers_reservoir import (has_pw, numsol_symbolic_system, numsol_symbolic_
     ,stochastic_collocation_transform, numerical_rhs, MH_sampling, save_csv
     ,load_csv, stride ,f_of_t_maker,const_of_t_maker,numerical_function_from_expression
     ,x_phi_ivp,numerical_rhs2)
+from .BlockIvp import BlockIvp
 
 class Error(Exception):
     """Generic error occurring in this module."""
@@ -203,7 +204,7 @@ class SmoothModelRun(object):
             self._B = _B
 
         return self._B(t)     
-
+    
     def linearize(self):
         """Return a linearized SmoothModelRun instance.
 
@@ -217,6 +218,69 @@ class SmoothModelRun(object):
             of ``func_set``.
         """
         sol_funcs = self.sol_funcs()
+        
+        srm = self.model
+        xi, T, N, C, u = srm.xi_T_N_u_representation()
+        svec = srm.state_vector
+
+        symbolic_sol_funcs = {sv: Function(sv.name + '_sol')(srm.time_symbol) 
+                                for sv in svec}
+
+        # need to define a function_factory to create the function we need to 
+        # avoid late binding
+        # with late binding pool will always be nr_pools and always the last 
+        # function will be used!
+        def func_maker(pool):
+            def func(t):
+                return sol_funcs[pool](t)
+
+            return(func)
+
+        sol_dict = {}
+        for pool in range(self.nr_pools):
+            key = sstr(symbolic_sol_funcs[svec[pool]])
+            sol_dict[key] = func_maker(pool)
+
+
+        linearized_B = (xi*T*N).subs(symbolic_sol_funcs)
+        linearized_u = u.subs(symbolic_sol_funcs)
+
+        func_set = self.func_set
+        func_set.update(sol_dict)
+
+        cl=srm.__class__
+        linearized_srm = cl.from_B_u(
+            srm.state_vector, 
+            srm.time_symbol, 
+            linearized_B, 
+            linearized_u
+        )      
+
+        linearized_smr = self.__class__(
+            linearized_srm, 
+            self.parameter_dict,
+            self.start_values, 
+            self.times, 
+            func_set=func_set
+        )
+ 
+        return linearized_smr
+
+
+    def linearize_2(self):
+        """Return a linearized SmoothModelRun instance.
+
+        Linearization happens along the solution trajectory. Only for linear 
+        systems all functionality is guaranteed,
+        this is why nonlinear systems should be linearized first.
+
+        Returns:
+            :class:`SmoothModelRun`: A linearized version of the original 
+            :class:`SmoothModelRun`, with the solutions now being part 
+            of ``func_set``.
+        """
+        #sol_funcs = self.sol_funcs()
+        sol_funcs = self.sol_funcs_2()
         
         srm = self.model
         xi, T, N, C, u = srm.xi_T_N_u_representation()
@@ -356,9 +420,25 @@ class SmoothModelRun(object):
 
     ##### fluxes as functions #####
     
+    def sol_funcs(self):
+        """Return linearly interpolated solution functions.
+
+        Returns:
+            Python function ``f``: ``f(t)`` returns a numpy.array containing the
+            pool contents at time ``t``.
+        """
+        times = self.times
+
+        sol = self.solve(times)
+        sol_funcs = []
+        for i in range(self.nr_pools):
+            sol_inter = interp1d(times, sol[:,i])
+            sol_funcs.append(sol_inter)
+
+        return sol_funcs
 
     #fixme: test
-    def sol_funcs(self):
+    def sol_funcs_2(self):
         """Return linearly interpolated solution functions.
 
         Returns:
@@ -380,7 +460,8 @@ class SmoothModelRun(object):
     def sol_funcs_dict_by_symbol(self):
         """Return linearly interpolated solution functions. as a dictionary indexed by the symbols of the
         state variables"""
-        sol_funcs=self.sol_funcs()
+        #sol_funcs=self.sol_funcs()
+        sol_funcs=self.sol_funcs_2()
         state_vector=self.model.state_vector
         n=len(state_vector)
         sol_dict_by_smybol={state_vector[i]:sol_funcs[i] for i in range(n)}
@@ -494,7 +575,8 @@ class SmoothModelRun(object):
         """
         n = self.nr_pools
 
-        sol_funcs = self.sol_funcs()
+        #sol_funcs = self.sol_funcs()
+        sol_funcs = self.sol_funcs_2()
         output_vec_at_t = self.output_vector_func(t)
 
         rate_vec = np.zeros((n,))
@@ -3238,6 +3320,9 @@ class SmoothModelRun(object):
             B_func=numerical_function_from_expression(srm.compartmental_matrix,tup,self.parameter_dict,self.func_set)
             def lin_rhs(tau,x):
                 # we inject the soltution into B to get the linearized version
+                #print('tau=',tau,flush=True)
+                #print('sol_func(tau)',sol_func(tau))
+                #print('B(tau,sol(tau))',B_func(tau,*sol_func(tau)))
                 B=B_func(tau,*sol_func(tau))
                 # and then apply it to the actual  vector x to compute Phi*x
                 return np.matmul(B,x).flatten()
@@ -3251,7 +3336,10 @@ class SmoothModelRun(object):
                     return np.array(start_vector)
                 sv = np.array(start_vector).reshape((self.nr_pools,))
 
-                values=solve_ivp(lin_rhs,y0=sv,t_span=(s,t)).y
+                sol_dict=solve_ivp(lin_rhs,y0=sv,t_span=(s,t))
+                values=sol_dict.y
+                #print('sol_dict=',sol_dict)
+                #print('t,s=',t,s)
                 return values[:,-1]
                 #return odeint(no_inputs_num_rhs, sv, times, mxstep = 10000)[-1]
         
@@ -3262,6 +3350,56 @@ class SmoothModelRun(object):
     #fixme: test
 
     def build_state_transition_operator_cache(self, size = 101):
+        ca= self._compute_state_transition_operator_cache(size)
+        print("cache created")
+
+        self._state_transition_operator_values = ca
+        self._cache_size = size
+        
+    def _compute_state_transition_operator_cache(self, size = 101):
+        if size < 2:
+            raise(Error('Cache size must be at least 2'))
+
+        times = self.times
+        n = self.nr_pools
+        t_min = times[0]
+        t_max = times[-1]
+        nc = size
+        cached_times = np.linspace(t_min, t_max, nc)
+
+        # build cache
+        print("creating cache")
+        ca = np.ndarray((nc, nc, n, n))
+        ca = np.zeros((nc, nc, n, n)) 
+        no_input_sol = self._no_input_sol
+
+        for tm1_index in tqdm(range(nc-1)):
+            tm1 = cached_times[tm1_index]
+            sub_cached_times = np.linspace(tm1, t_max, nc)
+
+            for i in range(n):
+                e_i = np.zeros((n,1))
+                e_i[i] = 1
+                #ca[tm1_index,:,:,i] = no_input_sol(sub_cached_times, e_i) 
+                # leads to zig-zag functions, 
+                # the ends do not fit together
+                sv = e_i
+                st = tm1
+                for j in range(len(sub_cached_times)):
+                    new_sv = no_input_sol([st, sub_cached_times[j]], sv)
+                    ca[tm1_index,j,:,i] = new_sv.reshape((n,))
+                    sv = new_sv
+                    st = sub_cached_times[j]
+        return ca
+    
+    def build_state_transition_operator_cache_2(self, size = 101):
+        ca= self._compute_state_transition_operator_cache_2(size)
+        print("cache created")
+
+        self._state_transition_operator_values = ca
+        self._cache_size = size
+    
+    def _compute_state_transition_operator_cache_2(self, size = 101):
         if size < 2:
             raise(Error('Cache size must be at least 2'))
 
@@ -3277,6 +3415,7 @@ class SmoothModelRun(object):
         ca = np.ndarray((nc, nc, n, n))
         ca = np.zeros((nc, nc, n, n)) 
         linearized_no_input_sol = self._linearized_no_input_sol
+        #linearized_no_input_sol = self._no_input_sol
 
         for tm1_index in tqdm(range(nc-1)):
             tm1 = cached_times[tm1_index]
@@ -3295,11 +3434,36 @@ class SmoothModelRun(object):
                     ca[tm1_index,j,:,i] = new_sv.reshape((n,))
                     sv = new_sv
                     st = sub_cached_times[j]
+        return ca
 
-        print("cache created")
+    def _compute_state_transition_operator_cache_2b(self, size = 101):
+        # implement a cache that computes PHI_{t_i,t_i+1 } for i in 0:size-1 
+        # we also compute PHI in a skewproduct system along with the solution.
+        # so we do not need an interpolation
+        if size < 2:
+            raise(Error('Cache size must be at least 2'))
+        
+        times = self.times
+        n = self.nr_pools
+        t_min = times[0]
+        t_max = times[-1]
+        nc = size #number of cached matrices 
+        cache_times = np.linspace(t_min, t_max, nc+1)
 
-        self._state_transition_operator_values = ca
-        self._cache_size = size
+        # build cache
+        print("creating cache")
+        #ca = np.ndarray((nc, n, n))
+        ca = np.zeros(( nc, n, n)) 
+
+        for tm1_index in tqdm(range(nc-1)):
+            t= cache_times[tm1_index]
+            s= cache_times[tm1_index+1]
+            Phi=self._state_transition_operator_by_skew_product_system(t,s)
+            ca[tm1_index,:,:]=Phi
+             
+
+        return ca
+
 
     def save_state_transition_operator_cache(self, filename):
         cache = {'values': self._state_transition_operator_values,
@@ -3415,13 +3579,13 @@ class SmoothModelRun(object):
             if x is None:
                 # inversions are expensive, we cache them
                 A_inv=my_inv(t,A) #costs if it is the firs time
-                mat =np.matmul(B,Ainv)
+                mat =np.matmul(B,A_inv)
                 return mat
             else:
                 key=t
                 if (key in cache.keys()):
                     A_inv=my_inv(t,A) #costs nothing since in cache
-                    mat =np.matmul(B,Ainv)
+                    mat =np.matmul(B,A_inv)
                     return np.matmul(mat,x)
                 else:
                     # instead of computing the inverse of A
