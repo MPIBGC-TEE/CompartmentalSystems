@@ -3496,7 +3496,7 @@ class SmoothModelRun(object):
         
         #if t < s : 
         # This can be caused by the ode solvers for integrals of phi
-        # so we can not exclude it actually the function handle this
+        # so we can not exclude it, actually the function handles this
         # case by backward integration 
         
 
