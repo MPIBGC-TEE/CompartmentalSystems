@@ -119,8 +119,17 @@ class BlockIvp:
         )
         self.start_vec=np.concatenate(start_arrays)
         self._cache=dict()
-        print(self.rhs(0,self.start_vec))
         
+    def solve_direct(self,t_span,dense_output=True,**kwargs):
+        sol=solve_ivp(
+             fun=self.rhs
+            ,y0=self.start_vec
+            ,t_span=t_span
+            ,dense_output=True # only 20%slower 
+            ,**kwargs
+        )
+        return sol
+
     def solve(self,t_span,dense_output=True,**kwargs):
         # this is just a caching proxy for scypy.solve_ivp
         # remember the times for the solution
@@ -140,15 +149,11 @@ class BlockIvp:
             del(kwargs['vectorized'])
             print('''The vectorized flag is forbidden for $c 
             since we rely on decomposing the argument vector'''.format(s=self.__class__))
-        sol=solve_ivp(
-             fun=self.rhs
-            ,y0=self.start_vec
-            ,t_span=t_span
-            ,dense_output=True # only 20%slower 
-            ,**kwargs
-        )
+
+        sol=self.solve_direct(t_span,dense_output=True,**kwargs)
         self._cache[cache_key]=sol
         return sol
+
     def check_block_exists(self,block_name):
         if not(block_name in set(self.index_dict.keys()).union(self.time_str)):
             raise Exception("There is no block with this name")
@@ -162,7 +167,26 @@ class BlockIvp:
         lower,upper=self.index_dict[block_name] 
         return sol.y[lower:upper,:]
         
+    def block_solve(self,*args,**kwargs):
+        # fixme:
+        # This will be the new solve 
+        # returns a list of the block solutions (either values or functions depending on the "dense_output" keyword 
+        # of solve_ivp
+        complete_sol=self.solve_direct(*args,**kwargs)
+        def block_sol(block_name):
+            lower,upper=self.index_dict[block_name] 
+            return complete_sol.y[lower:upper,:]
+
+        block_names=self.index_dict.keys()
+        print(block_names)
+        block_sols={ block_name:block_sol(block_name) for block_name in self.index_dict.keys()}
+        #print(block_sols)
+        return block_sols
+
+
     def get_function(self,block_name,t_span,**kwargs):
+        # fixme mm:
+        # what happens with the **kwargs?
         self.check_block_exists(block_name)
         if block_name==self.time_str:
             print("""

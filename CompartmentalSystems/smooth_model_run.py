@@ -3435,34 +3435,86 @@ class SmoothModelRun(object):
                     sv = new_sv
                     st = sub_cached_times[j]
         return ca
+    
+    def build_state_transition_operator_cache_2b(self, size = 101):
+        cache= self._compute_state_transition_operator_cache_2b(size)
+        print("cache created")
+
+        self._state_transition_operator_values_2b = cache
 
     def _compute_state_transition_operator_cache_2b(self, size = 101):
-        # implement a cache that computes PHI_{t_i,t_i+1 } for i in 0:size-1 
-        # we also compute PHI in a skewproduct system along with the solution.
-        # so we do not need an interpolation
-        if size < 2:
-            raise(Error('Cache size must be at least 2'))
+             
+        # build the cache
+        srm=self.model
+        parameter_dict=self.parameter_dict
+        func_dict=self.func_set
+        start_x=self.start_values
+        x_block_name='x'
+        phi_block_name='phi'
+        nr_pools=srm.nr_pools
+        nq=nr_pools*nr_pools
+        sol_rhs=numerical_rhs2(
+             srm.state_vector
+            ,srm.time_symbol
+            ,srm.F
+            ,parameter_dict
+            ,func_dict
+        )
+        # for comparison solve the original system 
+        
+        B_sym=srm.compartmental_matrix
+        tup=(srm.time_symbol,)+tuple(srm.state_vector)
+        B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
+        x_i_start=0
+        x_i_end=nr_pools
+        #Phi_1d_i_start=x_i_end
+        #Phi_1d_i_end=(nr_pools+1)*nr_pools
+        #
+        def Phi_rhs(t,x,Phi_1d):
+            B=B_func(t,*x)
+            return np.matmul(B,Phi_1d.reshape(nr_pools,nr_pools)).flatten()
+
+        #create the additional startvecot for the components of Phi
+        start_Phi=np.identity(nr_pools)
+        start_Phi_1d=start_Phi.flatten()
         
         times = self.times
         n = self.nr_pools
         t_min = times[0]
         t_max = times[-1]
         nc = size #number of cached matrices 
+        print(nc)
         cache_times = np.linspace(t_min, t_max, nc+1)
-
+        print(cache_times)
         # build cache
         print("creating cache")
-        #ca = np.ndarray((nc, n, n))
         ca = np.zeros(( nc, n, n)) 
-
-        for tm1_index in tqdm(range(nc-1)):
-            t= cache_times[tm1_index]
-            s= cache_times[tm1_index+1]
-            Phi=self._state_transition_operator_by_skew_product_system(t,s)
-            ca[tm1_index,:,:]=Phi
-             
-
-        return ca
+       
+        # fixme
+        # could only be parallelized if x has been computed once before
+        for tm1_index in tqdm(range(nc)):
+            t_min=cache_times[tm1_index]
+            t_max=cache_times[tm1_index+1]
+            t_span=(t_min,t_max)
+            print('t_span',t_span)
+            block_ivp=BlockIvp(
+                time_str=srm.time_symbol.name
+                ,start_blocks  = [(x_block_name,start_x),(phi_block_name,start_Phi_1d)]
+                ,functions = [
+                     (sol_rhs,[srm.time_symbol.name,x_block_name])
+                    ,(Phi_rhs,[srm.time_symbol.name,x_block_name,phi_block_name])
+                 ]
+            )
+            #block_ivp.get_function(x_block_name,t_span)
+            sol_blocks=block_ivp.block_solve(t_span=t_span)
+            start_x=sol_blocks[x_block_name][:,-1]
+            phi=sol_blocks[phi_block_name][:,-1]
+            ca[tm1_index,:,:]=phi.reshape(start_Phi.shape)
+            #print(start_x)
+        
+        print(ca)
+        from .Cache import Cache
+        return Cache(cache_times,ca)
 
 
     def save_state_transition_operator_cache(self, filename):
@@ -3498,8 +3550,8 @@ class SmoothModelRun(object):
         # This can be caused by the ode solvers for integrals of phi
         # so we can not exclude it, actually the function handles this
         # case by backward integration 
+       
         
-
     def _state_transition_operator_by_skew_product_system(self, t, s, x=None):
         """
         For t_0 <s <t we have
@@ -3701,6 +3753,14 @@ class SmoothModelRun(object):
         # else: 
 
         return val 
+
+    def _state_transition_operator_2b(self, t, t0, x):
+        if self._state_transition_operator_values_2b is not None:
+            cache=self._state_transition_operator_values_2b
+            cached_times=cache.keys
+            ca=cache.values
+        else:
+            raise
 
     def _state_transition_operator(self, t, t0, x):
         if t0 > t:

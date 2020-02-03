@@ -207,8 +207,11 @@ cache_size =1001
 
 
 #print('Building state transition operator cache')
+
 ca_2b=linear_smr_2._compute_state_transition_operator_cache_2b(size = cache_size)
+
 #ca_2=linear_smr_2._compute_state_transition_operator_cache_2(size = cache_size)
+#ca_2=linear_smr_2.build_state_transition_operator_cache_2(size = cache_size)
 #ca  =linear_smr._compute_state_transition_operator_cache(size = cache_size)
 #
 #print(np.nanmax((ca_2-ca)/ca*100))

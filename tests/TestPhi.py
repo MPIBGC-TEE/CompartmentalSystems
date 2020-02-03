@@ -17,6 +17,75 @@ from CompartmentalSystems.BlockIvp import BlockIvp
 from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs2,x_phi_ivp,integrate_array_func_for_nested_boundaries,array_quad_result,array_integration_by_ode,array_integration_by_values
 
 class TestPhi(InDirTest):
+    def test_skew_phi_vs_skew_phi_cached(self):
+        k_0_val=1
+        k_1_val=2
+        x0_0=np.float(0.5)
+        x0_1=np.float(1.5)
+        delta_t=np.float(1./4.)
+        # 
+        var(["x_0","x_1","k_0","k_1","t","u"])
+        #
+        inputs={
+             0:u
+            ,1:u*t
+        }
+        outputs={
+             0:k_0*x_0**2
+            ,1:k_1*x_1
+        }
+        internal_fluxes={}
+        svec=Matrix([x_0,x_1])
+        srm=SmoothReservoirModel(
+                 state_vector       =svec
+                ,time_symbol        =t
+                ,input_fluxes       =inputs
+                ,output_fluxes      =outputs
+                ,internal_fluxes    =internal_fluxes
+        )
+        t_0     = 0
+        t_max   = 4
+        nt=5
+        times = np.linspace(t_0, t_max, nt)
+        double_times = np.linspace(t_0, t_max, 2*(nt-1)+1)
+        quad_times = np.linspace(t_0, t_max, 4*(nt-1)+1)
+        parameter_dict = {
+             k_0: k_0_val
+            ,k_1: k_1_val
+            ,u:1}
+        func_dict={}
+        start_x= np.array([x0_0,x0_1]) #make it a column vector for later use
+        #create the model run
+        smr=SmoothModelRun(
+             model=srm
+            ,parameter_dict= parameter_dict
+            ,start_values=start_x
+            ,times=times
+            ,func_set=func_dict
+        )
+        nr_pools=srm.nr_pools
+        smr.build_state_transition_operator_cache_2b(size=3)
+
+        def baseVector(i):
+            e_i = np.zeros((nr_pools,1))
+            e_i[i] = 1
+            return e_i
+        bvs = [ baseVector(i) for i in range(nr_pools)]
+        #pe('Phi_skew(2,1,bvs[0])',locals())
+        ##raise
+        #
+        test_times=np.linspace(t_0, t_max, 2)
+        args=[(t,s,e) for t in test_times for s in test_times if s<=t for e in bvs]
+        #print(args)
+        #resultTupels=[
+        #    (
+        #            Phi_skew_cache(t,s,e_i) 
+        #    )        
+        #    for (t,s,e_i) in args
+        #]
+        res=smr._state_transition_operator_2b(*args[0]) 
+        print(res)
+
     def test_x_phi_ivp_linear(self):
         # We compute Phi_t0(t) =Phi(t,t_0) with fixed t_0
         # This can be computed by a skew product system
