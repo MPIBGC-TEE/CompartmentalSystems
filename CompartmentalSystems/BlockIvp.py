@@ -7,7 +7,8 @@ class BlockIvp:
     def build_rhs(
              cls
             ,time_str  : str
-            ,X_blocks  : List[ Tuple[str,int] ]
+            #,X_blocks  : List[ Tuple[str,int] ]
+            ,start_blocks : List[ Tuple[str,np.ndarray] ]
             ,functions : List[ Tuple[Callable,List[str]]]
         )->Callable[[np.double,np.ndarray],np.ndarray]:
         """
@@ -67,9 +68,11 @@ class BlockIvp:
         The names of the blocks itself are arbitrary and have no meaning apart from
         their correspondence in the X_blocks and functions argument.
         """
-        block_names=[t[0] for t in X_blocks]
-        dims=[t[1] for t in X_blocks]
-        nb=len(dims)
+
+        start_block_dict={ t[0]:t[1] for t in start_blocks }
+        block_names=[t[0] for t in start_blocks]
+        sizes=[t[1].size for t in start_blocks]
+        nb=len(sizes)
         strArgLists=[f[1] for f in functions]
         # make sure that all argument lists are really lists
         assert(all([isinstance(l,list) for l in strArgLists])) 
@@ -81,55 +84,58 @@ class BlockIvp:
     
         # first compute the indices of block boundaries in X by summing the dimensions 
         # of the blocks
-        indices=[0]+[ sum(dims[:(i+1)]) for i in range(nb)]
+        indices=[0]+[ sum(sizes[:(i+1)]) for i in range(nb)]
         def rhs(t,X):
-            blockDict={block_names[i]: X[indices[i]:indices[i+1]] for i in range(nb)}
-            #pe('blockDict',locals())
+            vecBlockDict={block_names[i]: X[indices[i]:indices[i+1]] for i in range(nb)}
+            blockDict={name:vecBlock.reshape(start_block_dict[name].shape) for name,vecBlock in vecBlockDict.items()}
             blockDict[time_str]=t
-            arg_lists=[ [blockDict[k] for k in f[1]] for f in functions]
-            blockResults=[ functions[i][0]( *arg_lists[i] )for i in range(nb)]
-            #pe('blockResults',locals())
-            return np.concatenate(blockResults).reshape(X.shape)
+
+            arg_lists=[ [blockDict[name] for name in f[1]] for f in functions]
+            vecResults=[ functions[i][0]( *arg_lists[i] ).flatten()  for i in range(nb)]
+            return np.concatenate(vecResults)#.reshape(X.shape)
         
         return rhs
 
     def __init__(
-         self
-        ,time_str       : str
-        ,start_blocks   : List[ Tuple[str,np.ndarray] ]
-        ,functions      : List[ Tuple[Callable,List[str]]]):
+             self
+            ,time_str       : str
+            ,start_blocks   : List[ Tuple[str,np.ndarray] ]
+            ,functions      : List[ Tuple[Callable,List[str]]]
+        ):
         
+        self.array_dict={tup[0]:tup[1] for tup in start_blocks}
         self.time_str=time_str
         names           =[sb[0]   for sb in start_blocks]
         start_arrays    =[sb[1]   for sb in start_blocks]
-        shapes          =[a.shape  for a in start_arrays]
-        #assert that we have only vectors or n,1 arrays as startvalues
-        assert( all([len(s)==1 or (len(s)==2 and s[1]==1) for s in shapes]))
         #
-        dims=[s[0] for s in shapes]
-        nb=len(dims)
+        sizes=[a.size for a in start_arrays]
+        nb=len(sizes)
         r=range(nb)
-        X_blocks=[(names[i],dims[i]) for i in r]
-        indices=[0]+[ sum(dims[:(i+1)]) for i in r]
+        #X_blocks=[(names[i],sizes[i]) for i in r]
+        indices=[0]+[ sum(sizes[:(i+1)]) for i in r]
         self.index_dict={names[i]:(indices[i],indices[i+1]) for i in r}
         self.rhs=self.build_rhs(
              time_str  = time_str
-            ,X_blocks  = X_blocks
+            ,start_blocks= start_blocks
             ,functions = functions
         )
-        self.start_vec=np.concatenate(start_arrays)
+        self.start_vec=np.concatenate([ a.flatten() for a in start_arrays])
         self._cache=dict()
         
+    # fixme:
+    # should be retired (see blocksolve)
     def solve_direct(self,t_span,dense_output=True,**kwargs):
         sol=solve_ivp(
              fun=self.rhs
             ,y0=self.start_vec
             ,t_span=t_span
-            ,dense_output=True # only 20%slower 
+            ,dense_output=dense_output
             ,**kwargs
         )
         return sol
 
+    # fixme:
+    # should be retired (see blocksolve)
     def solve(self,t_span,dense_output=True,**kwargs):
         # this is just a caching proxy for scypy.solve_ivp
         # remember the times for the solution
@@ -158,6 +164,8 @@ class BlockIvp:
         if not(block_name in set(self.index_dict.keys()).union(self.time_str)):
             raise Exception("There is no block with this name")
 
+    # fixme:
+    # should be retired (see blocksolve)
     def get_values(self,block_name,t_span,**kwargs):
         self.check_block_exists(block_name)
         sol=self.solve(t_span=t_span,**kwargs)
@@ -167,19 +175,32 @@ class BlockIvp:
         lower,upper=self.index_dict[block_name] 
         return sol.y[lower:upper,:]
         
-    def block_solve(self,*args,**kwargs):
+    def block_solve(self,*args,dense_output=True,**kwargs):
         # fixme:
         # This will be the new solve 
-        # returns a list of the block solutions (either values or functions depending on the "dense_output" keyword 
+        # returns a dict of the block solutions (either values or functions depending on the "dense_output" keyword 
         # of solve_ivp
-        complete_sol=self.solve_direct(*args,**kwargs)
+        complete_sol=solve_ivp(
+             fun=self.rhs
+            ,y0=self.start_vec
+            #,t_span=t_span
+            ,dense_output=dense_output
+            ,**kwargs
+        )
         def block_sol(block_name):
+            start_array=self.array_dict[block_name]
             lower,upper=self.index_dict[block_name] 
-            return complete_sol.y[lower:upper,:]
+            time_dim_size=complete_sol.y.shape[-1]
+            tmp=complete_sol.y[lower:upper,:].reshape(
+                    start_array.shape+(time_dim_size,)
+            )        
+            # solve_ivp returns an array that has time as the LAST dimension
+            # but our code usually expects it as FIRST dimension 
+            # Therefore we move the last axis to the first position
+            return np.moveaxis(tmp,-1,0)
 
         block_names=self.index_dict.keys()
-        print(block_names)
-        block_sols={ block_name:block_sol(block_name) for block_name in self.index_dict.keys()}
+        block_sols={ block_name:block_sol(block_name) for block_name in block_names}
         #print(block_sols)
         return block_sols
 

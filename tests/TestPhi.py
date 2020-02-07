@@ -17,7 +17,150 @@ from CompartmentalSystems.BlockIvp import BlockIvp
 from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs2,x_phi_ivp,integrate_array_func_for_nested_boundaries,array_quad_result,array_integration_by_ode,array_integration_by_values
 
 class TestPhi(InDirTest):
-    def test_skew_phi_vs_skew_phi_cached(self):
+    def test_phi_2d_linear(self):
+        C_0,C_1 = symbols('C_0,C_1')
+        state_vector = [C_0,C_1]
+        time_symbol = Symbol('t')
+        input_fluxes = {}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+
+        start_values = np.array([1,2])
+        t_0     = 0
+        t_max   = 4
+        nt=200
+        times = np.linspace(t_0, t_max, nt)
+        smr = SmoothModelRun(srm, {}, start_values, times)
+        
+
+        nr_pools=srm.nr_pools
+
+        def baseVector(i):
+            e_i = np.zeros((nr_pools,1))
+            e_i[i] = 1
+            return e_i
+        bvs = [ baseVector(i) for i in range(nr_pools)]
+        
+        blivp= x_phi_ivp(
+            smr.model
+            ,smr.parameter_dict
+            ,smr.func_set
+            ,smr.start_values
+            ,x_block_name='sol'
+            ,phi_block_name='Phi_1d'
+        )
+        sol_dict=blivp.block_solve(t_span=(t_0,t_max),t_eval=times)
+        
+        sol_skew=sol_dict['sol'][...,-1]
+        phi_mat=sol_dict['Phi_1d'][...,-1].reshape(nr_pools,nr_pools)
+        phi_ref=np.eye(2)*np.exp(-(t_max-t_0))
+
+        self.assertTrue( np.allclose( phi_mat,phi_ref,atol=1e-4))
+        for x in bvs:
+            with self.subTest():
+                self.assertTrue( 
+                    np.allclose(
+                        smr._state_transition_operator_for_linear_systems(t_max,t_0,x),
+                        np.matmul(phi_ref,x).reshape(nr_pools,)
+                    )
+                )
+
+    def test_phi_2d_non_linear(self):
+        k_0_val=1
+        k_1_val=2
+        x0_0=np.float(0.5)
+        x0_1=np.float(1.5)
+        delta_t=np.float(1./4.)
+        # 
+        x_0,x_1,k_0,k_1,t,u=symbols("x_0,x_1,k_0,k_1,t,u")
+        #
+        inputs={
+             0:u
+            ,1:u*t
+        }
+        outputs={
+             0:k_0*x_0**2
+            ,1:k_1*x_1
+        }
+        internal_fluxes={}
+        svec=Matrix([x_0,x_1])
+        srm=SmoothReservoirModel(
+                 state_vector       =svec
+                ,time_symbol        =t
+                ,input_fluxes       =inputs
+                ,output_fluxes      =outputs
+                ,internal_fluxes    =internal_fluxes
+        )
+        t_0     = 0
+        t_max   = 4
+        nt=200
+        times = np.linspace(t_0, t_max, nt)
+        parameter_dict = {
+             k_0: k_0_val
+            ,k_1: k_1_val
+            ,u:1}
+        func_dict={}
+        start_x= np.array([x0_0,x0_1]) #make it a column vector for later use
+        #create the model run
+        smr=SmoothModelRun(
+             model=srm
+            ,parameter_dict= parameter_dict
+            ,start_values=start_x
+            ,times=times
+            ,func_set=func_dict
+        )
+
+        nr_pools=srm.nr_pools
+
+        def baseVector(i):
+            e_i = np.zeros((nr_pools,1))
+            e_i[i] = 1
+            return e_i
+        bvs = [ baseVector(i) for i in range(nr_pools)]
+        
+        smrl=smr.linearize()
+        
+        blivp= x_phi_ivp(
+            smr.model
+            ,smr.parameter_dict
+            ,smr.func_set
+            ,smr.start_values
+            ,x_block_name='sol'
+            ,phi_block_name='Phi_2d'
+        )
+        sol_dict=blivp.block_solve(t_span=(t_0,t_max),t_eval=times)
+        #print(sol_dict)
+        phi_mat=sol_dict['Phi_2d'][-1,...]
+        
+        blivp_l= x_phi_ivp(
+            smrl.model
+            ,smrl.parameter_dict
+            ,smrl.func_set
+            ,smrl.start_values
+            ,x_block_name='sol'
+            ,phi_block_name='Phi_2d'
+        )
+        sol_dict_l=blivp.block_solve(t_span=(t_0,t_max),t_eval=times)
+        
+        phi_mat_l=sol_dict_l['Phi_2d'][-1,...]
+        print(phi_mat)
+        
+        for mat in [phi_mat , phi_mat_l]:
+            for x in bvs:
+                with self.subTest():
+                    phi_x_old=smrl._state_transition_operator_for_linear_systems(t_max,t_0,x),
+                    phi_x_mat=np.matmul(mat,x).reshape(nr_pools,)
+                    self.assertTrue( 
+                        np.allclose(
+                            phi_x_old, 
+                            phi_x_mat,
+                            atol=1e-5
+                        )
+                    )
+
+
+    def test_phi_cache_vals(self):
         k_0_val=1
         k_1_val=2
         x0_0=np.float(0.5)
@@ -45,7 +188,8 @@ class TestPhi(InDirTest):
         )
         t_0     = 0
         t_max   = 4
-        nt=5
+        nt=2000 # the old way relies on the interpolation and goes wild for 
+        # small nt...
         times = np.linspace(t_0, t_max, nt)
         double_times = np.linspace(t_0, t_max, 2*(nt-1)+1)
         quad_times = np.linspace(t_0, t_max, 4*(nt-1)+1)
@@ -64,27 +208,33 @@ class TestPhi(InDirTest):
             ,func_set=func_dict
         )
         nr_pools=srm.nr_pools
-        smr.build_state_transition_operator_cache_2b(size=3)
+        #smr.build_state_transition_operator_cache_2b(size=3)
+        cache= smr._compute_state_transition_operator_cache_2b(size=2)
+
+        phi_2_0=cache.values[0]
+        phi_4_2=cache.values[1]
+
 
         def baseVector(i):
             e_i = np.zeros((nr_pools,1))
             e_i[i] = 1
             return e_i
         bvs = [ baseVector(i) for i in range(nr_pools)]
-        #pe('Phi_skew(2,1,bvs[0])',locals())
-        ##raise
-        #
-        test_times=np.linspace(t_0, t_max, 2)
-        args=[(t,s,e) for t in test_times for s in test_times if s<=t for e in bvs]
-        #print(args)
-        #resultTupels=[
-        #    (
-        #            Phi_skew_cache(t,s,e_i) 
-        #    )        
-        #    for (t,s,e_i) in args
-        #]
-        res=smr._state_transition_operator_2b(*args[0]) 
-        print(res)
+        smrl=smr.linearize()
+        for ind,phi in enumerate(cache.values):
+            tmin=cache.keys[ind]
+            tmax=cache.keys[ind+1]
+            for x in bvs:
+                with self.subTest():
+                    phi_x_old=smrl._state_transition_operator_for_linear_systems(tmax,tmin,x)
+                    phi_x_mat=np.matmul(phi,x).reshape(nr_pools,)
+                    self.assertTrue( 
+                        np.allclose(
+                            phi_x_old, 
+                            phi_x_mat,
+                            rtol=1e-2
+                        )
+                    )
 
     def test_x_phi_ivp_linear(self):
         # We compute Phi_t0(t) =Phi(t,t_0) with fixed t_0

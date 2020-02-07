@@ -45,15 +45,17 @@ from scipy.interpolate import interp1d, UnivariateSpline
 from scipy.optimize import newton, brentq, minimize
 
 from tqdm import tqdm
+from functools import reduce
 #from testinfrastructure.helpers import pe
 
 from .smooth_reservoir_model import SmoothReservoirModel
-from .helpers_reservoir import deprecation_warning,warning ,make_cut_func_set
-from .helpers_reservoir import (has_pw, numsol_symbolic_system, numsol_symbolic_system_2
-    ,arrange_subplots, melt, generalized_inverse_CDF, draw_rv
-    ,stochastic_collocation_transform, numerical_rhs, MH_sampling, save_csv
-    ,load_csv, stride ,f_of_t_maker,const_of_t_maker,numerical_function_from_expression
-    ,x_phi_ivp,numerical_rhs2)
+from .helpers_reservoir import (deprecation_warning,warning
+,make_cut_func_set, has_pw, numsol_symbolic_system,
+numsol_symbolic_system_2 ,arrange_subplots, melt,
+generalized_inverse_CDF, draw_rv ,stochastic_collocation_transform,
+numerical_rhs, MH_sampling, save_csv ,load_csv, stride
+,f_of_t_maker,const_of_t_maker,numerical_function_from_expression
+,x_phi_ivp,x_phi_ode, numerical_rhs2)
 from .BlockIvp import BlockIvp
 
 class Error(Exception):
@@ -3335,7 +3337,9 @@ class SmoothModelRun(object):
                 if abs(s-t) < 1e-14: 
                     return np.array(start_vector)
                 sv = np.array(start_vector).reshape((self.nr_pools,))
-
+                #fixme mm 02-06
+                # this function should use 
+                # numsol_symbolic_system_2
                 sol_dict=solve_ivp(lin_rhs,y0=sv,t_span=(s,t))
                 values=sol_dict.y
                 #print('sol_dict=',sol_dict)
@@ -3443,52 +3447,29 @@ class SmoothModelRun(object):
         self._state_transition_operator_values_2b = cache
 
     def _compute_state_transition_operator_cache_2b(self, size = 101):
-             
-        # build the cache
-        srm=self.model
-        parameter_dict=self.parameter_dict
-        func_dict=self.func_set
-        start_x=self.start_values
         x_block_name='x'
         phi_block_name='phi'
-        nr_pools=srm.nr_pools
-        nq=nr_pools*nr_pools
-        sol_rhs=numerical_rhs2(
-             srm.state_vector
-            ,srm.time_symbol
-            ,srm.F
-            ,parameter_dict
-            ,func_dict
-        )
-        # for comparison solve the original system 
+        nr_pools=self.nr_pools
         
-        B_sym=srm.compartmental_matrix
-        tup=(srm.time_symbol,)+tuple(srm.state_vector)
-        B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
-        x_i_start=0
-        x_i_end=nr_pools
-        #Phi_1d_i_start=x_i_end
-        #Phi_1d_i_end=(nr_pools+1)*nr_pools
-        #
-        def Phi_rhs(t,x,Phi_1d):
-            B=B_func(t,*x)
-            return np.matmul(B,Phi_1d.reshape(nr_pools,nr_pools)).flatten()
-
-        #create the additional startvecot for the components of Phi
-        start_Phi=np.identity(nr_pools)
-        start_Phi_1d=start_Phi.flatten()
+        block_ode=x_phi_ode(
+            self.model,
+            self.parameter_dict,
+            self.func_set,
+            x_block_name,
+            phi_block_name
+        )
+        
+        start_x=self.start_values
+        start_Phi_2d=np.identity(nr_pools)
         
         times = self.times
-        n = self.nr_pools
+        
         t_min = times[0]
         t_max = times[-1]
         nc = size #number of cached matrices 
-        print(nc)
         cache_times = np.linspace(t_min, t_max, nc+1)
-        print(cache_times)
         # build cache
-        print("creating cache")
-        ca = np.zeros(( nc, n, n)) 
+        ca = np.zeros(( nc, nr_pools, nr_pools)) 
        
         # fixme
         # could only be parallelized if x has been computed once before
@@ -3496,23 +3477,13 @@ class SmoothModelRun(object):
             t_min=cache_times[tm1_index]
             t_max=cache_times[tm1_index+1]
             t_span=(t_min,t_max)
-            print('t_span',t_span)
-            block_ivp=BlockIvp(
-                time_str=srm.time_symbol.name
-                ,start_blocks  = [(x_block_name,start_x),(phi_block_name,start_Phi_1d)]
-                ,functions = [
-                     (sol_rhs,[srm.time_symbol.name,x_block_name])
-                    ,(Phi_rhs,[srm.time_symbol.name,x_block_name,phi_block_name])
-                 ]
-            )
-            #block_ivp.get_function(x_block_name,t_span)
+            start_blocks=[ (x_block_name,start_x), (phi_block_name,start_Phi_2d) ]
+            block_ivp=block_ode.blockIvp( start_blocks )
             sol_blocks=block_ivp.block_solve(t_span=t_span)
-            start_x=sol_blocks[x_block_name][:,-1]
-            phi=sol_blocks[phi_block_name][:,-1]
-            ca[tm1_index,:,:]=phi.reshape(start_Phi.shape)
-            #print(start_x)
+            start_x=sol_blocks[x_block_name][-1,...]
+            phi=sol_blocks[phi_block_name][-1,...]
+            ca[tm1_index,:,:]=phi
         
-        print(ca)
         from .Cache import Cache
         return Cache(cache_times,ca)
 
@@ -3552,6 +3523,8 @@ class SmoothModelRun(object):
         # case by backward integration 
        
         
+    # fixme 02-06 mm
+    # this function should be retired
     def _state_transition_operator_by_skew_product_system(self, t, s, x=None):
         """
         For t_0 <s <t we have
@@ -3676,6 +3649,8 @@ class SmoothModelRun(object):
                 u = np.linalg.solve(B,x)
                 return np.matmul(A,u).flatten()
     
+    # fixme 02-06 mm
+    # this function should be retired
     def _state_transition_operator_by_direct_integration_vec(self, t, s, x):
         """
         For t_0 <s <t we have
@@ -3705,11 +3680,19 @@ class SmoothModelRun(object):
         
         # note that the next line also works for s>t since the ode solver
         # will integrate backwards
-        Phi_times_x_values=solve_ivp(x_rhs,y0=x.flatten(),t_span=(s,t)).y
+        print('#_solve_ivp #')
+        Phi_times_x_values=solve_ivp(
+            x_rhs,
+		    y0=x.flatten(),
+		    t_span=(s, t),
+            method='LSODA'
+        ).y
         val=Phi_times_x_values[:,-1].flatten()
         
         return val
 
+    # fixme 02-06 mm
+    # this function should be retired
     def _state_transition_operator_by_direct_integration(self, t, s, x=None):
         """
         For t_0 <s <t we have
@@ -3740,7 +3723,12 @@ class SmoothModelRun(object):
 
         # note that this includes the case s>t since the 
         # ode solver accepts time to run backwards
-        Phi_values=solve_ivp(Phi_rhs,y0=np.identity(n).flatten(),t_span=(s,t)).y
+        Phi_values=solve_ivp(
+                Phi_rhs,
+                y0=np.identity(n).flatten(),
+                t_span=(s,t),
+                method='LSODA'
+                ).y
         val=Phi_values[:,-1].reshape(n,n)
         
         # if s>t:
@@ -3755,12 +3743,53 @@ class SmoothModelRun(object):
         return val 
 
     def _state_transition_operator_2b(self, t, t0, x):
-        if self._state_transition_operator_values_2b is not None:
+        if t0 > t:
+            raise(Error("Evaluation before t0 is not possible"))
+        if t0 == t:
+            return x.flatten() 
+        
+        linearized_no_input_sol = self._linearized_no_input_sol
+        n = self.nr_pools
+        
+        if hasattr(self,'_state_transition_operator_values_2b'):
             cache=self._state_transition_operator_values_2b
             cached_times=cache.keys
             ca=cache.values
+            
+            # find tm1
+            tm1_ind = cached_times.searchsorted(t0)
+            tm1 = cached_times[tm1_ind]
+
+            # find tm2
+            tm2_ind = cached_times.searchsorted(t)-1 # -1 :we want the last cached_time BEFORE t
+            tm2 = cached_times[tm2_ind]
+            
+            # check if next cached time is already behind t
+            # this means we have to integrate directly
+            if t <= tm1: return linearized_no_input_sol([t0, t], x)
+        
+            # first integrate x to tm1: y = Phi(tm1, t_0)x
+            y_tm1_t0 = (linearized_no_input_sol([t0, tm1], x)).reshape((n,1))
+
+            # use matrix multiplication of the cached intervals between
+            # tm1 and tm2 in reverse order 
+            # phi_tm2_tm1 = phi_tm2_tm2-1 * ... * phi_tm1+1_tm1
+            phi_tm2_tm1=reduce(lambda prod_phi,cached_phi : np.matmul(cached_phi,prod_phi),ca)
+            a=np.matrix([[0,1],[1,0]])
+            # To test (convince yourself) do:
+            # b=np.matrix([[1,2],[3,4]])
+            # a=np.matrix([[1,0],[0,0]])
+            # reduce(lambda prod_phi,cached_phi : np.matmul(cached_phi,prod_phi),[a,b])==b*a
+            y_tm2_t0=np.matmul(phi_tm2_tm1,y_tm1_t0)
+
+            # integrate directly from tm2 to t
+            y_t_t0 = (linearized_no_input_sol([tm2, t], y_tm2_t0)).reshape((n,1))
+            return y_t_t0.reshape(n,)
+
         else:
-            raise
+            #raise
+            y_t_t0 = (linearized_no_input_sol([t0, t], x)).reshape((n,))
+            return(y_t_t0)
 
     def _state_transition_operator(self, t, t0, x):
         if t0 > t:

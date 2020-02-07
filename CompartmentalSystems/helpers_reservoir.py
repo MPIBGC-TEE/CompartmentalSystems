@@ -14,6 +14,7 @@ from sympy import flatten, gcd, lambdify, DiracDelta, solve, Matrix,diff
 from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
+from .BlockOde import BlockOde
 from .BlockIvp import BlockIvp
 #from testinfrastructure.helpers import pe
 
@@ -287,7 +288,16 @@ def numsol_symbolic_system_2(
     )
     t_min=times[0]
     t_max=times[-1]
-    res=solve_ivp(num_rhs, y0=start_values,t_span=(t_min,t_max),t_eval=times,dense_output=dense_output,method='LSODA')
+    res=solve_ivp(
+        num_rhs,
+        y0=start_values,
+        t_span=(t_min, t_max),
+        t_eval=times,
+        rtol=1e-08,
+        atol=1e-08,
+        dense_output=dense_output,
+        method='LSODA'
+    )
     #res=solve_ivp(num_rhs, y0=start_values,t_span=(t_min,t_max),t_eval=times,dense_output=dense_output)
     values=res.y.transpose() # adapt to the old interface since our code at the moment expects it
     func=res.sol
@@ -504,13 +514,15 @@ def const_of_t_maker(const):
             return(const*np.ones_like(possible_vec_arg))
     return const_arr_fun
 
-def x_phi_ivp(srm, parameter_dict, func_dict,start_x,x_block_name='x',phi_block_name='phi'):
-        
-    #B=srm.compartmental_matrix
-#    pe('srm',locals())
+def x_phi_ode(
+    srm, 
+    parameter_dict, 
+    func_dict,
+    x_block_name='x',
+    phi_block_name='phi'
+    ):
     nr_pools=srm.nr_pools
     nq=nr_pools*nr_pools
-    #tup=(t,)+tuple(srm.state_vector)
     sol_rhs=numerical_rhs2(
          srm.state_vector
         ,srm.time_symbol
@@ -518,49 +530,61 @@ def x_phi_ivp(srm, parameter_dict, func_dict,start_x,x_block_name='x',phi_block_
         ,parameter_dict
         ,func_dict
     )
-    # for comparison solve the original system 
     
     B_sym=srm.compartmental_matrix
-    ## now use the interpolation function to compute B in an alternative way.
-    #symbolic_sol_funcs = {sv: Function(sv.name + '_sol')                        for sv in svec}
-    #sol_func_exprs =     {sv: symbolic_sol_funcs[sv](srm.time_symbol)           for sv in svec}# To F add the (t) 
-    #def func_maker(pool):
-    #    def func(t):
-    #        return sol.sol(t)[pool]
-    #
-    #    return(func)
-    #
-    #sol_dict = {symbolic_sol_funcs[svec[pool]]:func_maker(pool) for pool in range(srm.nr_pools)}
-    #lin_func_dict=copy(func_dict)
-    #lin_func_dict.update(sol_dict)
-    #
-    #linearized_B = B_sym.subs(sol_func_exprs)
-    #
     tup=(srm.time_symbol,)+tuple(srm.state_vector)
     B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
-    x_i_start=0
-    x_i_end=nr_pools
-    Phi_1d_i_start=x_i_end
-    Phi_1d_i_end=(nr_pools+1)*nr_pools
-    #
-    def Phi_rhs(t,x,Phi_1d):
-        B=B_func(t,*x)
-        #Phi_cols=[Phi_1d[i*nr_pools:(i+1)*nr_pools] for i in range(nr_pools)]
-        #Phi_ress=[np.matmul(B,pc) for pc in Phi_cols]
-        #return np.stack([np.matmul(B,pc) for pc in Phi_cols]).flatten()
-        return np.matmul(B,Phi_1d.reshape(nr_pools,nr_pools)).flatten()
+    
+    def Phi_rhs(t,x,Phi_2d):
+        return np.matmul(B_func(t,*x),Phi_2d)
 
-    #create the additional startvecot for the components of Phi
-    start_Phi_1d=np.identity(nr_pools).flatten()
-
-    block_ivp=BlockIvp(
-        time_str=srm.time_symbol.name
-        ,start_blocks  = [(x_block_name,start_x),(phi_block_name,start_Phi_1d)]
+    #create the additional startvector for the components of Phi
+    
+    return BlockOde(
+        time_str = srm.time_symbol.name
+        ,block_names_and_shapes = [
+            (x_block_name,(nr_pools,))
+            ,(phi_block_name,(nr_pools,nr_pools,))
+        ]
         ,functions = [
              (sol_rhs,[srm.time_symbol.name,x_block_name])
             ,(Phi_rhs,[srm.time_symbol.name,x_block_name,phi_block_name])
          ]
     )
+
+
+def x_phi_ivp(srm, parameter_dict, func_dict,start_x,x_block_name='x',phi_block_name='phi'):
+        
+    nr_pools=srm.nr_pools
+    nq=nr_pools*nr_pools
+    sol_rhs=numerical_rhs2(
+         srm.state_vector
+        ,srm.time_symbol
+        ,srm.F
+        ,parameter_dict
+        ,func_dict
+    )
+    
+    B_sym=srm.compartmental_matrix
+    tup=(srm.time_symbol,)+tuple(srm.state_vector)
+    B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
+    
+    def Phi_rhs(t,x,Phi_1d):
+        B=B_func(t,*x)
+        return np.matmul(B,Phi_1d.reshape(nr_pools,nr_pools)).flatten()
+
+    #create the additional startvector for the components of Phi
+    start_Phi_2d=np.identity(nr_pools)
+    
+    block_ode=x_phi_ode(
+        srm,
+        parameter_dict,
+        func_dict,
+        x_block_name,
+        phi_block_name
+    )
+    start_blocks=[ (x_block_name,start_x), (phi_block_name,start_Phi_2d) ]
+    block_ivp=block_ode.blockIvp( start_blocks )
     return block_ivp
 
 def integrate_array_func_for_nested_boundaries(
