@@ -27,11 +27,13 @@ from numpy.linalg import matrix_power
 
 import plotly.graph_objs as go
 
-import pickle
+import base64
+import hashlib
 import mpmath
+from frozendict import frozendict
 
 from sympy import lambdify, flatten, latex, Function, sympify, sstr, solve, \
-                  ones, Matrix
+                  ones, Matrix, ImmutableMatrix
 from sympy.core.function import UndefinedFunction
 from sympy.abc import _clash
 from sympy.printing import pprint
@@ -57,6 +59,7 @@ numerical_rhs, MH_sampling, save_csv ,load_csv, stride
 ,f_of_t_maker,const_of_t_maker,numerical_function_from_expression
 ,x_phi_ivp,x_phi_ode, numerical_rhs2)
 from .BlockIvp import BlockIvp
+from .Cache import Cache
 
 class Error(Exception):
     """Generic error occurring in this module."""
@@ -159,7 +162,7 @@ class SmoothModelRun(object):
         #    if not isinstance(f,UndefinedFunction):
         #        raise(Error("The keys of the func_set should be of type:  sympy.core.function.UndefinedFunction"))
         self.func_set = func_set
-        self._state_transition_operator_values = None
+        #self._state_transition_operator_cache = None
         self._external_input_vector_func = None
 
 
@@ -3351,102 +3354,13 @@ class SmoothModelRun(object):
 
         return self._saved_linearized_no_input_sol
 
-    #fixme: test
-
     def build_state_transition_operator_cache(self, size = 101):
-        ca= self._compute_state_transition_operator_cache(size)
+        cache= self._compute_state_transition_operator_cache(size)
         print("cache created")
 
-        self._state_transition_operator_values = ca
-        self._cache_size = size
-        
+        self._state_transition_operator_cache= cache
+
     def _compute_state_transition_operator_cache(self, size = 101):
-        if size < 2:
-            raise(Error('Cache size must be at least 2'))
-
-        times = self.times
-        n = self.nr_pools
-        t_min = times[0]
-        t_max = times[-1]
-        nc = size
-        cached_times = np.linspace(t_min, t_max, nc)
-
-        # build cache
-        print("creating cache")
-        ca = np.ndarray((nc, nc, n, n))
-        ca = np.zeros((nc, nc, n, n)) 
-        no_input_sol = self._no_input_sol
-
-        for tm1_index in tqdm(range(nc-1)):
-            tm1 = cached_times[tm1_index]
-            sub_cached_times = np.linspace(tm1, t_max, nc)
-
-            for i in range(n):
-                e_i = np.zeros((n,1))
-                e_i[i] = 1
-                #ca[tm1_index,:,:,i] = no_input_sol(sub_cached_times, e_i) 
-                # leads to zig-zag functions, 
-                # the ends do not fit together
-                sv = e_i
-                st = tm1
-                for j in range(len(sub_cached_times)):
-                    new_sv = no_input_sol([st, sub_cached_times[j]], sv)
-                    ca[tm1_index,j,:,i] = new_sv.reshape((n,))
-                    sv = new_sv
-                    st = sub_cached_times[j]
-        return ca
-    
-    def build_state_transition_operator_cache_2(self, size = 101):
-        ca= self._compute_state_transition_operator_cache_2(size)
-        print("cache created")
-
-        self._state_transition_operator_values = ca
-        self._cache_size = size
-    
-    def _compute_state_transition_operator_cache_2(self, size = 101):
-        if size < 2:
-            raise(Error('Cache size must be at least 2'))
-
-        times = self.times
-        n = self.nr_pools
-        t_min = times[0]
-        t_max = times[-1]
-        nc = size
-        cached_times = np.linspace(t_min, t_max, nc)
-
-        # build cache
-        print("creating cache")
-        ca = np.ndarray((nc, nc, n, n))
-        ca = np.zeros((nc, nc, n, n)) 
-        linearized_no_input_sol = self._linearized_no_input_sol
-        #linearized_no_input_sol = self._no_input_sol
-
-        for tm1_index in tqdm(range(nc-1)):
-            tm1 = cached_times[tm1_index]
-            sub_cached_times = np.linspace(tm1, t_max, nc)
-
-            for i in range(n):
-                e_i = np.zeros((n,1))
-                e_i[i] = 1
-                #ca[tm1_index,:,:,i] = linearized_no_input_sol(sub_cached_times, e_i) 
-                # leads to zig-zag functions, 
-                # the ends do not fit together
-                sv = e_i
-                st = tm1
-                for j in range(len(sub_cached_times)):
-                    new_sv = linearized_no_input_sol([st, sub_cached_times[j]], sv)
-                    ca[tm1_index,j,:,i] = new_sv.reshape((n,))
-                    sv = new_sv
-                    st = sub_cached_times[j]
-        return ca
-    
-    def build_state_transition_operator_cache_2b(self, size = 101):
-        cache= self._compute_state_transition_operator_cache_2b(size)
-        print("cache created")
-
-        self._state_transition_operator_values_2b = cache
-
-    def _compute_state_transition_operator_cache_2b(self, size = 101):
         x_block_name='x'
         phi_block_name='phi'
         nr_pools=self.nr_pools
@@ -3485,264 +3399,48 @@ class SmoothModelRun(object):
             ca[tm1_index,:,:]=phi
         
         from .Cache import Cache
-        return Cache(cache_times,ca)
+        return Cache(cache_times,ca,self.myhash())
 
-
+    #fixme: 
+    # this method is not yet aware of the Cache class
     def save_state_transition_operator_cache(self, filename):
-        cache = {'values': self._state_transition_operator_values,
-                 'size': self._cache_size,
-                 'times': self.times}
-        
-        with open(filename, 'wb') as output:
-            pickle.dump(cache, output)
+        self._state_transition_operator_cache.save(filename)
 
     def load_state_transition_operator_cache(self, filename):
-        with open(filename, 'rb') as output:
-            cache = pickle.load(output)
-    
-        if not np.all(self.times == cache['times']):
-            raise(Error('The cached state transition operator does not '
-                        'correspond to the current setting.'))
-
-        self._state_transition_operator_values = cache['values']
-        self._cache_size = cache['size']
-
-    def check_phi_args(self,t,s):
-        n=self.nr_pools
-        # All functions to compute the state transition operator Phi(t,s)
-        # should check for the following cases
-        t_0=np.min(self.times)
-        if t < t_0:
-            raise(Error("Evaluation of Phi(t,s) with t before t0 is not possible"))
-        if s < t_0 :
-            raise(Error("Evaluation of Phi(t,s) with s before t0 is not possible"))
-        
-        #if t < s : 
-        # This can be caused by the ode solvers for integrals of phi
-        # so we can not exclude it, actually the function handles this
-        # case by backward integration 
-       
-        
-    # fixme 02-06 mm
-    # this function should be retired
-    def _state_transition_operator_by_skew_product_system(self, t, s, x=None):
-        """
-        For t_0 <s <t we have
-        
-        Phi(t,t_0)=Phi(t,s)*Phi(s,t_0)
-        
-        If we know $Phi(s,t_0) \forall s \in [t,t_0] $
-        
-        We can reconstruct Phi(t,s)=Phi(t,t_0)* Phi(s,t_0)^-1
-        This is what this function does.
-        It will integrate Phi(t,s) for s=t_0 only once and cache the result.
-        For any s!=t_0 it will compute (and cache) the inverse or in case x is given solve 
-        a linear system. In many cases this should be mauch faster than 
-        The computation of Phi by direct integration, Especially if we use integration methods based on fixed values of time, since they will only hit cached inverses.
-        """
-        if not(hasattr(self,'_skewPhiCache')):
-            self._skewPhiCache=dict()
-        
-        cache=self._skewPhiCache
-        def my_inv(t,mat):
-            # before we compute an inverse we try to look it up
-            # in case we have to compute it we store it
-            # since t_0 is fixed min(self.times)
-            # t of phi t,t_0 is the only changig variable
-            # for the computation of the inverses
-            key=t
-            if not(key in cache.keys()):
-                cache[key]=np.linalg.inv(mat)
-                
-            return cache[key]
-
-        self.check_phi_args(t,s)
-        srm=self.model
-        n=srm.nr_pools
-        if s == t:
-            if x is None:
-                return np.identity(n)
-            else:
-                return x.flatten()
-
-        time_symbol=srm.time_symbol
-        if not(hasattr(self,'_x_phi_ivp')):
-            self._x_phi_ivp=x_phi_ivp(
-                    srm
-                    ,self.parameter_dict
-                    ,self.func_set
-                    ,self.start_values
-                    ,x_block_name='sol'
-                    ,phi_block_name='Phi_1d'
-                    )
-
-        my_x_phi_ivp=self._x_phi_ivp
-        t_0=np.min(self.times)
-        t_max=np.max(self.times)
-        t_span=(t_0,t_max)
-
-        # ts   =my_x_phi_ivp.get_values(time_symbol.name,t_span=t_span,max_step=.2)
-        # xs   =my_x_phi_ivp.get_values("sol",t_span=t_span)
-        #phis =my_x_phi_ivp.get_values("Phi_1d",t_span=t_span)
-        #pe('phis',locals()) ;raise
-        
-
-        # the next call will cost nothing 
-        # since the ivp caches the solutions up to t_0 after the first call.
-        Phi_t0 =my_x_phi_ivp.get_function("Phi_1d",t_span=t_span,t_eval=self.times)
-
-        def Phi_t0_mat(t):
-            return Phi_t0(t).reshape(srm.nr_pools,srm.nr_pools)
-
-        if s>t:
-            # we could call the function recoursively with exchanged arguments but
-            # as in res=np.linalg.inv(Phi(s,t))
-            # But this would involve an extra inversions. 
-            # To save one inversion we use (A * B^-1)^-1 = B * A^-1
-            A=Phi_t0_mat(t) 
-            B=Phi_t0_mat(s)
-            if x is None:
-                # inversions are expensive, we cache them
-                A_inv=my_inv(t,A) #costs if it is the firs time
-                mat =np.matmul(B,A_inv)
-                return mat
-            else:
-                key=t
-                if (key in cache.keys()):
-                    A_inv=my_inv(t,A) #costs nothing since in cache
-                    mat =np.matmul(B,A_inv)
-                    return np.matmul(mat,x)
-                else:
-                    # instead of computing the inverse of A
-                    # and then compute y = B * A^-1 * x
-                    # we compute A^-1 x as the solution of u = A * x
-                    # and then y = B * u
-                    u = np.linalg.solve(A,x)
-                    return np.matmul(B,u).flatten() 
-            
-        
-        
-        if s == t_0:
-            mat=Phi_t0_mat(t)
-            if x is None:
-                return mat
-            else:
-                return np.matmul(mat,x).flatten() 
-        
-        A=Phi_t0_mat(t) 
-        B=Phi_t0_mat(s)
-        if x is None:
-            B_inv=my_inv(s,B)
-            mat = np.matmul(A,B_inv)
-            return mat
+        tmpCache = Cache.from_file(filename)
+        if self.myhash()==tmpCache.myhash:
+            self._state_transition_operator_cache=tmpCache
         else:
-            key=t
-            if (key in cache.keys()):
-                B_inv=my_inv(s,B) #costs nothing since in cache
-                mat = np.matmul(A,B_inv)
-                return np.matmul(mat,x)
-            else:
-                # instead of computing the inverse of B
-                # and then compute y = A * B^-1 * x
-                # we compute B^-1 x as the solution of u = B * x
-                # and then y = A * u
-                u = np.linalg.solve(B,x)
-                return np.matmul(A,u).flatten()
-    
-    # fixme 02-06 mm
-    # this function should be retired
-    def _state_transition_operator_by_direct_integration_vec(self, t, s, x):
+            raise Exception('state transition operator cache hash is different from myhash ')
+
+    def myhash(self):
+        """ 
+        Compute a hash considering SOME but NOT ALL properties of a
+        model run. The function's main use is to detect saved state transition
+        operator cashes that are no longer compatible with the model run object
+        that wants to use them. This check is useful but NOT COMPREHENSIVE.
         """
-        For t_0 <s <t we have
-        
-        compute Phi(t,s) directly
-        by integrating 
-        d Phi/dt= B(x(tau))  from s to t with the startvalue Phi(s)=UnitMatrix
-        It assumes the existence of a solution x 
-        """
-        self.check_phi_args(t,s)
-        srm=self.model
-        n=srm.nr_pools
-        if s == t:
-            return x.flatten() 
-        
-        # compute the solution of the non linear system
-        sol_vals,sol_func=self.solve_2()
 
-        # get the compartmental matrix  
-        tup=(srm.time_symbol,)+tuple(srm.state_vector)
-        B_func=numerical_function_from_expression(srm.compartmental_matrix,tup,self.parameter_dict,self.func_set)
-        def x_rhs(tau,x):
-            # we inject the soltution into B to get the linearized version
-            B=B_func(tau,*sol_func(tau))
-            # and then apply it to the actual  vector x to compute Phi*x
-            return np.matmul(B,x).flatten()
+        def make_hash_sha256(o):
+            hasher = hashlib.sha256()
+            #hasher.update(repr(make_hashable(o)).encode())
+            hasher.update(repr(o).encode())
+            return base64.b64encode(hasher.digest()).decode()
         
-        # note that the next line also works for s>t since the ode solver
-        # will integrate backwards
-        print('#_solve_ivp #')
-        Phi_times_x_values=solve_ivp(
-            x_rhs,
-		    y0=x.flatten(),
-		    t_span=(s, t),
-            method='LSODA'
-        ).y
-        val=Phi_times_x_values[:,-1].flatten()
-        
-        return val
+        return make_hash_sha256(
+            (
+                frozendict(self.model.input_fluxes),    
+                frozendict(self.model.internal_fluxes),    
+                frozendict(self.model.output_fluxes),    
+                ImmutableMatrix(self.model.state_vector),
+                # to compute a hash of an arbittrary function object is difficult
+                # in particular if the function depends on data.
+                frozendict(self.parameter_dict),
+                self.start_values
+            )   
+        )
 
-    # fixme 02-06 mm
-    # this function should be retired
-    def _state_transition_operator_by_direct_integration(self, t, s, x=None):
-        """
-        For t_0 <s <t we have
-        
-        compute Phi(t,s) directly
-        by integrating 
-        d Phi/dt= B(x(tau))  from s to t with the startvalue Phi(s)=UnitMatrix
-        It assumes the existence of a solution x 
-        """
-        if x is not None:
-            # this is nr_pools times cheaper
-            return self._state_transition_operator_by_direct_integration_vec( t, s, x)
-        self.check_phi_args(t,s)
-        srm=self.model
-        n=srm.nr_pools
-        if s == t:
-            return np.identity(n)
-
-        x_vals,x_func=self.solve_2()
-        tup=(srm.time_symbol,)+tuple(srm.state_vector)
-        B_func=numerical_function_from_expression(srm.compartmental_matrix,tup,self.parameter_dict,self.func_set)
-        def Phi_rhs(tau,Phi_1d):
-            B=B_func(tau,*x_func(tau))
-            #Phi_cols=[Phi_1d[i*n:(i+1)*n] for i in range(n)]
-            #Phi_ress=[np.matmul(B,pc) for pc in Phi_cols]
-            #return np.stack([np.matmul(B,pc) for pc in Phi_cols]).flatten()
-            return np.matmul(B,Phi_1d.reshape(n,n)).flatten()
-
-        # note that this includes the case s>t since the 
-        # ode solver accepts time to run backwards
-        Phi_values=solve_ivp(
-                Phi_rhs,
-                y0=np.identity(n).flatten(),
-                t_span=(s,t),
-                method='LSODA'
-                ).y
-        val=Phi_values[:,-1].reshape(n,n)
-        
-        # if s>t:
-        #     # we could probably express this by a backward integration
-        #     mat=np.linalg.inv(val)
-        #     if x is None:
-        #         return mat
-        #     else:
-        #         return np.matmul(mat,x).flatten() 
-        # else: 
-
-        return val 
-
-    def _state_transition_operator_2b(self, t, t0, x):
+    def _state_transition_operator(self, t, t0, x):
         if t0 > t:
             raise(Error("Evaluation before t0 is not possible"))
         if t0 == t:
@@ -3751,8 +3449,8 @@ class SmoothModelRun(object):
         linearized_no_input_sol = self._linearized_no_input_sol
         n = self.nr_pools
         
-        if hasattr(self,'_state_transition_operator_values_2b'):
-            cache=self._state_transition_operator_values_2b
+        if hasattr(self,'_state_transition_operator_cache'):
+            cache=self._state_transition_operator_cache
             cached_times=cache.keys
             ca=cache.values
             
@@ -3761,7 +3459,10 @@ class SmoothModelRun(object):
             tm1 = cached_times[tm1_ind]
 
             # find tm2
-            tm2_ind = cached_times.searchsorted(t)-1 # -1 :we want the last cached_time BEFORE t
+            # side=right    : if we hit a cached value directly we want tu use it
+            # -1            : we want the last cached_time BEFORE t
+            tm2_ind = cached_times.searchsorted(t,side='right')-1 
+            #tm2_ind = np.int(np.min([np.floor((t-tm1)/step_size), nc]))
             tm2 = cached_times[tm2_ind]
             
             # check if next cached time is already behind t
@@ -3769,13 +3470,21 @@ class SmoothModelRun(object):
             if t <= tm1: return linearized_no_input_sol([t0, t], x)
         
             # first integrate x to tm1: y = Phi(tm1, t_0)x
-            y_tm1_t0 = (linearized_no_input_sol([t0, tm1], x)).reshape((n,1))
+            if tm1 != t0:
+                y_tm1_t0 = (linearized_no_input_sol([t0, tm1], x)).reshape((n,1))
+            else:
+                y_tm1_t0 = x
+
 
             # use matrix multiplication of the cached intervals between
             # tm1 and tm2 in reverse order 
             # phi_tm2_tm1 = phi_tm2_tm2-1 * ... * phi_tm1+1_tm1
-            phi_tm2_tm1=reduce(lambda prod_phi,cached_phi : np.matmul(cached_phi,prod_phi),ca)
-            a=np.matrix([[0,1],[1,0]])
+            phi_tm2_tm1=reduce(
+                lambda prod_phi,cached_phi : np.matmul(cached_phi,prod_phi),
+                [ca[i,...] for i in range(tm1_ind,tm2_ind)],
+                np.identity(self.nr_pools)
+            )
+            
             # To test (convince yourself) do:
             # b=np.matrix([[1,2],[3,4]])
             # a=np.matrix([[1,0],[0,0]])
@@ -3783,7 +3492,11 @@ class SmoothModelRun(object):
             y_tm2_t0=np.matmul(phi_tm2_tm1,y_tm1_t0)
 
             # integrate directly from tm2 to t
-            y_t_t0 = (linearized_no_input_sol([tm2, t], y_tm2_t0)).reshape((n,1))
+            if tm2 != t:
+                y_t_t0 = (linearized_no_input_sol([tm2, t], y_tm2_t0)).reshape((n,1))
+            else:
+                y_t_t0=y_tm2_t0
+
             return y_t_t0.reshape(n,)
 
         else:
@@ -3791,59 +3504,6 @@ class SmoothModelRun(object):
             y_t_t0 = (linearized_no_input_sol([t0, t], x)).reshape((n,))
             return(y_t_t0)
 
-    def _state_transition_operator(self, t, t0, x):
-        if t0 > t:
-            raise(Error("Evaluation before t0 is not possible"))
-        if t0 == t:
-            return x.flatten() 
-       
-        n = self.nr_pools
-        linearized_no_input_sol = self._linearized_no_input_sol
-
-        if self._state_transition_operator_values is None:
-            # do not use the cache, it has not yet been created
-            #self.build_state_transition_operator_cache()
-            soln = (linearized_no_input_sol([t0, t], x)).reshape((n,))        
-        else:
-            # use the already created cache
-            times = self.times
-            t_min = times[0]
-            t_max = times[-1]
-            nc = self._cache_size
-    
-            cached_times = np.linspace(t_min, t_max, nc)
-            ca = self._state_transition_operator_values
-    
-            # find tm1
-            tm1_ind = cached_times.searchsorted(t0)
-            tm1 = cached_times[tm1_ind]
-    
-            # check if next cached time is already behind t
-            if t <= tm1: return linearized_no_input_sol([t0, t], x)
-    
-            # first integrate x to tm1: y = Phi(tm1, t_0)x
-            y = (linearized_no_input_sol([t0, tm1], x)).reshape((n,1))
-    
-            step_size = (t_max-tm1)/(nc-1)
-            if step_size > 0:
-                tm2_ind = np.int(np.min([np.floor((t-tm1)/step_size), nc-1]))
-                tm2 = tm1 + tm2_ind*step_size
-    
-                #print(t, t0, t==t0, tm1_ind, tm1, tm2_ind, tm2, step_size) 
-                B = ca[tm1_ind,tm2_ind,:,:]
-                #print(t, t0, tm1, tm2, step_size, B)
-                
-                z = np.dot(B, y)
-            else:
-                tm2 = tm1
-                z = y
-            #z = (linearized_no_input_sol([tm1, tm2], y)[-1]).reshape((n,))
-    
-            # integrate z to t: sol=Phi(t,tm2)*z
-            soln = (linearized_no_input_sol([tm2, t],z)).reshape((n,))
-        
-        return np.maximum(soln, np.zeros_like(soln))
-        
     def _state_transition_operator_for_linear_systems(self, t, t0, x):
         # this function could be used in a "linear smooth model run class"
         # At the moment it is only used by the tests to show
@@ -3861,100 +3521,54 @@ class SmoothModelRun(object):
         n = self.nr_pools
         no_input_sol = self._no_input_sol
 
-        if self._state_transition_operator_values is None:
-            # do not use the cache, it has not yet been created
-            #self.build_state_transition_operator_cache()
-            soln = (no_input_sol([t0, t], x)).reshape((n,))        
-        else:
-            # use the already created cache
-            times = self.times
-            t_min = times[0]
-            t_max = times[-1]
-            nc = self._cache_size
-    
-            cached_times = np.linspace(t_min, t_max, nc)
-            ca = self._state_transition_operator_values
-    
-            # find tm1
-            tm1_ind = cached_times.searchsorted(t0)
-            tm1 = cached_times[tm1_ind]
-    
-            # check if next cached time is already behind t
-            if t <= tm1: return no_input_sol([t0, t], x)
-    
-            # first integrate x to tm1: y = Phi(tm1, t_0)x
-            y = (no_input_sol([t0, tm1], x)).reshape((n,1))
-    
-            step_size = (t_max-tm1)/(nc-1)
-            if step_size > 0:
-                tm2_ind = np.int(np.min([np.floor((t-tm1)/step_size), nc-1]))
-                tm2 = tm1 + tm2_ind*step_size
-    
-                #print(t, t0, t==t0, tm1_ind, tm1, tm2_ind, tm2, step_size) 
-                B = ca[tm1_ind,tm2_ind,:,:]
-                #print(t, t0, tm1, tm2, step_size, B)
-                
-                z = np.dot(B, y)
-            else:
-                tm2 = tm1
-                z = y
-            #z = (no_input_sol([tm1, tm2], y)[-1]).reshape((n,))
-    
-            # integrate z to t: sol=Phi(t,tm2)*z
-            soln = (no_input_sol([tm2, t],z)).reshape((n,))
+        soln = (no_input_sol([t0, t], x)).reshape((n,))        
         
+        # avoid small negative values
         return np.maximum(soln, np.zeros_like(soln))
-        if t0 > t:
-            raise(Error("Evaluation before t0 is not possible"))
-        if t0 == t:
-            return x.flatten() 
-       
-        n = self.nr_pools
-        no_input_sol = self._no_input_sol
-
-        if self._state_transition_operator_values is None:
-            # do not use the cache, it has not yet been created
-            #self.build_state_transition_operator_cache()
-            soln = (no_input_sol([t0, t], x)).reshape((n,))        
-        else:
-            # use the already created cache
-            times = self.times
-            t_min = times[0]
-            t_max = times[-1]
-            nc = self._cache_size
-    
-            cached_times = np.linspace(t_min, t_max, nc)
-            ca = self._state_transition_operator_values
-    
-            # find tm1
-            tm1_ind = cached_times.searchsorted(t0)
-            tm1 = cached_times[tm1_ind]
-    
-            # check if next cached time is already behind t
-            if t <= tm1: return no_input_sol([t0, t], x)
-    
-            # first integrate x to tm1: y = Phi(tm1, t_0)x
-            y = (no_input_sol([t0, tm1], x)).reshape((n,1))
-    
-            step_size = (t_max-tm1)/(nc-1)
-            if step_size > 0:
-                tm2_ind = np.int(np.min([np.floor((t-tm1)/step_size), nc-1]))
-                tm2 = tm1 + tm2_ind*step_size
-    
-                #print(t, t0, t==t0, tm1_ind, tm1, tm2_ind, tm2, step_size) 
-                B = ca[tm1_ind,tm2_ind,:,:]
-                #print(t, t0, tm1, tm2, step_size, B)
-                
-                z = np.dot(B, y)
-            else:
-                tm2 = tm1
-                z = y
-            #z = (no_input_sol([tm1, tm2], y)[-1]).reshape((n,))
-    
-            # integrate z to t: sol=Phi(t,tm2)*z
-            soln = (no_input_sol([tm2, t],z)).reshape((n,))
         
-        return np.maximum(soln, np.zeros_like(soln))
+    #if self._state_transition_operator_cache is None:
+        #    # do not use the cache, it has not yet been created
+        #    #self.build_state_transition_operator_cache()
+        #    soln = (no_input_sol([t0, t], x)).reshape((n,))        
+        #else:
+        #    # use the already created cache
+        #    times = self.times
+        #    t_min = times[0]
+        #    t_max = times[-1]
+        #    nc = self._cache_size
+    
+        #    cached_times = np.linspace(t_min, t_max, nc)
+        #    ca = self._state_transition_operator_cache
+    
+        #    # find tm1
+        #    tm1_ind = cached_times.searchsorted(t0)
+        #    tm1 = cached_times[tm1_ind]
+    
+        #    # check if next cached time is already behind t
+        #    if t <= tm1: return no_input_sol([t0, t], x)
+    
+        #    # first integrate x to tm1: y = Phi(tm1, t_0)x
+        #    y = (no_input_sol([t0, tm1], x)).reshape((n,1))
+    
+        #    step_size = (t_max-tm1)/(nc-1)
+        #    if step_size > 0:
+        #        tm2_ind = np.int(np.min([np.floor((t-tm1)/step_size), nc-1]))
+        #        tm2 = tm1 + tm2_ind*step_size
+    
+        #        #print(t, t0, t==t0, tm1_ind, tm1, tm2_ind, tm2, step_size) 
+        #        B = ca[tm1_ind,tm2_ind,:,:]
+        #        #print(t, t0, tm1, tm2, step_size, B)
+        #        
+        #        z = np.dot(B, y)
+        #    else:
+        #        tm2 = tm1
+        #        z = y
+        #    #z = (no_input_sol([tm1, tm2], y)[-1]).reshape((n,))
+    
+        #    # integrate z to t: sol=Phi(t,tm2)*z
+        #    soln = (no_input_sol([tm2, t],z)).reshape((n,))
+        #
+        #return np.maximum(soln, np.zeros_like(soln))
 
     #this function should be rewritten using the vector values solution 
     def _flux_vector(self, flux_vec_symbolic):

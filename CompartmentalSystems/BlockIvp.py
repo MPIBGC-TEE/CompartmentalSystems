@@ -12,44 +12,44 @@ class BlockIvp:
             ,functions : List[ Tuple[Callable,List[str]]]
         )->Callable[[np.double,np.ndarray],np.ndarray]:
         """
-        The function returns a function dot_X=f(t,X) suitable as the righthandside 
-        for the ode solver scipy.solve_ivp from a collection of vector valued
+        The function returns a function dot_X=f(t,X) suitable as the right-hand side 
+        for the ode solver scipy.solve_ivp from a collection of array valued
         functions that compute blocks of dot_X from time and blocks of X 
         rather than from single equations.
     
         A special application is the creation of block triangular systems, to 
-        integrate variables whose time derivative depend on the solution
-        of an original system instantaniously along with it.
+        integrate variables whose time derivative depends on the solution
+        of an original system instantaneously along with it.
         
         Assume that
         X_1(t) is the solution of the initial value problem (ivp)
         
         ivp_1:
-        dot_X_1=f_1(t,X) ,X_1(t_0) 
+        dot_X_1=f_1(t,X), X_1(t_0) 
     
         and X_2(t) the solution of another ivp 
     
         ivp_2:
-        dot_X_2=f_2(t,X_1,X_2) ,X_2(t_0) whose righthand side depends on x_1
+        dot_X_2=f_2(t,X_1,X_2), X_2(t_0) whose right-hand side depends on x_1.
         
-        Then we can obtain the solution of both ivps simultaniously by
-        combining the them into one.
+        Then we can obtain the solution of both ivps simultaneously by
+        combining them into one.
         
         (dot_X_1, dox_X_2)^t = (f_1(t,X_1),f_2(t,X_1,X_2))^t
     
         For n instead of 2 variables one has:  
-        (dot_X_1, dox_X_2,...,dot_X_n)^t = (f_1(t,X_1),f_2(t,X_1,X_2),...,f_n(t,X_1,...X_n))^t
+        (dot_X_1, dot_X_2,..., dot_X_n)^t = (f_1(t,X_1), f_2(t,X_1,X_2),..., f_n(t,X_1,...X_n))^t
         
-        For a full lower triangular system  the block derivative dot_X_i depend on t,
-        and ALL the blocks X_1,...,X_i but often they will only depend on 
-        SOME of the previous blocks so that f_m has a considerably smaller argument list.
+        For a full lower triangular system the block derivative dot_X_i depends on t and ALL the blocks X_1,...,X_i  
+        but often it will only depend on 
+        SOME of the previous blocks so that f_i has a considerably smaller argument list.
     
         This function therefore allows to specify WHICH blocks the f_i depend on.
-        Consider the following 7 dimensional block diagonal example:
+        Consider the following 5+2*2 = 9 -dimensional block diagonal example:
     
         b_s=block_rhs(
              time_str='t'
-            ,X_blocks=[('X1',5),('X2',2)]
+            ,start_blocks=[('X1',np.ones((5,1)),('X2',np.ones((2,2)))]
             ,functions=[
                  ((lambda x   : x*2 ),  ['X1']    )
                 ,((lambda t,x : t*x ),  ['t' ,'X2'])
@@ -57,16 +57,16 @@ class BlockIvp:
         
     
         The first argument 'time_str' denotes the alias for the t argument to be used
-        later in the signature of the blockfunctions.
-        The second argument 'X_blocks' describes the decomposition of X into blocks
-        by a list of tuples of the form ('Name',size)
+        later in the signature of the block functions.
+        The second argument 'start_blocks' describes the decomposition of X into blocks
+        by a list of tuples of the form ('Name',array).
         The third argument 'functions' is a list of tuples of the function itself
         and the list of the names of its block arguments as specified in the
-        'X_blocks' argument. 
-        Order is important for the 'X_blocks' and the 'functions'
+        'start_blocks' argument. 
+        Order is important for the 'start_blocks' and the 'functions'.
         It is assumed that the i-th function computes the derivative of the i-th block.
         The names of the blocks itself are arbitrary and have no meaning apart from
-        their correspondence in the X_blocks and functions argument.
+        their correspondence in the start_blocks and functions argument.
         """
 
         start_block_dict={ t[0]:t[1] for t in start_blocks }
@@ -122,69 +122,69 @@ class BlockIvp:
         self.start_vec=np.concatenate([ a.flatten() for a in start_arrays])
         self._cache=dict()
         
-    # fixme:
-    # should be retired (see blocksolve)
-    def solve_direct(self,t_span,dense_output=True,**kwargs):
-        sol=solve_ivp(
-             fun=self.rhs
-            ,y0=self.start_vec
-            ,t_span=t_span
-            ,dense_output=dense_output
-            ,**kwargs
-        )
-        return sol
+   # # fixme:
+   # # should be retired (see blocksolve)
+   # def solve_direct(self,t_span,dense_output=True,**kwargs):
+   #     sol=solve_ivp(
+   #          fun=self.rhs
+   #         ,y0=self.start_vec
+   #         ,t_span=t_span
+   #         ,dense_output=dense_output
+   #         ,**kwargs
+   #     )
+   #     return sol
 
-    # fixme:
-    # should be retired (see blocksolve)
-    def solve(self,t_span,dense_output=True,**kwargs):
-        # this is just a caching proxy for scypy.solve_ivp
-        # remember the times for the solution
-        if not(isinstance(t_span,tuple)):
-            raise Exception('''
-            scipy.solve_ivp actually allows a list for t_span, but we insist 
-            that it should be an (immutable) tuple, since we want to cache the solution 
-            and want to use t_span as a hash.''')
-        cache_key=(t_span)
-        if cache_key in self._cache.keys():
-            # caching can be made much more sophisticated by
-            # starting at the end of previos solution with
-            # the same start times and a smaller t_end
-            return self._cache[cache_key]
-        #
-        if 'vectorized' in kwargs.keys():
-            del(kwargs['vectorized'])
-            print('''The vectorized flag is forbidden for $c 
-            since we rely on decomposing the argument vector'''.format(s=self.__class__))
+   # # fixme:
+   # # should be retired (see blocksolve)
+   # def solve(self,t_span,dense_output=True,**kwargs):
+   #     # this is just a caching proxy for scypy.solve_ivp
+   #     # remember the times for the solution
+   #     if not(isinstance(t_span,tuple)):
+   #         raise Exception('''
+   #         scipy.solve_ivp actually allows a list for t_span, but we insist 
+   #         that it should be an (immutable) tuple, since we want to cache the solution 
+   #         and want to use t_span as a hash.''')
+   #     cache_key=(t_span)
+   #     if cache_key in self._cache.keys():
+   #         # caching can be made much more sophisticated by
+   #         # starting at the end of previos solution with
+   #         # the same start times and a smaller t_end
+   #         return self._cache[cache_key]
+   #     #
+   #     if 'vectorized' in kwargs.keys():
+   #         del(kwargs['vectorized'])
+   #         print('''The vectorized flag is forbidden for $c 
+   #         since we rely on decomposing the argument vector'''.format(s=self.__class__))
 
-        sol=self.solve_direct(t_span,dense_output=True,**kwargs)
-        self._cache[cache_key]=sol
-        return sol
+   #     sol=self.solve_direct(t_span,dense_output=True,**kwargs)
+   #     self._cache[cache_key]=sol
+   #     return sol
 
     def check_block_exists(self,block_name):
         if not(block_name in set(self.index_dict.keys()).union(self.time_str)):
             raise Exception("There is no block with this name")
 
-    # fixme:
-    # should be retired (see blocksolve)
-    def get_values(self,block_name,t_span,**kwargs):
-        self.check_block_exists(block_name)
-        sol=self.solve(t_span=t_span,**kwargs)
-        if block_name==self.time_str:
-            return sol.t
+    ## fixme:
+    ## should be retired (see blocksolve)
+    #def get_values(self,block_name,t_span,**kwargs):
+    #    self.check_block_exists(block_name)
+    #    sol=self.solve(t_span=t_span,**kwargs)
+    #    if block_name==self.time_str:
+    #        return sol.t
+    #    
+    #    lower,upper=self.index_dict[block_name] 
+    #    return sol.y[lower:upper,:]
         
-        lower,upper=self.index_dict[block_name] 
-        return sol.y[lower:upper,:]
-        
-    def block_solve(self,*args,dense_output=True,**kwargs):
+    def block_solve(self,t_span,**kwargs):
         # fixme:
         # This will be the new solve 
         # returns a dict of the block solutions (either values or functions depending on the "dense_output" keyword 
         # of solve_ivp
         complete_sol=solve_ivp(
              fun=self.rhs
+            ,t_span=t_span
             ,y0=self.start_vec
-            #,t_span=t_span
-            ,dense_output=dense_output
+            ,dense_output=False
             ,**kwargs
         )
         def block_sol(block_name):
@@ -204,24 +204,58 @@ class BlockIvp:
         #print(block_sols)
         return block_sols
 
+    def block_solve_functions(self,t_span,**kwargs):
+        # fixme:
+        # This will be the new solve 
+        # returns a dict of the block solutions (either values or functions depending on the "dense_output" keyword 
+        # of solve_ivp
+        complete_sol=solve_ivp(
+             fun=self.rhs
+            ,t_span=t_span
+            ,y0=self.start_vec
+            ,dense_output=True
+            ,**kwargs
+        )
+        def block_sol(block_name):
+            start_array=self.array_dict[block_name]
+            lower,upper=self.index_dict[block_name] 
+            def func(times):
+                tmp= complete_sol.sol(times)[lower:upper]
+                if isinstance(times,np.ndarray): 
+                    res=tmp.reshape(
+                            (start_array.shape+(len(times),))
+                    ) 
+                    return np.moveaxis(res,-1,0)
+                else:
+                    return tmp.reshape(start_array.shape)
+            
+            # solve_ivp returns an array that has time as the LAST dimension
+            # but our code usually expects it as FIRST dimension 
+            # Therefore we move the last axis to the first position
+            return func
 
-    def get_function(self,block_name,t_span,**kwargs):
-        # fixme mm:
-        # what happens with the **kwargs?
-        self.check_block_exists(block_name)
-        if block_name==self.time_str:
-            print("""
-            warning:
-            $s interpolated with respect to s$ is probably an accident...
-            """.format(s=self.time_str))
-            # this is silly since it means somebody asked for the interpolation of t with respect to t
-            # so we give back the identiy
-            return lambda t:t
+        block_names=self.index_dict.keys()
+        block_sols={ block_name:block_sol(block_name) for block_name in block_names}
+        #print(block_sols)
+        return block_sols
 
-        lower,upper=self.index_dict[block_name] 
-        complete_sol_func=self.solve(t_span=t_span,dense_output=True).sol
-        def block(t):
-            return complete_sol_func(t)[lower:upper]
-        
-        return block
+    #def get_function(self,block_name,t_span,**kwargs):
+    #    # fixme mm:
+    #    # what happens with the **kwargs?
+    #    self.check_block_exists(block_name)
+    #    if block_name==self.time_str:
+    #        print("""
+    #        warning:
+    #        $s interpolated with respect to s$ is probably an accident...
+    #        """.format(s=self.time_str))
+    #        # this is silly since it means somebody asked for the interpolation of t with respect to t
+    #        # so we give back the identiy
+    #        return lambda t:t
+
+    #    lower,upper=self.index_dict[block_name] 
+    #    complete_sol_func=self.solve(t_span=t_span,dense_output=True).sol
+    #    def block(t):
+    #        return complete_sol_func(t)[lower:upper]
+    #    
+    #    return block
 

@@ -53,32 +53,18 @@ class TestDiscreteModelRun(InDirTest):
         
         smr = SmoothModelRun(srm, parameter_dict, start_values, times)
 
-        # export the ingredients for a different ode solver 
-        srm = smr.model
-        state_vector, rhs = srm.age_moment_system(max_order=0)
-        num_rhs = numerical_rhs2(
-            state_vector,
-            srm.time_symbol,
-            rhs, 
-            parameter_dict,
-            {}
-        )
-        sf=solve_ivp(fun=num_rhs,t_span=[0,t_max],y0=start_values,t_eval=times)
         
         dmr = DiscreteModelRun.from_SmoothModelRun(smr)
-        smrs=smr.solve()
+        smrs=smr.solve_2()[0]
         dmrs=dmr.solve()
-        self.assertTrue(np.allclose(dmrs[:,1],sf.y[1,:]))
-        self.assertTrue(np.allclose(dmrs[:,0],sf.y[0,:]))
-        self.assertTrue(np.allclose(dmrs,smrs,rtol=1e-2,atol=1e-3))
+        self.assertTrue(np.allclose(dmrs,smrs))
+        
         fig=plt.figure(figsize=(7,7))
         for i in [0,1]:
             ax=fig.add_subplot(2,1,1+i)
             plt.title("solutions")
             ax.plot(times,smrs[:,i],'*',color='red',label="smr"+str(i),markersize=12)
             ax.plot(times,dmrs[:,i],'*',color='blue',label="dmr"+str(i),markersize=8)
-            n=len(sf.t)
-            ax.plot(sf.t,sf.y[i].reshape(n,),'*',color='green',label="solve_ivp"+str(i),markersize=4)
             ax.legend()
         fig.savefig("pool_contents.pdf")
         self.assertTrue(True)

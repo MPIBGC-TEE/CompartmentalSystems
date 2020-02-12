@@ -10,7 +10,7 @@ def dump(object, filename, protocol = -1):
     file.close()
 
 def load(filename):
-    """Loads a compressed object from disk
+    """Loads a compressed object from disk.
     """
     file = gzip.GzipFile(filename, 'rb')
     object = pickle.load(file)

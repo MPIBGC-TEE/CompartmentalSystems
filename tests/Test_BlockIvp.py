@@ -21,7 +21,7 @@ class TestBlockIvp(InDirTest):
         ref={'x1':np.exp(-t_max)*np.ones(x1_shape),
              'x2':np.exp(-t_max**2)*np.ones(x2_shape)
         }
-        res = bivp.block_solve(t_span=(0,t_max),dense_output=False)
+        res = bivp.block_solve(t_span=(0,t_max))
         self.assertTrue(np.allclose(res['x1'][-1],ref['x1'],rtol=1e-2))
         self.assertTrue(np.allclose(res['x2'][-1],ref['x2'],rtol=1e-2))
 
@@ -42,6 +42,6 @@ class TestBlockIvp(InDirTest):
         ref={'x1':t_max*np.ones(x1_shape),
              'x2':np.exp(-t_max**2)*np.ones(x2_shape)
         }
-        res = bivp.block_solve(t_span=(0,t_max),dense_output=False)
+        res = bivp.block_solve(t_span=(0,t_max))
         self.assertTrue(np.allclose(res['x1'][-1],ref['x1'],rtol=1e-2))
         self.assertTrue(np.allclose(res['x2'][-1],ref['x2'],rtol=1e-2))

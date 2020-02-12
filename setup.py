@@ -40,7 +40,8 @@ setup(name='CompartmentalSystems',
             "plotly",
             "scipy",
             "sympy",
-            "tqdm"
+            "tqdm",
+            "frozendict"
         ],
         # to hopefully make RTD work
         include_package_data=True,

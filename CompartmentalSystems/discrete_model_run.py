@@ -3,12 +3,12 @@ import numpy as np
 from numpy.linalg import matrix_power, pinv
 from scipy.linalg import inv
 from scipy.special import factorial, binom
-from scipy.integrate import solve_ivp,OdeSolver,odeint
 from sympy import Matrix
 
 from tqdm import tqdm
 
 from . import picklegzip
+from .helpers_reservoir import x_phi_ivp
 
 ################################################################################
 
@@ -35,8 +35,18 @@ class DiscreteModelRun(object):
         if data_times is None:
             data_times = smr.times
 
-        def Phi(t,s,x=None):
-            return smr._state_transition_operator_by_skew_product_system(t,s,x)
+        def Phi(t,s):
+            blivp= x_phi_ivp(
+                smr.model
+                ,smr.parameter_dict
+                ,smr.func_set
+                ,smr.start_values
+                ,x_block_name='sol'
+                ,phi_block_name='Phi_2d'
+            )
+            sol_dict=blivp.block_solve(t_span=(s,t))
+            phi_mat=sol_dict['Phi_2d'][-1,...]
+            return phi_mat
 
         nr_pools=smr.nr_pools
         #data_times=smr.times
