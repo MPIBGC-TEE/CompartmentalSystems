@@ -26,7 +26,7 @@ from testinfrastructure.InDirTest import InDirTest
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun
-from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs2
+from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs
 
 
 class TestDiscreteModelRun(InDirTest):
@@ -55,7 +55,7 @@ class TestDiscreteModelRun(InDirTest):
 
         
         dmr = DiscreteModelRun.from_SmoothModelRun(smr)
-        smrs=smr.solve_2()[0]
+        smrs,_=smr.solve()
         dmrs=dmr.solve()
         self.assertTrue(np.allclose(dmrs,smrs))
         

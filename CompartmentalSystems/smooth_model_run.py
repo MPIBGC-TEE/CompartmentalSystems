@@ -52,12 +52,12 @@ from functools import reduce
 
 from .smooth_reservoir_model import SmoothReservoirModel
 from .helpers_reservoir import (deprecation_warning,warning
-,make_cut_func_set, has_pw, numsol_symbolic_system,
-numsol_symbolic_system_2 ,arrange_subplots, melt,
+,make_cut_func_set, has_pw, numsol_symbolic_system_old,
+numsol_symbolical_system ,arrange_subplots, melt,
 generalized_inverse_CDF, draw_rv ,stochastic_collocation_transform,
-numerical_rhs, MH_sampling, save_csv ,load_csv, stride
+numerical_rhs_old, MH_sampling, save_csv ,load_csv, stride
 ,f_of_t_maker,const_of_t_maker,numerical_function_from_expression
-,x_phi_ivp,x_phi_ode, numerical_rhs2)
+,x_phi_ivp,x_phi_ode)
 from .BlockIvp import BlockIvp
 from .Cache import Cache
 
@@ -210,7 +210,7 @@ class SmoothModelRun(object):
 
         return self._B(t)     
     
-    def linearize(self):
+    def linearize_old(self):
         """Return a linearized SmoothModelRun instance.
 
         Linearization happens along the solution trajectory. Only for linear 
@@ -222,7 +222,7 @@ class SmoothModelRun(object):
             :class:`SmoothModelRun`, with the solutions now being part 
             of ``func_set``.
         """
-        sol_funcs = self.sol_funcs()
+        sol_funcs = self.sol_funcs_old()
         
         srm = self.model
         xi, T, N, C, u = srm.xi_T_N_u_representation()
@@ -272,7 +272,7 @@ class SmoothModelRun(object):
         return linearized_smr
 
 
-    def linearize_2(self):
+    def linearize(self):
         """Return a linearized SmoothModelRun instance.
 
         Linearization happens along the solution trajectory. Only for linear 
@@ -285,7 +285,7 @@ class SmoothModelRun(object):
             of ``func_set``.
         """
         #sol_funcs = self.sol_funcs()
-        sol_funcs = self.sol_funcs_2()
+        sol_funcs = self.sol_funcs()
         
         srm = self.model
         xi, T, N, C, u = srm.xi_T_N_u_representation()
@@ -376,7 +376,7 @@ class SmoothModelRun(object):
         """int: Return the number of pools involved in the model."""
         return(self.model.nr_pools)
 
-    def solve_single_value(self, alternative_start_values=None):
+    def solve_single_value_old(self, alternative_start_values=None):
         """Solve the model and return a function of time.
 
         Args:
@@ -387,10 +387,27 @@ class SmoothModelRun(object):
             Python function ``f``: ``f(t)`` is a numpy.array that containts the 
             pool contents at time ``t``.
         """
-        return self._solve_age_moment_system_single_value(0, None, 
+        return self._solve_age_moment_system_single_value_old(0, None, 
                         alternative_start_values)
 
-    def solve(self, alternative_times = None, alternative_start_values=None):
+    def solve_func(self, alternative_start_values=None):
+        """Solve the model and return a function of time.
+
+        Args:
+            alternative_start_values (numpy.array, optional): If not given, the 
+                original ``start_values`` are used.
+
+        Returns:
+            Python function ``f``: ``f(t)`` is a numpy.array that containts the 
+            pool contents at time ``t``.
+        """
+        return self._solve_age_moment_system_func(
+                0,				 
+                None, 
+                alternative_start_values
+            )
+
+    def solve_old(self, alternative_times = None, alternative_start_values=None):
         """Solve the model and return a solution grid.
 
         Args:
@@ -403,10 +420,10 @@ class SmoothModelRun(object):
             numpy.ndarray: len(times) x nr_pools, contains the pool contents 
             at the times given in the time grid.
         """
-        return self._solve_age_moment_system(0, None, alternative_times, 
+        return self._solve_age_moment_system_old(0, None, alternative_times, 
                         alternative_start_values)
 
-    def solve_2(self, alternative_times = None, alternative_start_values=None):
+    def solve(self, alternative_times = None, alternative_start_values=None):
         """Solve the model and return a solution grid as well as a solution function of time. If the solution has been computed previously (even by other methods) the cached result will be returned.
 
         Args:
@@ -420,11 +437,29 @@ class SmoothModelRun(object):
             at the times given in the time grid.
             funct is a function of time where f(t) is a numpy.ndarray with shape: (nr_pools,)
         """
-        return self._solve_age_moment_system_2(0, None, alternative_times, 
+        return self._solve_age_moment_system(0, None, alternative_times, 
                         alternative_start_values)
 
     ##### fluxes as functions #####
     
+    def sol_funcs_old(self):
+        """Return linearly interpolated solution functions.
+
+        Returns:
+            Python function ``f``: ``f(t)`` returns a numpy.array containing the
+            pool contents at time ``t``.
+        """
+        times = self.times
+
+        sol = self.solve_old(times)
+        sol_funcs = []
+        for i in range(self.nr_pools):
+            sol_inter = interp1d(times, sol[:,i])
+            sol_funcs.append(sol_inter)
+
+        return sol_funcs
+
+    #fixme: test
     def sol_funcs(self):
         """Return linearly interpolated solution functions.
 
@@ -434,26 +469,9 @@ class SmoothModelRun(object):
         """
         times = self.times
 
-        sol = self.solve(times)
-        sol_funcs = []
-        for i in range(self.nr_pools):
-            sol_inter = interp1d(times, sol[:,i])
-            sol_funcs.append(sol_inter)
 
-        return sol_funcs
-
-    #fixme: test
-    def sol_funcs_2(self):
-        """Return linearly interpolated solution functions.
-
-        Returns:
-            Python function ``f``: ``f(t)`` returns a numpy.array containing the
-            pool contents at time ``t``.
-        """
-        times = self.times
-
-
-        sol,vec_sol_func = self.solve_2()
+        #sol,vec_sol_func = self.solve()
+        vec_sol_func = self.solve_func()
         # the factorie is necessary to avoid untstrict evaluation
         def func_maker(pool):
             def func(t):
@@ -466,7 +484,7 @@ class SmoothModelRun(object):
         """Return linearly interpolated solution functions. as a dictionary indexed by the symbols of the
         state variables"""
         #sol_funcs=self.sol_funcs()
-        sol_funcs=self.sol_funcs_2()
+        sol_funcs=self.sol_funcs()
         state_vector=self.model.state_vector
         n=len(state_vector)
         sol_dict_by_smybol={state_vector[i]:sol_funcs[i] for i in range(n)}
@@ -581,7 +599,7 @@ class SmoothModelRun(object):
         n = self.nr_pools
 
         #sol_funcs = self.sol_funcs()
-        sol_funcs = self.sol_funcs_2()
+        sol_funcs = self.sol_funcs()
         output_vec_at_t = self.output_vector_func(t)
 
         rate_vec = np.zeros((n,))
@@ -629,7 +647,7 @@ class SmoothModelRun(object):
         Returns:
             numpy.ndarray: len(times) x nr_pools, ``solution/output_vector``
         """
-        soln = self.solve()
+        soln,_ = self.solve()
         output_vec = self.external_output_vector
 
         # take care of possible division by zero
@@ -794,9 +812,10 @@ class SmoothModelRun(object):
         """
         p_sv = self.pool_age_densities_single_value(start_age_densities)
         times = self.times
-        x = self.solve()
-        n = self.nr_pools
-        k = order
+        #x = self.solve_old()
+        x,_ = self.solve()
+        n   = self.nr_pools
+        k   = order
 
         def am_at_time_index_for_pool(ti, pool):
             def integrand(a):
@@ -877,7 +896,8 @@ class SmoothModelRun(object):
 
             return part1_time(t) + part2_time(t)
 
-        soln = self.solve()
+        #soln = self.solve_old()
+        soln,_ = self.solve()
 
         def both_parts_normalized_at_time_index(ti):
             t = times[ti]
@@ -940,14 +960,15 @@ class SmoothModelRun(object):
             start_age_moments=start_age_moments[0:order,:]
 
         if not (0 in self.start_values):
-            ams = self._solve_age_moment_system(order, start_age_moments)
+            ams = self._solve_age_moment_system_old(order, start_age_moments)
             return ams[:,n*order:]
         else:
             # try to start adapted mean_age_system once no pool 
             # has np.nan as mean_age (empty pool)
 
             # find last time index that contains an empty pool --> ti
-            soln = self.solve()
+            #soln = self.solve_old()
+            soln,_ = self.solve()
             ti = len(times)-1
             content = soln[ti,:]
             while not (0 in content) and (ti>0): 
@@ -969,7 +990,7 @@ class SmoothModelRun(object):
                 # with nonzero start values
                 new_start_age_moments = amv1[-1,:].reshape((n, order))
                 start_values = soln[ti+1]
-                ams = self._solve_age_moment_system(
+                ams = self._solve_age_moment_system_old(
                     order, new_start_age_moments, times[ti+1:], start_values)
                 amv2 = ams[:,n*order:]
 
@@ -1006,7 +1027,8 @@ class SmoothModelRun(object):
         n = self.nr_pools
         age_moment_vector = self.age_moment_vector(order, start_age_moments)
         age_moment_vector[np.isnan(age_moment_vector)] = 0
-        soln = self.solve()
+        #soln = self.solve_old()
+        soln,_ = self.solve()
          
         total_mass = soln.sum(1) # row sum
         total_mass[total_mass==0] = np.nan
@@ -1742,7 +1764,8 @@ class SmoothModelRun(object):
 
         times = self.times
         n = self.nr_pools
-        soln = self.solve()
+        #soln = self.solve_old()
+        soln,_ = self.solve()
 
 
         def make_ax_nice(ax, title):
@@ -1782,7 +1805,8 @@ class SmoothModelRun(object):
             Instead ``ax`` is changed in place.
         """
         times = self.times
-        soln = self.solve()
+        #soln = self.solve_old()
+        soln,_ = self.solve()
         ax.plot(soln[:, i], soln[:, j])
         
         x0 = soln[0, i]
@@ -2263,7 +2287,8 @@ class SmoothModelRun(object):
             time ``t``.
         """
         n = self.nr_pools
-        soln = self.solve()
+        #soln = self.solve_old()
+        soln,_ = self.solve()
         if soln[0,:].sum() == 0:
             start_age_densities = lambda a: np.zeros((n,))
 
@@ -2275,7 +2300,8 @@ class SmoothModelRun(object):
         #sol_funcs = self.sol_funcs()
         #sol_funcs_array = lambda t: np.array([sol_funcs[pool](t) 
         #                                           for pool in range(n)])
-        sol_funcs_array = self.solve_single_value()
+        #sol_funcs_array = self.solve_single_value_old()
+        sol_funcs_array = self.solve_func()
 
         if F0 is None:
             p0 = start_age_densities
@@ -2332,7 +2358,8 @@ class SmoothModelRun(object):
             with age less than or equal to ``a`` at time ``t``.
         """
         n = self.nr_pools
-        soln = self.solve()
+        #soln = self.solve_old()
+        soln,_ = self.solve()
         if soln[0,:].sum() == 0:
             start_age_densities = lambda a: np.zeros((n,))
         
@@ -2463,7 +2490,8 @@ class SmoothModelRun(object):
             The computed quantile values over the time-pool grid.
         """
         n = self.nr_pools
-        soln = self.solve()
+        #soln = self.solve_old()
+        soln,_ = self.solve()
         if soln[0,:].sum() == 0:
             start_age_densities = lambda a: np.zeros((n,))
 
@@ -2477,7 +2505,8 @@ class SmoothModelRun(object):
 
         F_sv = self.cumulative_pool_age_distributions_single_value(
                     start_age_densities=start_age_densities, F0=F0)
-        soln = self.solve()
+        #soln = self.solve_old()
+        soln,_ = self.solve()
 
         res = []
         for pool in range(n):
@@ -2536,7 +2565,8 @@ class SmoothModelRun(object):
             numpy.array: The computed quantile values over the time grid.
         """
         n = self.nr_pools
-        soln = self.solve()
+        #soln = self.solve_old()
+        soln,_ = self.solve()
         if soln[0,:].sum() == 0:
             start_age_densities = lambda a: np.zeros((n,))
 
@@ -2545,7 +2575,8 @@ class SmoothModelRun(object):
         
         F_sv = self.cumulative_system_age_distribution_single_value(
                     start_age_densities=start_age_densities, F0=F0)
-        soln = self.solve()
+        #soln = self.solve_old()
+        soln,_ = self.solve()
         start_age_moments = self.moments_from_densities(1, start_age_densities)
         
         if start_values is None: 
@@ -2728,7 +2759,8 @@ class SmoothModelRun(object):
             numpy.ndarray: (len(times)) The computed quantile values over the 
             time grid.
         """
-        soln = self.solve()
+        #soln = self.solve_old()
+        soln,_ = self.solve()
         empty = soln[0, pool] == 0
 
         if not empty and F0 is None and start_age_densities is None:
@@ -2746,7 +2778,8 @@ class SmoothModelRun(object):
         u = self.external_input_vector_func()
         F = self.cumulative_pool_age_distributions_single_value(
                 start_age_densities=start_age_densities, F0=F0)
-        sol_funcs = self.solve_single_value()
+        #sol_funcs = self.solve_single_value_old()
+        vec_sol_funcs = self.solve_func()
 
         # find last time index such that the pool is empty --> ti
         ti = len(times)-1
@@ -2802,7 +2835,7 @@ class SmoothModelRun(object):
             p_val = p(y, t_val)[pool]
             u_val = u(t_val)[pool]
             F_vec = F(y, t_val).reshape((n,1))
-            x_vec = sol_funcs(t_val).reshape((n,1))
+            x_vec = vec_sol_funcs(t_val).reshape((n,1))
             B = self.B(t_val)
 
             #print('B', B)
@@ -2875,7 +2908,8 @@ class SmoothModelRun(object):
         Returns:
             numpy.ndarray: The computed quantile values over the time grid.
         """
-        soln = self.solve()
+        #soln = self.solve_old()
+        soln,_ = self.solve()
         # check if system is empty at the beginning,
         # if so, then we use 0 as start value, otherwise
         # we need to compute it from F0 (preferably) or start_age_density
@@ -2898,7 +2932,8 @@ class SmoothModelRun(object):
         u = self.external_input_vector_func()
         F = self.cumulative_pool_age_distributions_single_value(
                 start_age_densities=start_age_densities, F0=F0)
-        sol_funcs = self.solve_single_value()
+        #sol_funcs = self.solve_single_value_old()
+        vec_sol_func = self.solve_func()
 
         # find last time index such that the system is empty --> ti
         ti = len(times)-1
@@ -2954,7 +2989,7 @@ class SmoothModelRun(object):
             p_val = p(y, t_val)
             u_vec = u(t_val)
             F_vec = F(y, t_val).reshape((n,1))
-            x_vec = sol_funcs(t_val).reshape((n,1))
+            x_vec = vec_sol_func(t_val).reshape((n,1))
             B = self.B(t_val)
 
             #print('B', B)
@@ -3078,7 +3113,7 @@ class SmoothModelRun(object):
     ########## private methods #########
 
 
-    def _solve_age_moment_system_single_value(self, max_order, 
+    def _solve_age_moment_system_single_value_old(self, max_order, 
             start_age_moments=None, start_values=None):
         t0 = self.times[0]
         t_max = self.times[-1]
@@ -3095,7 +3130,7 @@ class SmoothModelRun(object):
             if t > t_max: t = t_max
 
             new_times = [t0, t]
-            soln = self._solve_age_moment_system(max_order, 
+            soln = self._solve_age_moment_system_old(max_order, 
                                                  start_age_moments, 
                                                  times=new_times, 
                                                  start_values=start_values)
@@ -3104,95 +3139,48 @@ class SmoothModelRun(object):
 
         return func 
 
-    def _solve_age_moment_system_2(self, max_order, 
-            start_age_moments=None, times=None, start_values=None, store=True):
-        # this function caches the interpolation function instead of the values
-        #store = True
-        if not ((times is None) and (start_values is None)): store = False
+    def _solve_age_moment_system_func(
+            self, 
+            max_order, 
+            start_age_moments=None, 
+            start_values=None
+        ):
 
-        if times is None: 
-            times = self.times
-
-        if start_values is None: start_values = self.start_values
-
-        if not(isinstance(start_values, np.ndarray)):
-            #print(start_values)
-            raise(Error("start_values should be a numpy array"))
-
-        n = self.nr_pools
-        if start_age_moments is None:
-            start_age_moments = np.zeros((max_order, n))
-        
-        start_age_moments_list = flatten([a.tolist() for a in 
-                            [start_age_moments[i,:] 
-                                for i in range(start_age_moments.shape[0])]])
-       
-        storage_key = tuple(start_age_moments_list) + ((max_order,),)
-
-        # return cached result if possible
-        if store:
-            if hasattr(self, "_previously_computed_age_moment_sol2"):
-                if storage_key in self._previously_computed_age_moment_sol2:
-                    #print('using cached age moment system:', storage_key)
-                    #print(
-                    #   self._previously_computed_age_moment_sol2[storage_key])
-                    return self._previously_computed_age_moment_sol2[storage_key]
-                elif max_order==0 and hasattr(self,'_x_phi_ivp'):
-
-                    sol_func=self._x_phi_ivp.get_function('sol')
-                    soln=self._x_phi_ivp.get_values('sol')
-                    return (soln,sol_func)
-
-
-
+        t0 = self.times[0]
+        t_max = self.times[-1]
+        soln,func = self._solve_age_moment_system(
+                                                max_order, 
+                                                start_age_moments, 
+                                                #times=new_times, 
+                                                start_values=start_values
+                    )
+        def save_func(times):
+            if isinstance(times,np.ndarray):
+                if times[0]<t0 or times[-1]>t_max:
+                    raise Exception("""
+                        times[0]<t0 or times[-1]>t_max: solve_ivp returns an interpolated
+                        function, which does not check if the functions is called
+                        with arguments outside the computed range, but we do. 
+                        """
+                    )
+                else:
+                    return np.rollaxis(func(times),-1,0)
             else:
-                self._previously_computed_age_moment_sol2 = {}
+                if times <t0 or times>t_max:
+                    raise Exception("""
+                        t<t0 or t>t_max: solve_ivp returns an interpolated
+                        function, which does not check if the functions is called
+                        with arguments outside the computed range, but we do. 
+                        """
+                    )
+                else:
+                    return func(times)
 
-        srm = self.model
-        state_vector, rhs = srm.age_moment_system(max_order)
-       
-        # compute solution
-        new_start_values = np.zeros((n*(max_order+1),))
-        new_start_values[:n] = np.array((start_values)).reshape((n,)) 
-        new_start_values[n:] = np.array((start_age_moments_list))
-
-        soln,sol_func = numsol_symbolic_system_2(
-            state_vector,
-            srm.time_symbol,
-            rhs,
-            self.parameter_dict,
-            self.func_set,
-            new_start_values, 
-            times,
-            dense_output=True
-        )
-        def restrictionMaker(order):
-            #pe('soln[:,:]',locals())
-            restrictedSolutionArr=soln[:,:(order+1)*n]
-            def restictedSolutionFunc(t):
-                return sol_func(t)[:(order+1)*n]
-
-            return (restrictedSolutionArr,restictedSolutionFunc)
-            
-        # save all solutions for order <= max_order
-        if store:
-            for order in range(max_order+1):
-                shorter_start_age_moments_list = (
-                    start_age_moments_list[:order*n])
-                #print(start_age_moments_list)
-                #print(shorter_start_age_moments_list)
-                storage_key = (tuple(shorter_start_age_moments_list) 
-                                + ((order,),))
-                #print('saving', storage_key)
-
-                self._previously_computed_age_moment_sol2[storage_key] = restrictionMaker(order)
-                
-                #print(self._previously_computed_age_moment_sol2[storage_key])
-
-        return (soln,sol_func)
+        return save_func 
 
     def _solve_age_moment_system(self, max_order, 
             start_age_moments=None, times=None, start_values=None, store=True):
+        # this function caches the interpolation function instead of the values
         #store = True
         if not ((times is None) and (start_values is None)): store = False
 
@@ -3223,6 +3211,14 @@ class SmoothModelRun(object):
                     #print(
                     #   self._previously_computed_age_moment_sol[storage_key])
                     return self._previously_computed_age_moment_sol[storage_key]
+                elif max_order==0 and hasattr(self,'_x_phi_ivp'):
+
+                    sol_func=self._x_phi_ivp.get_function('sol')
+                    soln=self._x_phi_ivp.get_values('sol')
+                    return (soln,sol_func)
+
+
+
             else:
                 self._previously_computed_age_moment_sol = {}
 
@@ -3234,7 +3230,85 @@ class SmoothModelRun(object):
         new_start_values[:n] = np.array((start_values)).reshape((n,)) 
         new_start_values[n:] = np.array((start_age_moments_list))
 
-        soln= numsol_symbolic_system(
+        soln,sol_func = numsol_symbolical_system(
+            state_vector,
+            srm.time_symbol,
+            rhs,
+            self.parameter_dict,
+            self.func_set,
+            new_start_values, 
+            times,
+            dense_output=True
+        )
+        def restrictionMaker(order):
+            #pe('soln[:,:]',locals())
+            restrictedSolutionArr=soln[:,:(order+1)*n]
+            def restictedSolutionFunc(t):
+                return sol_func(t)[:(order+1)*n]
+
+            return (restrictedSolutionArr,restictedSolutionFunc)
+            
+        # save all solutions for order <= max_order
+        if store:
+            for order in range(max_order+1):
+                shorter_start_age_moments_list = (
+                    start_age_moments_list[:order*n])
+                #print(start_age_moments_list)
+                #print(shorter_start_age_moments_list)
+                storage_key = (tuple(shorter_start_age_moments_list) 
+                                + ((order,),))
+                #print('saving', storage_key)
+
+                self._previously_computed_age_moment_sol[storage_key] = restrictionMaker(order)
+                
+                #print(self._previously_computed_age_moment_sol[storage_key])
+
+        return (soln,sol_func)
+
+    def _solve_age_moment_system_old(self, max_order, 
+            start_age_moments=None, times=None, start_values=None, store=True):
+        #store = True
+        if not ((times is None) and (start_values is None)): store = False
+
+        if times is None: 
+            times = self.times
+
+        if start_values is None: start_values = self.start_values
+
+        if not(isinstance(start_values, np.ndarray)):
+            #print(start_values)
+            raise(Error("start_values should be a numpy array"))
+
+        n = self.nr_pools
+        if start_age_moments is None:
+            start_age_moments = np.zeros((max_order, n))
+        
+        start_age_moments_list = flatten([a.tolist() for a in 
+                            [start_age_moments[i,:] 
+                                for i in range(start_age_moments.shape[0])]])
+       
+        storage_key = tuple(start_age_moments_list) + ((max_order,),)
+
+        # return cached result if possible
+        if store:
+            if hasattr(self, "_previously_computed_age_moment_sol_old"):
+                if storage_key in self._previously_computed_age_moment_sol_old:
+                    #print('using cached age moment system:', storage_key)
+                    #print(
+                    #   self._previously_computed_age_moment_sol_old[storage_key])
+                    return self._previously_computed_age_moment_sol_old[storage_key]
+            else:
+                self._previously_computed_age_moment_sol_old = {}
+
+        srm = self.model
+        state_vector, rhs = srm.age_moment_system(max_order)
+       
+        # compute solution
+        new_start_values = np.zeros((n*(max_order+1),))
+        new_start_values[:n] = np.array((start_values)).reshape((n,)) 
+        new_start_values[n:] = np.array((start_age_moments_list))
+
+        soln= numsol_symbolic_system_old(
             state_vector,
             srm.time_symbol,
             rhs,
@@ -3255,9 +3329,9 @@ class SmoothModelRun(object):
                                 + ((order,),))
                 #print('saving', storage_key)
 
-                self._previously_computed_age_moment_sol[storage_key] = (
+                self._previously_computed_age_moment_sol_old[storage_key] = (
                     soln[:,:(order+1)*n])
-                #print(self._previously_computed_age_moment_sol[storage_key])
+                #print(self._previously_computed_age_moment_sol_old[storage_key])
 
         return soln
 
@@ -3288,7 +3362,7 @@ class SmoothModelRun(object):
             m = self.model
             m_no_inputs=self.no_input_model
             
-            no_inputs_num_rhs = numerical_rhs(
+            no_inputs_num_rhs = numerical_rhs_old(
                 m_no_inputs.state_vector, 
                 m_no_inputs.time_symbol, 
                 m_no_inputs.F, 
@@ -3316,7 +3390,7 @@ class SmoothModelRun(object):
         # the state transition operator if the system is linear
         # to compute the state transition operator we therefore 
         # linearize along the soluion
-        sol_vals,sol_func=self.solve_2()
+        sol_vals,sol_func=self.solve()
 
         srm=self.model
 
@@ -3342,7 +3416,7 @@ class SmoothModelRun(object):
                 sv = np.array(start_vector).reshape((self.nr_pools,))
                 #fixme mm 02-06
                 # this function should use 
-                # numsol_symbolic_system_2
+                # numsol_symbolical_system
                 sol_dict=solve_ivp(lin_rhs,y0=sv,t_span=(s,t))
                 values=sol_dict.y
                 #print('sol_dict=',sol_dict)
@@ -3572,7 +3646,8 @@ class SmoothModelRun(object):
 
     #this function should be rewritten using the vector values solution 
     def _flux_vector(self, flux_vec_symbolic):
-        sol = self.solve()
+        #sol = self.solve_old()
+        sol,_ = self.solve()
         srm = self.model
         n = self.nr_pools
         times = self.times
@@ -3759,6 +3834,7 @@ class SmoothModelRun(object):
 
     def _flux_funcs(self, expr_dict):
         m = self.model
+        #sol_funcs = self.sol_funcs()
         sol_funcs = self.sol_funcs()
         flux_funcs = {}
         tup = tuple(m.state_variables) + (m.time_symbol,)
@@ -3809,8 +3885,9 @@ class SmoothModelRun(object):
         t0 = start
         t1 = end
         u_func = self.external_input_vector_func()
-        soln_func = self.solve_single_value()
-        x0 = soln_func(t0)
+        #soln_func = self.solve_single_value_old()
+        vec_soln_func = self.solve_func()
+        x0 = vec_soln_func(t0)
         x0_norm = x0.sum()
         
         A = x0_norm*(t1-t0)*self._FTTT_lambda_bar(t1, t0, x0)
@@ -3850,8 +3927,9 @@ class SmoothModelRun(object):
         u_func = self.external_input_vector_func()
         Phi = self._state_transition_operator
 
-        soln_func = self.solve_single_value()
-        x0 = soln_func(t0)
+        #soln_func = self.solve_single_value_old()
+        vec_soln_func = self.solve_func()
+        x0 = vec_soln_func(t0)
         x0_norm = x0.sum()
         
         if x0_norm > 0:
@@ -3894,9 +3972,10 @@ class SmoothModelRun(object):
             return np.nan
 
         t0, t1 = start, end 
-        soln_func = self.solve_single_value()
-        x0 = soln_func(t0)
-        x1 = soln_func(t1)
+        #soln_func = self.solve_single_value_old()
+        vec_soln_func = self.solve_func()
+        x0 = vec_soln_func(t0)
+        x1 = vec_soln_func(t1)
 
         z0 = x0.sum()
         z1 = x1.sum()
@@ -4031,10 +4110,10 @@ class SmoothModelRun(object):
 
 
     def _FTTT_finite_plus_remaining(self, s, t1, t0):
-        print('s', s, 't1', t1)
         if s == t0:
-            soln_func = self.solve_single_value()
-            vec = soln_func(s)
+            #soln_func = self.solve_single_value_old()
+            vec_soln_func = self.solve_func()
+            vec = vec_soln_func(s)
         else:
             u_func = self.external_input_vector_func()
             vec = u_func(s)
@@ -4058,7 +4137,6 @@ class SmoothModelRun(object):
             else:
                 remaining = 0
 
-            print('frs', finite, remaining, finite+remaining)
             return finite + remaining
         else:
             return 0
@@ -4071,19 +4149,17 @@ class SmoothModelRun(object):
             raise(Error('Starting time must be earlier then ending time'))
         
         A = (t1-t0) * self._FTTT_finite_plus_remaining(t0, t1, t0)
-        print('A', A)
 
         def B_integrand(s):
             return (t1-s) * self._FTTT_finite_plus_remaining(s, t1, t0)
 
         B = quad(B_integrand, t0, t1, epsabs=1.5e-03, epsrel=1.5e-03)[0]
-        print('B', B)
 
-        soln_func = self.solve_single_value()
-        x0 = soln_func(t0)
+        #soln_func = self.solve_single_value_old()
+        vec_soln_func = self.solve_func()
+        x0 = vec_soln_func(t0)
         x0_norm = x0.sum()
         C = x0_norm*(t1-t0)
-        print('C', C)
         
         u_func = self.external_input_vector_func()
         def D_integrand(s):
@@ -4091,14 +4167,14 @@ class SmoothModelRun(object):
             return u_norm*(t1-s)
 
         D = quad(D_integrand, t0, t1)[0]
-        print('D', D)
 
         return (A+B)/(C+D)
 
 
     def _fake_discretized_output(self, data_times):
         ## prepare some fake output data
-        x = self.solve_single_value()
+        #x = self.solve_single_value_old()
+        x = self.solve_func()
         xs = [x(ti) for ti in data_times]
     
         nr_pools = self.nr_pools
@@ -4169,7 +4245,8 @@ class SmoothModelRun_14C(SmoothModelRun):
         r = super().external_output_vector
         # remove the decay because it is not part of respiration
         correction_rates = - np.ones_like(r) * self.decay_rate
-        soln = self.solve()
+        #soln = self.solve_old()
+        soln,_ = self.solve()
         correction = correction_rates * soln
         r += correction
 

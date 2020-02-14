@@ -5,5 +5,7 @@ CompartmentalSystems.egg-info/*
 tests/tmp/*
 tmp/*
 tests/bins/tmp/*
-.*.swp
+*.swp
+*.pyc
 .tox/
+*/.mypy_cache

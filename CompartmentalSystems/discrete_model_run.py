@@ -54,14 +54,14 @@ class DiscreteModelRun(object):
         Bs = np.zeros((n-1, nr_pools, nr_pools)) 
         us = np.zeros((n-1, nr_pools)) 
         start_index = 0
-        soln,sol_func=smr.solve_2()
+        soln,sol_func=smr.solve()
         print("##################################")
         for k in range(start_index, n-1):
             delta_t=data_times[k+1]-data_times[k]
             B=Phi(data_times[k+1],data_times[k])
             Bs[k,:,:] = B
             #u=sol(tk)-phi(t_k,t_k+1)*x(t_k) which is identical but much cheaper
-            #soln,sol_func=smr.solve_2()
+            #soln,sol_func=smr.solve()
             #print("##################################")
             u=sol_func(data_times[k+1])-np.matmul(B,sol_func(data_times[k]))
 

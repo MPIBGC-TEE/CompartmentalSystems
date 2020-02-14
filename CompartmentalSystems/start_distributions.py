@@ -165,7 +165,7 @@ def start_age_distributions_from_empty_spinup(srm,t_max,parameter_dict,func_set)
     
     # p_sv(a,t) returns the mass of age a at time t
     p_sv = spin_up_mr.pool_age_densities_single_value(a_dist_at_start_of_spinup)
-    sol_t_max=spin_up_mr.solve()[-1,:]
+    sol_t_max=spin_up_mr.solve()[0][-1,:]
 
     def a_dist_at_end_of_spinup(age):
         return p_sv(age,t_max)
@@ -320,7 +320,7 @@ def start_age_moments_from_empty_spinup(srm,t_max,parameter_dict,func_set,max_or
     #second line second moment (columns are pools)
     moment_arr=np.stack(moment_vector_list,0) 
     
-    sol_t_max=spin_up_mr.solve()[-1,:]
+    sol_t_max=spin_up_mr.solve()[0][-1,:]
     return moment_arr, sol_t_max
 
 def start_age_moments_from_zero_initial_content(srm,max_order):

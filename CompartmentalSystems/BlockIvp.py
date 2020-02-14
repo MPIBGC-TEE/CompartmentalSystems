@@ -168,7 +168,7 @@ class BlockIvp:
     ## should be retired (see blocksolve)
     #def get_values(self,block_name,t_span,**kwargs):
     #    self.check_block_exists(block_name)
-    #    sol=self.solve(t_span=t_span,**kwargs)
+    #    sol,_=self.solve(t_span=t_span,**kwargs)
     #    if block_name==self.time_str:
     #        return sol.t
     #    

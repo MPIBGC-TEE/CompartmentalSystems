@@ -104,8 +104,8 @@ par_dict_v1 = {alpha: 0.2, beta: 10.0} # nonlinear
 # create the nonlinear model run
 nonlinear_smr = SmoothModelRun(nonlinear_srm, par_dict_v1, start_values, times, func_set)
 # create a linear model with the same solution trajectory
-linear_smr = nonlinear_smr.linearize()
-linear_smr_2 = nonlinear_smr.linearize_2()
+linear_smr = nonlinear_smr.linearize_old()
+linear_smr_2 = nonlinear_smr.linearize()
 
 print(nonlinear_smr.model)
 print(linear_smr.model)
@@ -208,11 +208,12 @@ cache_size =1001
 
 #print('Building state transition operator cache')
 
-ca_2b=linear_smr_2._compute_state_transition_operator_cache_2b(size = cache_size)
+#ca_2b=linear_smr_2._compute_state_transition_operator_cache_2b(size = cache_size)
 
 #ca_2=linear_smr_2._compute_state_transition_operator_cache_2(size = cache_size)
-#ca_2=linear_smr_2.build_state_transition_operator_cache_2(size = cache_size)
+linear_smr_2.build_state_transition_operator_cache(size = cache_size)
+linear_smr_2.save_state_transition_operator_cache('sto.cache')
 #ca  =linear_smr._compute_state_transition_operator_cache(size = cache_size)
 #
 #print(np.nanmax((ca_2-ca)/ca*100))
-print(ca_2b)
+#print(ca_2b)

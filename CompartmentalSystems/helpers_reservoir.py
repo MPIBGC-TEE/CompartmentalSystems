@@ -170,7 +170,7 @@ def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
     return expr_func
 
-def numerical_rhs2(
+def numerical_rhs(
          state_vector
         ,time_symbol
         ,rhs 
@@ -193,7 +193,7 @@ def numerical_rhs2(
 
     return num_rhs    
 
-def numerical_rhs(state_vector, time_symbol, rhs, 
+def numerical_rhs_old(state_vector, time_symbol, rhs, 
         parameter_dict, func_set, times):
     
     FL=numerical_function_from_expression(
@@ -240,7 +240,7 @@ def numerical_rhs(state_vector, time_symbol, rhs,
     return bounded_num_rhs
 
 
-def numsol_symbolic_system(
+def numsol_symbolic_system_old(
         state_vector, 
         time_symbol, 
         rhs, 
@@ -254,7 +254,7 @@ def numsol_symbolic_system(
     
     if times[0] == times[-1]: return start_values.reshape((1, nr_pools))
 
-    num_rhs = numerical_rhs(
+    num_rhs = numerical_rhs_old(
         state_vector,
         time_symbol,
         rhs, 
@@ -264,7 +264,7 @@ def numsol_symbolic_system(
     )
     return odeint(num_rhs, start_values, times, mxstep=10000)
 
-def numsol_symbolic_system_2(
+def numsol_symbolical_system(
          state_vector
         ,time_symbol
         ,rhs
@@ -279,7 +279,7 @@ def numsol_symbolic_system_2(
     
     if times[0] == times[-1]: return start_values.reshape((1, nr_pools))
 
-    num_rhs = numerical_rhs2(
+    num_rhs = numerical_rhs(
         state_vector,
         time_symbol,
         rhs, 
@@ -523,7 +523,7 @@ def x_phi_ode(
     ):
     nr_pools=srm.nr_pools
     nq=nr_pools*nr_pools
-    sol_rhs=numerical_rhs2(
+    sol_rhs=numerical_rhs(
          srm.state_vector
         ,srm.time_symbol
         ,srm.F
@@ -557,7 +557,7 @@ def x_phi_ivp(srm, parameter_dict, func_dict,start_x,x_block_name='x',phi_block_
         
     nr_pools=srm.nr_pools
     nq=nr_pools*nr_pools
-    sol_rhs=numerical_rhs2(
+    sol_rhs=numerical_rhs(
          srm.state_vector
         ,srm.time_symbol
         ,srm.F

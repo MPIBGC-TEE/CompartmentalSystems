@@ -15,7 +15,7 @@ from testinfrastructure.InDirTest import InDirTest
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 from CompartmentalSystems.BlockIvp import BlockIvp
-from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs2,x_phi_ivp,integrate_array_func_for_nested_boundaries,array_quad_result,array_integration_by_ode,array_integration_by_values
+from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs,x_phi_ivp,integrate_array_func_for_nested_boundaries,array_quad_result,array_integration_by_ode,array_integration_by_values
 
 class TestPhi(InDirTest):
     def test_phi_2d_linear(self):
@@ -133,7 +133,7 @@ class TestPhi(InDirTest):
             return e_i
         bvs = [ baseVector(i) for i in range(nr_pools)]
         
-        smrl=smr.linearize()
+        smrl=smr.linearize_old()
         
         blivp= x_phi_ivp(
             smr.model
@@ -237,7 +237,7 @@ class TestPhi(InDirTest):
             e_i[i] = 1
             return e_i
         bvs = [ baseVector(i) for i in range(nr_pools)]
-        smrl=smr.linearize()
+        smrl=smr.linearize_old()
         for ind,phi in enumerate(cache.values):
             tmin=cache.keys[ind]
             tmax=cache.keys[ind+1]
@@ -306,7 +306,7 @@ class TestPhi(InDirTest):
         func_dict={}
         nr_pools=srm.nr_pools
         nq=nr_pools*nr_pools
-        sol_rhs=numerical_rhs2(
+        sol_rhs=numerical_rhs(
              srm.state_vector
             ,srm.time_symbol
             ,srm.F
@@ -406,7 +406,7 @@ class TestPhi(InDirTest):
         times = np.linspace(t_min,t_max, 11)
         smr = SmoothModelRun(srm, parameter_dict={}, start_values=start_values, times=times,func_set=func_set)
         
-        soln = smr.solve()
+        soln,_ = smr.solve()
         # To be able to check if a stored state_transition_operator cache 
         # is applicable to the SmoothModelRun object it is supposed to speed up
         #print(smr.myhash())  

@@ -58,7 +58,7 @@ ts   =my_x_phi_ivp.get_values("t",t_span=t_span,max_step=.2)
 xs   =my_x_phi_ivp.get_values("sol",t_span=t_span)
 phis =my_x_phi_ivp.get_values("Phi_1d",t_span=t_span)
 
-sol_rhs=numerical_rhs2(
+sol_rhs=numerical_rhs(
      srm.state_vector
     ,srm.time_symbol
     ,srm.F

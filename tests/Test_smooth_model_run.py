@@ -54,6 +54,114 @@ class TestSmoothModelRun(InDirTest):
         
     
     def test_linearize(self):
+        time_symbol = symbols('tau')
+        # Atmosphere, Terrestrial Carbon and Surface layer
+        C_A, C_T, C_S = symbols('C_A C_T C_S')
+        
+        # equilibrium contents
+        A_e, T_e, S_e = symbols('A_e T_e S_e')
+        
+        # equilibrium fluxes
+        F_0, F_1, F_2 = symbols('F_0 F_1 F_2')
+        
+        # nonlinear coefficients
+        alpha, beta = symbols('alpha beta')
+        
+        # external flux from surface layer to deep ocean
+        F_ex = F_0*C_S/S_e
+        
+        # fossil fuel inputs
+        #u_A = symbols('u_A')
+        u_A = Function('u_A')(time_symbol)
+
+        # land use change flux
+        f_TA = Function('f_TA')(time_symbol)
+
+        
+        #########################################
+        
+        state_vector = Matrix([C_A, C_T, C_S])
+        
+        input_fluxes = {0: u_A, 1: 0, 2: F_0}
+        output_fluxes = {0: 0, 1: 0, 2: F_0*C_S/S_e}
+        internal_fluxes = {(0,1): F_2*(C_A/A_e)**alpha, # A --> T
+                           (0,2): F_1*C_A/A_e,          # A --> S
+                           (1,0): F_2*C_T/T_e+f_TA,          # T --> A
+                           (2,0): F_1*(C_S/S_e)**beta}  # S --> A
+
+        nonlinear_srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        
+        A_eq, T_eq, S_eq = (700.0, 3000.0, 1000.0) 
+        par_dict = {  A_e: A_eq,  T_e:  T_eq, S_e: S_eq, # equilibrium contents in Pg
+                      F_0: 45.0,  F_1: 100.0, F_2: 60.0, # equilibrium fluxes in PgC/yr
+                    alpha:  0.2, beta:  10.0           } # nonlinear coefficients
+        
+        # fossil fuel inputs
+        #par_dict[u_A] = 0
+        # fossil fuel and land use change data
+        ff_and_lu_data = np.loadtxt('../../../notebooks/PNAS/emissions.csv', usecols = (0,1,2), skiprows = 38)
+        
+        # column 0: time, column 1: fossil fuels
+        ff_data = ff_and_lu_data[:,[0,1]]
+        
+        # linear interpolation of the (nonnegative) data points
+        u_A_interp = interp1d(ff_data[:,0], np.maximum(ff_data[:,1], 0),fill_value="extrapolate")
+        
+        def u_A_func(t_val):
+            # here we could do whatever we want to compute the input function
+            # we return only the linear interpolation from above
+            return u_A_interp(t_val)
+        
+        # column 0: time, column 2: land use effects
+        lu_data = ff_and_lu_data[:,[0,2]]
+        f_TA_func = interp1d(lu_data[:,0], lu_data[:,1],fill_value="extrapolate")
+        
+        # define a dictionary to connect the symbols with the according functions
+        func_set = {u_A: u_A_func, f_TA: f_TA_func}
+        
+        # initialize model run 
+        start_year = 1765
+        end_year = 2500
+        max_age = 250
+        
+        times = np.arange(start_year, end_year+1, 1)
+        #times = np.linspace(0, 10, 101)
+        #start_values = np.array([A_eq/2, T_eq*2, S_eq/3])
+        start_values = np.array([A_eq, T_eq, S_eq])
+        nonlinear_smr = SmoothModelRun(nonlinear_srm, par_dict, start_values, times,func_set)
+      
+        linearized_smr = nonlinear_smr.linearize()
+        nonlin_soln,_ = nonlinear_smr.solve()
+        lin_soln,_ = linearized_smr.solve()
+        self.assertTrue(
+            np.allclose(
+                nonlin_soln,
+                lin_soln,
+                rtol=5e-3
+            )
+        )
+
+        # plot the solution
+        fig=plt.figure(figsize=(10,7))
+        ax=fig.add_subplot(1,1,1)
+        #plt.title('Total carbon'+title_suffs[version])
+        ax.plot(times, nonlin_soln[:,0],   alpha=0.2,color='blue', label='Atmosphere')
+        ax.plot(times, nonlin_soln[:,1],   alpha=0.2,color='green', label='Terrestrial Biosphere')
+        ax.plot(times, nonlin_soln[:,2],   alpha=0.2,color='purple', label='Surface ocean')
+        ax.plot(times, nonlin_soln.sum(1), alpha=0.2,color='red', label='Total')
+        ax.plot(times, lin_soln[:,0],   ls='--', color='blue', label='Atmosphere')
+        ax.plot(times, lin_soln[:,1],   ls='--', color='green', label='Terrestrial Biosphere')
+        ax.plot(times, lin_soln[:,2],   ls='--', color='purple', label='Surface ocean')
+        ax.plot(times, lin_soln.sum(1), ls='--', color='red', label='Total')
+        ax.set_xlim([1765,2500])
+        ax.set_ylim([0,9000])
+        ax.legend(loc=2)
+        ax.set_xlabel('Time (yr)')
+        ax.set_ylabel('Mass (PgC)')
+        fig.savefig('plot.pdf')
+
+
+    def test_linearize_old(self):
         # Atmosphere, Terrestrial Carbon and Surface layer
         C_A, C_T, C_S = symbols('C_A C_T C_S')
         
@@ -96,16 +204,20 @@ class TestSmoothModelRun(InDirTest):
         
         # initialize model run 
         times = np.linspace(0, 10, 101)
-        start_values = np.array([A_eq, T_eq, S_eq])
+        start_values = np.array([A_eq/2, T_eq*2, S_eq/3])
         nonlinear_smr = SmoothModelRun(nonlinear_srm, par_dict, start_values, times)
       
-        linearized_smr = nonlinear_smr.linearize()
-        #print(linearized_srm.F)
-        soln = linearized_smr.solve()
-        # system is in steady state, so the linearized solution
-        # should stay constant
-        self.assertTrue(np.allclose(soln[-1], start_values,rtol=5e-3))
 
+        linearized_smr = nonlinear_smr.linearize_old()
+        nonlin_soln = nonlinear_smr.solve_old()
+        lin_soln = linearized_smr.solve_old()
+        self.assertTrue(
+            np.allclose(
+                nonlin_soln,
+                lin_soln,
+                rtol=5e-3
+            )
+        )
 
     def test_moments_from_densities(self):
         # two_dimensional
@@ -160,7 +272,7 @@ class TestSmoothModelRun(InDirTest):
                           [ 0.41111229,  0.58450666],
                           [ 0.36787944,  0.56766764]])
         ref = np.ndarray((10,2), np.float, a_ref)
-        soln = smr.solve()
+        soln,_ = smr.solve()
         self.assertTrue(np.allclose(soln, ref))
     
 
@@ -205,7 +317,7 @@ class TestSmoothModelRun(InDirTest):
         times = np.linspace(t_min,t_max, 11)
         smr = SmoothModelRun(srm, parameter_dict={}, start_values=start_values, times=times,func_set=func_set)
         
-        soln = smr.solve()
+        soln,_ = smr.solve()
 
 
     ##### fluxes as functions #####
@@ -494,7 +606,7 @@ class TestSmoothModelRun(InDirTest):
         #internal_fluxes = {}
         #srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
         #smr = SmoothModelRun(srm, {}, start_values, times)
-        #lmr=smr.linearize()
+        #lmr=smr.linearize_old()
         #ages = np.linspace(0,2,21)
         #p = lmr.pool_age_densities_func(start_age_densities)
         #pool_age_densities = p(ages)
@@ -1618,7 +1730,7 @@ class TestSmoothModelRun(InDirTest):
     ########## private methods ########## 
              
     
-    def test_solve_age_moment_system_single_value(self):
+    def test_solve_age_moment_system_single_value_old(self):
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
         B = Matrix([[-1, 0],
@@ -1636,33 +1748,136 @@ class TestSmoothModelRun(InDirTest):
         # set manually mean age in first pool to zero
         start_age_moments[0,0] = 0
 
-        ams_func = smr._solve_age_moment_system_single_value(1, start_age_moments)
+        ams_func = smr._solve_age_moment_system_single_value_old(1, start_age_moments)
         ams = ams_func(t_mid)
         soln = ams[:2]
-        self.assertTrue(np.allclose(soln, smr.solve_single_value()(t_mid)))
+        self.assertTrue(np.allclose(soln, smr.solve_single_value_old()(t_mid)))
         ma = ams[2:]
 
         ref = np.array([ 0.26884456,  0.90341213])
         self.assertTrue(np.allclose(ma, ref)) 
 
         ## test missing start_age_moments
-        ams_func = smr._solve_age_moment_system_single_value(1)
+        ams_func = smr._solve_age_moment_system_single_value_old(1)
         ams=ams_func(t_mid)
         soln = ams[:2]
-        self.assertTrue(np.allclose(soln, smr.solve_single_value()(t_mid)))
+        self.assertTrue(np.allclose(soln, smr.solve_single_value_old()(t_mid)))
         ma = ams[2:]
-        ref_ams_func = smr._solve_age_moment_system_single_value(1, np.zeros((1,2))) # 1 moment, 2 pools
+        ref_ams_func = smr._solve_age_moment_system_single_value_old(1, np.zeros((1,2))) # 1 moment, 2 pools
         ref_ams=ref_ams_func(t_mid)
         ref_ma = ref_ams[2:]
         self.assertTrue(np.allclose(ma, ref_ma))
 
         # test second order moments!
         start_age_moments = smr.moments_from_densities(2, start_age_densities)
-        ams_func = smr._solve_age_moment_system_single_value(2, start_age_moments)
+        ams_func = smr._solve_age_moment_system_single_value_old(2, start_age_moments)
 
         # test missing start_age_moments
-        ams_func = smr._solve_age_moment_system_single_value(2)
+        ams_func = smr._solve_age_moment_system_single_value_old(2)
 
+    
+    def test_solve_age_moment_system_func(self):
+        x, y, t = symbols("x y t")
+        state_vector = Matrix([x,y])
+        B = Matrix([[-1, 0],
+                    [ 0,-2]])
+        u = Matrix(2, 1, [9,1])
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
+        t_end = 1
+        t_mid=(t_end-0)/2
+        start_values = np.array([1,1])
+        smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,t_end ,11))
+
+        start_age_densities = lambda a: np.exp(-a) * start_values
+        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+    
+        # set manually mean age in first pool to zero
+        start_age_moments[0,0] = 0
+
+        ams_func = smr._solve_age_moment_system_func(1, start_age_moments)
+        ams = ams_func(np.array([t_mid,t_end]))
+        #check that the time is the first dimension
+        self.assertEqual(ams.shape,(2,4))
+
+        ams = ams_func(t_mid)
+        soln = ams[:2]
+        self.assertTrue(np.allclose(soln, smr.solve_func()(t_mid)))
+        ma = ams[2:]
+
+        ref = np.array([ 0.26884456,  0.90341213])
+        self.assertTrue(np.allclose(ma, ref)) 
+
+        ## test missing start_age_moments
+        ams_func = smr._solve_age_moment_system_func(1)
+        ams=ams_func(t_mid)
+        soln = ams[:2]
+        self.assertTrue(np.allclose(soln, smr.solve_func()(t_mid)))
+        ma = ams[2:]
+        ref_ams_func = smr._solve_age_moment_system_func(1, np.zeros((1,2))) # 1 moment, 2 pools
+        ref_ams=ref_ams_func(t_mid)
+        ref_ma = ref_ams[2:]
+        self.assertTrue(np.allclose(ma, ref_ma))
+
+        # test second order moments!
+        start_age_moments = smr.moments_from_densities(2, start_age_densities)
+        ams_func = smr._solve_age_moment_system_func(2, start_age_moments)
+
+        # test missing start_age_moments
+        ams_func = smr._solve_age_moment_system_func(2)
+
+    def test_solve_age_moment_system_old(self):
+        x, y, t = symbols("x y t")
+        state_vector = Matrix([x,y])
+        B = Matrix([[-1, 0],
+                    [ 0,-2]])
+        u = Matrix(2, 1, [9,1])
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
+
+        start_values = np.array([1,1])
+        smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
+
+        start_age_densities = lambda a: np.exp(-a) * start_values
+        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+    
+        # set manually mean age in first pool to zero
+        start_age_moments[0,0] = 0
+
+        ams = smr._solve_age_moment_system_old(1, start_age_moments)
+        soln = ams[:,:2]
+        self.assertTrue(np.allclose(soln, smr.solve()[0]))
+        ma = ams[:,2:]
+
+        a_ref = np.array([[ 0.        ,  1.        ], 
+                          [ 0.08202606,  0.99407994],
+                          [ 0.14256583,  0.97750078],
+                          [ 0.19599665,  0.95232484],
+                          [ 0.24534554,  0.92082325],
+                          [ 0.29165801,  0.8852548 ],
+                          [ 0.33540449,  0.84768088],
+                          [ 0.37683963,  0.80984058],
+                          [ 0.41612357,  0.77309132],
+                          [ 0.45337056,  0.73840585]])
+        ref = np.ndarray((10,2), np.float, a_ref)
+        self.assertTrue(np.allclose(ma, ref)) 
+
+        # test missing start_age_moments
+        ams = smr._solve_age_moment_system_old(1)
+        soln = ams[:,:2]
+        self.assertTrue(np.allclose(soln, smr.solve()[0]))
+        ma = ams[:,2:]
+        ref_ams = smr._solve_age_moment_system_old(1, np.zeros((1,2))) # 1 moment, 2 pools
+        ref_ma = ref_ams[:,2:]
+        self.assertTrue(np.allclose(ma, ref_ma))
+
+        # test second order moments!
+        start_age_moments = smr.moments_from_densities(2, start_age_densities)
+        ams = smr._solve_age_moment_system_old(2, start_age_moments)
+
+        # test missing start_age_moments
+        ams = smr._solve_age_moment_system_old(2)
+
+
+#
 
     def test_solve_age_moment_system(self):
         x, y, t = symbols("x y t")
@@ -1681,9 +1896,9 @@ class TestSmoothModelRun(InDirTest):
         # set manually mean age in first pool to zero
         start_age_moments[0,0] = 0
 
-        ams = smr._solve_age_moment_system(1, start_age_moments)
+        ams,_ = smr._solve_age_moment_system(1, start_age_moments)
         soln = ams[:,:2]
-        self.assertTrue(np.allclose(soln, smr.solve()))
+        self.assertTrue(np.allclose(soln, smr.solve()[0]))
         ma = ams[:,2:]
 
         a_ref = np.array([[ 0.        ,  1.        ], 
@@ -1700,23 +1915,21 @@ class TestSmoothModelRun(InDirTest):
         self.assertTrue(np.allclose(ma, ref)) 
 
         # test missing start_age_moments
-        ams = smr._solve_age_moment_system(1)
+        ams,_ = smr._solve_age_moment_system(1)
         soln = ams[:,:2]
-        self.assertTrue(np.allclose(soln, smr.solve()))
+        self.assertTrue(np.allclose(soln, smr.solve()[0]))
         ma = ams[:,2:]
-        ref_ams = smr._solve_age_moment_system(1, np.zeros((1,2))) # 1 moment, 2 pools
+        ref_ams,_ = smr._solve_age_moment_system(1, np.zeros((1,2))) # 1 moment, 2 pools
         ref_ma = ref_ams[:,2:]
         self.assertTrue(np.allclose(ma, ref_ma))
 
         # test second order moments!
         start_age_moments = smr.moments_from_densities(2, start_age_densities)
-        ams = smr._solve_age_moment_system(2, start_age_moments)
+        ams,_ = smr._solve_age_moment_system(2, start_age_moments)
 
         # test missing start_age_moments
-        ams = smr._solve_age_moment_system(2)
+        ams,_ = smr._solve_age_moment_system(2)
 
-
-#
 
     def test_output_rate_vector_at_t(self):
         # two-dimensional case
@@ -2284,7 +2497,7 @@ class TestSmoothModelRun(InDirTest):
         start, end, ts = 1950, 2000, 0.5
         times = np.linspace(start, end, int((end+ts-start)/ts))
         smr = SmoothModelRun(srm, par_set, start_values, times)
-        soln = smr.solve()
+        soln,_ = smr.solve()
 
         #this=Path(__file__).parents[0] #the package dir
         pabs = Path(inspect.getfile(SmoothModelRun)).absolute()
@@ -2294,7 +2507,7 @@ class TestSmoothModelRun(InDirTest):
         atm_delta_14C = np.loadtxt(pfile, skiprows=1, delimiter=',')
         smr_14C = smr.to_14C_only(atm_delta_14C, 1)
 
-        soln_14C = smr_14C.solve()
+        soln_14C,_ = smr_14C.solve()
 
 
     def test_to_14C_explicit(self):
@@ -2317,7 +2530,7 @@ class TestSmoothModelRun(InDirTest):
         start, end, ts = 1950, 2000, 0.5
         times = np.linspace(start, end, int((end+ts-start)/ts))
         smr = SmoothModelRun(srm, par_set, start_values, times)
-        soln = smr.solve()
+        soln,_ = smr.solve()
 
         pabs = Path(inspect.getfile(SmoothModelRun)).absolute()
         pfile = pabs.parents[0].joinpath('Data').joinpath('C14Atm_NH.csv')
@@ -2325,7 +2538,7 @@ class TestSmoothModelRun(InDirTest):
         atm_delta_14C = np.loadtxt(pfile, skiprows=1, delimiter=',')
         smr_14C = smr.to_14C_explicit(atm_delta_14C, 1)
 
-        soln_14C = smr_14C.solve()
+        soln_14C,_ = smr_14C.solve()
 
 
     ##### temporary #####
@@ -2421,8 +2634,6 @@ class TestSmoothModelRun(InDirTest):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
-        #print(start_values)
-        #print('soln', smr.solve())
 
         result = smr._FTTT_lambda_bar_S(start, end)
         self.assertEqual(round(result, 5), par_set[lamda])
