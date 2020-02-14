@@ -256,8 +256,8 @@ class SmoothModelRun(object):
         linearized_B = (xi*T*N).subs(symbolic_sol_funcs)
         linearized_u = u.subs(symbolic_sol_funcs)
 
-        func_set = self.func_set
-        func_set.update(sol_dict)
+        func_set=frozendict({key:val for mydict in [self.func_set,sol_dict]
+                                     for key,val in mydict.items()})  
 
         cl=srm.__class__
         linearized_srm = cl.from_B_u(
@@ -3049,7 +3049,7 @@ class SmoothModelRun(object):
         srm_14C = self.model.to_14C_only('lamda_14C', 'Fa_14C')
 
         # create SmoothModelRun for 14C
-        par_set_14C = copy(self.parameter_dict)
+        par_set_14C = {k:v for k, v in self.parameter_dict.items()}
         par_set_14C['lamda_14C'] = decay_rate
         #fixme: use 14C equilibrium start values
         start_values_14C = self.start_values
@@ -3059,7 +3059,7 @@ class SmoothModelRun(object):
         Fa_atm[:,1] = Fa_atm[:,1]/1000 + 1
         Fa_func = interp1d(Fa_atm[:,0], Fa_atm[:,1])
 
-        func_set_14C = copy(self.func_set)
+        func_set_14C = {k:v for k,v in self.func_set.items()}
         function_string = 'Fa_14C(' + srm_14C.time_symbol.name + ')'
         func_set_14C[function_string] = Fa_func
 
@@ -3090,7 +3090,7 @@ class SmoothModelRun(object):
         srm_14C = self.model.to_14C_explicit('lamda_14C', 'Fa_14C')
 
         # create SmoothModelRun for 14C
-        par_set_14C = copy(self.parameter_dict)
+        par_set_14C = {k:v for k, v in self.parameter_dict.items()}
         par_set_14C['lamda_14C'] = decay_rate
 
         nr_pools = self.nr_pools
@@ -3102,7 +3102,7 @@ class SmoothModelRun(object):
         Fa_atm = copy(atm_delta_14C)
         Fa_atm[:,1] = Fa_atm[:,1]/1000 + 1
         Fa_func = interp1d(Fa_atm[:,0], Fa_atm[:,1])
-        func_set_14C = copy(self.func_set)
+        func_set_14C = {k:v for k,v in self.func_set.items()}
 
         function_string = 'Fa_14C(' + srm_14C.time_symbol.name + ')'
         func_set_14C[function_string] = Fa_func
