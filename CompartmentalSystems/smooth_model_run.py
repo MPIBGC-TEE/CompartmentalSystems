@@ -146,7 +146,7 @@ class SmoothModelRun(object):
 
 
         self.model = model
-        self.parameter_dict = parameter_dict
+        self.parameter_dict = frozendict(parameter_dict)
         self.times = times
         # make sure that start_values are an array,
         # even a one-dimensional one
@@ -161,10 +161,16 @@ class SmoothModelRun(object):
         #for f in func_set.keys():
         #    if not isinstance(f,UndefinedFunction):
         #        raise(Error("The keys of the func_set should be of type:  sympy.core.function.UndefinedFunction"))
-        self.func_set = func_set
+        self.func_set = frozendict(func_set)
         #self._state_transition_operator_cache = None
         self._external_input_vector_func = None
 
+    def __str__(self):
+        return str(
+                 [ 'id(self)'+str(id(self)), 'id(model)'+str(id(self.model))]
+                +["id "+str(key)+" "+str(id(val)) for key,val in   self.func_set.items()]
+                +["id "+str(key)+" "+str(id(val)) for key,val in   self.parameter_dict.items()]
+                )  
 
 
     # create self.B(t)
@@ -225,7 +231,7 @@ class SmoothModelRun(object):
         sol_funcs = self.sol_funcs_old()
         
         srm = self.model
-        xi, T, N, C, u = srm.xi_T_N_u_representation()
+        xi, T, N, C, u = deepcopy(srm.xi_T_N_u_representation())
         svec = srm.state_vector
 
         symbolic_sol_funcs = {sv: Function(sv.name + '_sol')(srm.time_symbol) 
@@ -313,8 +319,9 @@ class SmoothModelRun(object):
         linearized_B = (xi*T*N).subs(symbolic_sol_funcs)
         linearized_u = u.subs(symbolic_sol_funcs)
 
-        func_set = self.func_set
-        func_set.update(sol_dict)
+        func_set=frozendict({key:val for mydict in [self.func_set,sol_dict] for key,val in mydict.items()})  
+        #func_set = self.func_set
+        #func_set.update(sol_dict)
 
         cl=srm.__class__
         linearized_srm = cl.from_B_u(
@@ -3485,7 +3492,7 @@ class SmoothModelRun(object):
         if self.myhash()==tmpCache.myhash:
             self._state_transition_operator_cache=tmpCache
         else:
-            raise Exception('state transition operator cache hash is different from myhash ')
+            raise Exception('State transition operator cache hash is different from the hash of the present model run and cannot be used. Please REMOVE THE CACHE FILE:'+filename)
 
     def myhash(self):
         """ 
