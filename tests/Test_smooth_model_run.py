@@ -22,6 +22,7 @@ from testinfrastructure.InDirTest import InDirTest
 #from testinfrastructure.helpers import pe
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
+from CompartmentalSystems import __path__ as CS_path
 
 
 class TestSmoothModelRun(InDirTest):
@@ -99,7 +100,10 @@ class TestSmoothModelRun(InDirTest):
         # fossil fuel inputs
         #par_dict[u_A] = 0
         # fossil fuel and land use change data
-        ff_and_lu_data = np.loadtxt('../../../notebooks/PNAS/emissions.csv', usecols = (0,1,2), skiprows = 38)
+        p = Path(CS_path[0])
+        p2 = Path('notebooks/PNAS/emissions.csv')
+        file_path_str = str(p.parent.joinpath(p2))
+        ff_and_lu_data = np.loadtxt(file_path_str, usecols = (0,1,2), skiprows = 38)
         
         # column 0: time, column 1: fossil fuels
         ff_data = ff_and_lu_data[:,[0,1]]
