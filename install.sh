@@ -1,9 +1,9 @@
 # This script calls pip to perform package installation and adds some packages that we usually use 
-# in conjuntion with our package
+# in conjunction with our package
 
 pip3 install --upgrade pip setuptools wheel
 
-pip3 install -rrequirements.bleadingEdge-e .
+pip3 install -r requirements.bleadingEdge -e .
 #python3 setup.py develop
 
 # enable jupyter notebook nbextensions

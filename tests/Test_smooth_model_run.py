@@ -3,7 +3,7 @@
 
 from concurrencytest import ConcurrentTestSuite, fork_for_tests
 import inspect
-import sys 
+import sys ,os
 import unittest
 import matplotlib
 matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
@@ -22,7 +22,6 @@ from testinfrastructure.InDirTest import InDirTest
 #from testinfrastructure.helpers import pe
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
-from CompartmentalSystems import __path__ as CS_path
 
 
 class TestSmoothModelRun(InDirTest):
@@ -55,6 +54,10 @@ class TestSmoothModelRun(InDirTest):
         
     
     def test_linearize(self):
+        print('sys.argv')
+        print(sys.argv)
+        print('sys.path')
+        print(sys.path[0])
         time_symbol = symbols('tau')
         # Atmosphere, Terrestrial Carbon and Surface layer
         C_A, C_T, C_S = symbols('C_A C_T C_S')
@@ -100,7 +103,7 @@ class TestSmoothModelRun(InDirTest):
         # fossil fuel inputs
         #par_dict[u_A] = 0
         # fossil fuel and land use change data
-        p = Path(CS_path[0])
+        p = Path(sys.path[0])
         p2 = Path('notebooks/PNAS/emissions.csv')
         file_path_str = str(p.parent.joinpath(p2))
         ff_and_lu_data = np.loadtxt(file_path_str, usecols = (0,1,2), skiprows = 38)
@@ -2987,5 +2990,4 @@ if __name__ == '__main__':
 #    # to let the buildbot fail we set the exit value !=0 if either a failure or error occurs
 #    if (len(res.errors)+len(res.failures))>0:
 #        sys.exit(1)
-
     unittest.main()
