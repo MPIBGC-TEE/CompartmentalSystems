@@ -5,12 +5,12 @@ python:
 
 install:
         #- pip install -r requirements.freeze
-        - pip install --upgrade pip
+        - pip install --upgrade pip setuptools wheel
         - pip install -r requirements.bleadingEdge
         - pip install .
 
 script:
-        - python tests/run_tests.py
+        #- python tests/run_tests.py
         - bash run_travis_test.sh
 
 notifications:

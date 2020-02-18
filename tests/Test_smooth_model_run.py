@@ -54,10 +54,6 @@ class TestSmoothModelRun(InDirTest):
         
     
     def test_linearize(self):
-        print('sys.argv')
-        print(sys.argv)
-        print('sys.path')
-        print(sys.path[0])
         time_symbol = symbols('tau')
         # Atmosphere, Terrestrial Carbon and Surface layer
         C_A, C_T, C_S = symbols('C_A C_T C_S')
@@ -2538,18 +2534,18 @@ class TestSmoothModelRun(InDirTest):
         times = np.linspace(start, end, int((end+ts-start)/ts))
         smr = SmoothModelRun(srm, par_set, start_values, times)
         soln,_ = smr.solve()
+        # fixme:
+        # The following (commented) code finds the file in the INSTALLED version  of 
+        # the package but not on travis...
+        #import CompartmentalSystems
+        #dataPath=Path(CompartmentalSystems.__path__[0]).joinpath('Data')
+        #print('############################################')
+        #print([f for f in dataPath.iterdir()])
+        # pfile = dataPath.joinpath('C14Atm_NH.csv')
+        # Therefor we approach the file from the directory where the test suite
+        # is started as returned by sys.path[0]
+        pfile = Path(sys.path[0]).parent.joinpath('CompartmentalSystems','Data','C14Atm_NH.csv')
         
-        pabs = Path(inspect.getfile(SmoothModelRun)).absolute()
-        pfile = pabs.parents[0].joinpath('Data').joinpath('C14Atm_NH.csv')
-        import CompartmentalSystems
-        dataPath=Path(CompartmentalSystems.__path__[0]).joinpath('Data')
-        print('############################################')
-        print([f for f in dataPath.iterdir()])
-        pfile_2 = dataPath.joinpath('C14Atm_NH.csv')
-        
-        print(pfile)
-        print(pfile_2)
-        atm_delta_14C = np.loadtxt(pfile_2, skiprows=1, delimiter=',')
         atm_delta_14C = np.loadtxt(pfile, skiprows=1, delimiter=',')
         smr_14C = smr.to_14C_explicit(atm_delta_14C, 1)
 
