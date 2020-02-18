@@ -20,6 +20,7 @@ def main():
     s1=unittest.TestSuite()
     from  Test_smooth_model_run import TestSmoothModelRun
     s1.addTest(TestSmoothModelRun('test_to_14C_explicit'))
+    s1.addTest(TestSmoothModelRun('test_linearize'))
     r = unittest.TextTestRunner()
     res = r.run(s1)
     if len(res.errors) + len(res.failures) > 0:
