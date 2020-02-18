@@ -2538,10 +2538,14 @@ class TestSmoothModelRun(InDirTest):
         times = np.linspace(start, end, int((end+ts-start)/ts))
         smr = SmoothModelRun(srm, par_set, start_values, times)
         soln,_ = smr.solve()
-
+        
         pabs = Path(inspect.getfile(SmoothModelRun)).absolute()
         pfile = pabs.parents[0].joinpath('Data').joinpath('C14Atm_NH.csv')
-
+        import CompartmentalSystems
+        pfile_2 = Path(CompartmentalSystems.__path__[0]).joinpath('Data').joinpath('C14Atm_NH.csv')
+        print(pfile)
+        print(pfile_2)
+        atm_delta_14C = np.loadtxt(pfile_2, skiprows=1, delimiter=',')
         atm_delta_14C = np.loadtxt(pfile, skiprows=1, delimiter=',')
         smr_14C = smr.to_14C_explicit(atm_delta_14C, 1)
 
