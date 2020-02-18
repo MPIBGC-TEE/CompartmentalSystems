@@ -9,8 +9,8 @@ install:
         - pip install .
 
 script:
-        #- python tests/run_tests.py
-        bash run_travis_test.sh
+        - python tests/run_tests.py
+          ### - bash run_travis_test.sh
 
 notifications:
   email:

@@ -2542,7 +2542,11 @@ class TestSmoothModelRun(InDirTest):
         pabs = Path(inspect.getfile(SmoothModelRun)).absolute()
         pfile = pabs.parents[0].joinpath('Data').joinpath('C14Atm_NH.csv')
         import CompartmentalSystems
-        pfile_2 = Path(CompartmentalSystems.__path__[0]).joinpath('Data').joinpath('C14Atm_NH.csv')
+        dataPath=Path(CompartmentalSystems.__path__[0]).joinpath('Data')
+        print('############################################')
+        print([f for f in dataPath.iterdir()])
+        pfile_2 = dataPath.joinpath('C14Atm_NH.csv')
+        
         print(pfile)
         print(pfile_2)
         atm_delta_14C = np.loadtxt(pfile_2, skiprows=1, delimiter=',')
