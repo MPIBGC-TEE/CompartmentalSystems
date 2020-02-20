@@ -49,7 +49,7 @@ class TestTimeStep(InDirTest):
         #the loss at 1,1 should have propagated in Ts and Tp        
         # by one bin widht tss
 
-    #@unittest.skip("only in the meantime")
+    @unittest.skip("only in the meantime")
     def test_plot_two_pool_with_internal_flux(self):
         # get the components ready
         # - initial age distributions

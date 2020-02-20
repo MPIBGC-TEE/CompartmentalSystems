@@ -3414,22 +3414,15 @@ class SmoothModelRun(object):
                 return np.matmul(B,x).flatten()
     
             def sol(times, start_vector):
-                ('nos', times, start_vector)
                 # Start and end time too close together? Do not integrate!
                 s=times[0] # not minimum for backward integrations
                 t=times[-1] # not maximum for backward integrations
                 if abs(s-t) < 1e-14: 
                     return np.array(start_vector)
                 sv = np.array(start_vector).reshape((self.nr_pools,))
-                #fixme mm 02-06
-                # this function should use 
-                # numsol_symbolical_system
-                sol_dict=solve_ivp(lin_rhs,y0=sv,t_span=(s,t))
-                values=sol_dict.y
-                #print('sol_dict=',sol_dict)
-                #print('t,s=',t,s)
-                return values[:,-1]
-                #return odeint(no_inputs_num_rhs, sv, times, mxstep = 10000)[-1]
+                sol_obj=solve_ivp(lin_rhs,y0=sv,t_span=(s,t))
+                values=sol_obj.y
+                return values[:,-1] #only last time (no rollaxis required)
         
             self._saved_linearized_no_input_sol = sol
 
@@ -3501,6 +3494,7 @@ class SmoothModelRun(object):
         operator cashes that are no longer compatible with the model run object
         that wants to use them. This check is useful but NOT COMPREHENSIVE.
         """
+        times=self.times
 
         def make_hash_sha256(o):
             hasher = hashlib.sha256()
@@ -3514,10 +3508,11 @@ class SmoothModelRun(object):
                 frozendict(self.model.internal_fluxes),    
                 frozendict(self.model.output_fluxes),    
                 ImmutableMatrix(self.model.state_vector),
-                # to compute a hash of an arbittrary function object is difficult
+                # to compute a hash of an arbitrary function object is difficult
                 # in particular if the function depends on data.
                 frozendict(self.parameter_dict),
-                self.start_values
+                self.start_values,
+                (times[0],times[-1])
             )   
         )
 

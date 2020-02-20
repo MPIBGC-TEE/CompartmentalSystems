@@ -8,15 +8,12 @@ import unittest
 import sys
 from pathlib import Path
 
-from pathlib import Path
-
 def main():
     # the following monkeypatching of the path would 
     # make the execution in subdirectories impossible 
     #print("\n###################### running single tests ##########################\n")
     #s1=unittest.TestSuite()
     #from  Test_smooth_model_run import TestSmoothModelRun
-    #s1.addTest(TestSmoothModelRun('test_to_14C_explicit'))
     #s1.addTest(TestSmoothModelRun('test_linearize'))
     #r = unittest.TextTestRunner()
     #res = r.run(s1)
@@ -27,8 +24,8 @@ def main():
     print("\n###################### running tests ##########################\n")
 
     s = unittest.defaultTestLoader.discover('', pattern='Test*')
-    p = unittest.defaultTestLoader.discover('', pattern='Pinned_Test*')
-    s.addTests(p)
+    #p = unittest.defaultTestLoader.discover('', pattern='Pinned_Test*')
+    #s.addTests(p)
     concurrent_suite = ConcurrentTestSuite(s, fork_for_tests(64))
     r = unittest.TextTestRunner()
 

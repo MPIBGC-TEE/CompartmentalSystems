@@ -184,7 +184,7 @@ def numerical_rhs(
             ,func_dict
     )
     
-    # 2.) Write a wrapper that transformes Matrices numpy.ndarrays and accepts array instead of the separate arguments for the states)
+    # 2.) Write a wrapper that transformes Matrices to numpy.ndarrays and accepts array instead of the separate arguments for the states)
     # 
     def num_rhs(t,X):
         Fval = FL(t,*X)
@@ -292,16 +292,18 @@ def numsol_symbolical_system(
         num_rhs,
         y0=start_values,
         t_span=(t_min, t_max),
+        first_step=(t_max-t_min)/2, # prevent the solver from overreaching (scipy bug)
         t_eval=times,
         rtol=1e-08,
         atol=1e-08,
         dense_output=dense_output,
         method='LSODA'
     )
-    #res=solve_ivp(num_rhs, y0=start_values,t_span=(t_min,t_max),t_eval=times,dense_output=dense_output)
     values=res.y.transpose() # adapt to the old interface since our code at the moment expects it
-    func=res.sol
-    return (values,func)
+    if dense_output:
+        return (values,res.sol)
+    else:
+        return (values,None)
 
 def arrange_subplots(n):
     if n <=3:

@@ -108,7 +108,7 @@ class TestPhi(InDirTest):
         )
         t_0     = 0
         t_max   = 4
-        nt=200
+        nt=20000
         times = np.linspace(t_0, t_max, nt)
         parameter_dict = {
              k_0: k_0_val
@@ -124,6 +124,7 @@ class TestPhi(InDirTest):
             ,times=times
             ,func_set=func_dict
         )
+        smr.build_state_transition_operator_cache(size=2)
 
         nr_pools=srm.nr_pools
 
@@ -135,6 +136,27 @@ class TestPhi(InDirTest):
         
         smrl=smr.linearize_old()
         
+        for s in  np.linspace(t_0,t_max,5):
+            for t in  np.linspace(s,t_max,5):
+                #sol_dict=blivp.block_solve(t_span=(s,t))
+                #print(sol_dict)
+                #phi_mat=sol_dict['Phi_2d'][-1,...]
+                
+                #sol_dict_l=blivp.block_solve(t_span=(s,t))
+                
+                #phi_mat_l=sol_dict_l['Phi_2d'][-1,...]
+                
+                #for mat in [ phi_mat ]:#, phi_mat_l ]:
+                for x in bvs:
+                    with self.subTest():
+                        self.assertTrue( 
+                            np.allclose(
+                                smr._state_transition_operator(t,s,x),
+                                smrl._state_transition_operator_for_linear_systems(t,s,x),
+                                rtol=1.5*1e-2
+                            )
+                        )
+
         blivp= x_phi_ivp(
             smr.model
             ,smr.parameter_dict
@@ -151,29 +173,20 @@ class TestPhi(InDirTest):
             ,x_block_name='sol'
             ,phi_block_name='Phi_2d'
         )
-        for s in  np.linspace(t_0,t_max,2):
-            for t in  np.linspace(s,t_max,2):
-                sol_dict=blivp.block_solve(t_span=(s,t))
-                #print(sol_dict)
-                phi_mat=sol_dict['Phi_2d'][-1,...]
-                
-                sol_dict_l=blivp.block_solve(t_span=(s,t))
-                
-                phi_mat_l=sol_dict_l['Phi_2d'][-1,...]
-                
-                for mat in [ phi_mat , phi_mat_l ]:
-                    for x in bvs:
-                        with self.subTest():
-                            phi_x_old=smrl._state_transition_operator_for_linear_systems(t,s,x)
-                            phi_x_mat=np.matmul(mat,x).reshape(nr_pools,)
-                            self.assertTrue( 
-                                np.allclose(
-                                    phi_x_old, 
-                                    phi_x_mat,
-                                    rtol=1.5*1e-2
-                                )
+        for t in  np.linspace(t_0,t_max,5):
+            for phi_mat in [
+                                blivp.block_solve(t_span=(t_0,t))['Phi_2d'][-1,...] ,
+                                blivp_l.block_solve(t_span=(t_0,t))['Phi_2d'][-1,...]
+                            ]:
+                for x in bvs:
+                    with self.subTest():
+                        self.assertTrue( 
+                            np.allclose(
+                                np.matmul(phi_mat,x).reshape(nr_pools,),
+                                smr._state_transition_operator(t,t_0,x),
+                                rtol=1.5*1e-2
                             )
-
+                        )
 
     def test_phi_cache_vals(self):
         k_0_val=1

@@ -122,69 +122,28 @@ class BlockIvp:
         self.start_vec=np.concatenate([ a.flatten() for a in start_arrays])
         self._cache=dict()
         
-   # # fixme:
-   # # should be retired (see blocksolve)
-   # def solve_direct(self,t_span,dense_output=True,**kwargs):
-   #     sol=solve_ivp(
-   #          fun=self.rhs
-   #         ,y0=self.start_vec
-   #         ,t_span=t_span
-   #         ,dense_output=dense_output
-   #         ,**kwargs
-   #     )
-   #     return sol
-
-   # # fixme:
-   # # should be retired (see blocksolve)
-   # def solve(self,t_span,dense_output=True,**kwargs):
-   #     # this is just a caching proxy for scypy.solve_ivp
-   #     # remember the times for the solution
-   #     if not(isinstance(t_span,tuple)):
-   #         raise Exception('''
-   #         scipy.solve_ivp actually allows a list for t_span, but we insist 
-   #         that it should be an (immutable) tuple, since we want to cache the solution 
-   #         and want to use t_span as a hash.''')
-   #     cache_key=(t_span)
-   #     if cache_key in self._cache.keys():
-   #         # caching can be made much more sophisticated by
-   #         # starting at the end of previos solution with
-   #         # the same start times and a smaller t_end
-   #         return self._cache[cache_key]
-   #     #
-   #     if 'vectorized' in kwargs.keys():
-   #         del(kwargs['vectorized'])
-   #         print('''The vectorized flag is forbidden for $c 
-   #         since we rely on decomposing the argument vector'''.format(s=self.__class__))
-
-   #     sol=self.solve_direct(t_span,dense_output=True,**kwargs)
-   #     self._cache[cache_key]=sol
-   #     return sol
 
     def check_block_exists(self,block_name):
         if not(block_name in set(self.index_dict.keys()).union(self.time_str)):
             raise Exception("There is no block with this name")
 
-    ## fixme:
-    ## should be retired (see blocksolve)
-    #def get_values(self,block_name,t_span,**kwargs):
-    #    self.check_block_exists(block_name)
-    #    sol,_=self.solve(t_span=t_span,**kwargs)
-    #    if block_name==self.time_str:
-    #        return sol.t
-    #    
-    #    lower,upper=self.index_dict[block_name] 
-    #    return sol.y[lower:upper,:]
         
-    def block_solve(self,t_span,**kwargs):
+    def block_solve(self,t_span,method='LSODA',first_step=None,**kwargs):
         # fixme:
         # This will be the new solve 
         # returns a dict of the block solutions (either values or functions depending on the "dense_output" keyword 
         # of solve_ivp
+        if first_step is None:
+            t_min,t_max=t_span
+            first_step=(t_max-t_min)/2
+
         complete_sol=solve_ivp(
              fun=self.rhs
             ,t_span=t_span
             ,y0=self.start_vec
             ,dense_output=False
+            ,method=method
+            ,first_step=first_step
             ,**kwargs
         )
         def block_sol(block_name):
@@ -204,16 +163,22 @@ class BlockIvp:
         #print(block_sols)
         return block_sols
 
-    def block_solve_functions(self,t_span,**kwargs):
+    def block_solve_functions(self,t_span,method='LSODA',first_step=None,**kwargs):
         # fixme:
         # This will be the new solve 
         # returns a dict of the block solutions (either values or functions depending on the "dense_output" keyword 
         # of solve_ivp
+        if first_step is None: # prevent the solver from overreaching 
+            t_min,t_max=t_span
+            first_step=(t_max-t_min)/2
+
         complete_sol=solve_ivp(
              fun=self.rhs
             ,t_span=t_span
             ,y0=self.start_vec
             ,dense_output=True
+            ,method=method
+            ,first_step=first_step
             ,**kwargs
         )
         def block_sol(block_name):
@@ -239,23 +204,4 @@ class BlockIvp:
         #print(block_sols)
         return block_sols
 
-    #def get_function(self,block_name,t_span,**kwargs):
-    #    # fixme mm:
-    #    # what happens with the **kwargs?
-    #    self.check_block_exists(block_name)
-    #    if block_name==self.time_str:
-    #        print("""
-    #        warning:
-    #        $s interpolated with respect to s$ is probably an accident...
-    #        """.format(s=self.time_str))
-    #        # this is silly since it means somebody asked for the interpolation of t with respect to t
-    #        # so we give back the identiy
-    #        return lambda t:t
-
-    #    lower,upper=self.index_dict[block_name] 
-    #    complete_sol_func=self.solve(t_span=t_span,dense_output=True).sol
-    #    def block(t):
-    #        return complete_sol_func(t)[lower:upper]
-    #    
-    #    return block
 
