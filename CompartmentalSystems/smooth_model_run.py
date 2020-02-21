@@ -52,12 +52,12 @@ from functools import reduce
 
 from .smooth_reservoir_model import SmoothReservoirModel
 from .helpers_reservoir import (deprecation_warning,warning
-,make_cut_func_set, has_pw, numsol_symbolic_system_old,
+,make_cut_func_set, has_pw,  numsol_symbolic_system_old,
 numsol_symbolical_system ,arrange_subplots, melt,
 generalized_inverse_CDF, draw_rv ,stochastic_collocation_transform,
 numerical_rhs_old, MH_sampling, save_csv ,load_csv, stride
 ,f_of_t_maker,const_of_t_maker,numerical_function_from_expression
-,x_phi_ivp,x_phi_ode)
+,x_phi_ivp,x_phi_ode,phi_tmax)
 from .BlockIvp import BlockIvp
 from .Cache import Cache
 
@@ -967,7 +967,8 @@ class SmoothModelRun(object):
             start_age_moments=start_age_moments[0:order,:]
 
         if not (0 in self.start_values):
-            ams = self._solve_age_moment_system_old(order, start_age_moments)
+            #ams = self._solve_age_moment_system_old(order, start_age_moments)
+            ams,_ = self._solve_age_moment_system(order, start_age_moments)
             return ams[:,n*order:]
         else:
             # try to start adapted mean_age_system once no pool 
@@ -997,7 +998,9 @@ class SmoothModelRun(object):
                 # with nonzero start values
                 new_start_age_moments = amv1[-1,:].reshape((n, order))
                 start_values = soln[ti+1]
-                ams = self._solve_age_moment_system_old(
+                #ams = self._solve_age_moment_system_old(
+                #    order, new_start_age_moments, times[ti+1:], start_values)
+                ams,_ = self._solve_age_moment_system(
                     order, new_start_age_moments, times[ti+1:], start_values)
                 amv2 = ams[:,n*order:]
 
@@ -3420,7 +3423,13 @@ class SmoothModelRun(object):
                 if abs(s-t) < 1e-14: 
                     return np.array(start_vector)
                 sv = np.array(start_vector).reshape((self.nr_pools,))
-                sol_obj=solve_ivp(lin_rhs,y0=sv,t_span=(s,t))
+                sol_obj=solve_ivp(
+                    lin_rhs
+                    ,y0=sv
+                    ,t_span=(s,t)
+                    ,first_step=(t-s)/2 if t!=s else None
+                    #,method='LSODA'
+                )
                 values=sol_obj.y
                 return values[:,-1] #only last time (no rollaxis required)
         
@@ -3522,10 +3531,34 @@ class SmoothModelRun(object):
         if t0 == t:
             return x.flatten() 
         
-        linearized_no_input_sol = self._linearized_no_input_sol
-        n = self.nr_pools
+        #linearized_no_input_sol = self._linearized_no_input_sol
+        n=self.nr_pools
+        x_block_name='x'
+        phi_block_name='phi'
+        nr_pools=self.nr_pools
+        
+        block_ode=x_phi_ode(
+            self.model,
+            self.parameter_dict,
+            self.func_set,
+            x_block_name,
+            phi_block_name
+        )
+        
+        start_Phi_2d=np.identity(nr_pools)
+        solve_func=self.solve_func()
+        def phi(t,s,t_max):
+            start_blocks=[
+                (x_block_name,solve_func(s)),
+                (phi_block_name,start_Phi_2d) 
+            ]
+            blivp=block_ode.blockIvp( start_blocks )
+            return  phi_tmax(s,t_max,blivp,phi_block_name)(t)
+
+        
         
         if hasattr(self,'_state_transition_operator_cache'):
+        #if False:
             cache=self._state_transition_operator_cache
             cached_times=cache.keys
             ca=cache.values
@@ -3541,44 +3574,60 @@ class SmoothModelRun(object):
             #tm2_ind = np.int(np.min([np.floor((t-tm1)/step_size), nc]))
             tm2 = cached_times[tm2_ind]
             
-            # check if next cached time is already behind t
-            # this means we have to integrate directly
-            if t <= tm1: return linearized_no_input_sol([t0, t], x)
+            ## check if next cached time is already behind t
+            ## this means we have to integrate directly
+            ##if t <= tm1: return linearized_no_input_sol([t0, t], x)
+            #if t <= tm1: return np.matmul(phi(t,t0,t_max=tm1),x) 
         
-            # first integrate x to tm1: y = Phi(tm1, t_0)x
+            ## first integrate x to tm1: y = Phi(tm1, t_0)x
             if tm1 != t0:
-                y_tm1_t0 = (linearized_no_input_sol([t0, tm1], x)).reshape((n,1))
+                #y_tm1_t0 = (linearized_no_input_sol([t0, tm1], x)).reshape((nr_pools,1))
+                # y_tm1_t0 = np.matmul(phi(tm1,t0,t_max=tm1), x)
+                phi_tm1_t0=phi(tm1,t0,t_max=tm1)
             else:
-                y_tm1_t0 = x
+                phi_tm1_t0=start_Phi_2d
+            #    y_tm1_t0 = x
 
 
-            # use matrix multiplication of the cached intervals between
-            # tm1 and tm2 in reverse order 
-            # phi_tm2_tm1 = phi_tm2_tm2-1 * ... * phi_tm1+1_tm1
-            phi_tm2_tm1=reduce(
+            ## use matrix multiplication of the cached intervals between
+            ## tm1 and tm2 in reverse order 
+            ## phi_tm2_tm1 = phi_tm2_tm2-1 * ... * phi_tm1+1_tm1
+            #phi_tm2_tm1=reduce(
+            #    lambda prod_phi,cached_phi : np.matmul(cached_phi,prod_phi),
+            #    [ca[i,...] for i in range(tm1_ind,tm2_ind)],
+            #    np.identity(self.nr_pools)
+            #)
+            #
+            ## To test (convince yourself) do:
+            ## b=np.matrix([[1,2],[3,4]])
+            ## a=np.matrix([[1,0],[0,0]])
+            ## reduce(lambda prod_phi,cached_phi : np.matmul(cached_phi,prod_phi),[a,b])==b*a
+            #y_tm2_t0=np.matmul(phi_tm2_tm1,y_tm1_t0)
+
+            ## integrate directly from tm2 to t
+            if tm2 != t:
+                #y_t_t0 = (linearized_no_input_sol([tm2, t], y_tm2_t0)).reshape((nr_pools,1))
+                # y_t_t0 = np.matmul(phi(t,tm2,t_max=cached_times[tm2_ind+1]), y_tm2_t0)
+               phi_t_tm2=phi(t,tm2,t_max=cached_times[tm2_ind+1])
+            else:
+               phi_t_tm2=start_Phi_2d
+            #    y_t_t0=y_tm2_t0
+
+            #return y_t_t0.reshape(nr_pools,)
+            phi_t_t0=reduce(
                 lambda prod_phi,cached_phi : np.matmul(cached_phi,prod_phi),
-                [ca[i,...] for i in range(tm1_ind,tm2_ind)],
+                [phi_t_tm2]
+                +[ca[i,...] for i in range(tm1_ind,tm2_ind)]
+                +[phi_tm1_t0],
                 np.identity(self.nr_pools)
             )
-            
-            # To test (convince yourself) do:
-            # b=np.matrix([[1,2],[3,4]])
-            # a=np.matrix([[1,0],[0,0]])
-            # reduce(lambda prod_phi,cached_phi : np.matmul(cached_phi,prod_phi),[a,b])==b*a
-            y_tm2_t0=np.matmul(phi_tm2_tm1,y_tm1_t0)
-
-            # integrate directly from tm2 to t
-            if tm2 != t:
-                y_t_t0 = (linearized_no_input_sol([tm2, t], y_tm2_t0)).reshape((n,1))
-            else:
-                y_t_t0=y_tm2_t0
-
-            return y_t_t0.reshape(n,)
+            return np.matmul(phi_t_t0,x).reshape((nr_pools,))
 
         else:
             #raise
-            y_t_t0 = (linearized_no_input_sol([t0, t], x)).reshape((n,))
-            return(y_t_t0)
+            #y_t_t0 = (linearized_no_input_sol([t0, t], x)).reshape((nr_pools,))
+            y_t_t0 = (np.matmul(phi(t,t0,t_max=self.times[-1]), x)).reshape((nr_pools,))
+            return y_t_t0
 
     def _state_transition_operator_for_linear_systems(self, t, t0, x):
         # this function could be used in a "linear smooth model run class"

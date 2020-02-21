@@ -2,6 +2,7 @@
 from __future__ import division
 from typing import Callable,Iterable,Union,Optional,List,Tuple,Sequence
 
+from functools import lru_cache
 import numpy as np 
 import inspect
 from numbers import Number
@@ -276,7 +277,10 @@ def numsol_symbolical_system(
     ):
 
     nr_pools = len(state_vector)
-    
+    t_min=times[0]
+    t_max=times[-1]
+    print('t_min,t_max') 
+    print(t_min,t_max) 
     if times[0] == times[-1]: return start_values.reshape((1, nr_pools))
 
     num_rhs = numerical_rhs(
@@ -286,18 +290,16 @@ def numsol_symbolical_system(
         parameter_dict,
         func_set
     )
-    t_min=times[0]
-    t_max=times[-1]
     res=solve_ivp(
         num_rhs,
         y0=start_values,
         t_span=(t_min, t_max),
-        first_step=(t_max-t_min)/2, # prevent the solver from overreaching (scipy bug)
+        first_step=(t_max-t_min)/2 if t_max != t_min else None, # prevent the solver from overreaching (scipy bug)
         t_eval=times,
-        rtol=1e-08,
-        atol=1e-08,
+        #rtol=1e-08,
+        #atol=1e-08,
         dense_output=dense_output,
-        method='LSODA'
+        #method='LSODA'
     )
     values=res.y.transpose() # adapt to the old interface since our code at the moment expects it
     if dense_output:
@@ -659,7 +661,7 @@ def array_integration_by_ode(
         else:
             return f(tau).flatten()
     
-    ys= solve_ivp(rhs,y0=np.zeros(n),t_span=(a,b)).y
+    ys= solve_ivp(rhs,y0=np.zeros(n),t_span=(a,b),method="RK45").y
     val=ys[:,-1].reshape(test.shape)
     return val
 
@@ -679,3 +681,7 @@ def array_integration_by_values(
     vec=np.trapz(y=integrand_vals,x=taus)
     return vec.reshape(test.shape)
 
+@lru_cache(maxsize=None)
+def phi_tmax(s,t_max,blockIvp,phi_block_name):
+    phi_func=blockIvp.block_solve_functions(t_span=(s,t_max))[phi_block_name]
+    return phi_func

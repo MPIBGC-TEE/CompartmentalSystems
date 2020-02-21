@@ -128,13 +128,14 @@ class BlockIvp:
             raise Exception("There is no block with this name")
 
         
-    def block_solve(self,t_span,method='LSODA',first_step=None,**kwargs):
+    def block_solve(self,t_span,method="RK45",first_step=None,**kwargs):
         # fixme:
         # This will be the new solve 
         # returns a dict of the block solutions (either values or functions depending on the "dense_output" keyword 
         # of solve_ivp
-        if first_step is None:
-            t_min,t_max=t_span
+
+        t_min,t_max=t_span
+        if first_step is None and t_min!=t_max:
             first_step=(t_max-t_min)/2
 
         complete_sol=solve_ivp(
@@ -163,13 +164,13 @@ class BlockIvp:
         #print(block_sols)
         return block_sols
 
-    def block_solve_functions(self,t_span,method='LSODA',first_step=None,**kwargs):
+    def block_solve_functions(self,t_span,method='RK45',first_step=None,**kwargs):
         # fixme:
         # This will be the new solve 
         # returns a dict of the block solutions (either values or functions depending on the "dense_output" keyword 
         # of solve_ivp
-        if first_step is None: # prevent the solver from overreaching 
-            t_min,t_max=t_span
+        t_min,t_max=t_span
+        if first_step is None and t_min!=t_max: # prevent the solver from overreaching 
             first_step=(t_max-t_min)/2
 
         complete_sol=solve_ivp(

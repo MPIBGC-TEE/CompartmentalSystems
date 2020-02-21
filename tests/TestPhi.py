@@ -138,15 +138,6 @@ class TestPhi(InDirTest):
         
         for s in  np.linspace(t_0,t_max,5):
             for t in  np.linspace(s,t_max,5):
-                #sol_dict=blivp.block_solve(t_span=(s,t))
-                #print(sol_dict)
-                #phi_mat=sol_dict['Phi_2d'][-1,...]
-                
-                #sol_dict_l=blivp.block_solve(t_span=(s,t))
-                
-                #phi_mat_l=sol_dict_l['Phi_2d'][-1,...]
-                
-                #for mat in [ phi_mat ]:#, phi_mat_l ]:
                 for x in bvs:
                     with self.subTest():
                         self.assertTrue( 

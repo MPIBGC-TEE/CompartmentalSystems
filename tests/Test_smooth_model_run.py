@@ -2,6 +2,7 @@
 # vim:set ff=unix expandtab ts=4 sw=4:
 
 from concurrencytest import ConcurrentTestSuite, fork_for_tests
+from copy import deepcopy
 import inspect
 import sys ,os
 import unittest
@@ -25,84 +26,10 @@ from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel 
 
 def pfile_C14Atm_NH():
-    p=Path(__file__)
+    p=Path(deepcopy(__file__))
     pfile = p.parents[1].joinpath('CompartmentalSystems','Data','C14Atm_NH.csv')
     return pfile
 
-def pnas_smr(times):
-    time_symbol = symbols('tau')
-    # Atmosphere, Terrestrial Carbon and Surface layer
-    C_A, C_T, C_S = symbols('C_A C_T C_S')
-    
-    # equilibrium contents
-    A_e, T_e, S_e = symbols('A_e T_e S_e')
-    
-    # equilibrium fluxes
-    F_0, F_1, F_2 = symbols('F_0 F_1 F_2')
-    
-    # nonlinear coefficients
-    alpha, beta = symbols('alpha beta')
-    
-    # external flux from surface layer to deep ocean
-    F_ex = F_0*C_S/S_e
-    
-    # fossil fuel inputs
-    #u_A = symbols('u_A')
-    u_A = Function('u_A')(time_symbol)
-    
-    # land use change flux
-    f_TA = Function('f_TA')(time_symbol)
-    
-    
-    #########################################
-    
-    state_vector = Matrix([C_A, C_T, C_S])
-    
-    input_fluxes = {0: u_A, 1: 0, 2: F_0}
-    output_fluxes = {0: 0, 1: 0, 2: F_0*C_S/S_e}
-    internal_fluxes = {(0,1): F_2*(C_A/A_e)**alpha, # A --> T
-                       (0,2): F_1*C_A/A_e,          # A --> S
-                       (1,0): F_2*C_T/T_e+f_TA,          # T --> A
-                       (2,0): F_1*(C_S/S_e)**beta}  # S --> A
-    
-    nonlinear_srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
-    
-    A_eq, T_eq, S_eq = (700.0, 3000.0, 1000.0) 
-    par_dict = {  A_e: A_eq,  T_e:  T_eq, S_e: S_eq, # equilibrium contents in Pg
-                  F_0: 45.0,  F_1: 100.0, F_2: 60.0, # equilibrium fluxes in PgC/yr
-                alpha:  0.2, beta:  10.0           } # nonlinear coefficients
-    
-    # fossil fuel inputs
-    #par_dict[u_A] = 0
-    # fossil fuel and land use change data
-    
-    p=Path(__file__)
-    file_path = p.parents[1].joinpath('notebooks','PNAS','emissions.csv')
-    ff_and_lu_data = np.loadtxt(file_path, usecols = (0,1,2), skiprows = 38)
-    
-    # column 0: time, column 1: fossil fuels
-    ff_data = ff_and_lu_data[:,[0,1]]
-    
-    # linear interpolation of the (nonnegative) data points
-    u_A_interp = interp1d(ff_data[:,0], np.maximum(ff_data[:,1], 0),fill_value="extrapolate")
-    
-    def u_A_func(t_val):
-        # here we could do whatever we want to compute the input function
-        # we return only the linear interpolation from above
-        return u_A_interp(t_val)
-    
-    # column 0: time, column 2: land use effects
-    lu_data = ff_and_lu_data[:,[0,2]]
-    f_TA_func = interp1d(lu_data[:,0], lu_data[:,1],fill_value="extrapolate")
-    
-    # define a dictionary to connect the symbols with the according functions
-    func_set = {u_A: u_A_func, f_TA: f_TA_func}
-    
-    #times = np.linspace(0, 10, 101)
-    #start_values = np.array([A_eq/2, T_eq*2, S_eq/3])
-    start_values = np.array([A_eq, T_eq, S_eq])
-    nonlinear_smr = SmoothModelRun(nonlinear_srm, par_dict, start_values, times,func_set)
-    return nonlinear_smr
 
 class TestSmoothModelRun(InDirTest):
         
@@ -131,18 +58,13 @@ class TestSmoothModelRun(InDirTest):
             smr = SmoothModelRun(srm, pardict, start_values, times=times)
 
         
-    def test_age_densities_pnas(self):
-        # initialize model run 
+
+    def test_linearize(self):
+       # initialize model run 
         start_year = 1765
         end_year = 2500
         max_age = 250
         times = np.arange(start_year, end_year+1, 1)
-        ages = np.arange(0, max_age+1, 1)
-        #times = np.arange(start_year, end_year+1, 10)
-        #ages = np.arange(0, max_age+1, 10)
-        
-        
-        
         
         time_symbol = symbols('tau')
         # Atmosphere, Terrestrial Carbon and Surface layer
@@ -189,8 +111,7 @@ class TestSmoothModelRun(InDirTest):
         # fossil fuel inputs
         #par_dict[u_A] = 0
         # fossil fuel and land use change data
-        
-        p=Path(__file__)
+        p=Path(deepcopy(__file__))
         file_path = p.parents[1].joinpath('notebooks','PNAS','emissions.csv')
         ff_and_lu_data = np.loadtxt(file_path, usecols = (0,1,2), skiprows = 38)
         
@@ -216,68 +137,6 @@ class TestSmoothModelRun(InDirTest):
         #start_values = np.array([A_eq/2, T_eq*2, S_eq/3])
         start_values = np.array([A_eq, T_eq, S_eq])
         nonlinear_smr = SmoothModelRun(nonlinear_srm, par_dict, start_values, times,func_set)
-        nonlinear_smr.build_state_transition_operator_cache(1001)
-    
-    # equilibrium contents
-        xi, T, N, C, u = nonlinear_smr.model.xi_T_N_u_representation()
-
-        # B = xi*T*N, plug in the steady-state initial contents
-        # no land use change flux
-        B = (xi*T*N).subs(par_dict).subs({C_A: A_eq, C_T: T_eq, C_S: S_eq, f_TA: 0}) # version does not matter here
-        
-        # no fossil fuel inputs
-        u = u.subs(par_dict).subs({u_A: 0})
-        
-        # force purely numerical treatment of the LAPM
-        # symbolic treatment would be too slow here
-        LM = LinearAutonomousPoolModel(u, B, force_numerical=True)
-        
-        ## load equilibrium age densities ##
-        
-        # the start age densities are given as a function of age that returns
-        # a vector of mass with that age
-        def start_age_densities(a):
-            # we need to convert from sympy data types to numpy data types
-            res =  np.array(LM.a_density(a)).astype(np.float64).reshape((3,)) * start_values
-            return res
-        
-        # get the start mean ages
-        start_mean_ages = np.array(LM.a_expected_value).astype(np.float64).reshape((3,))
-        start_age_moments = start_mean_ages.reshape((1,3))
-    
-        p = nonlinear_smr.pool_age_densities_func(start_age_densities)
-        pool_age_densities = p(ages)
-        
-        system_age_density = nonlinear_smr.system_age_density(pool_age_densities)
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def test_linearize(self):
-       # initialize model run 
-        start_year = 1765
-        end_year = 2500
-        max_age = 250
-        times = np.arange(start_year, end_year+1, 1)
-        
-        nonlinear_smr=pnas_smr(times)
         linearized_smr = nonlinear_smr.linearize()
         nonlin_soln,_ = nonlinear_smr.solve()
         lin_soln,_ = linearized_smr.solve()
