@@ -51,13 +51,33 @@ from functools import reduce
 #from testinfrastructure.helpers import pe
 
 from .smooth_reservoir_model import SmoothReservoirModel
-from .helpers_reservoir import (deprecation_warning,warning
-,make_cut_func_set, has_pw,  numsol_symbolic_system_old,
-numsol_symbolical_system ,arrange_subplots, melt,
-generalized_inverse_CDF, draw_rv ,stochastic_collocation_transform,
-numerical_rhs_old, MH_sampling, save_csv ,load_csv, stride
-,f_of_t_maker,const_of_t_maker,numerical_function_from_expression
-,x_phi_ivp,x_phi_ode,phi_tmax)
+from .helpers_reservoir import (
+    deprecation_warning
+	,warning
+	,make_cut_func_set
+	,has_pw
+	,numsol_symbolic_system_old
+    ,numsol_symbolical_system 
+	,arrange_subplots
+	, melt
+    ,generalized_inverse_CDF
+	, draw_rv 
+	,stochastic_collocation_transform
+    ,numerical_rhs_old
+	, MH_sampling
+	, save_csv 
+	,load_csv
+	, stride
+	,f_of_t_maker
+	,const_of_t_maker
+	,numerical_function_from_expression
+	,x_phi_ivp
+	,x_phi_ode
+	,phi_tmax
+    ,phi_ind
+    ,end_time_from_phi_ind
+    ,start_time_from_phi_ind
+)
 from .BlockIvp import BlockIvp
 from .Cache import Cache
 
@@ -3557,75 +3577,46 @@ class SmoothModelRun(object):
 
         
         
-        if hasattr(self,'_state_transition_operator_cache'):
-        #if False:
+        #if hasattr(self,'_state_transition_operator_cache'):
+        if False:
             cache=self._state_transition_operator_cache
-            cached_times=cache.keys
+            cache_times=cache.keys
             ca=cache.values
             
-            # find tm1
-            tm1_ind = cached_times.searchsorted(t0)
-            tm1 = cached_times[tm1_ind]
+            t0_phi_ind=phi_ind(t0,cache_times)
+            t_phi_ind =phi_ind( t,cache_times)
 
-            # find tm2
-            # side=right    : if we hit a cached value directly we want tu use it
-            # -1            : we want the last cached_time BEFORE t
-            tm2_ind = cached_times.searchsorted(t,side='right')-1 
-            #tm2_ind = np.int(np.min([np.floor((t-tm1)/step_size), nc]))
-            tm2 = cached_times[tm2_ind]
+            # catch the corner cases where the cache is useless.
+            if (t_phi_ind-t0_phi_ind)<2:
+                return np.matmul( phi( t, t0, end_time_from_phi_ind( t_phi_ind, cache_times)), x).reshape((nr_pools,))
+
+            tm1 = end_time_from_phi_ind(t0_phi_ind,cache_times)
+            tm2 = start_time_from_phi_ind(t_phi_ind,cache_times)
             
-            ## check if next cached time is already behind t
-            ## this means we have to integrate directly
-            ##if t <= tm1: return linearized_no_input_sol([t0, t], x)
-            #if t <= tm1: return np.matmul(phi(t,t0,t_max=tm1),x) 
         
             ## first integrate x to tm1: y = Phi(tm1, t_0)x
             if tm1 != t0:
-                #y_tm1_t0 = (linearized_no_input_sol([t0, tm1], x)).reshape((nr_pools,1))
-                # y_tm1_t0 = np.matmul(phi(tm1,t0,t_max=tm1), x)
                 phi_tm1_t0=phi(tm1,t0,t_max=tm1)
             else:
                 phi_tm1_t0=start_Phi_2d
-            #    y_tm1_t0 = x
-
-
-            ## use matrix multiplication of the cached intervals between
-            ## tm1 and tm2 in reverse order 
-            ## phi_tm2_tm1 = phi_tm2_tm2-1 * ... * phi_tm1+1_tm1
-            #phi_tm2_tm1=reduce(
-            #    lambda prod_phi,cached_phi : np.matmul(cached_phi,prod_phi),
-            #    [ca[i,...] for i in range(tm1_ind,tm2_ind)],
-            #    np.identity(self.nr_pools)
-            #)
-            #
-            ## To test (convince yourself) do:
-            ## b=np.matrix([[1,2],[3,4]])
-            ## a=np.matrix([[1,0],[0,0]])
-            ## reduce(lambda prod_phi,cached_phi : np.matmul(cached_phi,prod_phi),[a,b])==b*a
-            #y_tm2_t0=np.matmul(phi_tm2_tm1,y_tm1_t0)
 
             ## integrate directly from tm2 to t
             if tm2 != t:
-                #y_t_t0 = (linearized_no_input_sol([tm2, t], y_tm2_t0)).reshape((nr_pools,1))
-                # y_t_t0 = np.matmul(phi(t,tm2,t_max=cached_times[tm2_ind+1]), y_tm2_t0)
-               phi_t_tm2=phi(t,tm2,t_max=cached_times[tm2_ind+1])
+               phi_t_tm2= phi( t, tm2, t_max=end_time_from_phi_ind( t_phi_ind, cache_times))
             else:
                phi_t_tm2=start_Phi_2d
-            #    y_t_t0=y_tm2_t0
 
-            #return y_t_t0.reshape(nr_pools,)
             phi_t_t0=reduce(
-                lambda prod_phi,cached_phi : np.matmul(cached_phi,prod_phi),
-                [phi_t_tm2]
-                +[ca[i,...] for i in range(tm1_ind,tm2_ind)]
-                +[phi_tm1_t0],
+                lambda acc,cached_phi : np.matmul(cached_phi,acc),
+                [phi_tm1_t0]
+                +[ca[i,...] for i in range(t0_phi_ind+1,t_phi_ind)]
+                #+[phi(tm2,tm1,t_max=self.times[-1])]
+                +[phi_t_tm2],
                 np.identity(self.nr_pools)
             )
             return np.matmul(phi_t_t0,x).reshape((nr_pools,))
 
         else:
-            #raise
-            #y_t_t0 = (linearized_no_input_sol([t0, t], x)).reshape((nr_pools,))
             y_t_t0 = (np.matmul(phi(t,t0,t_max=self.times[-1]), x)).reshape((nr_pools,))
             return y_t_t0
 

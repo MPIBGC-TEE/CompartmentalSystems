@@ -15,7 +15,18 @@ from testinfrastructure.InDirTest import InDirTest
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 from CompartmentalSystems.BlockIvp import BlockIvp
-from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs,x_phi_ivp,integrate_array_func_for_nested_boundaries,array_quad_result,array_integration_by_ode,array_integration_by_values
+from CompartmentalSystems.helpers_reservoir import (
+numerical_function_from_expression
+    ,numerical_rhs
+    ,x_phi_ivp
+    ,integrate_array_func_for_nested_boundaries
+    ,array_quad_result
+    ,array_integration_by_ode
+    ,array_integration_by_values
+    ,phi_ind
+    ,end_time_from_phi_ind
+    ,start_time_from_phi_ind
+)
 
 class TestPhi(InDirTest):
     def test_phi_2d_linear(self):
@@ -124,7 +135,7 @@ class TestPhi(InDirTest):
             ,times=times
             ,func_set=func_dict
         )
-        smr.build_state_transition_operator_cache(size=2)
+        smr.build_state_transition_operator_cache(size=4)
 
         nr_pools=srm.nr_pools
 
@@ -138,7 +149,11 @@ class TestPhi(InDirTest):
         
         for s in  np.linspace(t_0,t_max,5):
             for t in  np.linspace(s,t_max,5):
+            #for t in  np.linspace(s,t_max,2):
+                #s=1
+                #t=3.75
                 for x in bvs:
+                    #x=bvs[0]
                     with self.subTest():
                         self.assertTrue( 
                             np.allclose(
@@ -164,7 +179,7 @@ class TestPhi(InDirTest):
             ,x_block_name='sol'
             ,phi_block_name='Phi_2d'
         )
-        for t in  np.linspace(t_0,t_max,5):
+        for t in  np.linspace(t_0,t_max,6):
             for phi_mat in [
                                 blivp.block_solve(t_span=(t_0,t))['Phi_2d'][-1,...] ,
                                 blivp_l.block_solve(t_span=(t_0,t))['Phi_2d'][-1,...]
@@ -178,6 +193,24 @@ class TestPhi(InDirTest):
                                 rtol=1.5*1e-2
                             )
                         )
+
+    def test_phi_ind(self):
+        t_0     = 0
+        t_max   = 4
+        cache_times= np.linspace(t_0, t_max, 5) # 3 times 
+        # -> 2  phi matrices, 
+        # Phi[0]=Phi(t=2,s=0),Phi[1]= Phi(t=4,s=2)
+        self.assertEqual(phi_ind(1,cache_times),1) 
+        self.assertEqual(phi_ind(0,cache_times),0) 
+        self.assertEqual(phi_ind(2,cache_times),2) 
+        self.assertEqual(phi_ind(2.5,cache_times),2) 
+
+        self.assertEqual(phi_ind(3,cache_times),3) 
+        self.assertEqual(phi_ind(4,cache_times),3) 
+
+        self.assertEqual(start_time_from_phi_ind(0,cache_times),cache_times[0])
+        self.assertEqual(end_time_from_phi_ind(0,cache_times),cache_times[1])
+        self.assertEqual(end_time_from_phi_ind(3,cache_times),cache_times[-1])
 
     def test_phi_cache_vals(self):
         k_0_val=1

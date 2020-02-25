@@ -685,3 +685,23 @@ def array_integration_by_values(
 def phi_tmax(s,t_max,blockIvp,phi_block_name):
     phi_func=blockIvp.block_solve_functions(t_span=(s,t_max))[phi_block_name]
     return phi_func
+
+def phi_ind(tau,cache_times):
+    """
+    Helper function to compute the index of the cached state transition operator values. 
+    E.g. two matrices require 3 times (0 , 2 ,4 )
+    Where Phi[0]=Phi(t=2,s=0),Phi[1]= Phi(t=4,s=2)
+    """
+    # intervals before tau
+    m=cache_times[-1] 
+    if tau==m:
+        return len(cache_times)-1-1
+    else:
+        time_ind=cache_times.searchsorted(tau,side='right')
+        return time_ind-1
+
+def end_time_from_phi_ind(ind,cache_times):
+    return cache_times[ind+1]
+
+def start_time_from_phi_ind(ind,cache_times):
+    return cache_times[ind]
