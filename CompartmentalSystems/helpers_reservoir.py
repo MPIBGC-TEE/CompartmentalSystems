@@ -279,8 +279,6 @@ def numsol_symbolical_system(
     nr_pools = len(state_vector)
     t_min=times[0]
     t_max=times[-1]
-    print('t_min,t_max') 
-    print(t_min,t_max) 
     if times[0] == times[-1]: return start_values.reshape((1, nr_pools))
 
     num_rhs = numerical_rhs(
