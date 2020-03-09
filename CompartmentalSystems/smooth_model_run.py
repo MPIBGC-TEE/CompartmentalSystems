@@ -80,6 +80,7 @@ from .helpers_reservoir import (
     ,end_time_from_phi_ind
     ,start_time_from_phi_ind
     ,listProd
+    ,listProd_reduce
 )
 from .BlockIvp import BlockIvp
 from .Cache import Cache
@@ -3658,8 +3659,8 @@ class SmoothModelRun(object):
                 lambda acc,cached_phi : np.matmul(cached_phi,acc),
                 [phi_tm1_t0]
                 +[
-                    #listProd(
-                    listProd_reduce(
+                    listProd(
+                    #listProd_reduce(
                         tuple([
                             tuple(ca[i,...].flatten()) 
                             for i in range(t0_phi_ind+1,t_phi_ind)
