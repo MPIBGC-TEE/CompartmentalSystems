@@ -84,6 +84,24 @@ class BlockIvp:
     
         # first compute the indices of block boundaries in X by summing the dimensions 
         # of the blocks
+        indices=np.array([0]+[ sum(sizes[:(i+1)]) for i in range(nb)])
+        #vecBlockDict={block_names[i]: X[indices[i]:indices[i+1]] for i in range(nb)}
+        #blockDict={name:vecBlock.reshape(start_block_dict[name].shape) for name,vecBlock in vecBlockDict.items()}
+        #blockDict[time_str]=t
+        #arg_lists=[ [blockDict[name] for name in f[1]] for f in functions]
+        #def rhs(t,X):
+        #    Y=tuple(t,X)
+        #    for blnr in range(nb):
+        #        x=X[indices[blnr]:indices[blnr+1]]
+        #        f=functions[blnr][0]
+        #        f_arglist=[Y[block_start,block_end] for block_start,block_endin arg_indeces[blnr]]
+        #        res=f(arglist) 
+
+
+        #    vecResults=[ functions[i][0]( *arg_lists[i] ).flatten()  for i in range(nb)]
+        #    return np.concatenate(vecResults)#.reshape(X.shape)
+        #
+        #return rhs
         indices=[0]+[ sum(sizes[:(i+1)]) for i in range(nb)]
         def rhs(t,X):
             vecBlockDict={block_names[i]: X[indices[i]:indices[i+1]] for i in range(nb)}

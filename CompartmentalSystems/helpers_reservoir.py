@@ -524,7 +524,6 @@ def x_phi_ode(
     phi_block_name='phi'
     ):
     nr_pools=srm.nr_pools
-    nq=nr_pools*nr_pools
     sol_rhs=numerical_rhs(
          srm.state_vector
         ,srm.time_symbol
@@ -558,7 +557,6 @@ def x_phi_ode(
 def x_phi_ivp(srm, parameter_dict, func_dict,start_x,x_block_name='x',phi_block_name='phi'):
         
     nr_pools=srm.nr_pools
-    nq=nr_pools*nr_pools
     sol_rhs=numerical_rhs(
          srm.state_vector
         ,srm.time_symbol
@@ -680,9 +678,30 @@ def array_integration_by_values(
     return vec.reshape(test.shape)
 
 @lru_cache(maxsize=None)
-def phi_tmax(s,t_max,blockIvp,phi_block_name):
-    phi_func=blockIvp.block_solve_functions(t_span=(s,t_max))[phi_block_name]
+def phi_tmax(s,t_max,block_ode,x_s,x_block_name,phi_block_name):
+    x_s=np.array(x_s)
+    nr_pools=len(x_s)
+
+    start_Phi_2d=np.identity(nr_pools)
+    start_blocks=[
+        (x_block_name,x_s),
+        (phi_block_name,start_Phi_2d) 
+    ]
+    blivp=block_ode.blockIvp( start_blocks )
+    phi_func=blivp.block_solve_functions(t_span=(s,t_max))[phi_block_name]
     return phi_func
+
+@lru_cache(maxsize=None)
+def phi_tmax_2(s,t,x0,rhs):
+    #print('s,t,x0,rhs')
+    #print(s,t,x0,rhs)
+    nr_pools=len(x0)
+    start_Phi_1d=np.identity(nr_pools).flatten()
+    return solve_ivp(
+        rhs,
+        y0=np.concatenate((x0,start_Phi_1d)),
+        t_span=(s,t)
+    ).y[nr_pools:,-1].reshape((nr_pools,nr_pools))
 
 def phi_ind(tau,cache_times):
     """
@@ -703,3 +722,26 @@ def end_time_from_phi_ind(ind,cache_times):
 
 def start_time_from_phi_ind(ind,cache_times):
     return cache_times[ind]
+
+@lru_cache(maxsize=None)
+def listProd(ms:Tuple[Tuple],nr_pools:int)->np.ndarray:
+    """
+    Fast bisecting matrix multiplication for a tuple of tuples with cache
+    The tuples are interpreted as matrices. 
+    """
+    l=len(ms)
+    if l == 1:
+        return np.array(ms[0]).reshape(nr_pools,nr_pools)
+    
+    l1 = l // 2
+    #l1 = l -1
+    #l1 = 1
+    return np.matmul(listProd(ms[:l1],nr_pools), listProd(ms[l1:],nr_pools))
+
+def listProd_reduce(ms:Tuple[Tuple],nr_pools:int)->np.ndarray:
+    mats=[np.array(m).reshape(nr_pools,nr_pools) for m in ms]
+    return reduce(
+            lambda acc,el:np.matmul(acc,el)
+            ,mats
+            ,np.identity(self.nr_pools)
+    )
