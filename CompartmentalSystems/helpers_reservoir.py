@@ -288,17 +288,35 @@ def numsol_symbolical_system(
         parameter_dict,
         func_set
     )
-    res=solve_ivp(
-        num_rhs,
-        y0=start_values,
-        t_span=(t_min, t_max),
-        first_step=(t_max-t_min)/2 if t_max != t_min else None, # prevent the solver from overreaching (scipy bug)
-        t_eval=times,
-        #rtol=1e-08,
-        #atol=1e-08,
-        dense_output=dense_output,
-        #method='LSODA'
-    )
+
+    old_settings = np.geterr()    
+    np.seterr(all='raise')
+    try:
+        res=solve_ivp(
+            num_rhs,
+            y0=start_values,
+            t_span=(t_min, t_max),
+            first_step=(t_max-t_min)/2 if t_max != t_min else None, # prevent the solver from overreaching (scipy bug)
+            t_eval=times,
+            #rtol=1e-08,
+            #atol=1e-08,
+            dense_output=dense_output,
+            #method='LSODA'
+        )
+    except FloatingPointError:
+        res=solve_ivp(
+            num_rhs,
+            y0=start_values,
+            t_span=(t_min, t_max),
+            first_step=(t_max-t_min)/2 if t_max != t_min else None, # prevent the solver from overreaching (scipy bug)
+            t_eval=times,
+            #rtol=1e-08,
+            #atol=1e-08,
+            dense_output=dense_output,
+            method='LSODA'
+        )
+    np.seterr(**old_settings)
+
     values=res.y.transpose() # adapt to the old interface since our code at the moment expects it
     if dense_output:
         return (values,res.sol)
@@ -537,6 +555,8 @@ def x_phi_ode(
     B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
     
     def Phi_rhs(t,x,Phi_2d):
+        #print('B', B_func(t, *x))
+        #print('Phi_2d', Phi_2d)
         return np.matmul(B_func(t,*x),Phi_2d)
 
     #create the additional startvector for the components of Phi
@@ -723,7 +743,8 @@ def end_time_from_phi_ind(ind,cache_times):
 def start_time_from_phi_ind(ind,cache_times):
     return cache_times[ind]
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=10000)
+#@lru_cache(maxsize=None)
 def listProd(ms:Tuple[Tuple],nr_pools:int)->np.ndarray:
     """
     Fast bisecting matrix multiplication for a tuple of tuples with cache

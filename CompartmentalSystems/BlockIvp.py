@@ -156,15 +156,31 @@ class BlockIvp:
         if first_step is None and t_min!=t_max:
             first_step=(t_max-t_min)/2
 
-        complete_sol=solve_ivp(
-             fun=self.rhs
-            ,t_span=t_span
-            ,y0=self.start_vec
-            ,dense_output=False
-            ,method=method
-            ,first_step=first_step
-            ,**kwargs
-        )
+        old_settings = np.geterr()    
+        np.seterr(all='raise')
+        try:
+            complete_sol=solve_ivp(
+                 fun=self.rhs
+                ,t_span=t_span
+                ,y0=self.start_vec
+                ,dense_output=False
+                ,method=method
+                ,first_step=first_step
+                ,**kwargs
+            )
+        except FloatingPointError:
+            complete_sol=solve_ivp(
+                 fun=self.rhs
+                ,t_span=t_span
+                ,y0=self.start_vec
+                ,dense_output=False
+                ,method='LSODA'
+                ,first_step=first_step
+                ,**kwargs
+            )
+        np.seterr(**old_settings)
+
+
         def block_sol(block_name):
             start_array=self.array_dict[block_name]
             lower,upper=self.index_dict[block_name] 

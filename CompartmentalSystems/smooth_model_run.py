@@ -2848,7 +2848,7 @@ class SmoothModelRun(object):
         last_res = -1.0
 
         def rhs(y, t_val):
-            #print('y', y, 't', t_val)
+            print('y', y, 't', t_val)
             y = np.float(y)
             global last_t, last_res
             
@@ -2863,7 +2863,8 @@ class SmoothModelRun(object):
                 #pb.update(0)
                 pb.update(t_val-t_min-pb.n)
 
-            #print('y', y, 't', t_val)
+            print('Quantile, line 2866')
+            print('y', y, 't', t_val)
         
             p_val = p(y, t_val)[pool]
             u_val = u(t_val)[pool]
@@ -2871,15 +2872,15 @@ class SmoothModelRun(object):
             x_vec = vec_sol_funcs(t_val).reshape((n,1))
             B = self.B(t_val)
 
-            #print('B', B)
-            #print('x', x_vec)
-            #print('B*x', B.dot(x_vec))
-            #print('p', p_val)
-            #print('u', u_val)
-            #print('F', F_vec)
-            #print('B*F', B.dot(F_vec))
-            #print(B.dot(F_vec)[pool])
-            #print(B.dot(F_vec)[1])
+            print('B', B)
+            print('x', x_vec)
+            print('B*x', B.dot(x_vec))
+            print('p', p_val)
+            print('u', u_val)
+            print('F', F_vec)
+            print('B*F', B.dot(F_vec))
+            print(B.dot(F_vec)[pool])
+            print(B.dot(F_vec)[1])
 
             if p_val == 0:
                 raise(Error('Division by zero during quantile computation.'))
@@ -2894,6 +2895,7 @@ class SmoothModelRun(object):
             return res
 
         short_res = odeint(rhs, sv, times, atol=tol, mxstep=10000)
+
         pb.close()
 
         res = np.ndarray((len(self.times),))
@@ -3658,8 +3660,8 @@ class SmoothModelRun(object):
                 lambda acc,cached_phi : np.matmul(cached_phi,acc),
                 [phi_tm1_t0]
                 +[
-                    #listProd(
-                    listProd_reduce(
+                    listProd(
+                    #listProd_reduce(
                         tuple([
                             tuple(ca[i,...].flatten()) 
                             for i in range(t0_phi_ind+1,t_phi_ind)
@@ -3672,6 +3674,13 @@ class SmoothModelRun(object):
                 +[phi_t_tm2],
                 np.identity(self.nr_pools)
             )
+            #print(t0_phi_ind+1,t_phi_ind)
+            ci = listProd.cache_info()
+            #print(
+            #    'cache size: %05d' % ci.currsize, 
+            #    'hit ratio: %02.2f' %  (ci.hits/(ci.hits+ci.misses)*100),
+            #    'hr per cache size: %02.5f' % (ci.hits/(ci.hits+ci.misses)*100/ci.currsize)
+            #)
             return np.matmul(phi_t_t0,x).reshape((nr_pools,))
 
         else:
