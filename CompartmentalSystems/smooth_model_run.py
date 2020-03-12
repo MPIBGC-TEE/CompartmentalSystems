@@ -80,6 +80,7 @@ from .helpers_reservoir import (
     ,end_time_from_phi_ind
     ,start_time_from_phi_ind
     ,listProd
+    ,listProd_reduce
 )
 from .BlockIvp import BlockIvp
 from .Cache import Cache

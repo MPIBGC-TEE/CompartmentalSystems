@@ -2,7 +2,7 @@
 from __future__ import division
 from typing import Callable,Iterable,Union,Optional,List,Tuple,Sequence
 
-from functools import lru_cache
+from functools import lru_cache,reduce
 import numpy as np 
 import inspect
 from numbers import Number
@@ -759,10 +759,11 @@ def listProd(ms:Tuple[Tuple],nr_pools:int)->np.ndarray:
     #l1 = 1
     return np.matmul(listProd(ms[:l1],nr_pools), listProd(ms[l1:],nr_pools))
 
+#@lru_cache(maxsize=None)
 def listProd_reduce(ms:Tuple[Tuple],nr_pools:int)->np.ndarray:
     mats=[np.array(m).reshape(nr_pools,nr_pools) for m in ms]
     return reduce(
             lambda acc,el:np.matmul(acc,el)
             ,mats
-            ,np.identity(self.nr_pools)
+            ,np.identity(nr_pools)
     )
