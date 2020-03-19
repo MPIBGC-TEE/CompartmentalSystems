@@ -3633,6 +3633,9 @@ class SmoothModelRun(object):
             cache=self._state_transition_operator_cache
             cache_times=cache.keys
             ca=cache.values
+
+            if hasattr(self, '_listProd'):
+                listProd = self._listProd
             
             t0_phi_ind=phi_ind(t0,cache_times)
             t_phi_ind =phi_ind( t,cache_times)
