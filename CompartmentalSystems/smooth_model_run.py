@@ -80,7 +80,7 @@ from .helpers_reservoir import (
     ,end_time_from_phi_ind
     ,start_time_from_phi_ind
     ,listProd
-    ,listProd_reduce
+#    ,listProd_reduce
 )
 from .BlockIvp import BlockIvp
 from .Cache import Cache
@@ -2849,7 +2849,7 @@ class SmoothModelRun(object):
         last_res = -1.0
 
         def rhs(y, t_val):
-            print('y', y, 't', t_val)
+#            print('y', y, 't', t_val)
             y = np.float(y)
             global last_t, last_res
             
@@ -2864,8 +2864,8 @@ class SmoothModelRun(object):
                 #pb.update(0)
                 pb.update(t_val-t_min-pb.n)
 
-            print('Quantile, line 2866')
-            print('y', y, 't', t_val)
+#            print('Quantile, line 2866')
+#            print('y', y, 't', t_val)
         
             p_val = p(y, t_val)[pool]
             u_val = u(t_val)[pool]
@@ -2873,15 +2873,15 @@ class SmoothModelRun(object):
             x_vec = vec_sol_funcs(t_val).reshape((n,1))
             B = self.B(t_val)
 
-            print('B', B)
-            print('x', x_vec)
-            print('B*x', B.dot(x_vec))
-            print('p', p_val)
-            print('u', u_val)
-            print('F', F_vec)
-            print('B*F', B.dot(F_vec))
-            print(B.dot(F_vec)[pool])
-            print(B.dot(F_vec)[1])
+#            print('B', B)
+#            print('x', x_vec)
+#            print('B*x', B.dot(x_vec))
+#            print('p', p_val)
+#            print('u', u_val)
+#            print('F', F_vec)
+#            print('B*F', B.dot(F_vec))
+#            print(B.dot(F_vec)[pool])
+#            print(B.dot(F_vec)[1])
 
             if p_val == 0:
                 raise(Error('Division by zero during quantile computation.'))
