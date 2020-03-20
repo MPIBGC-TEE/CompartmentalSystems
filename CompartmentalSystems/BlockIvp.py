@@ -84,6 +84,24 @@ class BlockIvp:
     
         # first compute the indices of block boundaries in X by summing the dimensions 
         # of the blocks
+        indices=np.array([0]+[ sum(sizes[:(i+1)]) for i in range(nb)])
+        #vecBlockDict={block_names[i]: X[indices[i]:indices[i+1]] for i in range(nb)}
+        #blockDict={name:vecBlock.reshape(start_block_dict[name].shape) for name,vecBlock in vecBlockDict.items()}
+        #blockDict[time_str]=t
+        #arg_lists=[ [blockDict[name] for name in f[1]] for f in functions]
+        #def rhs(t,X):
+        #    Y=tuple(t,X)
+        #    for blnr in range(nb):
+        #        x=X[indices[blnr]:indices[blnr+1]]
+        #        f=functions[blnr][0]
+        #        f_arglist=[Y[block_start,block_end] for block_start,block_endin arg_indeces[blnr]]
+        #        res=f(arglist) 
+
+
+        #    vecResults=[ functions[i][0]( *arg_lists[i] ).flatten()  for i in range(nb)]
+        #    return np.concatenate(vecResults)#.reshape(X.shape)
+        #
+        #return rhs
         indices=[0]+[ sum(sizes[:(i+1)]) for i in range(nb)]
         def rhs(t,X):
             vecBlockDict={block_names[i]: X[indices[i]:indices[i+1]] for i in range(nb)}
@@ -138,15 +156,31 @@ class BlockIvp:
         if first_step is None and t_min!=t_max:
             first_step=(t_max-t_min)/2
 
-        complete_sol=solve_ivp(
-             fun=self.rhs
-            ,t_span=t_span
-            ,y0=self.start_vec
-            ,dense_output=False
-            ,method=method
-            ,first_step=first_step
-            ,**kwargs
-        )
+        old_settings = np.geterr()    
+        np.seterr(all='raise')
+        try:
+            complete_sol=solve_ivp(
+                 fun=self.rhs
+                ,t_span=t_span
+                ,y0=self.start_vec
+                ,dense_output=False
+                ,method=method
+                ,first_step=first_step
+                ,**kwargs
+            )
+        except FloatingPointError:
+            complete_sol=solve_ivp(
+                 fun=self.rhs
+                ,t_span=t_span
+                ,y0=self.start_vec
+                ,dense_output=False
+                ,method='LSODA'
+                ,first_step=first_step
+                ,**kwargs
+            )
+        np.seterr(**old_settings)
+
+
         def block_sol(block_name):
             start_array=self.array_dict[block_name]
             lower,upper=self.index_dict[block_name] 

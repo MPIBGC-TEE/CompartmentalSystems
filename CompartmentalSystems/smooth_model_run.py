@@ -63,6 +63,7 @@ from .helpers_reservoir import (
     ,generalized_inverse_CDF
 	, draw_rv 
 	,stochastic_collocation_transform
+    ,numerical_rhs
     ,numerical_rhs_old
 	, MH_sampling
 	, save_csv 
@@ -74,9 +75,12 @@ from .helpers_reservoir import (
 	,x_phi_ivp
 	,x_phi_ode
 	,phi_tmax
+	,phi_tmax_2
     ,phi_ind
     ,end_time_from_phi_ind
     ,start_time_from_phi_ind
+    ,listProd
+#    ,listProd_reduce
 )
 from .BlockIvp import BlockIvp
 from .Cache import Cache
@@ -2845,7 +2849,7 @@ class SmoothModelRun(object):
         last_res = -1.0
 
         def rhs(y, t_val):
-            #print('y', y, 't', t_val)
+#            print('y', y, 't', t_val)
             y = np.float(y)
             global last_t, last_res
             
@@ -2860,7 +2864,8 @@ class SmoothModelRun(object):
                 #pb.update(0)
                 pb.update(t_val-t_min-pb.n)
 
-            #print('y', y, 't', t_val)
+#            print('Quantile, line 2866')
+#            print('y', y, 't', t_val)
         
             p_val = p(y, t_val)[pool]
             u_val = u(t_val)[pool]
@@ -2868,15 +2873,15 @@ class SmoothModelRun(object):
             x_vec = vec_sol_funcs(t_val).reshape((n,1))
             B = self.B(t_val)
 
-            #print('B', B)
-            #print('x', x_vec)
-            #print('B*x', B.dot(x_vec))
-            #print('p', p_val)
-            #print('u', u_val)
-            #print('F', F_vec)
-            #print('B*F', B.dot(F_vec))
-            #print(B.dot(F_vec)[pool])
-            #print(B.dot(F_vec)[1])
+#            print('B', B)
+#            print('x', x_vec)
+#            print('B*x', B.dot(x_vec))
+#            print('p', p_val)
+#            print('u', u_val)
+#            print('F', F_vec)
+#            print('B*F', B.dot(F_vec))
+#            print(B.dot(F_vec)[pool])
+#            print(B.dot(F_vec)[1])
 
             if p_val == 0:
                 raise(Error('Division by zero during quantile computation.'))
@@ -2891,6 +2896,7 @@ class SmoothModelRun(object):
             return res
 
         short_res = odeint(rhs, sv, times, atol=tol, mxstep=10000)
+
         pb.close()
 
         res = np.ndarray((len(self.times),))
@@ -3241,14 +3247,6 @@ class SmoothModelRun(object):
                     #print(
                     #   self._previously_computed_age_moment_sol[storage_key])
                     return self._previously_computed_age_moment_sol[storage_key]
-                elif max_order==0 and hasattr(self,'_x_phi_ivp'):
-
-                    sol_func=self._x_phi_ivp.get_function('sol')
-                    soln=self._x_phi_ivp.get_values('sol')
-                    return (soln,sol_func)
-
-
-
             else:
                 self._previously_computed_age_moment_sol = {}
 
@@ -3545,6 +3543,54 @@ class SmoothModelRun(object):
             )   
         )
 
+    def _build_x_phi_rhs(self):
+        nr_pools=self.nr_pools
+        srm=self.model
+        parameter_dict=self.parameter_dict
+        func_dict=self.func_set
+
+        sol_rhs=numerical_rhs(
+             srm.state_vector
+            ,srm.time_symbol
+            ,srm.F
+            ,parameter_dict
+            ,func_dict
+        )
+        
+        B_sym=srm.compartmental_matrix
+        tup=(srm.time_symbol,)+tuple(srm.state_vector)
+        B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
+
+        def Phi_rhs(t,x,Phi_1d):
+            B=B_func(t,*x)
+            return np.matmul(B,Phi_1d.reshape(nr_pools,nr_pools)).flatten()
+
+        #create the additional startvector for the components of Phi
+        start_Phi_1d=np.identity(nr_pools).flatten()
+        def rhs(t,X):
+            return np.concatenate((
+                sol_rhs(t,X[:nr_pools]),
+                Phi_rhs(t,X[:nr_pools],X[nr_pools:])
+        ))
+
+        self._x_phi_rhs=rhs
+        return rhs
+    def _x_phi_block_ode(self):
+        x_block_name='x'
+        phi_block_name='phi'
+        if not(hasattr(self,'_x_phi_block_ode_cache')):
+            nr_pools=self.nr_pools
+            
+            block_ode=x_phi_ode(
+                self.model,
+                self.parameter_dict,
+                self.func_set,
+                x_block_name,
+                phi_block_name
+            )
+            self._x_phi_block_ode_cache=block_ode
+        return self._x_phi_block_ode_cache,x_block_name,phi_block_name
+
     def _state_transition_operator(self, t, t0, x):
         if t0 > t:
             raise(Error("Evaluation before t0 is not possible"))
@@ -3552,36 +3598,44 @@ class SmoothModelRun(object):
             return x.flatten() 
         
         #linearized_no_input_sol = self._linearized_no_input_sol
-        n=self.nr_pools
-        x_block_name='x'
-        phi_block_name='phi'
         nr_pools=self.nr_pools
         
-        block_ode=x_phi_ode(
-            self.model,
-            self.parameter_dict,
-            self.func_set,
-            x_block_name,
-            phi_block_name
-        )
+        #block_ode=x_phi_ode(
+        #    self.model,
+        #    self.parameter_dict,
+        #    self.func_set,
+        #    x_block_name,
+        #    phi_block_name
+        #)
         
         start_Phi_2d=np.identity(nr_pools)
         solve_func=self.solve_func()
+        block_ode,x_block_name,phi_block_name=self._x_phi_block_ode()
         def phi(t,s,t_max):
-            start_blocks=[
-                (x_block_name,solve_func(s)),
-                (phi_block_name,start_Phi_2d) 
-            ]
-            blivp=block_ode.blockIvp( start_blocks )
-            return  phi_tmax(s,t_max,blivp,phi_block_name)(t)
+            x_s=tuple(solve_func(s))
+            return  phi_tmax(s,t_max,block_ode,x_s,x_block_name,phi_block_name)(t)
+        solve_func=self.solve_func()
+        
+        #def phi(t,s,t_max):
+        #    return solve_ivp(
+        #        rhs,
+        #        y0=np.concatenate((solve_func(s),start_Phi_1d)),
+        #        t_span=(s,t)
+        #    ).y[nr_pools:,-1].reshape((nr_pools,nr_pools))
+        #rhs=self._x_phi_rhs if hasattr(self,'_x_phi_rhs') else self._build_x_phi_rhs()
+            
+            
+        #def phi(t,s,t_max):
+        #    return  phi_tmax_2(s,t,tuple(solve_func(s)),rhs)
 
-        
-        
-        #if hasattr(self,'_state_transition_operator_cache'):
-        if False:
+        if hasattr(self,'_state_transition_operator_cache'):
+        #if False:
             cache=self._state_transition_operator_cache
             cache_times=cache.keys
             ca=cache.values
+
+            if hasattr(self, '_listProd'):
+                listProd = self._listProd
             
             t0_phi_ind=phi_ind(t0,cache_times)
             t_phi_ind =phi_ind( t,cache_times)
@@ -3609,11 +3663,28 @@ class SmoothModelRun(object):
             phi_t_t0=reduce(
                 lambda acc,cached_phi : np.matmul(cached_phi,acc),
                 [phi_tm1_t0]
-                +[ca[i,...] for i in range(t0_phi_ind+1,t_phi_ind)]
+                +[
+                    listProd(
+                    #listProd_reduce(
+                        tuple([
+                            tuple(ca[i,...].flatten()) 
+                            for i in range(t0_phi_ind+1,t_phi_ind)
+                        ]),
+                        nr_pools
+                    )
+                ]
+                #+[ca[i,...] for i in range(t0_phi_ind+1,t_phi_ind)]
                 #+[phi(tm2,tm1,t_max=self.times[-1])]
                 +[phi_t_tm2],
                 np.identity(self.nr_pools)
             )
+            #print(t0_phi_ind+1,t_phi_ind)
+            ci = listProd.cache_info()
+            #print(
+            #    'cache size: %05d' % ci.currsize, 
+            #    'hit ratio: %02.2f' %  (ci.hits/(ci.hits+ci.misses)*100),
+            #    'hr per cache size: %02.5f' % (ci.hits/(ci.hits+ci.misses)*100/ci.currsize)
+            #)
             return np.matmul(phi_t_t0,x).reshape((nr_pools,))
 
         else:

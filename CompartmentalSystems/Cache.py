@@ -13,7 +13,7 @@ class Cache:
         return picklegzip.load(filename)
         
     def save(self,filename):
-        picklegzip.dump(self,filename )
+        picklegzip.dump(self,filename)
         
     def __eq__(self,other):
         return all(

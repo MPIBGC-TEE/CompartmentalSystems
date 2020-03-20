@@ -1,4 +1,6 @@
 import timeit
+from copy import deepcopy
+import time
 import cProfile
 import pstats
 import numpy as np
@@ -6,8 +8,8 @@ from sympy import sin, symbols, Matrix, Symbol, exp, solve, Eq, pi, Piecewise, F
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
-def test_age_densities_1_single_value():
-    # one-dimensional
+def smr_1d(nc):
+    #one-dimensional
     C = Symbol('C')
     state_vector = [C]
     time_symbol = Symbol('t')
@@ -19,64 +21,11 @@ def test_age_densities_1_single_value():
     start_values = np.array([5])
     times = np.linspace(0,1,6)
     smr = SmoothModelRun(srm, {}, start_values, times)
+    smr.build_state_transition_operator_cache(nc)
+    return deepcopy(smr)
 
-    start_age_densities = lambda a: np.exp(-a)*start_values
-    p1_sv = smr._age_densities_1_single_value(start_age_densities)
 
-    # negative ages will be cut off automatically
-    ages = np.linspace(-1,1,3)
-    a_ref = np.array([[[ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ]],
-                     
-                      [[ 5.        ],
-                       [ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ]],
-                     
-                      [[ 1.83939721],
-                       [ 1.83939724],
-                       [ 1.83939725],
-                       [ 1.83939724],
-                       [ 1.83939729],
-                       [ 1.83939727]]])
-             
-    ref = np.ndarray((3,6,1), np.float, a_ref)
-    res_l = [[p1_sv(a, t) for t in times] for a in ages]
-    res = np.array(res_l)
-
-    # test missing start_age_densities
-    a_ref = np.array([[[ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ]],
-                     
-                      [[ 5.        ],
-                       [ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ],
-                       [ 0.        ]],
-                     
-                      [[ 0         ],
-                       [ 0         ],
-                       [ 0         ],
-                       [ 0         ],
-                       [ 0         ],
-                       [ 1.83939727]]])
-    
-    ref = np.ndarray((3,6,1), np.float, a_ref)
-    p1_sv = smr._age_densities_1_single_value()
-    res_l = [[p1_sv(a,t) for t in times] for a in ages]
-    res = np.array(res_l)
-
+def smr_2d(nc):
     # two-dimensional
     C_0, C_1 = symbols('C_0 C_1')
     state_vector = [C_0, C_1]
@@ -87,79 +36,43 @@ def test_age_densities_1_single_value():
     srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
 
     start_values = np.array([5, 3])
-    times = np.linspace(0,1,6)
+    times = np.linspace(0,1,100)
     smr = SmoothModelRun(srm, {}, start_values, times)
+    smr.build_state_transition_operator_cache(nc)
+    return deepcopy(smr)
 
-    ages = np.linspace(-1,1,3)
-    # negative ages will be cut off automatically
-    start_age_densities = lambda a: np.exp(-a)*start_values
+def age_densities(smr):#_1D(smr):
+    start_age_densities = lambda a: np.exp(-a)*smr.start_values
+    p=smr.pool_age_densities_func(start_age_densities)
     p1_sv = smr._age_densities_1_single_value(start_age_densities)
 
-    a_ref = np.array(
-            [[[ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ]],
-            
-             [[ 5.        ,  3.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ]],
-            
-             [[ 1.83939721,  1.10363832],
-              [ 1.83939724,  1.10363834],
-              [ 1.83939725,  1.10363835],
-              [ 1.83939724,  1.10363835],
-              [ 1.83939729,  1.10363837],
-              [ 1.83939727,  1.10363836]]])
-
-    ref = np.ndarray((3,6,2), np.float, a_ref)
-    res_l = [[p1_sv(a,t) for t in times] for a in ages]
-    res = np.array(res_l)
-
-    # test missing start_age_densities
-    a_ref = np.array(
-            [[[ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ]],
-            
-             [[ 5.        ,  3.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ],
-              [ 0.        ,  0.        ]],
-            
-             [[ 0         ,  0         ],
-              [ 0         ,  0         ],
-              [ 0         ,  0         ],
-              [ 0         ,  0         ],
-              [ 0         ,  0         ],
-              [ 1.83939727,  1.10363836]]])
-
-    ref = np.ndarray((3,6,2), np.float, a_ref)
-    p1_sv = smr._age_densities_1_single_value()
-    res_l = [[p1_sv(a,t) for t in times] for a in ages]
-    res = np.array(res_l)
+    # negative ages will be cut off automatically
+    ages = np.linspace(-1,1,3)
+    res=p(ages)        
 # main
-#res=timeit.timeit(
-#    test_age_densities_1_single_value
-#    ,number=10
-#)
-#print('res',res)
+reps=10
+def funcmaker(f,*args):
+    def f_wihtout_args():
+        return f(*args)
 
-with cProfile.Profile() as pr:
-    test_age_densities_1_single_value()
+    return f_wihtout_args
 
-st=pstats.Stats(pr)
-st.sort_stats('time')
-st.print_stats()    
+for smr_func in [smr_1d,smr_2d]:
+    print('#####################################')
+    for nc in [10,100,1000]:#,10000]:
+        smr=smr_func(nc)
+        res=timeit.timeit(
+            #funcmaker(age_densities_1_single_value_2D,smr)
+            funcmaker(age_densities,smr)
+            ,number=10
+        )
+        print('res',res)
+
+#with cProfile.Profile() as pr:
+#    test_age_densities_1_single_value()
+#
+#st=pstats.Stats(pr)
+#st.sort_stats('time')
+#st.print_stats()    
 
 

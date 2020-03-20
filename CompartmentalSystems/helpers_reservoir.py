@@ -2,9 +2,11 @@
 from __future__ import division
 from typing import Callable,Iterable,Union,Optional,List,Tuple,Sequence
 
-from functools import lru_cache
+from functools import lru_cache,reduce, _CacheInfo, _lru_cache_wrapper 
 import numpy as np 
+import matplotlib.pyplot as plt
 import inspect
+from collections import namedtuple
 from numbers import Number
 from scipy.integrate import odeint,solve_ivp,quad
 from scipy.interpolate import lagrange
@@ -288,17 +290,35 @@ def numsol_symbolical_system(
         parameter_dict,
         func_set
     )
-    res=solve_ivp(
-        num_rhs,
-        y0=start_values,
-        t_span=(t_min, t_max),
-        first_step=(t_max-t_min)/2 if t_max != t_min else None, # prevent the solver from overreaching (scipy bug)
-        t_eval=times,
-        #rtol=1e-08,
-        #atol=1e-08,
-        dense_output=dense_output,
-        #method='LSODA'
-    )
+
+    old_settings = np.geterr()    
+    np.seterr(all='raise')
+    try:
+        res=solve_ivp(
+            num_rhs,
+            y0=start_values,
+            t_span=(t_min, t_max),
+            first_step=(t_max-t_min)/2 if t_max != t_min else None, # prevent the solver from overreaching (scipy bug)
+            t_eval=times,
+            #rtol=1e-08,
+            #atol=1e-08,
+            dense_output=dense_output,
+            #method='LSODA'
+        )
+    except FloatingPointError:
+        res=solve_ivp(
+            num_rhs,
+            y0=start_values,
+            t_span=(t_min, t_max),
+            first_step=(t_max-t_min)/2 if t_max != t_min else None, # prevent the solver from overreaching (scipy bug)
+            t_eval=times,
+            #rtol=1e-08,
+            #atol=1e-08,
+            dense_output=dense_output,
+            method='LSODA'
+        )
+    np.seterr(**old_settings)
+
     values=res.y.transpose() # adapt to the old interface since our code at the moment expects it
     if dense_output:
         return (values,res.sol)
@@ -524,7 +544,6 @@ def x_phi_ode(
     phi_block_name='phi'
     ):
     nr_pools=srm.nr_pools
-    nq=nr_pools*nr_pools
     sol_rhs=numerical_rhs(
          srm.state_vector
         ,srm.time_symbol
@@ -538,6 +557,8 @@ def x_phi_ode(
     B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
     
     def Phi_rhs(t,x,Phi_2d):
+        #print('B', B_func(t, *x))
+        #print('Phi_2d', Phi_2d)
         return np.matmul(B_func(t,*x),Phi_2d)
 
     #create the additional startvector for the components of Phi
@@ -558,7 +579,6 @@ def x_phi_ode(
 def x_phi_ivp(srm, parameter_dict, func_dict,start_x,x_block_name='x',phi_block_name='phi'):
         
     nr_pools=srm.nr_pools
-    nq=nr_pools*nr_pools
     sol_rhs=numerical_rhs(
          srm.state_vector
         ,srm.time_symbol
@@ -680,9 +700,30 @@ def array_integration_by_values(
     return vec.reshape(test.shape)
 
 @lru_cache(maxsize=None)
-def phi_tmax(s,t_max,blockIvp,phi_block_name):
-    phi_func=blockIvp.block_solve_functions(t_span=(s,t_max))[phi_block_name]
+def phi_tmax(s,t_max,block_ode,x_s,x_block_name,phi_block_name):
+    x_s=np.array(x_s)
+    nr_pools=len(x_s)
+
+    start_Phi_2d=np.identity(nr_pools)
+    start_blocks=[
+        (x_block_name,x_s),
+        (phi_block_name,start_Phi_2d) 
+    ]
+    blivp=block_ode.blockIvp( start_blocks )
+    phi_func=blivp.block_solve_functions(t_span=(s,t_max))[phi_block_name]
     return phi_func
+
+@lru_cache(maxsize=None)
+def phi_tmax_2(s,t,x0,rhs):
+    #print('s,t,x0,rhs')
+    #print(s,t,x0,rhs)
+    nr_pools=len(x0)
+    start_Phi_1d=np.identity(nr_pools).flatten()
+    return solve_ivp(
+        rhs,
+        y0=np.concatenate((x0,start_Phi_1d)),
+        t_span=(s,t)
+    ).y[nr_pools:,-1].reshape((nr_pools,nr_pools))
 
 def phi_ind(tau,cache_times):
     """
@@ -703,3 +744,130 @@ def end_time_from_phi_ind(ind,cache_times):
 
 def start_time_from_phi_ind(ind,cache_times):
     return cache_times[ind]
+
+@lru_cache(maxsize=10000)
+#@lru_cache(maxsize=None)
+def listProd(ms:Tuple[Tuple],nr_pools:int)->np.ndarray:
+    """
+    Fast bisecting matrix multiplication for a tuple of tuples with cache
+    The tuples are interpreted as matrices. 
+    """
+    l=len(ms)
+    if l == 1:
+        return np.array(ms[0]).reshape(nr_pools,nr_pools)
+    
+    l1 = l // 2
+    #l1 = l -1
+    #l1 = 1
+    return np.matmul(listProd(ms[:l1],nr_pools), listProd(ms[l1:],nr_pools))
+
+##@lru_cache(maxsize=None)
+#def listProd_reduce(ms:Tuple[Tuple],nr_pools:int)->np.ndarray:
+#    mats=[np.array(m).reshape(nr_pools,nr_pools) for m in ms]
+#    return reduce(
+#            lambda acc,el:np.matmul(acc,el)
+#            ,mats
+#            ,np.identity(nr_pools)
+#    )
+
+
+_CacheStats = namedtuple(
+    'CacheStats',
+    ['hitss', 'missess', 'currsizes', 'hitting_ratios']
+)
+
+def custom_lru_cache_wrapper(maxsize=None, typed=False, stats=False):
+    if stats:
+        hitss =[]
+        missess = []
+        currsizes = []
+        hitting_ratios = []
+    
+    def decorating_function(user_function):
+        func = _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo)
+        def wrapper(*args, **kwargs):
+            nonlocal stats, hitss, missess, currsizes, hitting_ratios
+            
+            result = func(*args, **kwargs)
+            if stats:
+                hitss.append(func.cache_info()[0])
+                missess.append(func.cache_info()[1])
+                currsizes.append(func.cache_info()[3])
+                hitting_ratios.append(round(hitss[-1]/(hitss[-1]+missess[-1])*100.0,
+2))
+            return result
+            
+        wrapper.cache_info = func.cache_info
+        if stats:
+            def cache_stats():
+                nonlocal hitss, missess, currsizes
+                return _CacheStats(hitss, missess, currsizes, hitting_ratios)
+            
+            wrapper.cache_stats = cache_stats
+            
+            def plot_hitss():
+                nonlocal hitss
+                plt.plot(range(len(hitss)), hitss)
+                plt.show()
+                
+            wrapper.plot_hitss = plot_hitss
+            
+            def plot_hitting_ratios():
+                nonlocal hitss, hitting_ratios
+                plt.plot(
+                    range(len(hitss)),
+                    hitting_ratios
+                )
+                plt.title('Hitting ratios')
+                plt.show()
+                
+            wrapper.plot_hitting_ratios = plot_hitting_ratios
+
+            def plot_currsizes():
+                nonlocal currsizes
+                plt.plot(
+                    range(len(currsizes)),
+                    currsizes
+                )
+                plt.title('Currsizes')
+                plt.show()
+
+            wrapper.plot_currsizes = plot_currsizes
+            
+            def plot_hitting_ratios_over_currsizes():
+                nonlocal hitting_ratios, currsizes
+                plt.plot(
+                    range(len(hitting_ratios)),
+                    [hitting_ratios[i]/currsizes[i] for i in range(len(hitting_ratios))]
+                )
+                plt.title('Hitting ratios over currsizes')
+                plt.show()
+
+            wrapper.plot_hitting_ratios_over_currsizes = plot_hitting_ratios_over_currsizes   
+        
+            def plot_hitting_ratios_vs_currsizes():
+                nonlocal hitting_ratios, currsizes
+                plt.plot(
+                    currsizes,
+                    hitting_ratios
+                )
+                plt.title('Hitting ratios vs currsizes')
+                plt.show()
+
+            wrapper.plot_hitting_ratios_vs_currsizes = plot_hitting_ratios_vs_currsizes   
+        def cache_clear():
+            nonlocal hitss, missess, currsizes
+            hitss = []
+            missess = []
+            currsizes = []
+            func.cache_clear()
+
+        wrapper.cache_clear = cache_clear
+        return wrapper
+
+    return decorating_function
+
+
+
+
+
