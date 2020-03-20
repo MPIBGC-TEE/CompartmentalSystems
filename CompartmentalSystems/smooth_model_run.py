@@ -79,7 +79,6 @@ from .helpers_reservoir import (
     ,phi_ind
     ,end_time_from_phi_ind
     ,start_time_from_phi_ind
-    ,listProd
 #    ,listProd_reduce
 )
 from .BlockIvp import BlockIvp
@@ -3636,7 +3635,8 @@ class SmoothModelRun(object):
 
             if hasattr(self, '_listProd'):
                 listProd = self._listProd
-            
+            else:
+                from .helpers_reservoir import listProd
             t0_phi_ind=phi_ind(t0,cache_times)
             t_phi_ind =phi_ind( t,cache_times)
 
