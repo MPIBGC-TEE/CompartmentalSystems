@@ -790,9 +790,9 @@ def custom_lru_cache_wrapper(maxsize=None, typed=False, stats=False):
             
             result = func(*args, **kwargs)
             if stats:
-                hitss.append(func.cache_info()[0])
-                missess.append(func.cache_info()[1])
-                currsizes.append(func.cache_info()[3])
+                hitss.append(func.cache_info().hits)
+                missess.append(func.cache_info().misses)
+                currsizes.append(func.cache_info().currsize)
                 hitting_ratios.append(round(hitss[-1]/(hitss[-1]+missess[-1])*100.0,
 2))
             return result
