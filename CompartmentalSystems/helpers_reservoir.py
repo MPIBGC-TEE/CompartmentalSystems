@@ -808,6 +808,7 @@ def custom_lru_cache_wrapper(maxsize=None, typed=False, stats=False):
             def plot_hitss():
                 nonlocal hitss
                 plt.plot(range(len(hitss)), hitss)
+                plt.title('Hitss')
                 plt.show()
                 
             wrapper.plot_hitss = plot_hitss
