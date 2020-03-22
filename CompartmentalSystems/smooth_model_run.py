@@ -2803,6 +2803,7 @@ class SmoothModelRun(object):
         n = self.nr_pools
 
         if not empty and F0 is None:
+            print('HALLO')
             p0 = start_age_densities
             F0 = lambda a: np.array([quad(lambda s: p0(s)[i], 0, a)[0] 
                                         for i in range(n)])
@@ -3612,7 +3613,7 @@ class SmoothModelRun(object):
         block_ode,x_block_name,phi_block_name=self._x_phi_block_ode()
         def phi(t,s,t_max):
             x_s=tuple(solve_func(s))
-            return  phi_tmax(s,t_max,block_ode,x_s,x_block_name,phi_block_name)(t)
+            return phi_tmax(s,t_max,block_ode,x_s,x_block_name,phi_block_name)(t)
         solve_func=self.solve_func()
         
         #def phi(t,s,t_max):
@@ -3814,6 +3815,7 @@ class SmoothModelRun(object):
 
             #fixme: cut off accidental negative values
             #print('Y', a-(t-t0), p0(a-t-t0))
+            #print('smr 3818 ppp', t, t0, a, a-(t-t0))
             res = np.maximum(Phi(t, t0, p0(a-(t-t0))), 0)
             #print('ppp:', res)
             return res

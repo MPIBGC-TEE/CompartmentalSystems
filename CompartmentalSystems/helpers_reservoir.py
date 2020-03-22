@@ -710,7 +710,21 @@ def phi_tmax(s,t_max,block_ode,x_s,x_block_name,phi_block_name):
         (phi_block_name,start_Phi_2d) 
     ]
     blivp=block_ode.blockIvp( start_blocks )
-    phi_func=blivp.block_solve_functions(t_span=(s,t_max))[phi_block_name]
+    
+    old_settings = np.geterr()    
+    np.seterr(all='raise')
+    try:
+        phi_func=blivp.block_solve_functions(
+            t_span=(s,t_max),
+            method='RK45'
+        )[phi_block_name]
+    except FloatingPointError:
+        phi_func=blivp.block_solve_functions(
+            t_span=(s,t_max),
+            method='LSODA'
+        )[phi_block_name]
+    np.seterr(**old_settings)
+
     return phi_func
 
 @lru_cache(maxsize=None)
