@@ -3815,9 +3815,9 @@ class SmoothModelRun(object):
 
             #fixme: cut off accidental negative values
             #print('Y', a-(t-t0), p0(a-t-t0))
-            #print('smr 3818 ppp', t, t0, a, a-(t-t0))
+            print('smr 3818 ppp', t, t0, a, a-(t-t0))
             res = np.maximum(Phi(t, t0, p0(a-(t-t0))), 0)
-            #print('ppp:', res)
+            print('ppp:', res)
             return res
 
         return ppp
