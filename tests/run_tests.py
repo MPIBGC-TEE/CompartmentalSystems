@@ -27,7 +27,7 @@ def main():
     #p = unittest.defaultTestLoader.discover('', pattern='Pinned_Test*')
     #s.addTests(p)
     #concurrent_suite = s
-    concurrent_suite = ConcurrentTestSuite(s, fork_for_tests(64))
+    concurrent_suite = ConcurrentTestSuite(s, fork_for_tests(128))
     r = unittest.TextTestRunner()
 
     res = r.run(concurrent_suite)
