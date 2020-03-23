@@ -294,7 +294,7 @@ class TestPhi(InDirTest):
         # We compute Phi_t0(t) =Phi(t,t_0) with fixed t_0
         # This can be computed by a skew product system
         # and can be used to compute the state-transition operator 
-        as function of both time arguments
+        # as function of both time arguments
         k_0_val=1
         k_1_val=2
         x0_0=np.float(1)
