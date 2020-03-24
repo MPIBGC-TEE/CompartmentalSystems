@@ -277,17 +277,17 @@ def start_age_distributions_from_zero_initial_content(srm):
 
 def compute_fixedpoint_numerically(srm,t0,x0,parameter_dict,func_set):
     B_sym = srm.compartmental_matrix
-    u_sym=srm.external_inputs
+    u_sym = srm.external_inputs
 
     t=srm.time_symbol
      
     tup = tuple(srm.state_vector) + (t,)
-    u_func=numerical_function_from_expression(u_sym,tup,parameter_dict,func_set)
-    B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_set)
+    u_func_non_lin=numerical_function_from_expression(u_sym,tup,parameter_dict,func_set)
+    B_func_non_lin=numerical_function_from_expression(B_sym,tup,parameter_dict,func_set)
    
     # get functions of x1,...,xn by partly applying to t0 
-    B0_func=func_subs(t,Function("B")(*tup),B_func,t0)
-    u0_func=func_subs(t,Function("u")(*tup),u_func,t0)
+    B0_func=func_subs(t,Function("B")(*tup),B_func_non_lin,t0)
+    u0_func=func_subs(t,Function("u")(*tup),u_func_non_lin,t0)
 
     # build the kind of function that scipy.optimize.root expects 
     # it has to have a single vector like argument
@@ -463,11 +463,11 @@ def lapm_for_steady_state(srm,t0,parameter_dict,func_set,x0=None):
 #        pe('x_fix',locals())
 
         t=srm.time_symbol
-        tup = tuple(srm.state_vector)+(t,)
-        u_func=numerical_function_from_expression(u_sym,tup,parameter_dict,func_set)
-        B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_set)
-        B0=B_func(*x_fix,t0)
-        u0=u_func(*x_fix,t0)
+        tup = (t,) + tuple(srm.state_vector)
+        u_func_non_lin=numerical_function_from_expression(u_sym,tup,parameter_dict,func_set)
+        B_func_non_lin=numerical_function_from_expression(B_sym,tup,parameter_dict,func_set)
+        B0=B_func_non_lin(t0,*x_fix)
+        u0=u_func_non_lin(t0,*x_fix)
 
 
     B0_m=Matrix(B0) 

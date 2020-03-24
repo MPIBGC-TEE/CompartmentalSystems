@@ -50,7 +50,7 @@ def func_subs(t,Func_expr,func,t0):
     by examining the Func_expression argument.
     Args: 
         t (sympy.symbol): the symbol to be replaced by t0
-        t0 (value)      : the value the function will be applied to
+        t0 (value)      : the value to which the function will be applied
         func (function) : a python function 
         Func_exprs (sympy.Function) : An expression for an undefined Function
 
@@ -554,12 +554,12 @@ def x_phi_ode(
     
     B_sym=srm.compartmental_matrix
     tup=(srm.time_symbol,)+tuple(srm.state_vector)
-    B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
+    B_func_non_lin=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
     
     def Phi_rhs(t,x,Phi_2d):
-        #print('B', B_func(t, *x))
+        #print('B', B_func_non_lin(t, *x))
         #print('Phi_2d', Phi_2d)
-        return np.matmul(B_func(t,*x),Phi_2d)
+        return np.matmul(B_func_non_lin(t,*x),Phi_2d)
 
     #create the additional startvector for the components of Phi
     
@@ -589,10 +589,10 @@ def x_phi_ivp(srm, parameter_dict, func_dict,start_x,x_block_name='x',phi_block_
     
     B_sym=srm.compartmental_matrix
     tup=(srm.time_symbol,)+tuple(srm.state_vector)
-    B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
+    B_func_non_lin=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
     
     def Phi_rhs(t,x,Phi_1d):
-        B=B_func(t,*x)
+        B=B_func_non_lin(t,*x)
         return np.matmul(B,Phi_1d.reshape(nr_pools,nr_pools)).flatten()
 
     #create the additional startvector for the components of Phi

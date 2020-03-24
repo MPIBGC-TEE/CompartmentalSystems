@@ -196,48 +196,22 @@ class SmoothModelRun(object):
                 )  
 
 
-    # create self.B(t)
+    
+    @property
+    def B_func(self): 
+        # we inject the soltution into B to get the linearized version
+        srm=self.model
+        tup=(srm.time_symbol,)+tuple(srm.state_vector)
+        numfun=numerical_function_from_expression(srm.compartmental_matrix,tup,self.parameter_dict,self.func_set)
 
-    # in a linear model, B(t) is independent of the state_variables,
-    # consequently, we can call _B with X = 0,
-    # in a nonlinear model we would need to compute X(t) 
-    # by solving the ODE first,
-    # then plug it in --> much slower 
-    # --> influences quantiles and forward transit time computation time
-
-    # --> this should be respected by the class to which the model belongs
-    def B(self, t):
-        """Return :math:`B(t)` with :math:`B` from 
-        :math:`\\dot{x} = B\\,x+u.`
-
-        Args:
-            t (float): The time at which :math:`B` is to be evaluated.
-
-        Returns:
-            numpy.ndarray: The compartmental matrix evaluated at time ``t``.
-        """
-        if not hasattr(self, '_B'):
-            #fixme: what about a piecewise in the matrix?
-            # is this here the right place to do it??
-            cm_par = self.model.compartmental_matrix.subs(self.parameter_dict)
-            tup = tuple(self.model.state_vector)+(self.model.time_symbol.name,)
-            # cut_func_set = {key[:key.index('(')]: val 
-            #                    for key, val in self.func_set.items()}
-            cut_func_set=make_cut_func_set(self.func_set)
-            B_func = lambdify(tup, cm_par, [cut_func_set, 'numpy'])
+        # we want a function  that accepts a vector argument for x
         
-            def _B(t):
-                #print('B', t)
-                #fixme: another times cut off!
-                t = min(t, self.times[-1])
+        vec_sol_func = self.solve_func()
+        def B_func(t):
+            x = vec_sol_func(t)
+            return numfun(t,*x)
 
-                X = np.ones((self.nr_pools,)) 
-                Xt = tuple(X) + (t,)
-                return B_func(*Xt)
-
-            self._B = _B
-
-        return self._B(t)     
+        return B_func
     
     def linearize_old(self):
         """Return a linearized SmoothModelRun instance.
@@ -490,12 +464,11 @@ class SmoothModelRun(object):
         return sol_funcs
 
     #fixme: test
-    def sol_funcs(self):
-        """Return linearly interpolated solution functions.
-
+    def sol_funcs(self):#->List[Callable[float,float]]:
+        """Returns list of linearly interpolated solution functions per pool.
         Returns:
-            Python function ``f``: ``f(t)`` returns a numpy.array containing the
-            pool contents at time ``t``.
+            List of Python functions ``[f[i]]``, where ``f[i](t)`` returns 
+                pool i's content at time ``t``.
         """
         times = self.times
 
@@ -511,8 +484,10 @@ class SmoothModelRun(object):
         return [func_maker(i) for i in range(self.nr_pools)]
 
     def sol_funcs_dict_by_symbol(self):
-        """Return linearly interpolated solution functions. as a dictionary indexed by the symbols of the
-        state variables"""
+        """
+        Return linearly interpolated solution functions as a dictionary 
+        indexed by the symbols of the state variables
+        """
         #sol_funcs=self.sol_funcs()
         sol_funcs=self.sol_funcs()
         state_vector=self.model.state_vector
@@ -1138,11 +1113,10 @@ class SmoothModelRun(object):
         t0 = times[0]   
         t_max = times[-1] 
         def p_ftt_sv(a, t):
-            #print(a,t)
             # nothing leaves before t0
-            if (t+a < t0): return 0
+            if (t+a < t0): return 0.0
 
-            #fixme: for MH we might need the density ver far away...
+            #fixme: for MH we might need the density very far away...
             # we cannot compute the density if t+a is out of bounds
             if cut_off and (t+a > t_max): return np.nan
 
@@ -1150,7 +1124,7 @@ class SmoothModelRun(object):
             if sum(u) == 0: return np.nan
             if (a < 0): return 0.0
             
-            return -self.B(t+a).dot(Phi(t+a, t, u)).sum()
+            return -np.matmul(self.B_func(t+a),Phi(t+a, t, u)).sum()
 
         return p_ftt_sv
 
@@ -2813,7 +2787,7 @@ class SmoothModelRun(object):
         F = self.cumulative_pool_age_distributions_single_value(
                 start_age_densities=start_age_densities, F0=F0)
         #sol_funcs = self.solve_single_value_old()
-        vec_sol_funcs = self.solve_func()
+        vec_sol_func = self.solve_func()
 
         # find last time index such that the pool is empty --> ti
         ti = len(times)-1
@@ -2870,8 +2844,8 @@ class SmoothModelRun(object):
             p_val = p(y, t_val)[pool]
             u_val = u(t_val)[pool]
             F_vec = F(y, t_val).reshape((n,1))
-            x_vec = vec_sol_funcs(t_val).reshape((n,1))
-            B = self.B(t_val)
+            x_vec = vec_sol_func(t_val)#.reshape((n,1))
+            B = self.B_func(t_val)
 
 #            print('B', B)
 #            print('x', x_vec)
@@ -2886,8 +2860,8 @@ class SmoothModelRun(object):
             if p_val == 0:
                 raise(Error('Division by zero during quantile computation.'))
             else:
-                res = (1 + 1/p_val*(u_val*(quantile-1.0)
-                        +quantile*(B.dot(x_vec))[pool]-(B.dot(F_vec))[pool]))
+                res = 1 + 1/p_val*(u_val*(quantile-1.0)
+                        +quantile*(np.matmul(B,x_vec)[pool])-(np.matmul(B,F_vec)[pool]))
             #print('res', res)
             #print('---')
 
@@ -3026,7 +3000,7 @@ class SmoothModelRun(object):
             u_vec = u(t_val)
             F_vec = F(y, t_val).reshape((n,1))
             x_vec = vec_sol_func(t_val).reshape((n,1))
-            B = self.B(t_val)
+            B=self.B_func(t_val)
 
             #print('B', B)
             #print('x', x_vec)
@@ -3041,7 +3015,7 @@ class SmoothModelRun(object):
                 raise(Error('Division by zero during quantile computation.'))
             else:
                 res = (1 + 1/p_val*(u_vec.sum()*(quantile-1.0)+
-                            quantile*(B.dot(x_vec)).sum()-(B.dot(F_vec)).sum()))
+                            quantile*(np.matmul(B,x_vec)).sum()-(np.matmul(B,F_vec)).sum()))
             #print('res', res)
 
             last_t = t_val
@@ -3418,19 +3392,12 @@ class SmoothModelRun(object):
         # the state transition operator if the system is linear
         # to compute the state transition operator we therefore 
         # linearize along the soluion
-        sol_vals,sol_func=self.solve()
 
-        srm=self.model
 
         if not hasattr(self, '_saved_linearized_no_input_sol'):
-            tup=(srm.time_symbol,)+tuple(srm.state_vector)
-            B_func=numerical_function_from_expression(srm.compartmental_matrix,tup,self.parameter_dict,self.func_set)
+            B_func=self.B_func
             def lin_rhs(tau,x):
-                # we inject the soltution into B to get the linearized version
-                #print('tau=',tau,flush=True)
-                #print('sol_func(tau)',sol_func(tau))
-                #print('B(tau,sol(tau))',B_func(tau,*sol_func(tau)))
-                B=B_func(tau,*sol_func(tau))
+                B=B_func(tau)
                 # and then apply it to the actual  vector x to compute Phi*x
                 return np.matmul(B,x).flatten()
     
@@ -3557,13 +3524,9 @@ class SmoothModelRun(object):
             ,func_dict
         )
         
-        B_sym=srm.compartmental_matrix
-        tup=(srm.time_symbol,)+tuple(srm.state_vector)
-        B_func=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
-
         def Phi_rhs(t,x,Phi_1d):
-            B=B_func(t,*x)
-            return np.matmul(B,Phi_1d.reshape(nr_pools,nr_pools)).flatten()
+            B = self.B_func(t)
+            return np.matmul(B, Phi_1d.reshape(nr_pools, nr_pools)).flatten()
 
         #create the additional startvector for the components of Phi
         start_Phi_1d=np.identity(nr_pools).flatten()
@@ -3815,7 +3778,7 @@ class SmoothModelRun(object):
 
             #fixme: cut off accidental negative values
             #print('Y', a-(t-t0), p0(a-t-t0))
-            print('smr 3818 ppp', t, t0, a, a-(t-t0))
+            print('smr 3821 ppp', t, t0, a, a-(t-t0))
             res = np.maximum(Phi(t, t0, p0(a-(t-t0))), 0)
             print('ppp:', res)
             return res
@@ -4169,7 +4132,9 @@ class SmoothModelRun(object):
 
 
     def _FTTT_lambda_bar_R_left_limit(self, t0):
-        B0 = self.B(t0)
+        #B0 = self.B(t0)
+        vec_sol_funcs = self.solve_func()
+        B0 = self.B_func(t0)
         iv = Matrix(self.start_values) # column vector
         z = (-ones(1, len(iv))*B0).T
         
@@ -4304,7 +4269,7 @@ class SmoothModelRun(object):
                 for i in range(nr_pools):
                     if i != j:
                         def integrand(s):
-                            return self.B(s)[i,j] * x(s)[j]
+                            return self.B_func(s)[i,j] * x(s)[j]
     
                         F[i,j] = quad(integrand, a, b)[0]
                         
@@ -4318,7 +4283,7 @@ class SmoothModelRun(object):
             r = np.zeros((nr_pools,))
             for j in range(nr_pools):
                 def integrand(s):
-                    return -sum(self.B(s)[:,j]) * x(s)[j]
+                    return -sum(self.B_func(s)[:,j]) * x(s)[j]
     
                 r[j] = quad(integrand, a, b)[0]
     
