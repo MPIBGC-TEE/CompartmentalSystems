@@ -7,9 +7,9 @@ def custom_solve_ivp(fun, t_span, y0 , **kwargs):
 
     t_min, t_max = t_span
     
-    old_settings = np.geterr()    
-    # fixme mm: write a contexmanager for np.seterr
-    np.seterr(all='raise')
+#    old_settings = np.geterr()    
+#    print(old_settings)
+#    np.seterr(all='raise')
     def f(method):
         return solve_ivp(
              fun=fun
@@ -21,13 +21,15 @@ def custom_solve_ivp(fun, t_span, y0 , **kwargs):
             ,first_step=(t_max-t_min)/2 if t_max != t_min else None
             ,**kwargs
         )
-    try:
-        #sol_obj = f(method='RK45')
-        sol_obj = f(method='BDF')
-    except FloatingPointError:
-        sol_obj = f(method='LSODA')
+    #try:
+    sol_obj = f(method='RK45')
+    #sol_obj = f(method='RK23')
+    #sol_obj = f(method='Radau')
+    #sol_obj = f(method='BDF')
+    #except FloatingPointError:
+    #    sol_obj = f(method='LSODA')
     
-    np.seterr(**old_settings)
+#    np.seterr(**old_settings)
 
     return sol_obj
 
@@ -176,56 +178,54 @@ class BlockIvp:
             raise Exception("There is no block with this name")
 
         
-    def block_solve(self,t_span,method="RK45",first_step=None,**kwargs):
+    def block_solve(self, t_span, first_step=None, **kwargs):
         # fixme:
         # This will be the new solve 
         # returns a dict of the block solutions (either values or functions depending on the "dense_output" keyword 
         # of solve_ivp
-        sol_obj=custom_solve_ivp(
-                 fun=self.rhs
-                ,t_span=t_span
-                ,y0=self.start_vec
-                ,dense_output=False
+        sol_obj = custom_solve_ivp(
+                 fun          = self.rhs
+                ,t_span       = t_span
+                ,y0           = self.start_vec
+                ,dense_output = False
                 ,**kwargs
             )
 
-
-
         def block_sol(block_name):
-            start_array=self.array_dict[block_name]
-            lower,upper=self.index_dict[block_name] 
-            time_dim_size=sol_obj.y.shape[-1]
-            tmp=sol_obj.y[lower:upper,:].reshape(
+            start_array = self.array_dict[block_name]
+            lower, upper = self.index_dict[block_name] 
+            time_dim_size = sol_obj.y.shape[-1]
+            tmp = sol_obj.y[lower:upper,:].reshape(
                     start_array.shape+(time_dim_size,)
             )        
             # solve_ivp returns an array that has time as the LAST dimension
             # but our code usually expects it as FIRST dimension 
             # Therefore we move the last axis to the first position
-            return np.moveaxis(tmp,-1,0)
+            return np.moveaxis(tmp, -1, 0)
 
-        block_names=self.index_dict.keys()
-        block_sols={ block_name:block_sol(block_name) for block_name in block_names}
+        block_names = self.index_dict.keys()
+        block_sols = {block_name: block_sol(block_name) for block_name in block_names}
         #print(block_sols)
         return block_sols
 
-    def block_solve_functions(self,t_span,method='RK45',first_step=None,**kwargs):
-        sol_obj=custom_solve_ivp(
-                 fun=self.rhs
-                ,t_span=t_span
-                ,y0=self.start_vec
-                ,dense_output=True
+    def block_solve_functions(self, t_span, first_step=None, **kwargs):
+        sol_obj = custom_solve_ivp(
+                 fun          = self.rhs
+                ,t_span       = t_span
+                ,y0           = self.start_vec
+                ,dense_output = True
                 ,**kwargs
             )
         def block_sol(block_name):
-            start_array=self.array_dict[block_name]
-            lower,upper=self.index_dict[block_name] 
+            start_array = self.array_dict[block_name]
+            lower, upper = self.index_dict[block_name] 
             def func(times):
-                tmp= sol_obj.sol(times)[lower:upper]
-                if isinstance(times,np.ndarray): 
-                    res=tmp.reshape(
+                tmp =  sol_obj.sol(times)[lower:upper]
+                if isinstance(times, np.ndarray): 
+                    res = tmp.reshape(
                             (start_array.shape+(len(times),))
                     ) 
-                    return np.moveaxis(res,-1,0)
+                    return np.moveaxis(res, -1, 0)
                 else:
                     return tmp.reshape(start_array.shape)
             
@@ -234,8 +234,8 @@ class BlockIvp:
             # Therefore we move the last axis to the first position
             return func
 
-        block_names=self.index_dict.keys()
-        block_sols={ block_name:block_sol(block_name) for block_name in block_names}
+        block_names = self.index_dict.keys()
+        block_sols = {block_name: block_sol(block_name) for block_name in block_names}
         #print(block_sols)
         return block_sols
 

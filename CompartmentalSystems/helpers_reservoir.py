@@ -162,15 +162,13 @@ def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
     expr_par=expr.subs(parameter_dict)
     ss_expr=expr_par.free_symbols
     ss_tup=set([s for s in tup])
+
     if not(ss_expr.issubset(ss_tup)):
         raise Exception("The free symbols of the expression: ${0} are not a subset of the symbols in the tuple argument:${1}".format(ss_expr,ss_tup))
 
-
-    
     cut_func_set=make_cut_func_set(func_set)
-   
 
-    expr_par=expr.subs(parameter_dict)
+    #expr_par=expr.subs(parameter_dict)
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
     return expr_func
 
@@ -192,7 +190,6 @@ def numerical_rhs(
     # 
     def num_rhs(t,X):
         Fval = FL(t,*X)
-#        print(t)
         return Fval.reshape(X.shape,)
 
     return num_rhs    
@@ -209,7 +206,6 @@ def numerical_rhs_old(state_vector, time_symbol, rhs,
     # 2.) Write a wrapper that transformes Matrices numpy.ndarrays and accepts array instead of the separate arguments for the states)
     # 
     def num_rhs(X,t):
-#        print(t)
         Fval = FL(*X,t)
         return Fval.reshape(X.shape,)
 
@@ -278,7 +274,6 @@ def numsol_symbolical_system(
         ,times
         ,dense_output
     ):
-
     nr_pools = len(state_vector)
     t_min=times[0]
     t_max=times[-1]
@@ -710,30 +705,18 @@ def array_integration_by_values(
     return vec.reshape(test.shape)
 
 @lru_cache(maxsize=None)
-def phi_tmax(s,t_max,block_ode,x_s,x_block_name,phi_block_name):
-    x_s=np.array(x_s)
-    nr_pools=len(x_s)
+def phi_tmax(s, t_max, block_ode, x_s, x_block_name, phi_block_name):
+    x_s = np.array(x_s)
+    nr_pools = len(x_s)
 
-    start_Phi_2d=np.identity(nr_pools)
-    start_blocks=[
-        (x_block_name,x_s),
-        (phi_block_name,start_Phi_2d) 
+    start_Phi_2d = np.identity(nr_pools)
+    start_blocks = [
+        (x_block_name, x_s),
+        (phi_block_name, start_Phi_2d) 
     ]
-    blivp=block_ode.blockIvp( start_blocks )
+    blivp = block_ode.blockIvp(start_blocks)
     
-    old_settings = np.geterr()    
-    np.seterr(all='raise')
-    try:
-        phi_func=blivp.block_solve_functions(
-            t_span=(s,t_max),
-            method='RK45'
-        )[phi_block_name]
-    except FloatingPointError:
-        phi_func=blivp.block_solve_functions(
-            t_span=(s,t_max),
-            method='LSODA'
-        )[phi_block_name]
-    np.seterr(**old_settings)
+    phi_func = blivp.block_solve_functions(t_span=(s, t_max))[phi_block_name]
 
     return phi_func
 

@@ -1694,8 +1694,12 @@ class TestSmoothModelRun(unittest.TestCase):
         smr = SmoothModelRun(srm, {}, start_values, times)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
-        
-        a_star = smr.system_age_distribution_quantiles_by_ode(0.5, start_age_densities=start_age_densities)
+        #F0 = lambda s: (1-np.exp(-s))*start_values
+        a_star = smr.system_age_distribution_quantiles_by_ode(
+            0.5, 
+            start_age_densities=start_age_densities,
+            #F0 = F0
+        )
         
         self.assertTrue(np.allclose(a_star, np.log(2),rtol=1e-3))
 

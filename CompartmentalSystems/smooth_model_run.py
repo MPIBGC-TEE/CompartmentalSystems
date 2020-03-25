@@ -567,9 +567,9 @@ class SmoothModelRun(object):
         """
         if self._external_input_vector_func is None:
             t0 = self.times[0]
-            # cut off inputs until t0
+            # cut off inputs until t0 (exclusive)
             if cut_off:
-                t_valid = lambda t: True if ((t0<t) and 
+                t_valid = lambda t: True if ((t0<=t) and 
                                 (t<=self.times[-1])) else False
             else:
                 t_valid = lambda t: True
@@ -3014,6 +3014,8 @@ class SmoothModelRun(object):
             #print('B', B)
             #print('x', x_vec)
             #print('B*x', B.dot(x_vec))
+            #print('y', y)
+            #print('t', t_val)
             #print('p', p_val)
             #print('u', u_vec)
             #print('F', F_vec)
