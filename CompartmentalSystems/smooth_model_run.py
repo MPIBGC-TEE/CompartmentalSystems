@@ -42,7 +42,7 @@ import scipy.linalg
 from scipy.linalg import inv
 from numpy.linalg import pinv
 from scipy.special import factorial
-from scipy.integrate import odeint, quad , solve_ivp
+from scipy.integrate import odeint, quad 
 from scipy.interpolate import interp1d, UnivariateSpline
 from scipy.optimize import newton, brentq, minimize
 
@@ -81,7 +81,7 @@ from .helpers_reservoir import (
     ,start_time_from_phi_ind
 #    ,listProd_reduce
 )
-from .BlockIvp import BlockIvp
+from .BlockIvp import BlockIvp, custom_solve_ivp
 from .Cache import Cache
 
 class Error(Exception):
@@ -2869,7 +2869,16 @@ class SmoothModelRun(object):
             last_res = res
             return res
 
-        short_res = odeint(rhs, sv, times, atol=tol, mxstep=10000)
+        #short_res = odeint(rhs, sv, times, atol=tol, mxstep=10000)
+        rhs2 = lambda t_val, y: rhs(y, t_val)
+        short_res = custom_solve_ivp(
+            fun    = rhs2,
+            y0     = np.array([sv]).reshape(1,),
+            t_span = (times[0], times[-1]),
+            t_eval = times,
+            atol   = tol
+        ).y
+        short_res = np.rollaxis(short_res, -1, 0)
 
         pb.close()
 
@@ -3022,7 +3031,17 @@ class SmoothModelRun(object):
             last_res = res
             return res
 
-        short_res = odeint(rhs, sv, times, atol=tol, mxstep=10000)
+        #short_res = odeint(rhs, sv, times, atol=tol, mxstep=10000)
+        rhs2 = lambda t_val, y: rhs(y, t_val)
+        short_res = custom_solve_ivp(
+            fun    = rhs2,
+            y0     = np.array([sv]).reshape(1,),
+            t_span = (times[0], times[-1]),
+            t_eval = times,
+            atol   = tol,
+        ).y
+        short_res = np.rollaxis(short_res, -1, 0)
+
         pb.close()
 
         res = np.ndarray((len(original_times),))
@@ -3408,11 +3427,18 @@ class SmoothModelRun(object):
                 if abs(s-t) < 1e-14: 
                     return np.array(start_vector)
                 sv = np.array(start_vector).reshape((self.nr_pools,))
-                sol_obj=solve_ivp(
-                    lin_rhs
+                #sol_obj=solve_ivp(
+                #    lin_rhs
+                #    ,y0=sv
+                #    ,t_span=(s,t)
+                #    ,first_step=(t-s)/2 if t!=s else None
+                #    #,method='LSODA'
+                #)
+                sol_obj=custom_solve_ivp(
+                    fun=lin_rhs
                     ,y0=sv
                     ,t_span=(s,t)
-                    ,first_step=(t-s)/2 if t!=s else None
+                    #,first_step=(t-s)/2 if t!=s else None
                     #,method='LSODA'
                 )
                 values=sol_obj.y
@@ -4041,6 +4067,8 @@ class SmoothModelRun(object):
 
 
     def _FTTT_lambda_bar_S(self, start, end):
+        # for Martin Rasmussens surrogate system
+
         if (start < self.times[0]) or (end > self.times[-1]):
             raise(Error('Interval boundaries out of bounds'))
         if start > end:

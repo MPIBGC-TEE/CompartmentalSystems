@@ -31,7 +31,8 @@ def pfile_C14Atm_NH():
     return pfile
 
 
-class TestSmoothModelRun(InDirTest):
+#class TestSmoothModelRun(InDirTest):
+class TestSmoothModelRun(unittest.TestCase):
         
     def test_init(self):
         #create a valid model run complete with start ages

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import inspect
 from collections import namedtuple
 from numbers import Number
-from scipy.integrate import odeint,solve_ivp,quad
+from scipy.integrate import odeint
 from scipy.interpolate import lagrange
 from scipy.optimize import brentq
 from scipy.stats import norm
@@ -18,8 +18,9 @@ from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
 from .BlockOde import BlockOde
-from .BlockIvp import BlockIvp
+from .BlockIvp import BlockIvp, custom_solve_ivp
 #from testinfrastructure.helpers import pe
+
 
 def warning(txt):
     print('############################################')
@@ -291,39 +292,44 @@ def numsol_symbolical_system(
         func_set
     )
 
-    old_settings = np.geterr()    
-    np.seterr(all='raise')
-    try:
-        res=solve_ivp(
-            num_rhs,
-            y0=start_values,
-            t_span=(t_min, t_max),
-            first_step=(t_max-t_min)/2 if t_max != t_min else None, # prevent the solver from overreaching (scipy bug)
-            t_eval=times,
-            #rtol=1e-08,
-            #atol=1e-08,
-            dense_output=dense_output,
-            #method='LSODA'
-        )
-    except FloatingPointError:
-        res=solve_ivp(
-            num_rhs,
-            y0=start_values,
-            t_span=(t_min, t_max),
-            first_step=(t_max-t_min)/2 if t_max != t_min else None, # prevent the solver from overreaching (scipy bug)
-            t_eval=times,
-            #rtol=1e-08,
-            #atol=1e-08,
-            dense_output=dense_output,
-            method='LSODA'
-        )
-    np.seterr(**old_settings)
+    #old_settings = np.geterr()    
+    #np.seterr(all='raise')
+    #try:
+    #    res=solve_ivp(
+    #        num_rhs,
+    #        y0=start_values,
+    #        t_span=(t_min, t_max),
+    #        first_step=(t_max-t_min)/2 if t_max != t_min else None, # prevent the solver from overreaching (scipy bug)
+    #        t_eval=times,
+    #        #rtol=1e-08,
+    #        #atol=1e-08,
+    #        dense_output=dense_output,
+    #        #method='LSODA'
+    #    )
+    #except FloatingPointError:
+    #    res=solve_ivp(
+    #        num_rhs,
+    #        y0=start_values,
+    #        t_span=(t_min, t_max),
+    #        first_step=(t_max-t_min)/2 if t_max != t_min else None, # prevent the solver from overreaching (scipy bug)
+    #        t_eval=times,
+    #        #rtol=1e-08,
+    #        #atol=1e-08,
+    #        dense_output=dense_output,
+    #        method='LSODA'
+    #    )
+    #np.seterr(**old_settings)
+    res=custom_solve_ivp(
+        fun=num_rhs
+        ,y0=start_values
+        ,t_span=(t_min, t_max)
+        ,t_eval=times
+        ,dense_output=dense_output
+    )
 
-    values=res.y.transpose() # adapt to the old interface since our code at the moment expects it
-    if dense_output:
-        return (values,res.sol)
-    else:
-        return (values,None)
+    #adapt to the old interface since our code at the moment expects it
+    values = np.rollaxis(res.y,-1,0)
+    return (values,res.sol)
 
 def arrange_subplots(n):
     if n <=3:
@@ -679,7 +685,11 @@ def array_integration_by_ode(
         else:
             return f(tau).flatten()
     
-    ys= solve_ivp(rhs,y0=np.zeros(n),t_span=(a,b),method="RK45").y
+    ys= custom_solve_ivp(
+        fun=rhs
+        ,y0=np.zeros(n)
+        ,t_span=(a,b)
+    ).y
     val=ys[:,-1].reshape(test.shape)
     return val
 
@@ -733,8 +743,8 @@ def phi_tmax_2(s,t,x0,rhs):
     #print(s,t,x0,rhs)
     nr_pools=len(x0)
     start_Phi_1d=np.identity(nr_pools).flatten()
-    return solve_ivp(
-        rhs,
+    return custom_solve_ivp(
+        fun=rhs,
         y0=np.concatenate((x0,start_Phi_1d)),
         t_span=(s,t)
     ).y[nr_pools:,-1].reshape((nr_pools,nr_pools))

@@ -1,5 +1,5 @@
 from typing import Callable,Iterable,Union,Optional,List,Tuple 
-from scipy.integrate import solve_ivp
+#from scipy.integrate import solve_ivp
 import numpy as np
 from .BlockIvp import BlockIvp
 class BlockOde:

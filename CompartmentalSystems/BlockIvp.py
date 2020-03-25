@@ -1,6 +1,36 @@
 from typing import Callable,Iterable,Union,Optional,List,Tuple 
 from scipy.integrate import solve_ivp
 import numpy as np
+
+def custom_solve_ivp(fun, t_span, y0 , **kwargs):
+    dense_output = kwargs.get('dense_output', False)
+
+    t_min, t_max = t_span
+    
+    old_settings = np.geterr()    
+    # fixme mm: write a contexmanager for np.seterr
+    np.seterr(all='raise')
+    def f(method):
+        return solve_ivp(
+             fun=fun
+            ,t_span=t_span
+            ,y0=y0
+            ,method=method
+            #
+            # prevent the solver from overreaching (scipy bug)
+            ,first_step=(t_max-t_min)/2 if t_max != t_min else None
+            ,**kwargs
+        )
+    try:
+        #sol_obj = f(method='RK45')
+        sol_obj = f(method='BDF')
+    except FloatingPointError:
+        sol_obj = f(method='LSODA')
+    
+    np.seterr(**old_settings)
+
+    return sol_obj
+
 class BlockIvp:
     """Helper class to build initial value systems from functions that operate on blocks of the state_variables"""
     @classmethod
@@ -151,41 +181,21 @@ class BlockIvp:
         # This will be the new solve 
         # returns a dict of the block solutions (either values or functions depending on the "dense_output" keyword 
         # of solve_ivp
-
-        t_min,t_max=t_span
-        if first_step is None and t_min!=t_max:
-            first_step=(t_max-t_min)/2
-
-        old_settings = np.geterr()    
-        np.seterr(all='raise')
-        try:
-            complete_sol=solve_ivp(
+        sol_obj=custom_solve_ivp(
                  fun=self.rhs
                 ,t_span=t_span
                 ,y0=self.start_vec
                 ,dense_output=False
-                ,method=method
-                ,first_step=first_step
                 ,**kwargs
             )
-        except FloatingPointError:
-            complete_sol=solve_ivp(
-                 fun=self.rhs
-                ,t_span=t_span
-                ,y0=self.start_vec
-                ,dense_output=False
-                ,method='LSODA'
-                ,first_step=first_step
-                ,**kwargs
-            )
-        np.seterr(**old_settings)
+
 
 
         def block_sol(block_name):
             start_array=self.array_dict[block_name]
             lower,upper=self.index_dict[block_name] 
-            time_dim_size=complete_sol.y.shape[-1]
-            tmp=complete_sol.y[lower:upper,:].reshape(
+            time_dim_size=sol_obj.y.shape[-1]
+            tmp=sol_obj.y[lower:upper,:].reshape(
                     start_array.shape+(time_dim_size,)
             )        
             # solve_ivp returns an array that has time as the LAST dimension
@@ -199,28 +209,18 @@ class BlockIvp:
         return block_sols
 
     def block_solve_functions(self,t_span,method='RK45',first_step=None,**kwargs):
-        # fixme:
-        # This will be the new solve 
-        # returns a dict of the block solutions (either values or functions depending on the "dense_output" keyword 
-        # of solve_ivp
-        t_min,t_max=t_span
-        if first_step is None and t_min!=t_max: # prevent the solver from overreaching 
-            first_step=(t_max-t_min)/2
-
-        complete_sol=solve_ivp(
-             fun=self.rhs
-            ,t_span=t_span
-            ,y0=self.start_vec
-            ,dense_output=True
-            ,method=method
-            ,first_step=first_step
-            ,**kwargs
-        )
+        sol_obj=custom_solve_ivp(
+                 fun=self.rhs
+                ,t_span=t_span
+                ,y0=self.start_vec
+                ,dense_output=True
+                ,**kwargs
+            )
         def block_sol(block_name):
             start_array=self.array_dict[block_name]
             lower,upper=self.index_dict[block_name] 
             def func(times):
-                tmp= complete_sol.sol(times)[lower:upper]
+                tmp= sol_obj.sol(times)[lower:upper]
                 if isinstance(times,np.ndarray): 
                     res=tmp.reshape(
                             (start_array.shape+(len(times),))
