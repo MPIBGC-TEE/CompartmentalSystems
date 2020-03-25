@@ -4,12 +4,9 @@ import numpy as np
 
 def custom_solve_ivp(fun, t_span, y0 , **kwargs):
     dense_output = kwargs.get('dense_output', False)
-
+    method = kwargs.get('method', 'Radau')
     t_min, t_max = t_span
     
-#    old_settings = np.geterr()    
-#    print(old_settings)
-#    np.seterr(all='raise')
     def f(method):
         return solve_ivp(
              fun=fun
@@ -19,18 +16,19 @@ def custom_solve_ivp(fun, t_span, y0 , **kwargs):
             #
             # prevent the solver from overreaching (scipy bug)
             ,first_step=(t_max-t_min)/2 if t_max != t_min else None
+            #,max_step=1
             ,**kwargs
         )
-    #try:
-    sol_obj = f(method='RK45')
+    sol_obj = f(method=method)
+    #sol_obj = f(method='RK45')
     #sol_obj = f(method='RK23')
     #sol_obj = f(method='Radau')
     #sol_obj = f(method='BDF')
-    #except FloatingPointError:
-    #    sol_obj = f(method='LSODA')
-    
-#    np.seterr(**old_settings)
+    #sol_obj = f(method='LSODA')
 
+    #print('status', sol_obj.status)
+    #print('message', sol_obj.message)
+    #print('success', sol_obj.success)
     return sol_obj
 
 class BlockIvp:
