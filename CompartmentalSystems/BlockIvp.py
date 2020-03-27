@@ -2,33 +2,35 @@ from typing import Callable,Iterable,Union,Optional,List,Tuple
 from scipy.integrate import solve_ivp
 import numpy as np
 
-def custom_solve_ivp(fun, t_span, y0 , **kwargs):
-    dense_output = kwargs.get('dense_output', False)
-    method = kwargs.get('method', 'Radau')
-    t_min, t_max = t_span
-    
-    def f(method):
-        return solve_ivp(
-             fun=fun
-            ,t_span=t_span
-            ,y0=y0
-            ,method=method
-            #
-            # prevent the solver from overreaching (scipy bug)
-            ,first_step=(t_max-t_min)/2 if t_max != t_min else None
-            #,max_step=1
-            ,**kwargs
-        )
-    sol_obj = f(method=method)
-    #sol_obj = f(method='RK45')
-    #sol_obj = f(method='RK23')
-    #sol_obj = f(method='Radau')
-    #sol_obj = f(method='BDF')
-    #sol_obj = f(method='LSODA')
+def custom_solve_ivp(fun, t_span, y0, **kwargs):
+    if 'dense_output' not in kwargs.keys():
+        kwargs['dense_output'] = False
 
-    #print('status', sol_obj.status)
-    #print('message', sol_obj.message)
-    #print('success', sol_obj.success)
+    if 'method' not in kwargs.keys():
+        kwargs['method'] = 'Radau'
+        #kwargs['method'] = 'RK45'
+        #kwargs['method'] = 'BDF'
+        #kwargs['method'] = 'LSODA'
+    
+    t_min, t_max = t_span
+    sol_obj = solve_ivp(
+         fun=fun
+        ,t_span=t_span
+        ,y0=y0
+        #
+        # prevent the solver from overreaching (scipy bug)
+        ,first_step=(t_max-t_min)/2 if t_max != t_min else None
+        #,max_step=10
+        #,rtol=1e-06
+        ,**kwargs
+    )
+
+    if not sol_obj.success:
+        msg = "ODE solver '{}' failed with ".format(kwargs['method'])
+        msg += "status {} and ".format(sol_obj.status)
+        msg += "message '{}'".format(sol_obj.message)
+        raise(ValueError(msg))
+
     return sol_obj
 
 class BlockIvp:
@@ -135,40 +137,40 @@ class BlockIvp:
         indices=[0]+[ sum(sizes[:(i+1)]) for i in range(nb)]
         def rhs(t,X):
             vecBlockDict={block_names[i]: X[indices[i]:indices[i+1]] for i in range(nb)}
-            blockDict={name:vecBlock.reshape(start_block_dict[name].shape) for name,vecBlock in vecBlockDict.items()}
+            blockDict={name: vecBlock.reshape(start_block_dict[name].shape) for name, vecBlock in vecBlockDict.items()}
             blockDict[time_str]=t
 
-            arg_lists=[ [blockDict[name] for name in f[1]] for f in functions]
-            vecResults=[ functions[i][0]( *arg_lists[i] ).flatten()  for i in range(nb)]
+            arg_lists=[[blockDict[name] for name in f[1]] for f in functions]
+            vecResults=[functions[i][0](*arg_lists[i]).flatten() for i in range(nb)]
             return np.concatenate(vecResults)#.reshape(X.shape)
         
         return rhs
 
     def __init__(
              self
-            ,time_str       : str
-            ,start_blocks   : List[ Tuple[str,np.ndarray] ]
-            ,functions      : List[ Tuple[Callable,List[str]]]
+            ,time_str    : str
+            ,start_blocks: List[Tuple[str,np.ndarray]]
+            ,functions   : List[Tuple[Callable,List[str]]]
         ):
         
-        self.array_dict={tup[0]:tup[1] for tup in start_blocks}
-        self.time_str=time_str
-        names           =[sb[0]   for sb in start_blocks]
-        start_arrays    =[sb[1]   for sb in start_blocks]
+        self.array_dict = {tup[0]: tup[1] for tup in start_blocks}
+        self.time_str   = time_str
+        names           = [sb[0] for sb in start_blocks]
+        start_arrays    = [sb[1] for sb in start_blocks]
         #
-        sizes=[a.size for a in start_arrays]
-        nb=len(sizes)
-        r=range(nb)
+        sizes = [a.size for a in start_arrays]
+        nb = len(sizes)
+        r = range(nb)
         #X_blocks=[(names[i],sizes[i]) for i in r]
-        indices=[0]+[ sum(sizes[:(i+1)]) for i in r]
-        self.index_dict={names[i]:(indices[i],indices[i+1]) for i in r}
-        self.rhs=self.build_rhs(
-             time_str  = time_str
-            ,start_blocks= start_blocks
-            ,functions = functions
+        indices = [0] + [ sum(sizes[:(i+1)]) for i in r]
+        self.index_dict = {names[i]: (indices[i], indices[i+1]) for i in r}
+        self.rhs = self.build_rhs(
+             time_str     = time_str
+            ,start_blocks = start_blocks
+            ,functions    = functions
         )
-        self.start_vec=np.concatenate([ a.flatten() for a in start_arrays])
-        self._cache=dict()
+        self.start_vec = np.concatenate([a.flatten() for a in start_arrays])
+        self._cache = dict()
         
 
     def check_block_exists(self,block_name):

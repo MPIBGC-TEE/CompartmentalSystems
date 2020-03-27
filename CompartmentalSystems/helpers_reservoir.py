@@ -166,11 +166,23 @@ def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
     if not(ss_expr.issubset(ss_tup)):
         raise Exception("The free symbols of the expression: ${0} are not a subset of the symbols in the tuple argument:${1}".format(ss_expr,ss_tup))
 
-    cut_func_set=make_cut_func_set(func_set)
-
+    cut_func_set = make_cut_func_set(func_set)
     #expr_par=expr.subs(parameter_dict)
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
-    return expr_func
+    
+    def expr_func_save_0_over_0(*val):
+        with np.errstate(invalid='raise'):
+            try:
+                res = expr_func(*val)
+            except FloatingPointError as e:
+                if e.args[0] == 'invalid value encountered in double_scalars':
+                    with np.errstate(invalid='ignore'):
+                        res = expr_func(*val)
+                        res = np.nan_to_num(res, copy=False)
+
+        return res
+
+    return expr_func_save_0_over_0
 
 def numerical_rhs(
          state_vector
@@ -189,7 +201,9 @@ def numerical_rhs(
     # 2.) Write a wrapper that transformes Matrices to numpy.ndarrays and accepts array instead of the separate arguments for the states)
     # 
     def num_rhs(t,X):
-        Fval = FL(t,*X)
+        # we need the arguments to be numpy arrays to be able to catch 0/0
+        Y = (np.array([x]) for x in X)
+        Fval = FL(t,*Y)
         return Fval.reshape(X.shape,)
 
     return num_rhs    
@@ -538,14 +552,14 @@ def const_of_t_maker(const):
     return const_arr_fun
 
 def x_phi_ode(
-    srm, 
-    parameter_dict, 
-    func_dict,
-    x_block_name='x',
-    phi_block_name='phi'
+        srm, 
+        parameter_dict, 
+        func_dict,
+        x_block_name='x',
+        phi_block_name='phi'
     ):
-    nr_pools=srm.nr_pools
-    sol_rhs=numerical_rhs(
+    nr_pools = srm.nr_pools
+    sol_rhs = numerical_rhs(
          srm.state_vector
         ,srm.time_symbol
         ,srm.F
@@ -553,14 +567,22 @@ def x_phi_ode(
         ,func_dict
     )
     
-    B_sym=srm.compartmental_matrix
-    tup=(srm.time_symbol,)+tuple(srm.state_vector)
-    B_func_non_lin=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
+    from sympy import simplify
+    B_sym = srm.compartmental_matrix
+
+    tup = (srm.time_symbol,) + tuple(srm.state_vector)
+    B_func_non_lin = numerical_function_from_expression(
+        B_sym,
+        tup,
+        parameter_dict,
+        func_dict
+    )
     
-    def Phi_rhs(t,x,Phi_2d):
+    def Phi_rhs(t, x, Phi_2d):
         #print('B', B_func_non_lin(t, *x))
         #print('Phi_2d', Phi_2d)
-        return np.matmul(B_func_non_lin(t,*x),Phi_2d)
+        res = np.matmul(B_func_non_lin(t, *x), Phi_2d)
+        return res
 
     #create the additional startvector for the components of Phi
     
@@ -720,7 +742,7 @@ def phi_tmax(s, t_max, block_ode, x_s, x_block_name, phi_block_name):
 
     return phi_func
 
-@lru_cache(maxsize=None)
+lru_cache(maxsize=None)
 def phi_tmax_2(s,t,x0,rhs):
     #print('s,t,x0,rhs')
     #print(s,t,x0,rhs)

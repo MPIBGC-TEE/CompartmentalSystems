@@ -320,7 +320,7 @@ class SmoothModelRun(object):
         #func_set = self.func_set
         #func_set.update(sol_dict)
 
-        cl=srm.__class__
+        cl = srm.__class__
         linearized_srm = cl.from_B_u(
             srm.state_vector, 
             srm.time_symbol, 
@@ -2320,7 +2320,10 @@ class SmoothModelRun(object):
         def G_sv(a, t):
             if a < t-t0: return np.zeros((n,))
             #print(t, t0, a-(t-t0))
-            return Phi(t, t0, F0(a-(t-t0)))
+            res = Phi(t, t0, F0(a-(t-t0)))
+            c = hasattr(self, '_state_transition_operator_cache')
+            #print(c, 'G', res, t, t0, a, a-(t-t0))
+            return res
 
 
         def H_sv(a, t):
@@ -2335,12 +2338,20 @@ class SmoothModelRun(object):
             x_tma = sol_funcs_array(t-a)
             # what remains from x_tma at time t
             m = Phi(t, t-a, x_tma)
+            c = hasattr(self, '_state_transition_operator_cache')
+            #print(c, 'H', m, t, a, x_t, x_tma)
             # difference is not older than t-a
             res = x_t-m
             # cut off accidental negative values
             return np.maximum(res, np.zeros(res.shape))
 
-        return lambda a, t: G_sv(a,t) + H_sv(a,t)
+        def F(a, t):
+            res = G_sv(a,t) + H_sv(a,t)
+            #print(a, t, res)
+            #print('G', G_sv(a,t), 'H', H_sv(a,t))
+            return res
+
+        return F
 
     def cumulative_system_age_distribution_single_value(self, 
             start_age_densities=None, F0=None):
@@ -2675,12 +2686,76 @@ class SmoothModelRun(object):
 
         return np.array(q_lst)
 
+    @staticmethod
+    def distribution_quantile(quantile, F, 
+            norm_const=None, start_value=None, method='brentq', tol=1e-8):
+        """Return distribution quantile (one single value) of a given distribution.
+
+        The compuation is done by computing the generalized inverse of the 
+        respective cumulative distribution using a nonlinear root search 
+        algorithm.
+
+        Args:
+            quantile (between 0 and 1): The relative share of mass that is 
+                considered to be left of the computed value. A value of ``0.5`` 
+                leads to the computation of the median of the distribution.
+            F (Python function): A function of age ``a`` that 
+                returns the mass that is of age less than or equal to ``a``.
+            norm_const (numpy.array, optional): The amount of total mass of the
+                distribution. 
+                Defaults to one assuming a given probability distribution.
+            start_value (float, optional): A start value for the nonlinear
+                search.
+                A good values is slighty greater than the solution value.
+                Defaults to zero.
+            method (str): The method that is used for finding the roots of a 
+                nonlinear function. Either 'brentq' or 'newton'. 
+                Defaults to 'brentq'.
+            tol (float): The tolerance used in the numerical root search 
+                algorithm. A low tolerance decreases the computation speed 
+                tremendously, so a value of ``1e-01`` might already be fine. 
+                Defaults to ``1e-08``.
+
+        Returns:
+            float: The computed quantile value of the distribution.
+        """
+        if start_value is None:
+            start_value = 0
+
+        if norm_const is None:
+            norm_const = 1
+
+        def quantile_f():
+            if norm_const == 0: return np.nan
+
+            def g(a):
+                if np.isnan(a): return np.nan
+                res =  quantile*norm_const - F(a)
+                #print('a:', a,'t', times[ti], 'g(a):', res, 'nc', 
+                #           norm_consts[ti], 'F', F(a, times[ti]))
+                return res
+
+            if method == 'newton': 
+                a_star = newton(g, start_value, maxiter=500, tol=tol)
+            if method == 'brentq': 
+                a_star = generalized_inverse_CDF(
+                            lambda a: F(a), 
+                           quantile*norm_const, 
+                           start_dist=start_value, 
+                           tol=tol
+                        )
+
+            return a_star
+
+        q = quantile_f()
+        return q
+
 
     ## by ode ##
 
 
     def pool_age_distributions_quantiles_by_ode(self, quantile, 
-            start_age_densities=None, F0=None, tol=1e-8):
+            start_age_densities, F0=None, **kwargs):
         """Return pool age distribution quantiles over the time grid.
 
         The compuation is done by solving an ODE for each pool as soon as the 
@@ -2692,24 +2767,17 @@ class SmoothModelRun(object):
             quantile (between 0 and 1): The relative share of mass that is 
                 considered to be left of the computed value. A value of ``0.5`` 
                 leads to the computation of the median of the distribution.
-            start_age_densities (Python function, optional): A function of age 
+            start_age_densities (Python function): A function of age 
                 that returns a ``numpy.array`` containing the masses with the 
                 given age at time :math:`t_0`. 
-                Defaults to ``None``.
-            F0 (Python function): A function of age that returns a 
+            F0 (Python function, optional): A function of age that returns a 
                 ``numpy.array`` containing the masses with age less than or 
                 equal to the age at time :math:`t_0`. 
                 Defaults to ``None``.
-            tol (float): The tolerance used in the numerical root search 
-                algorithm. A low tolerance decreases the computation speed 
-                tremendously, so a value of ``1e-01`` might already be fine. 
-                Defaults to ``1e-08``.
-
-        Raises:
-            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
-                One must be given.
                 It is fastest to provide ``F0``, otherwise ``F0`` will be 
                 computed by numerical integration of ``start_age_densities``.
+            kwargs: Passed to the ``solve_ivp``, e.g., ``method`` 
+                    or ``max_step``.
 
         Returns:
             numpy.ndarray: (len(times) x nr_pools) The computed quantile values 
@@ -2718,17 +2786,20 @@ class SmoothModelRun(object):
         res = []
         for pool in range(self.nr_pools):
             print('Pool:', pool)
-            res.append(self.pool_age_distribution_quantiles_pool_by_ode(
-                            quantile, 
-                            pool,
-                            start_age_densities=start_age_densities,
-                            F0=F0,
-                            tol=tol))
+            res.append(
+                self.pool_age_distribution_quantiles_pool_by_ode(
+                    quantile, 
+                    pool,
+                    start_age_densities,
+                    F0=F0,
+                    **kwargs
+                )
+            )
 
         return np.array(res).transpose()
 
     def pool_age_distribution_quantiles_pool_by_ode(self, quantile, pool, 
-            start_age_densities=None, F0=None, tol=1e-8):
+            start_age_densities, F0=None, **kwargs):
         """Return pool age distribution quantile over the time grid for one 
         single pool.
 
@@ -2743,24 +2814,20 @@ class SmoothModelRun(object):
                 leads to the computation of the median of the distribution.
             pool (int): The number of the pool for which the age quantile is to 
                 be computed.
-            start_age_densities (Python function, optional): A function of age 
+            start_age_densities (Python function): A function of age 
                 that returns a ``numpy.array`` containing the masses with the 
                 given age at time :math:`t_0`. 
-                Defaults to ``None``.
-            F0 (Python function): A function of age that returns a 
+            F0 (Python function, optional): A function of age that returns a 
                 ``numpy.array`` containing the masses with age less than or 
                 equal to the age at time :math:`t_0`. 
-                Defaults to ``None``.
-            tol (float): The tolerance used in the numerical root search 
-                algorithm. A low tolerance decreases the computation speed 
-                tremendously, so a value of ``1e-01`` might already be fine. 
-                Defaults to ``1e-08``.
-
-        Raises:
-            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
-                One must be given.
                 It is fastest to provide ``F0``, otherwise ``F0`` will be 
                 computed by numerical integration of ``start_age_densities``.
+                Defaults to ``None``.
+            kwargs: Passed to the ``solve_ivp``, e.g., ``method`` 
+                    or ``max_step``.
+
+        Raises:
+            Error: If ``start_age_densities`` is ``None``. 
 
         Returns:
             numpy.ndarray: (len(times)) The computed quantile values over the 
@@ -2770,8 +2837,8 @@ class SmoothModelRun(object):
         soln,_ = self.solve()
         empty = soln[0, pool] == 0
 
-        if not empty and F0 is None and start_age_densities is None:
-            raise(Error('Either F0 or start_age_densities must be given.'))
+        if not empty and start_age_densities is None:
+            raise(Error('start_age_densities must be given'))
         
         times = self.times
         n = self.nr_pools
@@ -2822,7 +2889,6 @@ class SmoothModelRun(object):
         last_res = -1.0
 
         def rhs(y, t_val):
-#            print('y', y, 't', t_val)
             y = np.float(y)
             global last_t, last_res
             
@@ -2831,6 +2897,7 @@ class SmoothModelRun(object):
             # rhs will be called twice with the same value apparently,  
             # we can use this to speed it up
             if t_val == last_t: return last_res
+            #print('y', y, 't', t_val)
 
             if (t_val <= t_max) and (t_val-t_min-pb.n > 0):
                 #pb.n = t_val-t_min
@@ -2856,17 +2923,17 @@ class SmoothModelRun(object):
 #            print(B.dot(F_vec)[pool])
 #            print(B.dot(F_vec)[1])
 
-            if p_val == 0:
-                raise(Error('Division by zero during quantile computation.'))
-            else:
-                res = 1 + 1/p_val*(u_val*(quantile-1.0)
+            #if p_val == 0:
+                #raise(Error('Division by zero during quantile computation.'))
+            #else:
+            res = 1 + 1/p_val*(u_val*(quantile-1.0)
                         +quantile*(np.matmul(B,x_vec)[pool])-(np.matmul(B,F_vec)[pool]))
             #print('res', res)
             #print('---')
 
             last_t = t_val
             last_res = res
-            return res
+            return np.array(res).reshape(1,)
 
         #short_res = odeint(rhs, sv, times, atol=tol, mxstep=10000)
         rhs2 = lambda t_val, y: rhs(y, t_val)
@@ -2875,7 +2942,7 @@ class SmoothModelRun(object):
             y0     = np.array([sv]).reshape(1,),
             t_span = (times[0], times[-1]),
             t_eval = times,
-            atol   = tol
+            **kwargs
         ).y
         short_res = np.rollaxis(short_res, -1, 0)
 
@@ -2890,7 +2957,7 @@ class SmoothModelRun(object):
 
 
     def system_age_distribution_quantiles_by_ode(self, quantile, 
-            start_age_densities=None, F0=None, tol=1e-8):
+            start_age_densities, F0=None, **kwargs):
         """Return system age distribution quantile over the time grid.
 
         The compuation is done by solving an ODE as soon as the system is 
@@ -2904,24 +2971,20 @@ class SmoothModelRun(object):
                 leads to the computation of the median of the distribution.
             pool (int): The number of the pool for which the age quantile is to 
                 be computed.
-            start_age_densities (Python function, optional): A function of age 
+            start_age_densities (Python function): A function of age 
                 that returns a ``numpy.array`` containing the masses with the 
                 given age at time :math:`t_0`. 
-                Defaults to ``None``.
-            F0 (Python function): A function of age that returns a 
+            F0 (Python function, optional): A function of age that returns a 
                 ``numpy.array`` containing the masses with age less than or 
                 equal to the age at time :math:`t_0`. 
-                Defaults to ``None``.
-            tol (float): The tolerance used in the numerical root search 
-                algorithm. A low tolerance decreases the computation speed 
-                tremendously, so a value of ``1e-01`` might already be fine. 
-                Defaults to ``1e-08``.
-
-        Raises:
-            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
-                One must be given.
                 It is fastest to provide ``F0``, otherwise ``F0`` will be 
                 computed by numerical integration of ``start_age_densities``.
+                Defaults to ``None``.
+            kwargs: Passed to the ``solve_ivp``, e.g., ``method`` 
+                    or ``max_step``.
+
+        Raises:
+            Error: If ``start_age_densities`` is ``None``. 
 
         Returns:
             numpy.ndarray: The computed quantile values over the time grid.
@@ -2933,11 +2996,11 @@ class SmoothModelRun(object):
         # we need to compute it from F0 (preferably) or start_age_density
         empty = soln[0,:].sum() == 0
 
-        if not empty and F0 is None and start_age_densities is None:
-            raise(Error('Either F0 or start_age_densities must be given.'))
+        if not empty and start_age_densities is None:
+            raise(Error('start_age_densities must be given'))
         
         times = self.times
-        original_times = times
+        original_times = copy(times)
         n = self.nr_pools
 
         if not empty and F0 is None:
@@ -2946,7 +3009,6 @@ class SmoothModelRun(object):
                                         for pool in range(n)])
         
         p = self.system_age_density_single_value(start_age_densities)
-
         u = self.external_input_vector_func()
         F = self.cumulative_pool_age_distributions_single_value(
                 start_age_densities=start_age_densities, F0=F0)
@@ -3007,7 +3069,7 @@ class SmoothModelRun(object):
             p_val = p(y, t_val)
             u_vec = u(t_val)
             F_vec = F(y, t_val).reshape((n,1))
-            x_vec = vec_sol_func(t_val).reshape((n,1))
+            x_vec = vec_sol_func(t_val)#.reshape((n,1))
             B=self.B_func(t_val)
 
             #print('B', B)
@@ -3021,16 +3083,16 @@ class SmoothModelRun(object):
             #print('B*F', B.dot(F_vec))
 
             #print(F_val/x_val.sum()*((B*x_val).sum()-(B*F_val).sum()))
-            if p_val == 0:
-                raise(Error('Division by zero during quantile computation.'))
-            else:
-                res = (1 + 1/p_val*(u_vec.sum()*(quantile-1.0)+
-                            quantile*(np.matmul(B,x_vec)).sum()-(np.matmul(B,F_vec)).sum()))
+            #if p_val == 0:
+            #    raise(Error('Division by zero during quantile computation.'))
+            #else:
+            res = 1 + 1/p_val*(u_vec.sum()*(quantile-1.0)+
+                            quantile*(np.matmul(B,x_vec)).sum()-(np.matmul(B,F_vec)).sum())
             #print('res', res)
 
             last_t = t_val
             last_res = res
-            return res
+            return np.array(res).reshape(1,)
 
         #short_res = odeint(rhs, sv, times, atol=tol, mxstep=10000)
         rhs2 = lambda t_val, y: rhs(y, t_val)
@@ -3039,7 +3101,7 @@ class SmoothModelRun(object):
             y0     = np.array([sv]).reshape(1,),
             t_span = (times[0], times[-1]),
             t_eval = times,
-            atol   = tol,
+            **kwargs
         ).y
         short_res = np.rollaxis(short_res, -1, 0)
 
@@ -3246,13 +3308,16 @@ class SmoothModelRun(object):
 
         srm = self.model
         state_vector, rhs = srm.age_moment_system(max_order)
-       
+#        print('---')
+#        print(state_vector)
+#        print(rhs)
+#        input() 
         # compute solution
         new_start_values = np.zeros((n*(max_order+1),))
-        new_start_values[:n] = np.array((start_values)).reshape((n,)) 
-        new_start_values[n:] = np.array((start_age_moments_list))
+        new_start_values[:n] = np.array(start_values)#.reshape(n,) 
+        new_start_values[n:] = np.array(start_age_moments_list)
 
-        soln,sol_func = numsol_symbolical_system(
+        soln, sol_func = numsol_symbolical_system(
             state_vector,
             srm.time_symbol,
             rhs,
@@ -3449,18 +3514,18 @@ class SmoothModelRun(object):
 
         return self._saved_linearized_no_input_sol
 
-    def build_state_transition_operator_cache(self, size = 101):
-        cache= self._compute_state_transition_operator_cache(size)
+    def build_state_transition_operator_cache(self, size=101):
+        cache = self._compute_state_transition_operator_cache(size)
         print("cache created")
 
-        self._state_transition_operator_cache= cache
+        self._state_transition_operator_cache = cache
 
-    def _compute_state_transition_operator_cache(self, size = 101):
-        x_block_name='x'
-        phi_block_name='phi'
-        nr_pools=self.nr_pools
+    def _compute_state_transition_operator_cache(self, size=101):
+        x_block_name = 'x'
+        phi_block_name = 'phi'
+        nr_pools = self.nr_pools
         
-        block_ode=x_phi_ode(
+        block_ode = x_phi_ode(
             self.model,
             self.parameter_dict,
             self.func_set,
@@ -3468,8 +3533,8 @@ class SmoothModelRun(object):
             phi_block_name
         )
         
-        start_x=self.start_values
-        start_Phi_2d=np.identity(nr_pools)
+        start_x = self.start_values
+        start_Phi_2d = np.identity(nr_pools)
         
         times = self.times
         
@@ -3478,20 +3543,20 @@ class SmoothModelRun(object):
         nc = size #number of cached matrices 
         cache_times = np.linspace(t_min, t_max, nc+1)
         # build cache
-        ca = np.zeros(( nc, nr_pools, nr_pools)) 
+        ca = np.zeros((nc, nr_pools, nr_pools)) 
        
         # fixme
         # could only be parallelized if x has been computed once before
         for tm1_index in tqdm(range(nc)):
-            t_min=cache_times[tm1_index]
-            t_max=cache_times[tm1_index+1]
-            t_span=(t_min,t_max)
-            start_blocks=[ (x_block_name,start_x), (phi_block_name,start_Phi_2d) ]
-            block_ivp=block_ode.blockIvp( start_blocks )
-            sol_blocks=block_ivp.block_solve(t_span=t_span)
-            start_x=sol_blocks[x_block_name][-1,...]
-            phi=sol_blocks[phi_block_name][-1,...]
-            ca[tm1_index,:,:]=phi
+            t_min = cache_times[tm1_index]
+            t_max = cache_times[tm1_index+1]
+            t_span = (t_min,t_max)
+            start_blocks =[(x_block_name,start_x), (phi_block_name,start_Phi_2d)]
+            block_ivp = block_ode.blockIvp(start_blocks)
+            sol_blocks = block_ivp.block_solve(t_span=t_span)
+            start_x = sol_blocks[x_block_name][-1,...]
+            phi = sol_blocks[phi_block_name][-1,...]
+            ca[tm1_index,:,:] = phi
         
         from .Cache import Cache
         return Cache(cache_times,ca,self.myhash())

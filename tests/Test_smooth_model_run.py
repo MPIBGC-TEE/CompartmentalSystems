@@ -1608,6 +1608,26 @@ class TestSmoothModelRun(unittest.TestCase):
         self.assertTrue(np.allclose(a_star_brentq[:,1], ref, equal_nan=True))
 
     
+    def test_distribution_quantile(self):
+        F = lambda a: 1-np.exp(-a)
+        q = SmoothModelRun.distribution_quantile(
+            quantile = 0.5,
+            F = F,
+            norm_const = None,
+            method = 'brentq'
+        )
+        self.assertEqual(round(q, 5), round(np.log(2), 5))   
+
+        F = lambda a: (1-np.exp(-a)) * 17
+        q = SmoothModelRun.distribution_quantile(
+            quantile = 0.5,
+            F = F,
+            norm_const = 17,
+            start_value = 1.0,
+            method = 'brentq'
+        )
+        self.assertEqual(round(q, 5), round(np.log(2), 5))   
+ 
     def test_pool_age_distributions_quantiles_by_ode(self):
         # two-dimensional
         C_0, C_1 = symbols('C_0 C_1')
@@ -1697,10 +1717,9 @@ class TestSmoothModelRun(unittest.TestCase):
         #F0 = lambda s: (1-np.exp(-s))*start_values
         a_star = smr.system_age_distribution_quantiles_by_ode(
             0.5, 
-            start_age_densities=start_age_densities,
-            #F0 = F0
+            start_age_densities,
+            max_step=0.1
         )
-        
         self.assertTrue(np.allclose(a_star, np.log(2),rtol=1e-3))
 
         # test empty start_system
@@ -1718,7 +1737,11 @@ class TestSmoothModelRun(unittest.TestCase):
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         
-        a_star = smr.system_age_distribution_quantiles_by_ode(0.5, start_age_densities=start_age_densities)
+        a_star = smr.system_age_distribution_quantiles_by_ode(
+            0.5,
+            start_age_densities,
+            max_step=0.01
+        )
         self.assertTrue(np.isnan(a_star[0]))
 
         # test steady state
@@ -1735,7 +1758,11 @@ class TestSmoothModelRun(unittest.TestCase):
         smr = SmoothModelRun(srm, {}, start_values, times)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
-        a_star = smr.system_age_distribution_quantiles_by_ode(0.5, start_age_densities=start_age_densities)
+        a_star = smr.system_age_distribution_quantiles_by_ode(
+            0.5,
+            start_age_densities,
+            max_step=0.1
+        )
         self.assertTrue(np.allclose(a_star, np.log(2)))
 
 
