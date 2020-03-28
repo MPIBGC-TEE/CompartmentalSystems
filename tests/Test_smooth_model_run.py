@@ -998,7 +998,7 @@ class TestSmoothModelRun(unittest.TestCase):
     ##### transit time density methods #####
 
 
-    def test_backward_transit_time_density_single_value(self):
+    def test_backward_transit_time_density_single_value_func(self):
         # two-dimensional
         C_0, C_1 = symbols('C_0 C_1')
         state_vector = [C_0, C_1]
@@ -1016,7 +1016,7 @@ class TestSmoothModelRun(unittest.TestCase):
         # negative ages will be cut off automatically
         start_age_densities = lambda a: np.exp(-a)*start_values
 
-        p_sv = smr.backward_transit_time_density_single_value(start_age_densities)
+        p_sv = smr.backward_transit_time_density_single_value_func(start_age_densities)
         self.assertTrue(np.allclose(p_sv(1, 1),(5+3)*np.exp(-1),rtol=1e-3 ))
 
 
@@ -1096,7 +1096,7 @@ class TestSmoothModelRun(unittest.TestCase):
         self.assertTrue(np.allclose(btt_dens, tt_ref,rtol=1e-3))
 
 
-    def test_forward_transit_time_density_single_value(self):
+    def test_forward_transit_time_density_single_value_func(self):
         # two-dimensional
         C_0, C_1 = symbols('C_0 C_1')
         state_vector = [C_0, C_1]
@@ -1114,8 +1114,10 @@ class TestSmoothModelRun(unittest.TestCase):
         # negative ages will be cut off automatically
         start_age_densities = lambda a: np.exp(-a)*start_values
 
-        p_btt_sv = smr.backward_transit_time_density_single_value(start_age_densities)
-        p_ftt_sv = smr.forward_transit_time_density_single_value()
+        p_btt_sv = smr.backward_transit_time_density_single_value_func(
+            start_age_densities
+        )
+        p_ftt_sv = smr.forward_transit_time_density_single_value_func()
     
         # no input at time t0 --> no forward transit time
         self.assertTrue(np.isnan(p_ftt_sv(1, 0)))

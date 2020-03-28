@@ -179,11 +179,12 @@ def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
                     with np.errstate(invalid='ignore'):
                         res = expr_func(*val)
                         res = np.nan_to_num(res, copy=False)
-                        print('FPE, iveids')
-                        print('val', *val)
+                        #print('FPE, iveids')
+                        #print('val', *val)
                 else:
-                    print('FPE, no iveids')
-                    print('val', *val)
+                    pass
+                    #print('FPE, no iveids')
+                    #print('val', *val)
 
         return res
 

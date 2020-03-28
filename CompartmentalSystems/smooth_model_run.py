@@ -1049,7 +1049,9 @@ class SmoothModelRun(object):
     ##### transit time density methods #####
 
 
-    def backward_transit_time_density_single_value(self, start_age_densities):
+    def backward_transit_time_density_single_value_func(
+            self, start_age_densities
+        ):
         """Return a function that returns a single value for the 
         backward transit time density.
 
@@ -1191,7 +1193,7 @@ class SmoothModelRun(object):
             numpy.array: The ``order`` th backward transit time moment over the 
             time grid.
         """
-        p_sv = self.backward_transit_time_density_single_value(
+        p_sv = self.backward_transit_time_density_single_value_func(
                     start_age_densities)
         times = self.times
         k = order
@@ -1700,6 +1702,7 @@ class SmoothModelRun(object):
             values for the pools and the system over the 
             ages-times-(pools+system) grid.
         """
+        print(filename)
         melted = load_csv(filename)
         n = self.nr_pools
         
@@ -3356,14 +3359,19 @@ class SmoothModelRun(object):
         def restrictionMaker(order):
             #pe('soln[:,:]',locals())
             restrictedSolutionArr=soln[:,:(order+1)*n]
-            def restictedSolutionFunc(t):
+            def restrictedSolutionFunc(t):
                 return sol_func(t)[:(order+1)*n]
 
-            return (restrictedSolutionArr,restictedSolutionFunc)
+            return (restrictedSolutionArr,restrictedSolutionFunc)
             
         # save all solutions for order <= max_order
         if store:
-            for order in range(max_order+1):
+            #for order in range(max_order+1):
+
+            # as it seems, if max_order is 1, the solution (order=0)
+            # is less accurate, consequently we do not save the solution
+            # for orders less than max_order separately
+            for order in [max_order]:
                 shorter_start_age_moments_list = (
                     start_age_moments_list[:order*n])
                 #print(start_age_moments_list)
@@ -3376,7 +3384,7 @@ class SmoothModelRun(object):
                 
                 #print(self._previously_computed_age_moment_sol[storage_key])
 
-        return (soln,sol_func)
+        return (soln, sol_func)
 
     def _solve_age_moment_system_old(self, max_order, 
             start_age_moments=None, times=None, start_values=None, store=True):
