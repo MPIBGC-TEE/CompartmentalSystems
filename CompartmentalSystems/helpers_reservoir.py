@@ -179,6 +179,11 @@ def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
                     with np.errstate(invalid='ignore'):
                         res = expr_func(*val)
                         res = np.nan_to_num(res, copy=False)
+                        print('FPE, iveids')
+                        print('val', *val)
+                else:
+                    print('FPE, no iveids')
+                    print('val', *val)
 
         return res
 
@@ -774,8 +779,7 @@ def end_time_from_phi_ind(ind,cache_times):
 def start_time_from_phi_ind(ind,cache_times):
     return cache_times[ind]
 
-@lru_cache(maxsize=10000)
-#@lru_cache(maxsize=None)
+@lru_cache(maxsize=None)
 def listProd(ms:Tuple[Tuple],nr_pools:int)->np.ndarray:
     """
     Fast bisecting matrix multiplication for a tuple of tuples with cache
@@ -807,7 +811,7 @@ _CacheStats = namedtuple(
 
 def custom_lru_cache_wrapper(maxsize=None, typed=False, stats=False):
     if stats:
-        hitss =[]
+        hitss = []
         missess = []
         currsizes = []
         hitting_ratios = []
@@ -841,6 +845,19 @@ def custom_lru_cache_wrapper(maxsize=None, typed=False, stats=False):
                 plt.show()
                 
             wrapper.plot_hitss = plot_hitss
+            
+            def plot_hit_history():
+                nonlocal hitss
+                plt.scatter(
+                    range(len(hitss)-1),
+                    np.diff(hitss),
+                    s=1,
+                    alpha=0.2
+                )
+                plt.title('Hit history')
+                plt.show()
+                
+            wrapper.plot_hit_history = plot_hit_history
             
             def plot_hitting_ratios():
                 nonlocal hitss, hitting_ratios

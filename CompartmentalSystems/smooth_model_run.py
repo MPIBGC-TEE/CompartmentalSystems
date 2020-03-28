@@ -852,9 +852,9 @@ class SmoothModelRun(object):
             start_age_moments (numpy.ndarray order x nr_pools, optional): 
                 Given initial age moments up to the order of interest. 
                 Can possibly be computed by :func:`moments_from_densities`. 
-                Defaults to None assuming zero initial ages.
+                Defaults to ``None`` assuming zero initial ages.
             times (numpy.array, optional): Time grid. 
-                Defaults to None and the original time grid is used.
+                Defaults to ``None`` and the original time grid is used.
 
         Returns:
             numpy.ndarray: len(times) x nr_pools.
@@ -1092,15 +1092,15 @@ class SmoothModelRun(object):
         return (pool_age_densities*r).sum(2)
 
     
-    def forward_transit_time_density_single_value(self, cut_off=True):
+    def forward_transit_time_density_single_value_func(self, cut_off=True):
         """Return a function that returns a single value for the 
         forward transit time density.
 
         Args:
-            cut_off (bool, optional): If True, no density values are going to 
+            cut_off (bool, optional): If ``True``, no density values are going to 
                 be computed after the end of the time grid, instead 
                 ``numpy.nan`` will be returned. 
-                Defaults to True and False might lead to unexpected behavior.
+                Defaults to ``True`` and ``False`` might lead to unexpected behavior.
         
         Returns:
             Python function ``p_sv``: ``p_sv(a, t)`` returns how much mass will 
@@ -1133,7 +1133,7 @@ class SmoothModelRun(object):
     # not that easy to resolve, since here we do not use age_densities,
     # instead ages is really needed to be able to make the shift or call 
     # the state_transition_operator
-    def forward_transit_time_density_func(self, cut_off=True):
+    def forward_transit_time_density_func(self, cut_off=True, times=None):
         """Return a function based on an age array for the forward transit time 
         density.
 
@@ -1142,6 +1142,8 @@ class SmoothModelRun(object):
                 be computed after the end of the time grid, instead 
                 ``numpy.nan`` will be returned. 
                 Defaults to True and False might lead to unexpected behavior.
+            times (numpy.array, optional): Time grid. 
+                Defaults to ``None`` and the original time grid is used.
         
         Returns:
             Python function ``p``: ``p(ages)`` is a ``numpy.ndarray`` 
@@ -1149,8 +1151,11 @@ class SmoothModelRun(object):
             system with the respective age when it came in at time ``t``, 
             where ``ages`` is a ``numpy.array``.
         """
-        p_sv = self.forward_transit_time_density_single_value(cut_off)
-        pp = lambda a: np.array([p_sv(a,t) for t in self.times], np.float)
+        if times is None:
+            times = self.times
+
+        p_sv = self.forward_transit_time_density_single_value_func(cut_off)
+        pp = lambda a: np.array([p_sv(a,t) for t in times], np.float)
         #p = lambda ages: np.array([pp(a) for a in ages], np.float)
         def p(ages):
             field_list = []
@@ -1351,7 +1356,9 @@ class SmoothModelRun(object):
 
         else:
             self.m = 0
-            p_sv = self.forward_transit_time_density_single_value(cut_off=False)
+            p_sv = self.forward_transit_time_density_single_value_func(
+                cut_off=False
+            )
             def f_FTT(a, t):
                 self.m += 1
                 return p_sv(a, t)
@@ -1598,21 +1605,25 @@ class SmoothModelRun(object):
         return np.array(dv_list)
 
 
-    def save_value_csv(self, filename, arr):
+    def save_value_csv(self, filename, arr, times=None):
         """Save values over the time grid to a csv file.
 
         Args:
             filename (str): The name of the csv file to be written.
             arr (numpy.array): The values to be saved over the time grid.
-
+            times (np.array, optional): The time grid to be used.
+                Defaults to ``None`` in which case the orginal time grid 
+                is used.
         Returns:
-            None.
         """
-        melted = melt(arr, [self.times])
+        if times is None:
+            times = self.times
+        
+        melted = melt(arr, [times])
         header = '"time", "value"'
         save_csv(filename, melted, header)
 
-    def save_density_csv(self, filename, density, ages, times = None):
+    def save_density_csv(self, filename, density, ages, times=None):
         """Save density values over age-time grid to csv file.
 
         Args:
@@ -1622,11 +1633,10 @@ class SmoothModelRun(object):
             ages (numpy.array): The ages corresponding to the indices in the
                 zeroth dimension of the density ndarray.
             times (numpy.array, optional): An alternative time grid to be used.
-                Defaults to None which means that the original time grid is 
+                Defaults to ``None`` which means that the original time grid is 
                 going to be used.
 
         Returns:
-            None
         """
         if times is None: times = self.times
         melted = melt(density, [ages, times])
@@ -1635,6 +1645,11 @@ class SmoothModelRun(object):
         
 
     ##### comma separated values input methods #####
+
+    
+    def load_value_csv(self, filename):
+        melted = load_csv(filename)
+        return (melted[:,1]).copy()
 
 
     ## combining pool and system structures ##
@@ -1691,7 +1706,8 @@ class SmoothModelRun(object):
         return np.ndarray((len(ages), len(self.times), n+1), 
                             buffer=(melted[:,3]).copy())
 
-    def load_density_csv(self, filename, ages):
+
+    def load_density_csv(self, filename, ages, times=None):
         """Load density values from a csv file.
 
         Attention: It is assumed that the data were saved before with the very
@@ -1701,14 +1717,19 @@ class SmoothModelRun(object):
             filename (str): The csv file from which the data are to be read.
             ages (numpy.array): The ages corresponding to the age indices. 
                 What is needed here is in fact only the length of the age grid.
-
+            times (numpy.array, optional): The ages corresponding to the time
+                indices. 
+                What is needed here is in fact only the length of the time grid.
+                Defaults to ``None`` and the original times are being used.
         Returns:
             numpy.ndarray: len(ages) x len(times) The density values over the 
             ages-times grid.
         """
+        if times is None:
+            times = self.times
+
         melted = load_csv(filename)
-        
-        return np.ndarray((len(ages), len(self.times)), 
+        return np.ndarray((len(ages), len(times)), 
                             buffer=(melted[:,2]).copy())
 
     def load_pools_and_system_value_csv(self, filename):
@@ -2428,8 +2449,8 @@ class SmoothModelRun(object):
         return F_btt_sv
 
     #fixme: test
-    def cumulative_forward_transit_time_distribution_single_value(self, 
-            cut_off=True):
+    def cumulative_forward_transit_time_distribution_single_value_func(
+            self, cut_off=True):
         """Return a function for the cumulative forward transit time 
         distribution.
 
@@ -2609,8 +2630,8 @@ class SmoothModelRun(object):
         return a_star
 
 
-    def distribution_quantiles(self, quantile, F_sv, 
-            norm_consts=None, start_values=None, method='brentq', tol=1e-8):
+    def distribution_quantiles(self, quantile, F_sv, norm_consts=None, 
+                start_values=None, times=None, method='brentq', tol=1e-8):
         """Return distribution quantiles over the time grid of a given 
         distribution.
 
@@ -2635,6 +2656,10 @@ class SmoothModelRun(object):
                 Good values are slighty greater than the solution values.
                 Must have the same length as ``times``.
                 Defaults to an array of zeros.
+            times (numpy.array, optional): Time grid on which to compute the
+                quantiles.
+                Defaults to ``None`` in which case the orignal time grid 
+                is used.
             method (str): The method that is used for finding the roots of a 
                 nonlinear function. Either 'brentq' or 'newton'. 
                 Defaults to 'brentq'.
@@ -2646,7 +2671,8 @@ class SmoothModelRun(object):
         Returns:
             numpy.array: The computed quantile values over the time grid.
         """
-        times = self.times
+        if times is None:
+            times = self.times
         
         if start_values is None:
             start_values = np.zeros((times,))
@@ -3735,7 +3761,7 @@ class SmoothModelRun(object):
                 np.identity(self.nr_pools)
             )
             #print(t0_phi_ind+1,t_phi_ind)
-            ci = listProd.cache_info()
+            #ci = listProd.cache_info()
             #print(
             #    'cache size: %05d' % ci.currsize, 
             #    'hit ratio: %02.2f' %  (ci.hits/(ci.hits+ci.misses)*100),
@@ -3883,8 +3909,8 @@ class SmoothModelRun(object):
         # for part that comes from initial value
 
         ppp = self._age_densities_1_single_value(start_age_densities)
-        pp = lambda a: np.array( [ ppp(a,t) for t in self.times ], np.float)
-        p1 = lambda ages: np.array( [ pp(a) for a in ages ], np.float)
+        pp = lambda a: np.array([ppp(a,t) for t in self.times], np.float)
+        p1 = lambda ages: np.array([pp(a) for a in ages], np.float)
         
         return p1
         
