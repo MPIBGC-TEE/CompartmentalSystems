@@ -1702,7 +1702,6 @@ class SmoothModelRun(object):
             values for the pools and the system over the 
             ages-times-(pools+system) grid.
         """
-        print(filename)
         melted = load_csv(filename)
         n = self.nr_pools
         
