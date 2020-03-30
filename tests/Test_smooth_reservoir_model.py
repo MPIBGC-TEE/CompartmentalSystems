@@ -23,6 +23,16 @@ class TestSmoothReservoirModel(InDirTest):
         pass
     
 
+    def test_JordanNormalForm(self):
+        C_0, C_1  = symbols('C_0 C_1')
+        k, k_0, k_1  = symbols('k,k_0,k_1')
+        #create a Model from a compartmental_matrix in jordan form
+        #P,J=m.jordan_form()
+        #m,P,J
+        B=Matrix([[-k,0],[1,-k]])
+        u=Matrix([[0],[0]])
+        rm2=SmoothReservoirModel.from_B_u(Matrix([C_0,C_1]),time_symbol,B,u)
+
 
     def test_from_symbolic_fluxes(self):
         # we allow the fluxes also be indexed by the state variables
