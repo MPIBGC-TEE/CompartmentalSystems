@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import inspect
 from collections import namedtuple
 from numbers import Number
-from scipy.integrate import odeint
+from scipy.integrate import odeint, quad
 from scipy.interpolate import lagrange
 from scipy.optimize import brentq
 from scipy.stats import norm
