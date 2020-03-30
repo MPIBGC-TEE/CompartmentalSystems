@@ -915,7 +915,17 @@ def custom_lru_cache_wrapper(maxsize=None, typed=False, stats=False):
 
     return decorating_function
 
-
-
-
+def print_quantile_error_statisctics(qs_ode, qs_pi):
+    print('ODE          :', ['{: 7.2f}'.format(v) for v in qs_ode])
+    print('Expl.        :', ['{: 7.2f}'.format(v) for v in qs_pi])
+    abs_err = np.abs(qs_ode-qs_pi)
+    print('abs. err.    :', ['{: 7.2f}'.format(v) for v in abs_err])
+    rel_err = np.abs(qs_ode-qs_pi)/qs_pi * 100
+    print('rel. err. (%):', ['{: 7.2f}'.format(v) for v in rel_err])
+    print()
+    print('mean abs. err    :', '{: 6.2f}'.format(abs_err.mean()))
+    print('mean rel. err (%):', '{: 6.2f}'.format(rel_err.mean()))
+    print('max. abs. err    :', '{: 6.2f}'.format(np.max(abs_err)))
+    print('max. rel. err (%):', '{: 6.2f}'.format(np.max(rel_err)))
+    print()
 

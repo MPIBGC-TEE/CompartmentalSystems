@@ -80,6 +80,7 @@ from .helpers_reservoir import (
     ,end_time_from_phi_ind
     ,start_time_from_phi_ind
 #    ,listProd_reduce
+    ,print_quantile_error_statisctics
 )
 from .BlockIvp import BlockIvp, custom_solve_ivp
 from .Cache import Cache
@@ -1118,7 +1119,8 @@ class SmoothModelRun(object):
             # nothing leaves before t0
             if (t+a < t0): return 0.0
 
-            #fixme: for MH we might need the density very far away...
+            #fixme: for Metropolis-Hastings we might need the density 
+            #very far away...
             # we cannot compute the density if t+a is out of bounds
             if cut_off and (t+a > t_max): return np.nan
 
@@ -1702,7 +1704,6 @@ class SmoothModelRun(object):
             values for the pools and the system over the 
             ages-times-(pools+system) grid.
         """
-        print(filename)
         melted = load_csv(filename)
         n = self.nr_pools
         
@@ -2768,7 +2769,7 @@ class SmoothModelRun(object):
                 a_star = newton(g, start_value, maxiter=500, tol=tol)
             if method == 'brentq': 
                 a_star = generalized_inverse_CDF(
-                            lambda a: F(a), 
+                           lambda a: F(a), 
                            quantile*norm_const, 
                            start_dist=start_value, 
                            tol=tol
@@ -2784,7 +2785,7 @@ class SmoothModelRun(object):
 
 
     def pool_age_distributions_quantiles_by_ode(self, quantile, 
-            start_age_densities, F0=None, **kwargs):
+            start_age_densities, F0=None, check_time_indices=None, **kwargs):
         """Return pool age distribution quantiles over the time grid.
 
         The compuation is done by solving an ODE for each pool as soon as the 
@@ -2805,8 +2806,13 @@ class SmoothModelRun(object):
                 Defaults to ``None``.
                 It is fastest to provide ``F0``, otherwise ``F0`` will be 
                 computed by numerical integration of ``start_age_densities``.
+            check_time_indices (numpy.array, optional): Indices of the tiime
+                 grid on which the ODE result are checked against an explicit
+                 solution computed by the pseudo-inverse of the cumulative 
+                distribution function.
+                Defaults to ``None`` in which case no check is performed.
             kwargs: Passed to the ``solve_ivp``, e.g., ``method`` 
-                    or ``max_step``.
+                or ``max_step``.
 
         Returns:
             numpy.ndarray: (len(times) x nr_pools) The computed quantile values 
@@ -2821,6 +2827,7 @@ class SmoothModelRun(object):
                     pool,
                     start_age_densities,
                     F0=F0,
+                    check_time_indices=check_time_indices,
                     **kwargs
                 )
             )
@@ -2828,7 +2835,7 @@ class SmoothModelRun(object):
         return np.array(res).transpose()
 
     def pool_age_distribution_quantiles_pool_by_ode(self, quantile, pool, 
-            start_age_densities, F0=None, **kwargs):
+            start_age_densities, F0=None, check_time_indices=None, **kwargs):
         """Return pool age distribution quantile over the time grid for one 
         single pool.
 
@@ -2852,6 +2859,11 @@ class SmoothModelRun(object):
                 It is fastest to provide ``F0``, otherwise ``F0`` will be 
                 computed by numerical integration of ``start_age_densities``.
                 Defaults to ``None``.
+            check_time_indices (numpy.array, optional): Indices of the tiime
+                 grid on which the ODE result are checked against an explicit
+                 solution computed by the pseudo-inverse of the cumulative 
+                distribution function.
+                Defaults to ``None`` in which case no check is performed.
             kwargs: Passed to the ``solve_ivp``, e.g., ``method`` 
                     or ``max_step``.
 
@@ -2981,12 +2993,26 @@ class SmoothModelRun(object):
         res[:ti] = np.nan
         res[ti:] = short_res.reshape((len(times),))
 
+        if check_time_indices is not None:
+            qs_ode = res[check_time_indices]
+            qs_pi = np.zeros_like(qs_ode)
+            for nr, ct_index in enumerate(check_time_indices):
+                qs_pi[nr] = self.__class__.distribution_quantile(
+                    quantile,
+                    lambda a: F(a, self.times[ct_index])[pool], 
+                    norm_const=soln[ct_index, pool],
+                    start_value=qs_ode[nr]
+                )
+                #, method='brentq', tol=1e-8):
+
+            print_quantile_error_statisctics(qs_ode, qs_pi)
+
         #print(res)
         return res
 
 
     def system_age_distribution_quantiles_by_ode(self, quantile, 
-            start_age_densities, F0=None, **kwargs):
+            start_age_densities, F0=None, check_time_indices=None, **kwargs):
         """Return system age distribution quantile over the time grid.
 
         The compuation is done by solving an ODE as soon as the system is 
@@ -3009,6 +3035,11 @@ class SmoothModelRun(object):
                 It is fastest to provide ``F0``, otherwise ``F0`` will be 
                 computed by numerical integration of ``start_age_densities``.
                 Defaults to ``None``.
+            check_time_indices (numpy.array, optional): Indices of the tiime
+                 grid on which the ODE result are checked against an explicit
+                 solution computed by the pseudo-inverse of the cumulative 
+                distribution function.
+                Defaults to ``None`` in which case no check is performed.
             kwargs: Passed to the ``solve_ivp``, e.g., ``method`` 
                     or ``max_step``.
 
@@ -3139,6 +3170,20 @@ class SmoothModelRun(object):
         res = np.ndarray((len(original_times),))
         res[:ti] = np.nan
         res[ti:] = short_res.reshape((len(times),))
+
+        if check_time_indices is not None:
+            qs_ode = res[check_time_indices]
+            qs_pi = np.zeros_like(qs_ode)
+            for nr, ct_index in enumerate(check_time_indices):
+                qs_pi[nr] = self.__class__.distribution_quantile(
+                    quantile,
+                    lambda a: F(a, self.times[ct_index]).sum(), 
+                    norm_const=soln[ct_index,:].sum(),
+                    start_value=qs_ode[nr]
+                )
+                #, method='brentq', tol=1e-8):
+
+            print_quantile_error_statisctics(qs_ode, qs_pi)
 
         #print(res)
         return res
@@ -3775,7 +3820,10 @@ class SmoothModelRun(object):
             #    'hit ratio: %02.2f' %  (ci.hits/(ci.hits+ci.misses)*100),
             #    'hr per cache size: %02.5f' % (ci.hits/(ci.hits+ci.misses)*100/ci.currsize)
             #)
-            return np.matmul(phi_t_t0,x).reshape((nr_pools,))
+            
+            res_cache = np.matmul(phi_t_t0,x).reshape((nr_pools,))
+            res_direct = (np.matmul(phi(t,t0,t_max=self.times[-1]), x)).reshape((nr_pools,))
+            return res_cache
 
         else:
             y_t_t0 = (np.matmul(phi(t,t0,t_max=self.times[-1]), x)).reshape((nr_pools,))
