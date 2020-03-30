@@ -1,3 +1,4 @@
+import unittest
 import numpy as np
 import time
 from collections import OrderedDict
@@ -44,7 +45,7 @@ class TestPhi(InDirTest):
         nt=200
         times = np.linspace(t_0, t_max, nt)
         smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.build_state_transition_operator_cache(size=2)
+        smr.initialize_state_transition_operator_cache(size=2)
         
 
         nr_pools=srm.nr_pools
@@ -135,7 +136,7 @@ class TestPhi(InDirTest):
             ,times=times
             ,func_set=func_dict
         )
-        smr.build_state_transition_operator_cache(size=4)
+        smr.initialize_state_transition_operator_cache(size=4)
 
         nr_pools=srm.nr_pools
 
@@ -212,6 +213,7 @@ class TestPhi(InDirTest):
         self.assertEqual(end_time_from_phi_ind(0,cache_times),cache_times[1])
         self.assertEqual(end_time_from_phi_ind(3,cache_times),cache_times[-1])
 
+    @unittest.skip('we do not compute cache_vals_anymore')
     def test_phi_cache_vals(self):
         k_0_val=1
         k_1_val=2
@@ -260,7 +262,7 @@ class TestPhi(InDirTest):
             ,func_set=func_dict
         )
         nr_pools=srm.nr_pools
-        #smr.build_state_transition_operator_cache_2b(size=3)
+        #smr.initialize _state_transition_operator_cache_2b(size=3)
         cache= smr._compute_state_transition_operator_cache(size=2)
 
         phi_2_0=cache.values[0]
@@ -468,7 +470,8 @@ class TestPhi(InDirTest):
         #ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
         #start_age_densities = lambda a: np.exp(-a)*start_values
-        smr.build_state_transition_operator_cache()
+        smr.initialize_state_transition_operator_cache()
+        
         ca = smr._state_transition_operator_cache
 
         filename = 'sto.cache'

@@ -732,7 +732,7 @@ def array_integration_by_values(
     vec=np.trapz(y=integrand_vals,x=taus)
     return vec.reshape(test.shape)
 
-@lru_cache(maxsize=None)
+#@lru_cache(maxsize=None)
 def phi_tmax(s, t_max, block_ode, x_s, x_block_name, phi_block_name):
     x_s = np.array(x_s)
     nr_pools = len(x_s)

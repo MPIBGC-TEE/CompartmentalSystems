@@ -79,8 +79,8 @@ from .helpers_reservoir import (
     ,phi_ind
     ,end_time_from_phi_ind
     ,start_time_from_phi_ind
-#    ,listProd_reduce
     ,print_quantile_error_statisctics
+    ,custom_lru_cache_wrapper
 )
 from .BlockIvp import BlockIvp, custom_solve_ivp
 from .Cache import Cache
@@ -3593,30 +3593,16 @@ class SmoothModelRun(object):
 
         return self._saved_linearized_no_input_sol
 
-    def build_state_transition_operator_cache(self, size=101):
-        cache = self._compute_state_transition_operator_cache(size)
-        print("cache created")
-
-        self._state_transition_operator_cache = cache
-
-    def _compute_state_transition_operator_cache(self, size=101):
-        x_block_name = 'x'
-        phi_block_name = 'phi'
-        nr_pools = self.nr_pools
-        
-        block_ode = x_phi_ode(
-            self.model,
-            self.parameter_dict,
-            self.func_set,
-            x_block_name,
-            phi_block_name
+    def initialize_state_transition_operator_cache(self, size=100, lru_stats=False):
+        custom_lru_cache = custom_lru_cache_wrapper(
+        	maxsize=size, # variable maxsize now for lru cache
+        	typed=False,
+        	stats=lru_stats # use custom statistics feature
         )
-        
-        start_x = self.start_values
-        start_Phi_2d = np.identity(nr_pools)
-        
+        self._cached_phi_tmax = custom_lru_cache(phi_tmax) 
+
+        nr_pools = self.nr_pools
         times = self.times
-        
         t_min = times[0]
         t_max = times[-1]
         nc = size #number of cached matrices 
@@ -3624,21 +3610,10 @@ class SmoothModelRun(object):
         # build cache
         ca = np.zeros((nc, nr_pools, nr_pools)) 
        
-        # fixme
-        # could only be parallelized if x has been computed once before
-        for tm1_index in tqdm(range(nc)):
-            t_min = cache_times[tm1_index]
-            t_max = cache_times[tm1_index+1]
-            t_span = (t_min,t_max)
-            start_blocks =[(x_block_name,start_x), (phi_block_name,start_Phi_2d)]
-            block_ivp = block_ode.blockIvp(start_blocks)
-            sol_blocks = block_ivp.block_solve(t_span=t_span)
-            start_x = sol_blocks[x_block_name][-1,...]
-            phi = sol_blocks[phi_block_name][-1,...]
-            ca[tm1_index,:,:] = phi
-        
         from .Cache import Cache
-        return Cache(cache_times,ca,self.myhash())
+        self._state_transition_operator_cache = Cache(cache_times,ca,self.myhash())
+        print("cache created")
+
 
     #fixme: 
     # this method is not yet aware of the Cache class
@@ -3745,88 +3720,91 @@ class SmoothModelRun(object):
         start_Phi_2d=np.identity(nr_pools)
         solve_func=self.solve_func()
         block_ode,x_block_name,phi_block_name=self._x_phi_block_ode()
-        def phi(t,s,t_max):
-            x_s=tuple(solve_func(s))
-            return phi_tmax(s,t_max,block_ode,x_s,x_block_name,phi_block_name)(t)
-        solve_func=self.solve_func()
+        def phi(t, s):
+            x_s=solve_func(s)
+            start_Phi_2d = np.identity(nr_pools)
+            start_blocks = [
+                (x_block_name, x_s),
+                (phi_block_name, start_Phi_2d) 
+            ]
+            blivp = block_ode.blockIvp(start_blocks)
+            
+            return blivp.block_solve(t_span=(s, t))[phi_block_name][-1,...]
+
         
-        #def phi(t,s,t_max):
-        #    return solve_ivp(
-        #        rhs,
-        #        y0=np.concatenate((solve_func(s),start_Phi_1d)),
-        #        t_span=(s,t)
-        #    ).y[nr_pools:,-1].reshape((nr_pools,nr_pools))
-        #rhs=self._x_phi_rhs if hasattr(self,'_x_phi_rhs') else self._build_x_phi_rhs()
-            
-            
-        #def phi(t,s,t_max):
-        #    return  phi_tmax_2(s,t,tuple(solve_func(s)),rhs)
 
         if hasattr(self,'_state_transition_operator_cache'):
         #if False:
+            t_max = self.times[-1]
+
             cache=self._state_transition_operator_cache
             cache_times=cache.keys
             ca=cache.values
 
-            if hasattr(self, '_listProd'):
-                listProd = self._listProd
-            else:
-                from .helpers_reservoir import listProd
+            cached_phi_tmax = getattr(self, '_cached_phi_tmax', phi_tmax)
+            #if hasattr(self, '_phi_tmax'):
+            # phi_tmax = self._phi_tmax
+            #else:
+            #    from .helpers_reservoir import phi_tmax
+
             t0_phi_ind=phi_ind(t0,cache_times)
             t_phi_ind =phi_ind( t,cache_times)
 
             # catch the corner cases where the cache is useless.
-            if (t_phi_ind-t0_phi_ind)<2:
-                return np.matmul( phi( t, t0, end_time_from_phi_ind( t_phi_ind, cache_times)), x).reshape((nr_pools,))
+            if (t_phi_ind-t0_phi_ind) < 1:
+                return np.matmul(phi(t, t0), x).reshape((nr_pools,))
 
             tm1 = end_time_from_phi_ind(t0_phi_ind,cache_times)
-            tm2 = start_time_from_phi_ind(t_phi_ind,cache_times)
+            #tm2 = start_time_from_phi_ind(t_phi_ind,cache_times)
             
         
             ## first integrate x to tm1: y = Phi(tm1, t_0)x
             if tm1 != t0:
-                phi_tm1_t0=phi(tm1,t0,t_max=tm1)
+                phi_tm1_t0=phi(tm1, t0)
             else:
                 phi_tm1_t0=start_Phi_2d
 
-            ## integrate directly from tm2 to t
-            if tm2 != t:
-               phi_t_tm2= phi( t, tm2, t_max=end_time_from_phi_ind( t_phi_ind, cache_times))
-            else:
-               phi_t_tm2=start_Phi_2d
+            ### integrate directly from tm2 to t
+            #if tm2 != t:
+            #   phi_t_tm2= phi( t, tm2, t_max=end_time_from_phi_ind( t_phi_ind, cache_times))
+            #else:
+            #   phi_t_tm2=start_Phi_2d
 
-            phi_t_t0=reduce(
-                lambda acc,cached_phi : np.matmul(cached_phi,acc),
-                [phi_tm1_t0]
-                +[
-                    listProd(
-                    #listProd_reduce(
-                        tuple([
-                            tuple(ca[i,...].flatten()) 
-                            for i in range(t0_phi_ind+1,t_phi_ind)
-                        ]),
-                        nr_pools
-                    )
-                ]
-                #+[ca[i,...] for i in range(t0_phi_ind+1,t_phi_ind)]
-                #+[phi(tm2,tm1,t_max=self.times[-1])]
-                +[phi_t_tm2],
-                np.identity(self.nr_pools)
-            )
-            #print(t0_phi_ind+1,t_phi_ind)
-            #ci = listProd.cache_info()
-            #print(
-            #    'cache size: %05d' % ci.currsize, 
-            #    'hit ratio: %02.2f' %  (ci.hits/(ci.hits+ci.misses)*100),
-            #    'hr per cache size: %02.5f' % (ci.hits/(ci.hits+ci.misses)*100/ci.currsize)
-            #)
-            
+            x_tm1 = tuple(solve_func(tm1))
+            phi_t_tm1 = cached_phi_tmax(
+                tm1,
+                t_max,
+                block_ode,
+                x_tm1,
+                x_block_name,
+                phi_block_name
+            )(t)
+            phi_t_t0 = np.matmul(phi_t_tm1, phi_tm1_t0)
+
+#            phi_t_t0=reduce(
+#                lambda acc,cached_phi : np.matmul(cached_phi,acc),
+#                [phi_tm1_t0]
+#                +[
+#                    listProd(
+#                        tuple([
+#                            tuple(ca[i,...].flatten()) 
+#                            for i in range(t0_phi_ind+1,t_phi_ind)
+#                        ]),
+#                        nr_pools
+#                    )
+#                ]
+#                +[ca[i,...] for i in range(t0_phi_ind+1,t_phi_ind)]
+#                #+[phi_tmax(t,tm1,t_max=self.times[-1])]
+#                #+[phi_t_tm2],
+#                np.identity(self.nr_pools)
+#            )
+           
             res_cache = np.matmul(phi_t_t0,x).reshape((nr_pools,))
-            res_direct = (np.matmul(phi(t,t0,t_max=self.times[-1]), x)).reshape((nr_pools,))
+            #res_direct = (np.matmul(phi(t,t0,t_max=self.times[-1]), x)).reshape((nr_pools,))
             return res_cache
 
         else:
-            y_t_t0 = (np.matmul(phi(t,t0,t_max=self.times[-1]), x)).reshape((nr_pools,))
+            y_t_t0 = (np.matmul(phi(t,t0), x)).reshape((nr_pools,))
             return y_t_t0
 
     def _state_transition_operator_for_linear_systems(self, t, t0, x):

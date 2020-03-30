@@ -1,8 +1,12 @@
 from . import picklegzip
 import numpy as np
 
-
+# Fixme: mm 03-30-2020 
+# At the moment this class is not used since we do all
+# the caching in the lru cache at runtime.  We might reuse it if we decide
+# to persist the lru cache in the future
 class Cache:
+    
     def __init__(self,keys,values,smr_hash):
         self.keys=keys
         self.values=values
