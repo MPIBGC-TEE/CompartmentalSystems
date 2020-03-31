@@ -43,11 +43,13 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([10])
         pardict = {k: 1}
         smr = SmoothModelRun(srm, pardict, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         self.assertEqual(smr.start_values, start_values)
         self.assertTrue(all(smr.times==times))
         
         #create a valid model run without start ages
         smr = SmoothModelRun(srm, pardict, start_values, times=times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         #check if we can retrieve values back 
         #(although this looks too simple there was an error here)
         self.assertEqual(smr.start_values, start_values)
@@ -138,7 +140,9 @@ class TestSmoothModelRun(unittest.TestCase):
         #start_values = np.array([A_eq/2, T_eq*2, S_eq/3])
         start_values = np.array([A_eq, T_eq, S_eq])
         nonlinear_smr = SmoothModelRun(nonlinear_srm, par_dict, start_values, times,func_set)
+        nonlinear_smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         linearized_smr = nonlinear_smr.linearize()
+        linearized_smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         nonlin_soln,_ = nonlinear_smr.solve()
         lin_soln,_ = linearized_smr.solve()
         self.assertTrue(
@@ -214,9 +218,11 @@ class TestSmoothModelRun(unittest.TestCase):
         times = np.linspace(0, 10, 101)
         start_values = np.array([A_eq/2, T_eq*2, S_eq/3])
         nonlinear_smr = SmoothModelRun(nonlinear_srm, par_dict, start_values, times)
+        nonlinear_smr.initialize_state_transition_operator_cache(lru_maxsize=None)
       
 
         linearized_smr = nonlinear_smr.linearize_old()
+        linearized_smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         nonlin_soln = nonlinear_smr.solve_old()
         lin_soln = linearized_smr.solve_old()
         self.assertTrue(
@@ -269,6 +275,7 @@ class TestSmoothModelRun(unittest.TestCase):
         u = Matrix(2, 1, [0,1])
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
         smr = SmoothModelRun(srm, parameter_dict={}, start_values=np.array([1,1]), times=np.linspace(0,1,10))
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         a_ref = np.array([[ 1.        ,  1.        ], 
                           [ 0.89483932,  0.90036872],
                           [ 0.80073741,  0.82059019],
@@ -324,6 +331,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1, 2, 3])
         times = np.linspace(t_min,t_max, 11)
         smr = SmoothModelRun(srm, parameter_dict={}, start_values=start_values, times=times,func_set=func_set)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         
         soln,_ = smr.solve()
 
@@ -346,6 +354,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5,5])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         
         u = smr.external_input_flux_funcs()
         o = smr.output_flux_funcs()
@@ -372,6 +381,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1,3])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         res=smr.output_vector_func(1)
 #        pe('res',locals())
         self.assertTrue(np.allclose(res, np.array([0.36809009, 1.10427026]),rtol=1e-3))
@@ -392,6 +402,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5,2])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         
         u = smr.external_input_vector_func()
         self.assertTrue(np.allclose(u(0.5), np.array([0.5, 0])))
@@ -413,6 +424,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1,3])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ref_a = np.array([[ 0.,          0.        ], # input starts right after t0
                           [ 1.,          1.42684416],
@@ -442,6 +454,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1])
         times = np.linspace(0, 1, 11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ref_a = np.array([[ 1.        ], 
                           [ 0.90483744],
@@ -469,6 +482,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1,3])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ref_a = np.array([[ 1.        ,  3.        ], 
                           [ 0.90483744,  2.71451231],
@@ -501,6 +515,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
@@ -573,6 +588,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
@@ -632,6 +648,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
@@ -702,6 +719,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
@@ -777,6 +795,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
         smr = SmoothModelRun(srm, parameter_dict={}, start_values=start_values, times=times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: 2*np.exp(-2*a)*start_values
 
@@ -803,6 +822,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1,1])
         times = np.linspace(0, 1, 10)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         n = smr.nr_pools
 
         def start_age_densities(a):
@@ -836,6 +856,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1,0])
         times = np.linspace(0, 1, 11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         n = smr.nr_pools
 
         def start_age_densities(a):
@@ -861,6 +882,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
         start_values = np.array([1,1])
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
         start_age_moments = smr.moments_from_densities(1, start_age_densities)
@@ -893,6 +915,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
         start_values = np.array([1,0])
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
         start_age_moments = smr.moments_from_densities(1, start_age_densities)
@@ -926,6 +949,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
         start_values = np.array([1,0])
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
         start_age_moments = smr.moments_from_densities(2, start_age_densities)
@@ -959,6 +983,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
         start_values = np.array([1,1])
         smr = SmoothModelRun(srm, {}, start_values, np.linspace(0,1,10))
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         n = smr.nr_pools
         
         order = 2
@@ -981,6 +1006,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
         start_values = np.array([0,0])
         smr = SmoothModelRun(srm, {}, start_values, np.linspace(0,1,10))
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         n = smr.nr_pools
         
         order = 1
@@ -1011,6 +1037,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
@@ -1033,6 +1060,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
@@ -1109,6 +1137,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
@@ -1141,6 +1170,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1, 2])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(0,1,3)
         # negative ages will be cut off automatically
@@ -1172,6 +1202,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
         smr = SmoothModelRun(srm, parameter_dict={}, start_values=start_values, times=times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: 2*np.exp(-2*a)*start_values
 
@@ -1197,6 +1228,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
         start_values = np.array([1,1])
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
         start_age_moments = smr.moments_from_densities(1, start_age_densities)
@@ -1228,6 +1260,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
         start_values = np.array(-B**(-1)*u)
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,11))
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a*k) / start_values*np.array(u)
         start_age_moments = smr.moments_from_densities(1, start_age_densities)
@@ -1249,6 +1282,7 @@ class TestSmoothModelRun(unittest.TestCase):
         n = 101
         times = np.linspace(0, 100, n)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         # to keep the integration time in resonable bounds we lower the required accuracy 
         mftts = smr.forward_transit_time_moment(1,epsrel=1e-2)
         self.assertTrue(np.allclose(mftts[1:], np.ones((100,)),rtol=1e-2)) 
@@ -1301,6 +1335,7 @@ class TestSmoothModelRun(unittest.TestCase):
         n = 101
         times = np.linspace(0, 100, n)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -1348,6 +1383,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1, 3])
         times = np.linspace(0,50,5)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(0,50,5)
         start_age_densities = lambda a: np.exp(-a)*start_values
@@ -1416,6 +1452,7 @@ class TestSmoothModelRun(unittest.TestCase):
     def test_plot_internal_fluxes(self):
         fig = plt.figure()
         smr = ESMR.nonlinear_two_pool()
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         smr.plot_internal_fluxes(fig)
         fig.savefig("plot.pdf")
         plt.close(fig.number)
@@ -1423,6 +1460,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
     def test_plot_external_output_fluxes(self):
         smr = ESMR.nonlinear_two_pool()
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         fig = plt.figure()
         smr.plot_external_output_fluxes(fig)
         fig.savefig("plot.pdf")
@@ -1431,6 +1469,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
     def test_plot_external_input_fluxes(self):
         smr = ESMR.nonlinear_two_pool()
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         fig = plt.figure()
         smr.plot_external_input_fluxes(fig)
         fig.savefig("plot.pdf")
@@ -1442,6 +1481,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
     def test_plot_mean_ages(self):
         smr = ESMR.critics()
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         fig = plt.figure()
         smr.plot_mean_ages(fig, np.array([0,0]))
         fig.savefig("plot.pdf")
@@ -1450,6 +1490,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
     def test_plot_mean_backward_transit_time(self):
         smr = ESMR.critics()
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
         smr.plot_mean_backward_transit_time(ax, np.array([0,0]))
@@ -1508,6 +1549,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         F_sv = smr.cumulative_pool_age_distributions_single_value(start_age_densities)
@@ -1530,6 +1572,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([0, 0])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         F_sv = smr.cumulative_pool_age_distributions_single_value(start_age_densities)
@@ -1548,6 +1591,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         F_sv = smr.cumulative_pool_age_distributions_single_value(start_age_densities)
@@ -1569,6 +1613,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         F_sv = smr.cumulative_system_age_distribution_single_value(start_age_densities)
@@ -1590,6 +1635,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1, 0])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         
@@ -1643,6 +1689,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1, 0])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         
@@ -1673,6 +1720,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1, 0])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         
@@ -1694,6 +1742,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([0, 0])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         
@@ -1714,6 +1763,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1, 0])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         #F0 = lambda s: (1-np.exp(-s))*start_values
@@ -1736,6 +1786,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([0, 0])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         
@@ -1758,6 +1809,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1, 1])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         a_star = smr.system_age_distribution_quantiles_by_ode(
@@ -1782,6 +1834,7 @@ class TestSmoothModelRun(unittest.TestCase):
         t_mid=(t_end-0)/2
         start_values = np.array([1,1])
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,t_end ,11))
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
         start_age_moments = smr.moments_from_densities(1, start_age_densities)
@@ -1828,6 +1881,7 @@ class TestSmoothModelRun(unittest.TestCase):
         t_mid=(t_end-0)/2
         start_values = np.array([1,1])
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,t_end ,11))
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
         start_age_moments = smr.moments_from_densities(1, start_age_densities)
@@ -1876,6 +1930,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
         start_values = np.array([1,1])
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
         start_age_moments = smr.moments_from_densities(1, start_age_densities)
@@ -1930,6 +1985,7 @@ class TestSmoothModelRun(unittest.TestCase):
 
         start_values = np.array([1,1])
         smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
         start_age_moments = smr.moments_from_densities(1, start_age_densities)
@@ -1985,6 +2041,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1,3])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         self.assertTrue(np.allclose(smr.output_rate_vector_at_t(1), np.array([1, 1])))
         
@@ -2002,6 +2059,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1])
         times = np.linspace(0, 1, 11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ref = np.ones((11, 1))
         self.assertTrue(np.allclose(smr.output_rate_vector, ref))
@@ -2018,6 +2076,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([1,3])
         times = np.linspace(0,1,11)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ref_a = np.array([[ 1.        ,  3.        ], 
                           [ 0.90483744,  2.71451231],
@@ -2052,6 +2111,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         p1_sv = smr._age_densities_1_single_value(start_age_densities)
@@ -2125,6 +2185,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
@@ -2201,6 +2262,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         p1 = smr._age_densities_1(start_age_densities)
@@ -2270,6 +2332,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
@@ -2343,6 +2406,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         p2_sv = smr._age_densities_2_single_value()
 
@@ -2386,6 +2450,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
@@ -2432,6 +2497,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         p2 = smr._age_densities_2()
 
@@ -2473,6 +2539,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
         smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
@@ -2538,6 +2605,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end, ts = 1950, 2000, 0.5
         times = np.linspace(start, end, int((end+ts-start)/ts))
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         soln,_ = smr.solve()
         atm_delta_14C = np.loadtxt(pfile_C14Atm_NH(), skiprows=1, delimiter=',')
         smr_14C = smr.to_14C_only(atm_delta_14C, 1)
@@ -2565,6 +2633,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end, ts = 1950, 2000, 0.5
         times = np.linspace(start, end, int((end+ts-start)/ts))
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         soln,_ = smr.solve()
         atm_delta_14C = np.loadtxt(pfile_C14Atm_NH(), skiprows=1, delimiter=',')
         smr_14C = smr.to_14C_explicit(atm_delta_14C, 1)
@@ -2595,6 +2664,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         result = smr._FTTT_lambda_bar(end, 5, np.array(u).astype(np.float64))
         self.assertTrue(np.allclose(result,1,rtol=1e-3))
@@ -2606,6 +2676,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 0.000005
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         s = (start+end)/2
         result = smr._FTTT_lambda_bar(end, s, np.array(u).astype(np.float64))
@@ -2639,6 +2710,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         #print(start_values)
         #print('soln', smr.solve())
 
@@ -2665,6 +2737,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         result = smr._FTTT_lambda_bar_S(start, end)
         self.assertEqual(round(result, 5), par_set[lamda])
@@ -2690,6 +2763,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         result = smr._FTTT_lambda_bar_R_left_limit(start)
         self.assertEqual(result, 1*1/2+1*1/2)
@@ -2701,6 +2775,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         result = smr._FTTT_lambda_bar_R_left_limit(start)
         self.assertEqual(result, (3*1/6+2*1/4)/(1/6+1/4)),
@@ -2726,6 +2801,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         s = 5
         t1 = 6
@@ -2747,6 +2823,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         s = 5
         t1 = 6
@@ -2785,6 +2862,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         s = 5
         t1 = 6
@@ -2835,6 +2913,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         s = 5
         t1 = 6
@@ -2873,6 +2952,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         # dealing with s in the middle of the interval
         s = 5
@@ -2937,6 +3017,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         t0 = 0
         t1 = 1
@@ -2964,6 +3045,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 10
         times = np.linspace(start, end, 101)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         t0 = 0
         result = np.array([smr._FTTT_conditional(t1,t0) 
@@ -2991,6 +3073,7 @@ class TestSmoothModelRun(unittest.TestCase):
         start, end = 0, 22
         times = np.linspace(start, end, 11)
         smr = SmoothModelRun(srm, par_set, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         t0 = 0
         result = np.array([smr._FTTT_conditional(t1,t0) 

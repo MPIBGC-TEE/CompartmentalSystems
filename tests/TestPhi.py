@@ -45,7 +45,7 @@ class TestPhi(InDirTest):
         nt=200
         times = np.linspace(t_0, t_max, nt)
         smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(size=2)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None, size=2)
         
 
         nr_pools=srm.nr_pools
@@ -136,7 +136,7 @@ class TestPhi(InDirTest):
             ,times=times
             ,func_set=func_dict
         )
-        smr.initialize_state_transition_operator_cache(size=4)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None, size=4)
 
         nr_pools=srm.nr_pools
 
@@ -452,6 +452,7 @@ class TestPhi(InDirTest):
         #print(smr.myhash())  
         smr.myhash()  
 
+    @unittest.skip('we do not save the STO cache to disk anymore')
     def test_save_and_load_state_transition_operator_cache(self):
         # two-dimensional
         C_0, C_1 = symbols('C_0 C_1')
@@ -470,7 +471,7 @@ class TestPhi(InDirTest):
         #ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
         #start_age_densities = lambda a: np.exp(-a)*start_values
-        smr.initialize_state_transition_operator_cache()
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None, size=100)
         
         ca = smr._state_transition_operator_cache
 

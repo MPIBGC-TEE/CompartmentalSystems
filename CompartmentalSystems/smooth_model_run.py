@@ -3593,26 +3593,24 @@ class SmoothModelRun(object):
 
         return self._saved_linearized_no_input_sol
 
-    def initialize_state_transition_operator_cache(self, size=100, lru_stats=False):
+    def initialize_state_transition_operator_cache(self, lru_maxsize, lru_stats=False, size=1):
         custom_lru_cache = custom_lru_cache_wrapper(
-        	maxsize=size, # variable maxsize now for lru cache
+        	maxsize=lru_maxsize, # variable maxsize now for lru cache
         	typed=False,
         	stats=lru_stats # use custom statistics feature
         )
-        self._cached_phi_tmax = custom_lru_cache(phi_tmax) 
-
+        
         nr_pools = self.nr_pools
         times = self.times
         t_min = times[0]
         t_max = times[-1]
         nc = size #number of cached matrices 
         cache_times = np.linspace(t_min, t_max, nc+1)
-        # build cache
         ca = np.zeros((nc, nr_pools, nr_pools)) 
-       
-        from .Cache import Cache
-        self._state_transition_operator_cache = Cache(cache_times,ca,self.myhash())
-        print("cache created")
+        cache = Cache(cache_times, ca, self.myhash())
+        cache._cached_phi_tmax = custom_lru_cache(phi_tmax) 
+
+        self._state_transition_operator_cache = cache 
 
 
     #fixme: 
@@ -3709,50 +3707,39 @@ class SmoothModelRun(object):
         #linearized_no_input_sol = self._linearized_no_input_sol
         nr_pools=self.nr_pools
         
-        #block_ode=x_phi_ode(
-        #    self.model,
-        #    self.parameter_dict,
-        #    self.func_set,
-        #    x_block_name,
-        #    phi_block_name
-        #)
         
         start_Phi_2d=np.identity(nr_pools)
         solve_func=self.solve_func()
         block_ode,x_block_name,phi_block_name=self._x_phi_block_ode()
-        def phi(t, s):
-            x_s=solve_func(s)
-            start_Phi_2d = np.identity(nr_pools)
-            start_blocks = [
-                (x_block_name, x_s),
-                (phi_block_name, start_Phi_2d) 
-            ]
-            blivp = block_ode.blockIvp(start_blocks)
-            
-            return blivp.block_solve(t_span=(s, t))[phi_block_name][-1,...]
-
         
 
         if hasattr(self,'_state_transition_operator_cache'):
-        #if False:
             t_max = self.times[-1]
 
             cache=self._state_transition_operator_cache
             cache_times=cache.keys
-            ca=cache.values
-
-            cached_phi_tmax = getattr(self, '_cached_phi_tmax', phi_tmax)
-            #if hasattr(self, '_phi_tmax'):
-            # phi_tmax = self._phi_tmax
-            #else:
-            #    from .helpers_reservoir import phi_tmax
 
             t0_phi_ind=phi_ind(t0,cache_times)
             t_phi_ind =phi_ind( t,cache_times)
+            my_phi_tmax =cache._cached_phi_tmax 
+            #phi = phi_maker(cache._cached_phi_tmax) 
+            def phi(t, s,t_max):
+                x_s=tuple(solve_func(s))
+                return my_phi_tmax(
+                    s,
+                    t_max,
+                    block_ode,
+                    x_s,
+                    x_block_name,
+                    phi_block_name
+                )(t)
 
             # catch the corner cases where the cache is useless.
             if (t_phi_ind-t0_phi_ind) < 1:
-                return np.matmul(phi(t, t0), x).reshape((nr_pools,))
+                return np.matmul(
+                    phi(t, t0,t_max=end_time_from_phi_ind(t_phi_ind,cache_times)),
+                    x
+                ).reshape((nr_pools,))
 
             tm1 = end_time_from_phi_ind(t0_phi_ind,cache_times)
             #tm2 = start_time_from_phi_ind(t_phi_ind,cache_times)
@@ -3760,52 +3747,34 @@ class SmoothModelRun(object):
         
             ## first integrate x to tm1: y = Phi(tm1, t_0)x
             if tm1 != t0:
-                phi_tm1_t0=phi(tm1, t0)
+                phi_tm1_t0=phi(tm1, t0,tm1)
             else:
                 phi_tm1_t0=start_Phi_2d
 
-            ### integrate directly from tm2 to t
-            #if tm2 != t:
-            #   phi_t_tm2= phi( t, tm2, t_max=end_time_from_phi_ind( t_phi_ind, cache_times))
-            #else:
-            #   phi_t_tm2=start_Phi_2d
 
             x_tm1 = tuple(solve_func(tm1))
-            phi_t_tm1 = cached_phi_tmax(
-                tm1,
-                t_max,
-                block_ode,
-                x_tm1,
-                x_block_name,
-                phi_block_name
-            )(t)
+            phi_t_tm1 = phi(t,tm1,self.times[-1])
             phi_t_t0 = np.matmul(phi_t_tm1, phi_tm1_t0)
 
-#            phi_t_t0=reduce(
-#                lambda acc,cached_phi : np.matmul(cached_phi,acc),
-#                [phi_tm1_t0]
-#                +[
-#                    listProd(
-#                        tuple([
-#                            tuple(ca[i,...].flatten()) 
-#                            for i in range(t0_phi_ind+1,t_phi_ind)
-#                        ]),
-#                        nr_pools
-#                    )
-#                ]
-#                +[ca[i,...] for i in range(t0_phi_ind+1,t_phi_ind)]
-#                #+[phi_tmax(t,tm1,t_max=self.times[-1])]
-#                #+[phi_t_tm2],
-#                np.identity(self.nr_pools)
-#            )
            
             res_cache = np.matmul(phi_t_t0,x).reshape((nr_pools,))
-            #res_direct = (np.matmul(phi(t,t0,t_max=self.times[-1]), x)).reshape((nr_pools,))
             return res_cache
 
         else:
+            def phi(t, s):
+                x_s=solve_func(s)
+                start_Phi_2d = np.identity(nr_pools)
+                start_blocks = [
+                    (x_block_name, x_s),
+                    (phi_block_name, start_Phi_2d) 
+                ]
+                blivp = block_ode.blockIvp(start_blocks)
+                
+                return blivp.block_solve(t_span=(s, t))[phi_block_name][-1,...]
+            #phi =phi_maker(phi_tmax) 
             y_t_t0 = (np.matmul(phi(t,t0), x)).reshape((nr_pools,))
             return y_t_t0
+
 
     def _state_transition_operator_for_linear_systems(self, t, t0, x):
         # this function could be used in a "linear smooth model run class"

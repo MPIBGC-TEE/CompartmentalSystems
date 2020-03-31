@@ -748,7 +748,7 @@ def phi_tmax(s, t_max, block_ode, x_s, x_block_name, phi_block_name):
 
     return phi_func
 
-lru_cache(maxsize=None)
+#@lru_cache(maxsize=None)
 def phi_tmax_2(s,t,x0,rhs):
     #print('s,t,x0,rhs')
     #print(s,t,x0,rhs)
