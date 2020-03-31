@@ -3704,9 +3704,7 @@ class SmoothModelRun(object):
         if t0 == t:
             return x.flatten() 
         
-        #linearized_no_input_sol = self._linearized_no_input_sol
         nr_pools=self.nr_pools
-        
         
         start_Phi_2d=np.identity(nr_pools)
         solve_func=self.solve_func()
@@ -3714,15 +3712,12 @@ class SmoothModelRun(object):
         
 
         if hasattr(self,'_state_transition_operator_cache'):
-            t_max = self.times[-1]
 
             cache=self._state_transition_operator_cache
             cache_times=cache.keys
-
             t0_phi_ind=phi_ind(t0,cache_times)
             t_phi_ind =phi_ind( t,cache_times)
             my_phi_tmax =cache._cached_phi_tmax 
-            #phi = phi_maker(cache._cached_phi_tmax) 
             def phi(t, s,t_max):
                 x_s=tuple(solve_func(s))
                 return my_phi_tmax(
@@ -3733,6 +3728,11 @@ class SmoothModelRun(object):
                     x_block_name,
                     phi_block_name
                 )(t)
+            t0_phi_ind = phi_ind(t0,cache_times)
+            t_phi_ind  = phi_ind( t,cache_times)
+
+#            t_max = self.times[-1]
+            t_max = end_time_from_phi_ind(t_phi_ind, cache_times)
 
             # catch the corner cases where the cache is useless.
             if (t_phi_ind-t0_phi_ind) < 1:
@@ -3771,7 +3771,6 @@ class SmoothModelRun(object):
                 blivp = block_ode.blockIvp(start_blocks)
                 
                 return blivp.block_solve(t_span=(s, t))[phi_block_name][-1,...]
-            #phi =phi_maker(phi_tmax) 
             y_t_t0 = (np.matmul(phi(t,t0), x)).reshape((nr_pools,))
             return y_t_t0
 
