@@ -3735,7 +3735,6 @@ class SmoothModelRun(object):
 
         if hasattr(self,'_state_transition_operator_cache'):
         #if False:
-            t_max = self.times[-1]
 
             cache=self._state_transition_operator_cache
             cache_times=cache.keys
@@ -3747,8 +3746,11 @@ class SmoothModelRun(object):
             #else:
             #    from .helpers_reservoir import phi_tmax
 
-            t0_phi_ind=phi_ind(t0,cache_times)
-            t_phi_ind =phi_ind( t,cache_times)
+            t0_phi_ind = phi_ind(t0,cache_times)
+            t_phi_ind  = phi_ind( t,cache_times)
+
+#            t_max = self.times[-1]
+            t_max = end_time_from_phi_ind(t_phi_ind, cache_times)
 
             # catch the corner cases where the cache is useless.
             if (t_phi_ind-t0_phi_ind) < 1:
