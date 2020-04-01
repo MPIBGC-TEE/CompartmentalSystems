@@ -1128,7 +1128,8 @@ class SmoothModelRun(object):
             if sum(u) == 0: return np.nan
             if (a < 0): return 0.0
             
-            return -np.matmul(self.B_func(t+a),Phi(t+a, t, u)).sum()
+            #return -np.matmul(self.B_func(t+a),Phi(t+a, t, u)).sum()
+            return -np.matmul(np.identity(n),Phi(t+a, t, u)).sum()
 
         return p_ftt_sv
 
