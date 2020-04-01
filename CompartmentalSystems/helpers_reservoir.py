@@ -760,25 +760,28 @@ def phi_tmax_2(s,t,x0,rhs):
         t_span=(s,t)
     ).y[nr_pools:,-1].reshape((nr_pools,nr_pools))
 
-def phi_ind(tau,cache_times):
-    """
-    Helper function to compute the index of the cached state transition operator values. 
-    E.g. two matrices require 3 times (0 , 2 ,4 )
-    Where Phi[0]=Phi(t=2,s=0),Phi[1]= Phi(t=4,s=2)
-    """
-    # intervals before tau
-    m=cache_times[-1] 
-    if tau==m:
-        return len(cache_times)-1-1
-    else:
-        time_ind=cache_times.searchsorted(tau,side='right')
-        return time_ind-1
+#def phi_ind(tau,cache_times):
+#    """
+#    Helper function to compute the index of the cached state transition operator values. 
+#    E.g. two matrices require 3 times (0 , 2 ,4 )
+#    Where Phi[0]=Phi(t=2,s=0),Phi[1]= Phi(t=4,s=2)
+#    """
+#    # intervals before tau
+#    m=cache_times[-1] 
+#    if tau==m:
+#        return len(cache_times)-1-1
+#    else:
+#        time_ind=cache_times.searchsorted(tau,side='right')
+#        return time_ind-1
 
-def end_time_from_phi_ind(ind,cache_times):
-    return cache_times[ind+1]
+#def end_time_from_phi_ind(ind,cache_times):
+#    if len(cache_times<2):
+#        return cache_times[-1]
+#    else:
+#        return cache_times[ind+1]
 
-def start_time_from_phi_ind(ind,cache_times):
-    return cache_times[ind]
+#def start_time_from_phi_ind(ind,cache_times):
+#    return cache_times[ind]
 
 @lru_cache(maxsize=None)
 def listProd(ms:Tuple[Tuple],nr_pools:int)->np.ndarray:

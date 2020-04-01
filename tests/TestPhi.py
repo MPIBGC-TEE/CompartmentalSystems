@@ -24,9 +24,9 @@ numerical_function_from_expression
     ,array_quad_result
     ,array_integration_by_ode
     ,array_integration_by_values
-    ,phi_ind
-    ,end_time_from_phi_ind
-    ,start_time_from_phi_ind
+    #,phi_ind
+    #,end_time_from_phi_ind
+    #,start_time_from_phi_ind
 )
 
 class TestPhi(InDirTest):
@@ -194,24 +194,25 @@ class TestPhi(InDirTest):
                                 rtol=1.5*1e-2
                             )
                         )
-
+    #@unittest.skip('phi_ind is now a method of the cache class')
     def test_phi_ind(self):
         t_0     = 0
         t_max   = 4
         cache_times= np.linspace(t_0, t_max, 5) # 3 times 
+        cache=Cache(keys=cache_times,values=None,smr_hash=None):
         # -> 2  phi matrices, 
         # Phi[0]=Phi(t=2,s=0),Phi[1]= Phi(t=4,s=2)
-        self.assertEqual(phi_ind(1,cache_times),1) 
-        self.assertEqual(phi_ind(0,cache_times),0) 
-        self.assertEqual(phi_ind(2,cache_times),2) 
-        self.assertEqual(phi_ind(2.5,cache_times),2) 
+        self.assertEqual(cache.phi_ind(1),1) 
+        self.assertEqual(cache.phi_ind(0),0) 
+        self.assertEqual(cache.phi_ind(2),2) 
+        self.assertEqual(cache.phi_ind(2.5),2) 
 
-        self.assertEqual(phi_ind(3,cache_times),3) 
-        self.assertEqual(phi_ind(4,cache_times),3) 
+        self.assertEqual(cache.phi_ind(3),3) 
+        self.assertEqual(cache.phi_ind(4),3) 
 
-        self.assertEqual(start_time_from_phi_ind(0,cache_times),cache_times[0])
-        self.assertEqual(end_time_from_phi_ind(0,cache_times),cache_times[1])
-        self.assertEqual(end_time_from_phi_ind(3,cache_times),cache_times[-1])
+        self.assertEqual(cache.start_time_from_phi_ind(0),cache_times[0])
+        self.assertEqual(cache.end_time_from_phi_ind(0),cache_times[1])
+        self.assertEqual(cache.end_time_from_phi_ind(3),cache_times[-1])
 
     @unittest.skip('we do not compute cache_vals_anymore')
     def test_phi_cache_vals(self):

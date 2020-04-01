@@ -76,9 +76,9 @@ from .helpers_reservoir import (
 	,x_phi_ode
 	,phi_tmax
 	,phi_tmax_2
-    ,phi_ind
-    ,end_time_from_phi_ind
-    ,start_time_from_phi_ind
+    #,phi_ind
+    #,end_time_from_phi_ind
+    #,start_time_from_phi_ind
     ,print_quantile_error_statisctics
     ,custom_lru_cache_wrapper
 )
@@ -1095,7 +1095,7 @@ class SmoothModelRun(object):
         return (pool_age_densities*r).sum(2)
 
     
-    def forward_transit_time_density_single_value_func(self, cut_off=True):
+    def forward_transit_time_density_single_value_func(self, cut_off=True, my_B_func=None):
         """Return a function that returns a single value for the 
         forward transit time density.
 
@@ -1109,6 +1109,9 @@ class SmoothModelRun(object):
             Python function ``p_sv``: ``p_sv(a, t)`` returns how much mass will 
             leave the system with age ``a`` when it came in at time ``t``.
         """
+        if my_B_func is None:
+            my_B_func = self.B_func
+
         n = self.nr_pools
         times = self.times
         Phi = self._state_transition_operator
@@ -1128,7 +1131,7 @@ class SmoothModelRun(object):
             if sum(u) == 0: return np.nan
             if (a < 0): return 0.0
             
-            return -np.matmul(self.B_func(t+a),Phi(t+a, t, u)).sum()
+            return -np.matmul(my_B_func(t+a),Phi(t+a, t, u)).sum()
 
         return p_ftt_sv
 
@@ -1155,10 +1158,17 @@ class SmoothModelRun(object):
             system with the respective age when it came in at time ``t``, 
             where ``ages`` is a ``numpy.array``.
         """
+        wrapper = custom_lru_cache_wrapper(maxsize=len(self.times))
+        cached_B_func = wrapper(self.B_func)
+
         if times is None:
             times = self.times
 
-        p_sv = self.forward_transit_time_density_single_value_func(cut_off)
+        p_sv = self.forward_transit_time_density_single_value_func(
+            cut_off, 
+            my_B_func=cached_B_func
+        )
+
         pp = lambda a: np.array([p_sv(a,t) for t in times], np.float)
         #p = lambda ages: np.array([pp(a) for a in ages], np.float)
         def p(ages):
@@ -3715,8 +3725,8 @@ class SmoothModelRun(object):
 
             cache=self._state_transition_operator_cache
             cache_times=cache.keys
-            t0_phi_ind=phi_ind(t0,cache_times)
-            t_phi_ind =phi_ind( t,cache_times)
+            t0_phi_ind=cache.phi_ind(t0)
+            t_phi_ind =cache.phi_ind( t)
             my_phi_tmax =cache._cached_phi_tmax 
             def phi(t, s,t_max):
                 x_s=tuple(solve_func(s))
@@ -3728,22 +3738,20 @@ class SmoothModelRun(object):
                     x_block_name,
                     phi_block_name
                 )(t)
-            t0_phi_ind = phi_ind(t0,cache_times)
-            t_phi_ind  = phi_ind( t,cache_times)
+            t0_phi_ind = cache.phi_ind(t0)
+            t_phi_ind  = cache.phi_ind( t)
 
 #            t_max = self.times[-1]
-            t_max = end_time_from_phi_ind(t_phi_ind, cache_times)
+            t_max = cache.end_time_from_phi_ind(t_phi_ind)
 
             # catch the corner cases where the cache is useless.
             if (t_phi_ind-t0_phi_ind) < 1:
                 return np.matmul(
-                    phi(t, t0,t_max=end_time_from_phi_ind(t_phi_ind,cache_times)),
+                    phi(t, t0,t_max=cache.end_time_from_phi_ind(t_phi_ind)),
                     x
                 ).reshape((nr_pools,))
 
-            tm1 = end_time_from_phi_ind(t0_phi_ind,cache_times)
-            #tm2 = start_time_from_phi_ind(t_phi_ind,cache_times)
-            
+            tm1 = cache.end_time_from_phi_ind(t0_phi_ind)
         
             ## first integrate x to tm1: y = Phi(tm1, t_0)x
             if tm1 != t0:
