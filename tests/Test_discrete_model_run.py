@@ -88,6 +88,9 @@ class TestDiscreteModelRun(InDirTest):
         times = np.linspace(1919, 2009, 901)
         parameter_dict = {}
         smr = SmoothModelRun(srm, parameter_dict, start_values, times)
+        smr.initialize_state_transition_operator_cache(
+            lru_maxsize=None
+        )
 
         dmr = DiscreteModelRun.from_SmoothModelRun(smr)
 

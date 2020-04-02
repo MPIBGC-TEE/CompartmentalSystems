@@ -16,6 +16,7 @@ from testinfrastructure.InDirTest import InDirTest
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 from CompartmentalSystems.BlockIvp import BlockIvp
+from CompartmentalSystems.Cache import Cache
 from CompartmentalSystems.helpers_reservoir import (
 numerical_function_from_expression
     ,numerical_rhs
@@ -198,8 +199,8 @@ class TestPhi(InDirTest):
     def test_phi_ind(self):
         t_0     = 0
         t_max   = 4
-        cache_times= np.linspace(t_0, t_max, 5) # 3 times 
-        cache=Cache(keys=cache_times,values=None,smr_hash=None):
+        cache_times= np.linspace(t_0, t_max, 5) # 3 intermediate times 
+        cache=Cache(keys=cache_times,values=None,smr_hash=None)
         # -> 2  phi matrices, 
         # Phi[0]=Phi(t=2,s=0),Phi[1]= Phi(t=4,s=2)
         self.assertEqual(cache.phi_ind(1),1) 

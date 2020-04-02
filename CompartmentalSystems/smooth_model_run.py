@@ -196,14 +196,18 @@ class SmoothModelRun(object):
                 +["id "+str(key)+" "+str(id(val)) for key,val in   self.parameter_dict.items()]
                 )  
 
-
     
     @property
     def B_func(self): 
         # we inject the soltution into B to get the linearized version
-        srm=self.model
-        tup=(srm.time_symbol,)+tuple(srm.state_vector)
-        numfun=numerical_function_from_expression(srm.compartmental_matrix,tup,self.parameter_dict,self.func_set)
+        srm = self.model
+        tup = (srm.time_symbol,) + tuple(srm.state_vector)
+        numfun=numerical_function_from_expression(
+            srm.compartmental_matrix,
+            tup,
+            self.parameter_dict,
+            self.func_set
+        )
 
         # we want a function  that accepts a vector argument for x
         
@@ -555,9 +559,7 @@ class SmoothModelRun(object):
     ##### fluxes as vector-valued functions #####
     
 
-    #fixme: returns a function
-    # 
-    #this function should be rewritten using the vector values solution 
+    # Note: This function could be rewritten using a vector valued input function 
     def external_input_vector_func(self, cut_off = True):
         """Return a vector valued function for the external inputs.
 
@@ -565,6 +567,12 @@ class SmoothModelRun(object):
         Returns:
             Python function ``u``: ``u(t)`` is a ``numpy.array`` containing the 
             external inputs at time ``t``.
+            Note: 
+            If the required (future) values for the input exceed the maximum of
+            times they are assumed to be zero if ``cut_off`` is ``True``.  
+            If ``cut_off`` is ``False`` then the input function is assumed to
+            be valid everywhere which might be dangerous if they are
+            extrapolated from data.
         """
         if self._external_input_vector_func is None:
             t0 = self.times[0]
@@ -590,8 +598,7 @@ class SmoothModelRun(object):
      
         return self._external_input_vector_func
 
-    # fixme: returns a vector
-    #this function should be rewritten using the vector values solution 
+ 
     def output_rate_vector_at_t(self, t):
         """Return a vector of output rates at time ``t``.
 
@@ -605,16 +612,17 @@ class SmoothModelRun(object):
         n = self.nr_pools
 
         #sol_funcs = self.sol_funcs()
-        sol_funcs = self.sol_funcs()
+        vec_sol_func = self.solve_func()
         output_vec_at_t = self.output_vector_func(t)
 
-        rate_vec = np.zeros((n,))
-        for pool in range(n):
-            x = sol_funcs[pool](t)
-            if x != 0:
-                rate_vec[pool] = output_vec_at_t[pool] / x
+#        rate_vec = np.zeros((n,))
+        x = vec_sol_func(t)
+#        for pool in range(n):
+#            #x = sol_funcs[pool](t)
+#            if x != 0:
+#                rate_vec[pool] = output_vec_at_t[pool] / x
 
-        return rate_vec
+        return np.nan_to_num(output_vec_at_t / x)
 
 
     ##### fluxes as vector over self.times #####
@@ -2843,6 +2851,27 @@ class SmoothModelRun(object):
             )
 
         return np.array(res).transpose()
+    
+    
+    def x_solve_func_skew(self):
+        
+        block_ode,x_block_name,phi_block_name=self._x_phi_block_ode()
+        s = self.times[0]
+        t = self.times[-1]
+            
+        start_Phi_2d = np.identity(self.nr_pools)
+        start_blocks = [
+            (x_block_name, self.start_values),
+            (phi_block_name, start_Phi_2d) 
+        ]
+        blivp = block_ode.blockIvp(start_blocks)
+        return blivp.block_solve_functions(
+                    t_span=(
+                        self.times[0],
+                        self.times[-1]
+                    )
+                )[x_block_name]#[-1,...]
+
 
     def pool_age_distribution_quantiles_pool_by_ode(self, quantile, pool, 
             start_age_densities, F0=None, check_time_indices=None, **kwargs):
@@ -2885,7 +2914,8 @@ class SmoothModelRun(object):
             time grid.
         """
         #soln = self.solve_old()
-        soln,_ = self.solve()
+        vec_sol_func = self.x_solve_func_skew()
+        soln = vec_sol_func(self.times)
         empty = soln[0, pool] == 0
 
         if not empty and start_age_densities is None:
@@ -2904,7 +2934,7 @@ class SmoothModelRun(object):
         F = self.cumulative_pool_age_distributions_single_value(
                 start_age_densities=start_age_densities, F0=F0)
         #sol_funcs = self.solve_single_value_old()
-        vec_sol_func = self.solve_func()
+        #vec_sol_func = self.solve_func()
 
         # find last time index such that the pool is empty --> ti
         ti = len(times)-1
@@ -3060,7 +3090,9 @@ class SmoothModelRun(object):
             numpy.ndarray: The computed quantile values over the time grid.
         """
         #soln = self.solve_old()
-        soln,_ = self.solve()
+        #soln,_ = self.solve()
+        vec_sol_func = self.x_solve_func_skew()
+        soln = vec_sol_func(self.times)
         # check if system is empty at the beginning,
         # if so, then we use 0 as start value, otherwise
         # we need to compute it from F0 (preferably) or start_age_density
@@ -3083,7 +3115,7 @@ class SmoothModelRun(object):
         F = self.cumulative_pool_age_distributions_single_value(
                 start_age_densities=start_age_densities, F0=F0)
         #sol_funcs = self.solve_single_value_old()
-        vec_sol_func = self.solve_func()
+        #vec_sol_func = self.solve_func()
 
         # find last time index such that the system is empty --> ti
         ti = len(times)-1
@@ -3357,7 +3389,10 @@ class SmoothModelRun(object):
     def _solve_age_moment_system(self, max_order, 
             start_age_moments=None, times=None, start_values=None, store=True):
         # this function caches the interpolation function instead of the values
-        #store = True
+        
+        #if max_order < 1:
+        #    raise(ValueError("For numerical consistency we use the age moment system only for order >=1 (mean). Use solve instead!"))
+
         if not ((times is None) and (start_values is None)): store = False
 
         if times is None: 
@@ -3421,10 +3456,15 @@ class SmoothModelRun(object):
             
         # save all solutions for order <= max_order
         if store:
-            #for order in range(max_order+1):
+            # as it seems, if max_order is > 0, the solution (solved with
+            # max_order=0) is sligthly different from the part of first part
+            # of the higher order system that corresponds als to the solution.
+            # The difference is very small ( ~1e-5 ), but big
+            # enough to cause numerical problems in functions depending on
+            # the consistency of the solution and the state transition
+            # operator.
 
-            # as it seems, if max_order is 1, the solution (order=0)
-            # is less accurate, consequently we do not save the solution
+            #consequently we do not save the solution
             # for orders less than max_order separately
             for order in [max_order]:
                 shorter_start_age_moments_list = (
@@ -3614,9 +3654,8 @@ class SmoothModelRun(object):
         times = self.times
         t_min = times[0]
         t_max = times[-1]
-        nc = size #number of cached matrices 
-        cache_times = np.linspace(t_min, t_max, nc+1)
-        ca = np.zeros((nc, nr_pools, nr_pools)) 
+        cache_times = np.linspace(t_min, t_max, size+1)
+        ca = np.zeros((size, nr_pools, nr_pools)) 
         cache = Cache(cache_times, ca, self.myhash())
         cache._cached_phi_tmax = custom_lru_cache(phi_tmax) 
 
@@ -3664,34 +3703,36 @@ class SmoothModelRun(object):
             )   
         )
 
-    def _build_x_phi_rhs(self):
-        nr_pools=self.nr_pools
-        srm=self.model
-        parameter_dict=self.parameter_dict
-        func_dict=self.func_set
+    #def _build_x_phi_rhs(self):
+    #    nr_pools=self.nr_pools
+    #    srm=self.model
+    #    parameter_dict=self.parameter_dict
+    #    func_dict=self.func_set
 
-        sol_rhs=numerical_rhs(
-             srm.state_vector
-            ,srm.time_symbol
-            ,srm.F
-            ,parameter_dict
-            ,func_dict
-        )
-        
-        def Phi_rhs(t,x,Phi_1d):
-            B = self.B_func(t)
-            return np.matmul(B, Phi_1d.reshape(nr_pools, nr_pools)).flatten()
+    #    sol_rhs=numerical_rhs(
+    #         srm.state_vector
+    #        ,srm.time_symbol
+    #        ,srm.F
+    #        ,parameter_dict
+    #        ,func_dict
+    #    )
+    #    
+    #    def Phi_rhs(t,x,Phi_1d):
+    #        B = self.B_func(t)
+    #        return np.matmul(B, Phi_1d.reshape(nr_pools, nr_pools)).flatten()
 
-        #create the additional startvector for the components of Phi
-        start_Phi_1d=np.identity(nr_pools).flatten()
-        def rhs(t,X):
-            return np.concatenate((
-                sol_rhs(t,X[:nr_pools]),
-                Phi_rhs(t,X[:nr_pools],X[nr_pools:])
-        ))
+    #    #create the additional startvector for the components of Phi
+    #    start_Phi_1d=np.identity(nr_pools).flatten()
+    #    def rhs(t,X):
+    #        return np.concatenate((
+    #            sol_rhs(t,X[:nr_pools]),
+    #            Phi_rhs(t,X[:nr_pools],X[nr_pools:])
+    #    ))
 
-        self._x_phi_rhs=rhs
-        return rhs
+    #    self._x_phi_rhs=rhs
+    #    return rhs
+
+
     def _x_phi_block_ode(self):
         x_block_name='x'
         phi_block_name='phi'
@@ -3770,6 +3811,7 @@ class SmoothModelRun(object):
 
         else:
             def phi(t, s):
+                #
                 x_s=solve_func(s)
                 start_Phi_2d = np.identity(nr_pools)
                 start_blocks = [
@@ -3849,7 +3891,7 @@ class SmoothModelRun(object):
         #
         #return np.maximum(soln, np.zeros_like(soln))
 
-    #this function should be rewritten using the vector values solution 
+    #this function should be rewritten using the vector valued solution 
     def _flux_vector(self, flux_vec_symbolic):
         #sol = self.solve_old()
         sol,_ = self.solve()

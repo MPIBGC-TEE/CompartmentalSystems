@@ -46,12 +46,12 @@ class Cache:
 
     def end_time_from_phi_ind(self,ind):
         cache_times=self.keys
-        if len(cache_times<2):
+        if len(cache_times) <= 2:
             return cache_times[-1]
         else:
             return cache_times[ind+1]
     
 
-    def start_time_from_phi_ind(sefl,ind):
+    def start_time_from_phi_ind(self,ind):
         cache_times=self.keys
         return cache_times[ind]

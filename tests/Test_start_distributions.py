@@ -100,7 +100,7 @@ class TestStartDistributions(InDirTest):
         output_fluxes = {0: C_0, 1: C_1}
         internal_fluxes = {(0,1):0.5*C_0**3}
         srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
-        
+         
         parameter_dict={}
         def f_func( t_val):
             return np.sin(t_val)+1.0
@@ -113,6 +113,9 @@ class TestStartDistributions(InDirTest):
         times = np.linspace(t_min,t_max,n_steps) 
         # create a model run that starts with all pools empty
         smr = SmoothModelRun(srm, parameter_dict=parameter_dict, start_values=np.zeros(srm.nr_pools), times=times,func_set=func_set)
+        smr.initialize_state_transition_operator_cache(
+            lru_maxsize=None
+        )
         # choose a t_0 somewhere in the times
         t0_index = int(n_steps/2)
         t0       = times[t0_index]
@@ -188,7 +191,9 @@ class TestStartDistributions(InDirTest):
         # create a model run that starts at x_fix and t0
         times = np.linspace(t0, 8*np.pi,41)
         smr = SmoothModelRun(srm, parameter_dict=parameter_dict, start_values=x_fix, times=times,func_set=func_set)
-
+        smr.initialize_state_transition_operator_cache(
+            lru_maxsize=None
+        )
         # construct a function p that takes an age array "ages" as argument
         # and gives back a three-dimensional ndarray (ages x times x pools)
         # from the a array-valued function of a single age a_dens_function
@@ -222,6 +227,9 @@ class TestStartDistributions(InDirTest):
         # create a model run that starts at x_fix and t0
         times = np.linspace(t0, 8*np.pi,41)
         smr = SmoothModelRun(srm, parameter_dict=parameter_dict, start_values=x_fix, times=times,func_set=func_set)
+        smr.initialize_state_transition_operator_cache(
+            lru_maxsize=None
+        )
 
         # construct a function p that takes an age array "ages" as argument
         # and gives back a three-dimensional ndarray (ages x times x pools)

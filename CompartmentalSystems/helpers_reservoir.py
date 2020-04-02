@@ -608,21 +608,6 @@ def x_phi_ode(
 def x_phi_ivp(srm, parameter_dict, func_dict,start_x,x_block_name='x',phi_block_name='phi'):
         
     nr_pools=srm.nr_pools
-    sol_rhs=numerical_rhs(
-         srm.state_vector
-        ,srm.time_symbol
-        ,srm.F
-        ,parameter_dict
-        ,func_dict
-    )
-    
-    B_sym=srm.compartmental_matrix
-    tup=(srm.time_symbol,)+tuple(srm.state_vector)
-    B_func_non_lin=numerical_function_from_expression(B_sym,tup,parameter_dict,func_dict)
-    
-    def Phi_rhs(t,x,Phi_1d):
-        B=B_func_non_lin(t,*x)
-        return np.matmul(B,Phi_1d.reshape(nr_pools,nr_pools)).flatten()
 
     #create the additional startvector for the components of Phi
     start_Phi_2d=np.identity(nr_pools)
