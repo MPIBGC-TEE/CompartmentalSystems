@@ -917,7 +917,8 @@ class SmoothModelRun(object):
             diag_values = np.array([x if x>0 else np.nan for x in soln[ti,:]])
             X_inv = np.diag(diag_values**(-1))
 
-            return (np.mat(X_inv) * np.mat(bp).transpose()).A1
+            #return (np.mat(X_inv) * np.mat(bp).transpose()).A1
+            return (np.matmul(X_inv, bp).transpose()).flatten()
 
         return np.array([both_parts_normalized_at_time_index(ti) 
                             for ti in range(len(times))])
@@ -1252,71 +1253,71 @@ class SmoothModelRun(object):
         return (r*age_moment_vector).sum(1)/r.sum(1)
 
 
-    def forward_transit_time_moment(self, order,epsrel=1e-2):
-        """Compute the ``order`` th forward transit time moment.
-
-        Attention! This function integrates over the state transition operator 
-        until infinite time.
-        The results are going to be weird, since at the end of the time grid 
-        some cut- off will happen which biases the result.
-        Be also aware that additionally - to avoid convergence issues in quad - the relative tolerance 
-        is set to 1e-2 by default.
-
-        Args:
-            order (int): The order of the forward transit time moment to be 
-                computed.
-
-        Returns:
-            numpy.array: The ``order`` th forward transit time moment over the 
-            time grid.
-        """
-        k = order
-        times = self.times
-        Phi = self._state_transition_operator
-        input_vector = self.external_input_vector
-
-        #import warnings
-        #from scipy.integrate import IntegrationWarning
-        #warnings.simplefilter("error", IntegrationWarning)
-        def moment_at_ti(ti):
-            u = input_vector[ti] 
-            
-            # if we have no inputs, there cannot be a transit(time)
-            if u.sum() == 0:    
-                return np.nan
-
-            def integrand(a):
-                res = (k*a**(k-1)*Phi(times[ti]+a, times[ti], u).sum())/u.sum()
-                #print(a, Phi(times[ti]+a, times[ti], u), res)
-                return res
-            
-            return quad(integrand, 0, np.infty,epsrel=epsrel)[0]
-            
-            # Remark: 
-            # We want to compute an inproper integral 
-            # instead of calling res=quad(integrand, 0, np.infty)[0]
-            # we could apply a variable transformation z=a/(c+a) # with an arbitrary c (possibly c=1 but we can optimize the choice  for better performance) 
-            # so we have \int_0^\infty f(a) dx= \int_0^z(a=\infty) f(a(z))*da/dz *dz  =\int_0^1  f(a(z)) c/(1-z**2) dz
-            # to do:
-            # To have the best accuracy we try to find c so that the peak of the integrand is projected to the middle of the new integration interval [0,1]
-            # 1.) find the maximum of the integrand
-            # 2.) find the c that projects this x to z=1/2
-            #c =1000
-            #def a(z):
-            #    return c*z/(1-z) 
-            #def transformed_integrand(z):
-            #    res = integrand(a(z))*c/(1-z**2) 
-            #    return res
-            #
-            #return quad(transformed_integrand, 0, 1)[0]
-
-        #res = np.array([moment_at_ti(ti) for ti in range(len(times))])
-        res = []
-        for ti in tqdm(range(len(times))):
-            res.append(moment_at_ti(ti))
-        res = np.array(res)
-
-        return res
+#    def forward_transit_time_moment(self, order, epsrel=1e-2):
+#        """Compute the ``order`` th forward transit time moment.
+#
+#        Attention! This function integrates over the state transition operator 
+#        until infinite time.
+#        The results are going to be weird, since at the end of the time grid 
+#        some cut- off will happen which biases the result.
+#        Be also aware that additionally - to avoid convergence issues in quad -
+#        the relative tolerance is set to 1e-2 by default.
+#
+#        Args:
+#            order (int): The order of the forward transit time moment to be 
+#                computed.
+#
+#        Returns:
+#            numpy.array: The ``order`` th forward transit time moment over the 
+#            time grid.
+#        """
+#        k = order
+#        times = self.times
+#        Phi = self._state_transition_operator
+#        input_vector = self.external_input_vector
+#
+#        #import warnings
+#        #from scipy.integrate import IntegrationWarning
+#        #warnings.simplefilter("error", IntegrationWarning)
+#        def moment_at_ti(ti):
+#            u = input_vector[ti] 
+#            
+#            # if we have no inputs, there cannot be a transit(time)
+#            if u.sum() == 0:    
+#                return np.nan
+#
+#            def integrand(a):
+#                res = (k*a**(k-1)*Phi(times[ti]+a, times[ti], u).sum())/u.sum()
+#                #print(a, Phi(times[ti]+a, times[ti], u), res)
+#                return res
+#            
+#            return quad(integrand, 0, np.infty,epsrel=epsrel)[0]
+#            
+#            # Remark: 
+#            # We want to compute an inproper integral 
+#            # instead of calling res=quad(integrand, 0, np.infty)[0]
+#            # we could apply a variable transformation z=a/(c+a) # with an arbitrary c (possibly c=1 but we can optimize the choice  for better performance) 
+#            # so we have \int_0^\infty f(a) dx= \int_0^z(a=\infty) f(a(z))*da/dz *dz  =\int_0^1  f(a(z)) c/(1-z**2) dz
+#            # to do:
+#            # To have the best accuracy we try to find c so that the peak of the integrand is projected to the middle of the new integration interval [0,1]
+#            # 1.) find the maximum of the integrand
+#            # 2.) find the c that projects this x to z=1/2
+#            #c =1000
+#            #def a(z):
+#            #    return c*z/(1-z) 
+#            #def transformed_integrand(z):
+#            #    res = integrand(a(z))*c/(1-z**2) 
+#            #    return res
+#            #
+#            #return quad(transformed_integrand, 0, 1)[0]
+#
+#        #res = np.array([moment_at_ti(ti) for ti in range(len(times))])
+#        res = []
+#        for ti in tqdm(range(len(times))):
+#            res.append(moment_at_ti(ti))
+#        res = np.array(res)
+#
+#        return res
 
 
     #fixme: split into two functions for SCCS and MH
