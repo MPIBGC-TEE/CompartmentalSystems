@@ -1,2 +1,6 @@
 notebooks/* linguist-vendored
 
+# exclude notebooks from automatic
+# merging 
+*.ipynb -diff 
+

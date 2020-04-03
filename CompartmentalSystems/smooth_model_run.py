@@ -72,13 +72,10 @@ from .helpers_reservoir import (
 	,f_of_t_maker
 	,const_of_t_maker
 	,numerical_function_from_expression
-	,x_phi_ivp
+	#,x_phi_ivp
 	,x_phi_ode
 	,phi_tmax
-	,phi_tmax_2
-    #,phi_ind
-    #,end_time_from_phi_ind
-    #,start_time_from_phi_ind
+	,x_tmax
     ,print_quantile_error_statisctics
     ,custom_lru_cache_wrapper
 )
@@ -197,8 +194,10 @@ class SmoothModelRun(object):
                 )  
 
     
-    @property
-    def B_func(self): 
+    def B_func(self, vec_sol_func=None):
+        if vec_sol_func == None:
+            vec_sol_func = self.solve_func()
+        
         # we inject the soltution into B to get the linearized version
         srm = self.model
         tup = (srm.time_symbol,) + tuple(srm.state_vector)
@@ -211,7 +210,6 @@ class SmoothModelRun(object):
 
         # we want a function  that accepts a vector argument for x
         
-        vec_sol_func = self.solve_func()
         def B_func(t):
             x = vec_sol_func(t)
             return numfun(t,*x)
@@ -1118,7 +1116,7 @@ class SmoothModelRun(object):
             leave the system with age ``a`` when it came in at time ``t``.
         """
         if my_B_func is None:
-            my_B_func = self.B_func
+            my_B_func = self.B_func(self.x_solve_func_skew())
 
         n = self.nr_pools
         times = self.times
@@ -1167,7 +1165,7 @@ class SmoothModelRun(object):
             where ``ages`` is a ``numpy.array``.
         """
         wrapper = custom_lru_cache_wrapper(maxsize=len(self.times))
-        cached_B_func = wrapper(self.B_func)
+        cached_B_func = wrapper(self.B_func(self.x_solve_func_skew()))
 
         if times is None:
             times = self.times
@@ -2852,25 +2850,16 @@ class SmoothModelRun(object):
 
         return np.array(res).transpose()
     
-    
     def x_solve_func_skew(self):
-        
         block_ode,x_block_name,phi_block_name=self._x_phi_block_ode()
-        s = self.times[0]
-        t = self.times[-1]
-            
-        start_Phi_2d = np.identity(self.nr_pools)
-        start_blocks = [
-            (x_block_name, self.start_values),
-            (phi_block_name, start_Phi_2d) 
-        ]
-        blivp = block_ode.blockIvp(start_blocks)
-        return blivp.block_solve_functions(
-                    t_span=(
-                        self.times[0],
-                        self.times[-1]
-                    )
-                )[x_block_name]#[-1,...]
+        return x_tmax(
+            self.times[0],
+            self.times[-1],
+            block_ode,
+            tuple(self.start_values),
+            x_block_name,
+            phi_block_name
+        )
 
 
     def pool_age_distribution_quantiles_pool_by_ode(self, quantile, pool, 
@@ -2992,7 +2981,7 @@ class SmoothModelRun(object):
             u_val = u(t_val)[pool]
             F_vec = F(y, t_val).reshape((n,1))
             x_vec = vec_sol_func(t_val)#.reshape((n,1))
-            B = self.B_func(t_val)
+            B = self.B_func(vec_sol_func)(t_val)
 
 #            print('B', B)
 #            print('x', x_vec)
@@ -3172,7 +3161,7 @@ class SmoothModelRun(object):
             u_vec = u(t_val)
             F_vec = F(y, t_val).reshape((n,1))
             x_vec = vec_sol_func(t_val)#.reshape((n,1))
-            B=self.B_func(t_val)
+            B=self.B_func(vec_sol_func)(t_val)
 
             #print('B', B)
             #print('x', x_vec)
@@ -3599,49 +3588,6 @@ class SmoothModelRun(object):
 
         return self._saved_no_input_sol
 
-    @property
-    def _linearized_no_input_sol(self):
-        # note that the solution of the no input system 
-        # only coincides with the (application of) 
-        # the state transition operator if the system is linear
-        # to compute the state transition operator we therefore 
-        # linearize along the soluion
-
-
-        if not hasattr(self, '_saved_linearized_no_input_sol'):
-            B_func=self.B_func
-            def lin_rhs(tau,x):
-                B=B_func(tau)
-                # and then apply it to the actual  vector x to compute Phi*x
-                return np.matmul(B,x).flatten()
-    
-            def sol(times, start_vector):
-                # Start and end time too close together? Do not integrate!
-                s=times[0] # not minimum for backward integrations
-                t=times[-1] # not maximum for backward integrations
-                if abs(s-t) < 1e-14: 
-                    return np.array(start_vector)
-                sv = np.array(start_vector).reshape((self.nr_pools,))
-                #sol_obj=solve_ivp(
-                #    lin_rhs
-                #    ,y0=sv
-                #    ,t_span=(s,t)
-                #    ,first_step=(t-s)/2 if t!=s else None
-                #    #,method='LSODA'
-                #)
-                sol_obj=custom_solve_ivp(
-                    fun=lin_rhs
-                    ,y0=sv
-                    ,t_span=(s,t)
-                    #,first_step=(t-s)/2 if t!=s else None
-                    #,method='LSODA'
-                )
-                values=sol_obj.y
-                return values[:,-1] #only last time (no rollaxis required)
-        
-            self._saved_linearized_no_input_sol = sol
-
-        return self._saved_linearized_no_input_sol
 
     def initialize_state_transition_operator_cache(self, lru_maxsize, lru_stats=False, size=1):
         custom_lru_cache = custom_lru_cache_wrapper(
@@ -3702,35 +3648,6 @@ class SmoothModelRun(object):
                 (times[0],times[-1])
             )   
         )
-
-    #def _build_x_phi_rhs(self):
-    #    nr_pools=self.nr_pools
-    #    srm=self.model
-    #    parameter_dict=self.parameter_dict
-    #    func_dict=self.func_set
-
-    #    sol_rhs=numerical_rhs(
-    #         srm.state_vector
-    #        ,srm.time_symbol
-    #        ,srm.F
-    #        ,parameter_dict
-    #        ,func_dict
-    #    )
-    #    
-    #    def Phi_rhs(t,x,Phi_1d):
-    #        B = self.B_func(t)
-    #        return np.matmul(B, Phi_1d.reshape(nr_pools, nr_pools)).flatten()
-
-    #    #create the additional startvector for the components of Phi
-    #    start_Phi_1d=np.identity(nr_pools).flatten()
-    #    def rhs(t,X):
-    #        return np.concatenate((
-    #            sol_rhs(t,X[:nr_pools]),
-    #            Phi_rhs(t,X[:nr_pools],X[nr_pools:])
-    #    ))
-
-    #    self._x_phi_rhs=rhs
-    #    return rhs
 
 
     def _x_phi_block_ode(self):
@@ -4306,7 +4223,7 @@ class SmoothModelRun(object):
     def _FTTT_lambda_bar_R_left_limit(self, t0):
         #B0 = self.B(t0)
         vec_sol_funcs = self.solve_func()
-        B0 = self.B_func(t0)
+        B0 = self.B_func()(t0)
         iv = Matrix(self.start_values) # column vector
         z = (-ones(1, len(iv))*B0).T
         
@@ -4426,8 +4343,8 @@ class SmoothModelRun(object):
     def _fake_discretized_output(self, data_times):
         ## prepare some fake output data
         #x = self.solve_single_value_old()
-        x = self.solve_func()
-        xs = [x(ti) for ti in data_times]
+        x_func = self.solve_func()
+        xs = [x_func(ti) for ti in data_times]
     
         nr_pools = self.nr_pools
         
@@ -4441,7 +4358,7 @@ class SmoothModelRun(object):
                 for i in range(nr_pools):
                     if i != j:
                         def integrand(s):
-                            return self.B_func(s)[i,j] * x(s)[j]
+                            return self.B_func(x_func)(s)[i,j] * x_func(s)[j]
     
                         F[i,j] = quad(integrand, a, b)[0]
                         
@@ -4455,7 +4372,7 @@ class SmoothModelRun(object):
             r = np.zeros((nr_pools,))
             for j in range(nr_pools):
                 def integrand(s):
-                    return -sum(self.B_func(s)[:,j]) * x(s)[j]
+                    return -sum(self.B_func(x_func)(s)[:,j]) * x_func(s)[j]
     
                 r[j] = quad(integrand, a, b)[0]
     
