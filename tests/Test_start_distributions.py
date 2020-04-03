@@ -32,61 +32,107 @@ class TestStartDistributions(InDirTest):
         state_vector = [C_0, C_1]
         t = Symbol('t')
         
-        f= Function('f')
-        
+        f = Function('f')
         
         input_fluxes = {0: C_0*f(t)+2, 1: 2}
         output_fluxes = {0: C_0, 1: C_1}
         internal_fluxes = {(0,1):0.5*C_0**3}
-        srm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+        srm = SmoothReservoirModel(
+            state_vector,
+            t,
+            input_fluxes,
+            output_fluxes,
+            internal_fluxes
+        )
         
         parameter_dict={}
-        def f_func( t_val):
+        def f_func(t_val):
             return np.sin(t_val)+1.0
         
         func_set = {f: f_func}
 
         t_min = 0
         t_max = 2*np.pi
-        n_steps=101
-        times = np.linspace(t_min,t_max,n_steps) 
+        n_steps = 101
+        times = np.linspace(t_min, t_max, n_steps) 
         # create a reference model run that starts with all pools empty
         ref_run = SmoothModelRun(
-                srm, 
-                parameter_dict=parameter_dict, 
-                start_values=np.zeros(srm.nr_pools), 
-                times=times,
-                func_set=func_set)
+            srm, 
+            parameter_dict=parameter_dict, 
+            start_values=np.zeros(srm.nr_pools), 
+            times=times,
+            func_set=func_set
+        )
+        ref_run.initialize_state_transition_operator_cache(
+            lru_maxsize=None
+        )
         # choose a t_0 somewhere in the times
         t0_index = int(n_steps/2)
         t0       = times[t0_index]
         # compute the moment vectors using the function under test 
         max_order=3
-        moments_t0,sol_t0=start_age_moments_from_empty_spinup(srm,t_max=t0,parameter_dict=parameter_dict,func_set=func_set,max_order=max_order)
+        moments_t0, sol_t0 = start_age_moments_from_empty_spinup(
+            srm,
+            t_max=t0,
+            parameter_dict=parameter_dict,
+            func_set=func_set,
+            max_order=max_order
+        )
         # compute the age_moments of order 1 for all times using the 
         # reference model 
-        m0=start_age_moments_from_zero_initial_content(srm,max_order)
+        m0 = start_age_moments_from_zero_initial_content(srm,max_order)
         # make sure that the values for the model run at t0 conincide 
         # with the values computed by the function under test
-        self.assertTrue(np.allclose(ref_run.age_moment_vector(1,m0[0:1,:])[t0_index,:],moments_t0[0,:])) 
-        self.assertTrue(np.allclose(ref_run.age_moment_vector(2,m0[0:2,:])[t0_index,:],moments_t0[1,:])) 
-        self.assertTrue(np.allclose(ref_run.age_moment_vector(3,m0[0:3,:])[t0_index,:],moments_t0[2,:])) 
+        self.assertTrue(
+            np.allclose(
+                ref_run.age_moment_vector(1,m0[0:1,:])[t0_index,:],
+                moments_t0[0,:],
+                rtol=1e-03
+            )
+        ) 
+        self.assertTrue(
+            np.allclose(
+                ref_run.age_moment_vector(2,m0[0:2,:])[t0_index,:],
+                moments_t0[1,:],
+                rtol=1e-03
+            )
+        ) 
+        self.assertTrue(
+            np.allclose(
+                ref_run.age_moment_vector(3,m0[0:3,:])[t0_index,:],
+                moments_t0[2,:],
+                rtol=1e-03
+            )
+        ) 
         # assert that the returned vector can be used as start_moments argument
         # to continue the computation from t0 to t_max
 
         second_half_run= SmoothModelRun( 
-                srm, 
-                parameter_dict=parameter_dict, 
-                start_values=sol_t0, 
-                times=times[t0_index:], 
-                func_set=func_set)
+            srm, 
+            parameter_dict=parameter_dict, 
+            start_values=sol_t0, 
+            times=times[t0_index:], 
+            func_set=func_set)
         mean_ages1 =         ref_run.age_moment_vector(1,m0[0:1,:])
-        sol1,_       =         ref_run.solve()
+        sol1,_     =         ref_run.solve()
         mean_ages2 = second_half_run.age_moment_vector(1,moments_t0[0:1,:])
-        sol2,_       = second_half_run.solve()
+        sol2,_     = second_half_run.solve()
         # compare them with the reference run
-        self.assertTrue(np.allclose(mean_ages1[t0_index:,:],mean_ages2))
-        self.assertTrue(np.allclose(sol1[t0_index:,:],sol2))
+        self.assertTrue(
+            np.allclose(
+                mean_ages1[t0_index:,:],
+                mean_ages2,
+                rtol=1e-03
+            )
+        )
+        self.assertTrue(
+            np.allclose(
+                sol1[t0_index:,:],
+                sol2,
+                rtol=1e-03
+            )
+        )
+
 
     def test_start_age_distribuions_from_empty_spinup(self):
         # two-dimensional nonlinear 
@@ -258,7 +304,7 @@ class TestStartDistributions(InDirTest):
         plot(fig,filename='test.html',auto_open=False)
 
 
-    def test_numeric_staedy_state(self):
+    def test_numeric_steady_state(self):
         # two-dimensional nonlinear 
         C_0, C_1 = symbols('C_0 C_1')
         state_vector = [C_0, C_1]
@@ -394,11 +440,12 @@ class TestStartDistributions(InDirTest):
 if __name__ == '__main__':
     suite=unittest.defaultTestLoader.discover(".",pattern=__file__)
     # Run same tests across 16 processes
-    concurrent_suite = ConcurrentTestSuite(suite, fork_for_tests(16))
-    runner = unittest.TextTestRunner()
-    res=runner.run(concurrent_suite)
-    # to let the buildbot fail we set the exit value !=0 if either a failure or 
-    # error occurs
-    if (len(res.errors)+len(res.failures))>0:
-        sys.exit(1)
+#    concurrent_suite = ConcurrentTestSuite(suite, fork_for_tests(16))
+#    runner = unittest.TextTestRunner()
+#    res=runner.run(concurrent_suite)
+#    # to let the buildbot fail we set the exit value !=0 if either a failure or 
+#    # error occurs
+#    if (len(res.errors)+len(res.failures))>0:
+#        sys.exit(1)
+    unittest.main()
 
