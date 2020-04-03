@@ -3117,7 +3117,7 @@ class TestSmoothModelRun(unittest.TestCase):
         self.assertEqual(round(smr._FTTT_finite_plus_remaining(s,t1,t0),4), 
                          round(finite+remaining,4))
 
-
+    @unittest.skip("A function for Martin's idea, not used now")
     def test_FTTT_conditional(self):
         # one-dimensional autonomous case
         lamda, C = symbols('lamda C')

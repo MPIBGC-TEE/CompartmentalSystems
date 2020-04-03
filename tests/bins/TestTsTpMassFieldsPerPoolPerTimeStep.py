@@ -154,7 +154,7 @@ class TestTsTpMassFieldsPerPoolPerTimeStep(InDirTest):
         fig = plt.figure()
         mr.plot_sols(fig)
         fig.savefig("mr_total_content.pdf")#compare
-        
+        #plt.close(fig) 
         
         
 if __name__ == "__main__":
