@@ -717,8 +717,7 @@ def array_integration_by_values(
     vec=np.trapz(y=integrand_vals,x=taus)
     return vec.reshape(test.shape)
 
-#@lru_cache(maxsize=None)
-def phi_tmax(s, t_max, block_ode, x_s, x_block_name, phi_block_name):
+def x_phi_tmax(s, t_max, block_ode, x_s, x_block_name, phi_block_name):
     x_s = np.array(x_s)
     nr_pools = len(x_s)
 
@@ -728,69 +727,24 @@ def phi_tmax(s, t_max, block_ode, x_s, x_block_name, phi_block_name):
         (phi_block_name, start_Phi_2d) 
     ]
     blivp = block_ode.blockIvp(start_blocks)
+    return blivp    
+
+def phi_tmax(s, t_max, block_ode, x_s, x_block_name, phi_block_name):
+    blivp = x_phi_tmax(s, t_max, block_ode, x_s, x_block_name, phi_block_name)
     
     phi_func = blivp.block_solve_functions(t_span=(s, t_max))[phi_block_name]
 
     return phi_func
 
-#@lru_cache(maxsize=None)
-def phi_tmax_2(s,t,x0,rhs):
-    #print('s,t,x0,rhs')
-    #print(s,t,x0,rhs)
-    nr_pools=len(x0)
-    start_Phi_1d=np.identity(nr_pools).flatten()
-    return custom_solve_ivp(
-        fun=rhs,
-        y0=np.concatenate((x0,start_Phi_1d)),
-        t_span=(s,t)
-    ).y[nr_pools:,-1].reshape((nr_pools,nr_pools))
-
-#def phi_ind(tau,cache_times):
-#    """
-#    Helper function to compute the index of the cached state transition operator values. 
-#    E.g. two matrices require 3 times (0 , 2 ,4 )
-#    Where Phi[0]=Phi(t=2,s=0),Phi[1]= Phi(t=4,s=2)
-#    """
-#    # intervals before tau
-#    m=cache_times[-1] 
-#    if tau==m:
-#        return len(cache_times)-1-1
-#    else:
-#        time_ind=cache_times.searchsorted(tau,side='right')
-#        return time_ind-1
-
-#def end_time_from_phi_ind(ind,cache_times):
-#    if len(cache_times<2):
-#        return cache_times[-1]
-#    else:
-#        return cache_times[ind+1]
-
-#def start_time_from_phi_ind(ind,cache_times):
-#    return cache_times[ind]
-
-@lru_cache(maxsize=None)
-def listProd(ms:Tuple[Tuple],nr_pools:int)->np.ndarray:
-    """
-    Fast bisecting matrix multiplication for a tuple of tuples with cache
-    The tuples are interpreted as matrices. 
-    """
-    l=len(ms)
-    if l == 1:
-        return np.array(ms[0]).reshape(nr_pools,nr_pools)
+@lru_cache()
+def x_tmax(s, t_max, block_ode, x_s, x_block_name, phi_block_name):
+    blivp = x_phi_tmax(s, t_max, block_ode, x_s, x_block_name, phi_block_name)
     
-    l1 = l // 2
-    #l1 = l -1
-    #l1 = 1
-    return np.matmul(listProd(ms[:l1],nr_pools), listProd(ms[l1:],nr_pools))
+    x_func = blivp.block_solve_functions(t_span=(s, t_max))[x_block_name]
 
-##@lru_cache(maxsize=None)
-#def listProd_reduce(ms:Tuple[Tuple],nr_pools:int)->np.ndarray:
-#    mats=[np.array(m).reshape(nr_pools,nr_pools) for m in ms]
-#    return reduce(
-#            lambda acc,el:np.matmul(acc,el)
-#            ,mats
-#            ,np.identity(nr_pools)
-#    )
+    return x_func
+
+
 
 
 _CacheStats = namedtuple(
