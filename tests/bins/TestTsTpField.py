@@ -80,7 +80,6 @@ class TestTsTpField(InDirTest):
         
         res=spad.default_plot_args(max_shape,20)
         self.assertEqual(res,(max_shape,20.0))
-        print(res)
 
         fig = plt.figure()
         fig.clf()

@@ -36,7 +36,7 @@ class TestTsTpMassField(unittest.TestCase):
         ref=np.zeros((self.x+1,self.y+1))
         ref[6,6]=10
         ref[6,5]=20
-        print("\n##########shift",spad.arr)
+        #print("\n##########shift",spad.arr)
         self.assertTrue((spad.arr==ref).all())
     
     def test_resize(self):

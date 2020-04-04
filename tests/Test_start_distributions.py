@@ -300,7 +300,7 @@ class TestStartDistributions(InDirTest):
             #,
             #showlegend = legend_on_surface
         )
-        smr.add_equilibrium_surface_plotly(fig)
+        smr.add_constant_age_distribution_surface_plotly(fig)
         plot(fig,filename='test.html',auto_open=False)
 
 

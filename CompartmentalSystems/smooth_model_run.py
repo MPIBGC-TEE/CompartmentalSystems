@@ -2248,19 +2248,19 @@ class SmoothModelRun(object):
         
         return fig
 
-    def add_equilibrium_surface_plotly(self, fig, opacity=0.7, index=0):
-        """
-        The function has been renamed since 
-            1. It is not certain that the system has an equilibrium at all. 
-            2. The age distribution at the beginning of a model run does not have to 
-               represent an equilibrium age distribution
-               (even if the system was in equilibrium at t0 in the sense that the pool contents do not change any more the age distribution still could.)
-               
-            please call add_constant_age_distribution_surface_plotly instead! 
-        """
-        txt=self.add_equilibrium_surface_plotly.__doc__
-        deprecation_warning(txt)
-        self.add_constant_age_distribution_surface_plotly(fig, opacity, index)
+#    def add_equilibrium_surface_plotly(self, fig, opacity=0.7, index=0):
+#        """
+#        The function has been renamed since 
+#            1. It is not certain that the system has an equilibrium at all. 
+#            2. The age distribution at the beginning of a model run does not have to 
+#               represent an equilibrium age distribution
+#               (even if the system was in equilibrium at t0 in the sense that the pool contents do not change any more the age distribution still could.)
+#               
+#            please call add_constant_age_distribution_surface_plotly instead! 
+#        """
+#        txt=self.add_equilibrium_surface_plotly.__doc__
+#        deprecation_warning(txt)
+#        self.add_constant_age_distribution_surface_plotly(fig, opacity, index)
 
     def add_constant_age_distribution_surface_plotly(self, fig, opacity=0.7, index=0):
         """Add a grey and transparent density surface to an existing

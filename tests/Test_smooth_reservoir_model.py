@@ -122,7 +122,6 @@ class TestSmoothReservoirModel(InDirTest):
         rm = SmoothReservoirModel(state_vars, t, input_fluxes, output_fluxes, internal_fluxes)
         J=rm.jacobian
         CM=Matrix([-3*C_0**2])
-        print(CM)
         # the next line breaks 
         self.assertEqual(J,CM)
 
