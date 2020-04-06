@@ -97,5 +97,6 @@ However, since the s`*.py` cript (intentionally) does not contain data, it can
 not be used to detect changes in the output of a notebook that might accidentally occure if the libraries used by the  notebook change. The `pytest` framework claims to be able to detect those changes, but produced false positives for 
 one plot in the pnas notebook, which furthermore did not run at all if it had not been run before on the same machine.
 If the notebook is freshly produced from the `*.py` file everything seems to work and the `pytest` can be relied upon to 
-check if the code is still running without errors.
+check if the code is still running without errors. 
+On Antakya the test needs 24s.
 
