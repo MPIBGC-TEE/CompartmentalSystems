@@ -23,7 +23,6 @@ class TestSmoothReservoirModelChecks(InDirTest):
                 [a_31, a_32, -k_3]
             ])
         rm = SmoothReservoirModel.from_B_u(C,t,B,u)
-        print(rm.free_symbols)
 
         rm_p1=rm.subs(
             {
@@ -35,7 +34,6 @@ class TestSmoothReservoirModelChecks(InDirTest):
                 xi:0.5
             }
         )
-        print(rm_p1.free_symbols)
 
     def test_is_state_dependent(self):
         x, y, t = symbols("x y t")
@@ -80,7 +78,8 @@ class TestSmoothReservoirModelChecks(InDirTest):
         
         # check that the method refuses if there are still free symbols (except the state variables and time)
         with self.assertRaises(Exception):
-            print(rm.is_compartmental)
+            #print(rm.is_compartmental)
+            rm.is_compartmental
         
         # we first choose a parameter set that leads to a compartmental system
         rm_p1=rm.subs(
@@ -141,7 +140,7 @@ class TestSmoothReservoirModelChecks(InDirTest):
                 xi:0.5
             }
         )
-        print(rm_p1)
+        
         # unfortunately sympy cannot handle this Michaelis Menten case yet
         with self.assertRaises(Exception):
             rm_p1.is_compartmental 
@@ -189,7 +188,6 @@ class TestSmoothReservoirModelChecks(InDirTest):
         output_fluxes = {}
         internal_fluxes = {(0,1): 5*C_0, (1,0): 4*C_1**2}
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
-        print(rm.F)
         self.assertEqual(rm.is_linear,False)
         
         # test nonlinear output flux

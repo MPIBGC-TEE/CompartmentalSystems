@@ -512,7 +512,6 @@ class TestPhi(InDirTest):
 
         self.assertEqual(Phix.shape, (1,))
         self.assertTrue(abs(Phix-np.exp(-1))<1e-03)
-        print(type(Phix))
 
     def test_state_transition_operator_2d(self):
         # two-dimensional case
