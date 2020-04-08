@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # vim:set ff=unix expandtab ts=4 sw=4:
 
-from concurrencytest import ConcurrentTestSuite, fork_for_tests
 from copy import deepcopy
 import inspect
 import sys ,os
@@ -16,8 +15,8 @@ from scipy.interpolate import interp1d
 from scipy.special import factorial
 from sympy import sin, symbols, Matrix, Symbol, exp, solve, Eq, pi, Piecewise, Function, ones
     
-import example_smooth_reservoir_models as ESRM
-import example_smooth_model_runs as ESMR
+import CompartmentalSystems.example_smooth_reservoir_models as ESRM
+import CompartmentalSystems.example_smooth_model_runs as ESMR
 
 from testinfrastructure.InDirTest import InDirTest
 #from testinfrastructure.helpers import pe
@@ -31,8 +30,8 @@ def pfile_C14Atm_NH():
     return pfile
 
 
-#class TestSmoothModelRun(InDirTest):
-class TestSmoothModelRun(unittest.TestCase):
+class TestSmoothModelRun(InDirTest):
+#class TestSmoothModelRun(unittest.TestCase):
         
     def test_init(self):
         #create a valid model run complete with start ages
@@ -3203,17 +3202,3 @@ class TestSmoothModelRun(unittest.TestCase):
         #self.assertTrue(np.allclose(result, np.array([1]*10)))
 
 
-###############################################################################
-
-
-if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestSmoothModelRun)
-#    # Run same tests across 16 processes
-#    concurrent_suite = ConcurrentTestSuite(suite, fork_for_tests(16))
-#    concurrent_suite = ConcurrentTestSuite(suite, fork_for_tests(1))
-#    runner = unittest.TextTestRunner()
-#    res=runner.run(concurrent_suite)
-#    # to let the buildbot fail we set the exit value !=0 if either a failure or error occurs
-#    if (len(res.errors)+len(res.failures))>0:
-#        sys.exit(1)
-    unittest.main()

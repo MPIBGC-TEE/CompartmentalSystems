@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # vim:set ff=unix expandtab ts=4 sw=4:
 
-from concurrencytest import ConcurrentTestSuite, fork_for_tests
 import inspect
 import sys 
 import unittest
@@ -18,8 +17,8 @@ from sympy import sin, symbols, Matrix, Symbol, exp, solve, Eq, pi, Piecewise, F
 from typing import Callable,Iterable,Union,Optional,List,Tuple 
 from copy import copy
     
-import example_smooth_reservoir_models as ESRM
-import example_smooth_model_runs as ESMR
+import CompartmentalSystems.example_smooth_reservoir_models as ESRM
+import CompartmentalSystems.example_smooth_model_runs as ESMR
 
 from testinfrastructure.InDirTest import InDirTest
 #from testinfrastructure.helpers import pe
@@ -95,21 +94,5 @@ class TestDiscreteModelRun(InDirTest):
         dmr = DiscreteModelRun.from_SmoothModelRun(smr)
 
         
-###############################################################################
-
-
-if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestDiscreteModelRun)
-#    # Run same tests across 16 processes
-#    concurrent_suite = ConcurrentTestSuite(suite, fork_for_tests(16))
-#    concurrent_suite = ConcurrentTestSuite(suite, fork_for_tests(1))
-#    runner = unittest.TextTestRunner()
-#    res=runner.run(concurrent_suite)
-#    # to let the buildbot fail we set the exit value !=0 if either a failure or error occurs
-#    if (len(res.errors)+len(res.failures))>0:
-#        sys.exit(1)
-    unittest.main()
-
-
 
 

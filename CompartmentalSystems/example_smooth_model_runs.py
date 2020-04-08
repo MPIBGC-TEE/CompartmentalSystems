@@ -1,9 +1,9 @@
 import numpy as np
 from sympy import symbols
 
-import example_smooth_reservoir_models as ESRM
-from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
-from CompartmentalSystems.smooth_model_run import SmoothModelRun 
+from . import example_smooth_reservoir_models as ESRM
+from .smooth_reservoir_model import SmoothReservoirModel  
+from .smooth_model_run import SmoothModelRun 
 
 def critics():
     symbs = symbols("t, k_01,k_10,k_0o,k_1o") 

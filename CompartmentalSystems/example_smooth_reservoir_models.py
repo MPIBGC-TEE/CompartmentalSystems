@@ -2,7 +2,7 @@
 # tests to avoid global variables we put them in functions
 from sympy import symbols, tanh, sin, cos, Matrix, pi
 
-from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+from .smooth_reservoir_model import SmoothReservoirModel
 
 def critics(symbs):
     t, k_01,k_10,k_0o,k_1o = symbs 
