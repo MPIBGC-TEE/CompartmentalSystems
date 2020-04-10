@@ -2,36 +2,78 @@ from typing import Callable,Iterable,Union,Optional,List,Tuple
 from scipy.integrate import solve_ivp
 import numpy as np
 
-def custom_solve_ivp(fun, t_span, y0, **kwargs):
+def custom_solve_ivp(fun, t_span, y0, disc_times=None, **kwargs):
     if 'dense_output' not in kwargs.keys():
         kwargs['dense_output'] = False
 
+    dense_output = kwargs['dense_output']
+
     if 'method' not in kwargs.keys():
         kwargs['method'] = 'Radau'
-        #kwargs['method'] = 'RK45'
-        #kwargs['method'] = 'BDF'
-        #kwargs['method'] = 'LSODA'
     
-    t_min, t_max = t_span
-    sol_obj = solve_ivp(
-         fun=fun
-        ,t_span=t_span
-        ,y0=y0
-        #
-        # prevent the solver from overreaching (scipy bug)
-        ,first_step=(t_max-t_min)/2 if t_max != t_min else None
-        #,max_step=10
-        #,rtol=1e-06
-        ,**kwargs
-    )
+    
+    def sub_solve_ivp(t_span, y0, **kwargs):    
+        t_min, t_max = t_span
+        sol_obj = solve_ivp(
+             fun=fun
+            ,t_span=t_span
+            ,y0=y0
+            #
+            # prevent the solver from overreaching (scipy bug)
+            ,first_step=(t_max-t_min)/2 if t_max != t_min else None
+            #,max_step=10
+            #,rtol=1e-06
+            ,**kwargs
+        )
 
-    if not sol_obj.success:
-        msg = "ODE solver '{}' failed with ".format(kwargs['method'])
-        msg += "status {} and ".format(sol_obj.status)
-        msg += "message '{}'".format(sol_obj.message)
-        raise(ValueError(msg))
+        if not sol_obj.success:
+            msg = "ODE solver '{}' failed with ".format(kwargs['method'])
+            msg += "status {} and ".format(sol_obj.status)
+            msg += "message '{}'".format(sol_obj.message)
+            raise(ValueError(msg))
 
-    return sol_obj
+        return sol_obj
+
+
+
+    if disc_times is None:
+        return sub_solve_ivp(t_span, y0, **kwargs)
+
+    else:
+        assert t_span[0] == disc_times[0]
+        assert t_span[1] == disc_times[-1]
+
+        soln = np.nan * np.zeros((len(disc_times),) + y0.shape)
+        soln[0] = y0
+        if dense_output:
+            sol_funcs = []
+        for i, t_span in enumerate(zip(disc_times[:-1], disc_times[1:])):
+            sol_obj_i = sub_solve_ivp(t_span, y0, **kwargs)
+            y0 = sol_obj_i.y[:,-1]
+            soln[i+1] = y0
+            if dense_output:
+                sol_funcs.append(sol_obj_i.sol)
+
+        def index(t):
+            i = np.where((disc_times<=t) & (t<=disc_times[-1]))[0][-1]
+            return min(i, len(disc_times)-2)
+
+        def sol_func(t):
+            i = index(t)
+            return sol_funcs[i](t)
+
+        sol_func_v = np.vectorize(sol_func, signature='()->(n)')
+
+        sol = sol_func_v if dense_output else None
+
+        from scipy.integrate._ivp.ivp import OdeResult
+        class myOdeResult(OdeResult):
+            def __init__(self, y, sol):
+                self.y = y
+                self.sol = sol
+
+        return myOdeResult(soln, sol)
+
 
 class BlockIvp:
     """Helper class to build initial value systems from functions that operate on blocks of the state_variables"""
