@@ -103,7 +103,7 @@ class DiscreteModelRun(object):
                     #print(j, x, F, r, '\n\n')
 #                    print('diagonal value = ', B[j,j])
 #                    print('pool content = ', x[j])
-                    raise(DMRError('Diag. val y0: pool %d, time %d' % (j,k)))
+                    raise(DMRError('Diag. val < 0: pool %d, time %d' % (j,k)))
             else:
                 B[j,j] = 1
    
