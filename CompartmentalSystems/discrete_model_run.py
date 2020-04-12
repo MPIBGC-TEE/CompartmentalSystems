@@ -84,12 +84,12 @@ class DiscreteModelRun(object):
         B = np.identity(nr_pools)
         if len(np.where(F<0)[0]) > 0:
 #            print('\n\n', np.where(F<0), '\n\n')
-            raise(DMRError('Negative flux detected: time step %d' % k))
+            raise(DMRError('Negative flux: time step %d' % k))
     
         # construct off-diagonals
         for j in range(nr_pools):
             if x[j] < 0:
-                raise(DMRError('Reconstructed compartment content negative: pool %d, time %d ' % (j,k)))
+                raise(DMRError('Ccontent negative: pool %d, time %d ' % (j,k)))
             if x[j] != 0:
                 B[:,j] = F[:,j] / x[j]
             else:
@@ -103,7 +103,7 @@ class DiscreteModelRun(object):
                     #print(j, x, F, r, '\n\n')
 #                    print('diagonal value = ', B[j,j])
 #                    print('pool content = ', x[j])
-                    raise(DMRError('Reconstructed diagonal value is negative: pool %d, time %d' % (j,k)))
+                    raise(DMRError('Diag. val y0: pool %d, time %d' % (j,k)))
             else:
                 B[j,j] = 1
    
@@ -143,6 +143,10 @@ class DiscreteModelRun(object):
         return self.soln
     
     @property
+    def external_input_vector(self):
+        return self.us
+    
+    @property
     def external_output_vector(self):
         n = self.nr_pools
         rho = np.array([1-B.sum(0).reshape((n,)) for B in self.Bs])
@@ -150,6 +154,12 @@ class DiscreteModelRun(object):
         r = rho * soln
 
         return r
+
+    @property
+    def internal_flux_matrix(self):
+        Bs = self.Bs
+        soln = self.solve()[:-1]
+        return np.array([Bs[k] * soln[k] for k in range(len(Bs))])
 
     # return value in unit "time steps"
     def compute_start_m_factorial_moment(self, order, time_index = 0):
@@ -460,7 +470,6 @@ class DiscreteModelRun(object):
     def to_14C_only(self, start_values_14C, us_14C, decay_rate=0.0001209681):
         times_14C = self.times
 
-        n = self.nr_pools
         Bs = self.Bs
         dts = self.dts
 
