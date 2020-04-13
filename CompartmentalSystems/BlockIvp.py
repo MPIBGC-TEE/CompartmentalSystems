@@ -4,6 +4,10 @@ from scipy.integrate._ivp.ivp import OdeResult
 import numpy as np
 
 def custom_solve_ivp(fun, t_span, y0, **kwargs):
+    ## disc_times should only be used when there are
+    ## real discontinuities
+    ## it seems not to be working too accurately
+
     if 'dense_output' not in kwargs.keys():
         kwargs['dense_output'] = False
 
@@ -15,7 +19,10 @@ def custom_solve_ivp(fun, t_span, y0, **kwargs):
     if 'disc_times' in kwargs.keys():
         disc_times = kwargs['disc_times']
         del kwargs['disc_times']
- 
+    else:
+        disc_times = None
+
+
     def sub_solve_ivp(t_span, y0, **kwargs):    
         t_min, t_max = t_span
         sol_obj = solve_ivp(
@@ -43,6 +50,7 @@ def custom_solve_ivp(fun, t_span, y0, **kwargs):
         return sub_solve_ivp(t_span, y0, **kwargs)
 
     else:
+        print('DISC')
         #fixme hm:
         # overwrite 't_eval' automatically by disc_times
         # would be better to merge
@@ -74,7 +82,8 @@ def custom_solve_ivp(fun, t_span, y0, **kwargs):
 
         sol_func_v = np.vectorize(sol_func, signature='()->(n)')
 
-        sol = sol_func_v if dense_output else None
+        sol = lambda t: sol_func_v(t).transpose() if dense_output\
+                             else None
 
         class myOdeResult(OdeResult):
             def __init__(self, y, sol):

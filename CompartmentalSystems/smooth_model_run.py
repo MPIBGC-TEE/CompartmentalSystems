@@ -186,6 +186,8 @@ class SmoothModelRun(object):
         #self._state_transition_operator_cache = None
         self._external_input_vector_func = None
 
+        self.disc_times = None
+
     def __str__(self):
         return str(
                  [ 'id(self)'+str(id(self)), 'id(model)'+str(id(self.model))]
@@ -3261,9 +3263,9 @@ class SmoothModelRun(object):
         #fixme: use 14C equilibrium start values
         times_14C = self.times
 
-#        Fa_atm = copy(atm_delta_14C)
-#        Fa_atm[:,1] = Fa_atm[:,1]/1000 + 1
-#        Fa_func = interp1d(Fa_atm[:,0], Fa_atm[:,1])
+        #Fa_atm = copy(atm_delta_14C)
+        #Fa_atm[:,1] = Fa_atm[:,1]/1000 + 1
+        #Fa_func = interp1d(Fa_atm[:,0], Fa_atm[:,1])
 
         func_set_14C = {k:v for k,v in self.func_set.items()}
         function_string = 'Fa_14C(' + srm_14C.time_symbol.name + ')'
@@ -3275,21 +3277,24 @@ class SmoothModelRun(object):
             start_values_14C,
             times_14C,
             func_set_14C,
-            decay_rate)
+            decay_rate
+        )
 
         return smr_14C
 
     #fixme: adapt to 'to_14C_only' interface
-    def to_14C_explicit(self, atm_delta_14C, decay_rate=0.0001209681):
+    def to_14C_explicit(self, start_values_14C, Fa_func, decay_rate=0.0001209681):
         """Construct and return a :class:`SmoothModelRun` instance that
            models the 14C component additional to the original model run.
     
         Args:
-            atm_delta_14C (numpy.ndarray, 2 x length): A table consisting of
+            start_values_14C (numpy.nd_array, nr_pools): 14C start values.
+            atm_delta_14C (func(t)): returns 
+            (numpy.ndarray, 2 x length): A table consisting of
                 years and :math:`\\Delta^{14}C` values. The first row serves
                 as header.
             decay rate (float, optional): The decay rate to be used, defaults to
-                ``0.0001209681``.
+                ``0.0001209681`` (daily).
         Returns:
             :class:`SmoothModelRun`
         """
@@ -3300,14 +3305,14 @@ class SmoothModelRun(object):
         par_set_14C['lamda_14C'] = decay_rate
 
         nr_pools = self.nr_pools
-        start_values_14C = np.ones(nr_pools*2)
-        start_values_14C[:nr_pools] = self.start_values
-        start_values_14C[nr_pools:] = self.start_values
+        start_values_14C_cb = np.ones(nr_pools*2)
+        start_values_14C_cb[:nr_pools] = self.start_values
+        start_values_14C_cb[nr_pools:] = start_values_14C
         times_14C = self.times
 
-        Fa_atm = copy(atm_delta_14C)
-        Fa_atm[:,1] = Fa_atm[:,1]/1000 + 1
-        Fa_func = interp1d(Fa_atm[:,0], Fa_atm[:,1])
+        #Fa_atm = copy(atm_delta_14C)
+        #Fa_atm[:,1] = Fa_atm[:,1]/1000 + 1
+        #Fa_func = interp1d(Fa_atm[:,0], Fa_atm[:,1])
         func_set_14C = {k:v for k,v in self.func_set.items()}
 
         function_string = 'Fa_14C(' + srm_14C.time_symbol.name + ')'
@@ -3316,9 +3321,10 @@ class SmoothModelRun(object):
         smr_14C = SmoothModelRun(
             srm_14C, 
             par_set_14C,
-            start_values_14C,
+            start_values_14C_cb,
             times_14C,
-            func_set_14C)
+            func_set_14C
+        )
 
         return smr_14C
 
@@ -3450,7 +3456,7 @@ class SmoothModelRun(object):
             new_start_values, 
             times,
             dense_output=True,
-            disc_times=self.times
+            disc_times=self.disc_times
         )
         def restrictionMaker(order):
             #pe('soln[:,:]',locals())

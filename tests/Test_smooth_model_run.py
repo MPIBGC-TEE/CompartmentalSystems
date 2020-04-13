@@ -2722,9 +2722,22 @@ class TestSmoothModelRun(InDirTest):
         smr = SmoothModelRun(srm, par_set, start_values, times)
         smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         soln,_ = smr.solve()
+        
         atm_delta_14C = np.loadtxt(pfile_C14Atm_NH(), skiprows=1, delimiter=',')
-        smr_14C = smr.to_14C_only(atm_delta_14C, 1)
+        F_atm_delta_14C = interp1d(
+            atm_delta_14C[:,0],
+            atm_delta_14C[:,1],
+            fill_value = 'extrapolate'
+        )
 
+        alpha = 1.18e-12
+        start_values_14C = smr.start_values * alpha
+        Fa_func = lambda t: alpha * (F_atm_delta_14C(t)/1000+1)
+        smr_14C = smr.to_14C_only(
+            start_values_14C,
+            Fa_func,
+            0.0001
+        )
         soln_14C,_ = smr_14C.solve()
 
 
@@ -2750,8 +2763,22 @@ class TestSmoothModelRun(InDirTest):
         smr = SmoothModelRun(srm, par_set, start_values, times)
         smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         soln,_ = smr.solve()
+
         atm_delta_14C = np.loadtxt(pfile_C14Atm_NH(), skiprows=1, delimiter=',')
-        smr_14C = smr.to_14C_explicit(atm_delta_14C, 1)
+        F_atm_delta_14C = interp1d(
+            atm_delta_14C[:,0],
+            atm_delta_14C[:,1],
+            fill_value = 'extrapolate'
+        )
+
+        alpha = 1.18e-12
+        start_values_14C = smr.start_values * alpha
+        Fa_func = lambda t: alpha * (F_atm_delta_14C(t)/1000+1)
+        smr_14C = smr.to_14C_explicit(
+            start_values_14C,
+            Fa_func,
+            0.0001
+        )
 
         soln_14C,_ = smr_14C.solve()
 

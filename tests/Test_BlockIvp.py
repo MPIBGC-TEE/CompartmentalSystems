@@ -51,7 +51,7 @@ class TestBlockIvp(InDirTest):
 
     def test_custom_solve_ivp(self):
         def func(t, x):
-            return -0.2*t*x
+            return -0.2*x
         
         disc_times = np.linspace(0, 10, 11)
         for dim in [1,2]:
@@ -63,14 +63,31 @@ class TestBlockIvp(InDirTest):
                     func,
                     t_span,
                     x0,
-                    disc_times,
-                    dense_output=True
+                    t_eval = disc_times,
+                    dense_output = True
                 )
-            
+           
+                sol_obj2 = custom_solve_ivp(
+                    func,
+                    t_span,
+                    x0,
+                    t_eval = disc_times,
+                    disc_times   = disc_times,
+                    dense_output = True
+                )
+               
                 self.assertTrue(
                     np.allclose(
                         sol_obj.y,
-                        sol_obj.sol(disc_times)
+                        sol_obj2.y,
+                        atol = 1e-03
+                    )
+                )
+                self.assertTrue(
+                    np.allclose(
+                        sol_obj.sol(disc_times),
+                        sol_obj2.sol(disc_times),
+                        atol = 1e-03 
                     )
                 )
 
