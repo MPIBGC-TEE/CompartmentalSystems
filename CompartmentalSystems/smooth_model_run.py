@@ -643,7 +643,7 @@ class SmoothModelRun(object):
         return res
 
     @property
-    #this function should be rewritten using the vector values solution 
+    #this function should be rewritten using the vector valued solution 
     def external_output_vector(self):
         """Return the grid of external output vectors.
 
@@ -667,6 +667,19 @@ class SmoothModelRun(object):
         soln[soln==0] = 0
 
         return output_vec/soln
+
+    #fixme hm: test
+    @property
+    def internal_flux_matrix(self):
+        """Return the grid of flux matrices.
+
+        Returns:
+            numpy.ndarray: len(times) x nr_pools x nr_pools
+        """
+        soln,_ = self.solve()
+        B_func = self.B_func()
+        return np.array([B_func(t) * soln[k] 
+                            for k, t in enumerate(self.times)])
 
 
     ##### age density methods #####
@@ -3224,16 +3237,19 @@ class SmoothModelRun(object):
     ########## 14C methods #########
 
 
-    def to_14C_only(self, atm_delta_14C, decay_rate=0.0001209681):
+#    def to_14C_only(self, start_values_14C, atm_delta_14C, decay_rate=0.0001209681):
+    def to_14C_only(self, start_values_14C, Fa_func, decay_rate=0.0001209681):
         """Construct and return a :class:`SmoothModelRun` instance that
            models the 14C component of the original model run.
     
         Args:
-            atm_delta_14C (numpy.ndarray, 2 x length): A table consisting of
+            start_values_14C (numpy.nd_array, nr_pools): 14C start values.
+            atm_delta_14C (func(t)): returns 
+            (numpy.ndarray, 2 x length): A table consisting of
                 years and :math:`\\Delta^{14}C` values. The first row serves
                 as header.
             decay rate (float, optional): The decay rate to be used, defaults to
-                ``0.0001209681``.
+                ``0.0001209681`` (daily).
         Returns:
             :class:`SmoothModelRun`
         """
@@ -3243,12 +3259,11 @@ class SmoothModelRun(object):
         par_set_14C = {k:v for k, v in self.parameter_dict.items()}
         par_set_14C['lamda_14C'] = decay_rate
         #fixme: use 14C equilibrium start values
-        start_values_14C = self.start_values
         times_14C = self.times
 
-        Fa_atm = copy(atm_delta_14C)
-        Fa_atm[:,1] = Fa_atm[:,1]/1000 + 1
-        Fa_func = interp1d(Fa_atm[:,0], Fa_atm[:,1])
+#        Fa_atm = copy(atm_delta_14C)
+#        Fa_atm[:,1] = Fa_atm[:,1]/1000 + 1
+#        Fa_func = interp1d(Fa_atm[:,0], Fa_atm[:,1])
 
         func_set_14C = {k:v for k,v in self.func_set.items()}
         function_string = 'Fa_14C(' + srm_14C.time_symbol.name + ')'
@@ -3264,7 +3279,7 @@ class SmoothModelRun(object):
 
         return smr_14C
 
-
+    #fixme: adapt to 'to_14C_only' interface
     def to_14C_explicit(self, atm_delta_14C, decay_rate=0.0001209681):
         """Construct and return a :class:`SmoothModelRun` instance that
            models the 14C component additional to the original model run.
@@ -3434,7 +3449,8 @@ class SmoothModelRun(object):
             self.func_set,
             new_start_values, 
             times,
-            dense_output=True
+            dense_output=True,
+            disc_times=self.times
         )
         def restrictionMaker(order):
             #pe('soln[:,:]',locals())
@@ -4408,7 +4424,7 @@ class SmoothModelRun_14C(SmoothModelRun):
             start_values,
             times,
             func_set)
-        self.decay_rate =  decay_rate
+        self.decay_rate = decay_rate
 
     @property 
     def external_output_vector(self):

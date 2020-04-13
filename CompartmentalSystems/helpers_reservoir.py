@@ -293,11 +293,14 @@ def numsol_symbolical_system(
         ,start_values
         ,times
         ,dense_output
+        ,disc_times=None
     ):
     nr_pools = len(state_vector)
-    t_min=times[0]
-    t_max=times[-1]
-    if times[0] == times[-1]: return start_values.reshape((1, nr_pools))
+    t_min    = times[0]
+    t_max     = times[-1]
+
+    if times[0] == times[-1]: 
+        return start_values.reshape((1, nr_pools))
 
     num_rhs = numerical_rhs(
         state_vector,
@@ -336,15 +339,16 @@ def numsol_symbolical_system(
     #np.seterr(**old_settings)
     res=custom_solve_ivp(
         fun=num_rhs
-        ,y0=start_values
-        ,t_span=(t_min, t_max)
-        ,t_eval=times
-        ,dense_output=dense_output
+        ,y0           = start_values
+        ,t_span       = (t_min, t_max)
+        ,t_eval       = times
+        ,disc_times   = disc_times
+        ,dense_output = dense_output
     )
 
     #adapt to the old interface since our code at the moment expects it
     values = np.rollaxis(res.y,-1,0)
-    return (values,res.sol)
+    return (values, res.sol)
 
 def arrange_subplots(n):
     if n <=3:
