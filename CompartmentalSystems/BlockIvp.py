@@ -50,7 +50,6 @@ def custom_solve_ivp(fun, t_span, y0, **kwargs):
         return sub_solve_ivp(t_span, y0, **kwargs)
 
     else:
-        print('DISC')
         #fixme hm:
         # overwrite 't_eval' automatically by disc_times
         # would be better to merge
