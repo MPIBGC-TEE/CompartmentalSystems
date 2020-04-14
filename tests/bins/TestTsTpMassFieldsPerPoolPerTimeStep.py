@@ -10,7 +10,7 @@ from scipy.interpolate import interp1d
 from sympy import var,sin,cos,sympify
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
-from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.pwc_model_run import PWCModelRun
 
 from CompartmentalSystems.bins.density_algorithm import losses,gains
 from CompartmentalSystems.bins.TsTpMassField import TsTpMassField 
@@ -64,7 +64,7 @@ class TestTsTpMassFieldsPerPoolPerTimeStep(InDirTest):
         
         start_values=[1,2]
         times=np.arange(100)*tss   # time grid forward
-        mr=SmoothModelRun(mod,self.params,start_values,times)
+        mr=PWCModelRun(mod,self.params,start_values,times)
 
         
         # now create initial age distributions 

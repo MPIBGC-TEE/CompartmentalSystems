@@ -31,7 +31,7 @@ class DiscreteModelRun(object):
         self.dts = np.diff(self.times).astype(np.float64)
 
     @classmethod
-    def from_SmoothModelRun(cls,smr,data_times=None): 
+    def from_PWCModelRun(cls,smr,data_times=None): 
         if data_times is None:
             data_times = smr.times
 

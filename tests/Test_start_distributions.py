@@ -21,7 +21,7 @@ from CompartmentalSystems.start_distributions import \
     start_age_distributions_from_empty_spinup, \
     start_age_distributions_from_zero_initial_content
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
-from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.pwc_model_run import PWCModelRun
 from testinfrastructure.InDirTest import InDirTest
 #from testinfrastructure.helpers import pe
 
@@ -56,7 +56,7 @@ class TestStartDistributions(InDirTest):
         n_steps = 101
         times = np.linspace(t_min, t_max, n_steps) 
         # create a reference model run that starts with all pools empty
-        ref_run = SmoothModelRun(
+        ref_run = PWCModelRun(
             srm, 
             parameter_dict=parameter_dict, 
             start_values=np.zeros(srm.nr_pools), 
@@ -107,7 +107,7 @@ class TestStartDistributions(InDirTest):
         # assert that the returned vector can be used as start_moments argument
         # to continue the computation from t0 to t_max
 
-        second_half_run= SmoothModelRun( 
+        second_half_run= PWCModelRun( 
             srm, 
             parameter_dict=parameter_dict, 
             start_values=sol_t0, 
@@ -158,8 +158,8 @@ class TestStartDistributions(InDirTest):
         n_steps=101
         times = np.linspace(t_min,t_max,n_steps) 
         # create a model run that starts with all pools empty
-        smr = SmoothModelRun(srm, parameter_dict=parameter_dict, start_values=np.zeros(srm.nr_pools), times=times,func_set=func_set)
-        smr.initialize_state_transition_operator_cache(
+        pwc_mr = PWCModelRun(srm, parameter_dict=parameter_dict, start_values=np.zeros(srm.nr_pools), times=times,func_set=func_set)
+        pwc_mr.initialize_state_transition_operator_cache(
             lru_maxsize=None
         )
         # choose a t_0 somewhere in the times
@@ -171,7 +171,7 @@ class TestStartDistributions(InDirTest):
         # construct a function p that takes an age array "ages" as argument
         # and gives back a three-dimensional ndarray (ages x times x pools)
         # from the a array-valued function representing the start age density
-        p=smr.pool_age_densities_func(start_age_distributions_from_zero_initial_content(srm))
+        p=pwc_mr.pool_age_densities_func(start_age_distributions_from_zero_initial_content(srm))
 
         # for this particular example we are only interrested in ages that are smaller than t_max
         # the particular choice ages=times means that t_0_ind is the same in both arrays
@@ -181,7 +181,7 @@ class TestStartDistributions(InDirTest):
         pool_dens_data=p(ages)
         for n in range(srm.nr_pools):
 
-            fig=smr.plot_3d_density_plotly("pool {0}".format(n),pool_dens_data[:,:,n],ages)
+            fig=pwc_mr.plot_3d_density_plotly("pool {0}".format(n),pool_dens_data[:,:,n],ages)
             # plot the computed start age density for t0 on top
             #trace_on_surface = go.Scatter3d(
             fig.add_scatter3d(
@@ -196,7 +196,7 @@ class TestStartDistributions(InDirTest):
                 #,
                 #showlegend = legend_on_surface
             )
-            #smr.add_equilibrium_surface_plotly(fig)
+            #pwc_mr.add_equilibrium_surface_plotly(fig)
             plot(fig,filename="test_{0}.html".format(n),auto_open=False)
            
             # make sure that the values for the model run at t0 conince with the values computed by the             # function returned by the function under test
@@ -236,18 +236,18 @@ class TestStartDistributions(InDirTest):
         a_dens_function,x_fix = start_age_distributions_from_steady_state(srm,t0=t0,parameter_dict={},func_set=func_set)
         # create a model run that starts at x_fix and t0
         times = np.linspace(t0, 8*np.pi,41)
-        smr = SmoothModelRun(srm, parameter_dict=parameter_dict, start_values=x_fix, times=times,func_set=func_set)
-        smr.initialize_state_transition_operator_cache(
+        pwc_mr = PWCModelRun(srm, parameter_dict=parameter_dict, start_values=x_fix, times=times,func_set=func_set)
+        pwc_mr.initialize_state_transition_operator_cache(
             lru_maxsize=None
         )
         # construct a function p that takes an age array "ages" as argument
         # and gives back a three-dimensional ndarray (ages x times x pools)
         # from the a array-valued function of a single age a_dens_function
-        p=smr.pool_age_densities_func(a_dens_function)
+        p=pwc_mr.pool_age_densities_func(a_dens_function)
         ages=np.linspace(0,3,31)
         pool_dens_data=p(ages)
-        system_dens_data=smr.system_age_density(pool_dens_data)
-        fig=smr.plot_3d_density_plotly('pool 1',pool_dens_data[:,:,0],ages)
+        system_dens_data=pwc_mr.system_age_density(pool_dens_data)
+        fig=pwc_mr.plot_3d_density_plotly('pool 1',pool_dens_data[:,:,0],ages)
         # two-dimensional non-autonomous nonlinear 
         C_0, C_1 = symbols('C_0 C_1')
         state_vector = [C_0, C_1]
@@ -272,19 +272,19 @@ class TestStartDistributions(InDirTest):
         a_dens_function,x_fix = start_age_distributions_from_steady_state(srm,t0=t0,parameter_dict={},func_set=func_set,x0=np.array([1,2]))
         # create a model run that starts at x_fix and t0
         times = np.linspace(t0, 8*np.pi,41)
-        smr = SmoothModelRun(srm, parameter_dict=parameter_dict, start_values=x_fix, times=times,func_set=func_set)
-        smr.initialize_state_transition_operator_cache(
+        pwc_mr = PWCModelRun(srm, parameter_dict=parameter_dict, start_values=x_fix, times=times,func_set=func_set)
+        pwc_mr.initialize_state_transition_operator_cache(
             lru_maxsize=None
         )
 
         # construct a function p that takes an age array "ages" as argument
         # and gives back a three-dimensional ndarray (ages x times x pools)
         # from the a array-valued function of a single age a_dens_function
-        p=smr.pool_age_densities_func(a_dens_function)
+        p=pwc_mr.pool_age_densities_func(a_dens_function)
         ages=np.linspace(0,3,31)
         pool_dens_data=p(ages)
-        system_dens_data=smr.system_age_density(pool_dens_data)
-        fig=smr.plot_3d_density_plotly('pool 1',pool_dens_data[:,:,0],ages)
+        system_dens_data=pwc_mr.system_age_density(pool_dens_data)
+        fig=pwc_mr.plot_3d_density_plotly('pool 1',pool_dens_data[:,:,0],ages)
 
         fig.add_scatter3d(
             #name=name,
@@ -300,7 +300,7 @@ class TestStartDistributions(InDirTest):
             #,
             #showlegend = legend_on_surface
         )
-        smr.add_constant_age_distribution_surface_plotly(fig)
+        pwc_mr.add_constant_age_distribution_surface_plotly(fig)
         plot(fig,filename='test.html',auto_open=False)
 
 

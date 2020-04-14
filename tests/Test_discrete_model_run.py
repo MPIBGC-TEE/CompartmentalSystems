@@ -18,18 +18,18 @@ from typing import Callable,Iterable,Union,Optional,List,Tuple
 from copy import copy
     
 import CompartmentalSystems.example_smooth_reservoir_models as ESRM
-import CompartmentalSystems.example_smooth_model_runs as ESMR
+import CompartmentalSystems.example_pwc_model_runs as ESMR
 
 from testinfrastructure.InDirTest import InDirTest
 #from testinfrastructure.helpers import pe
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
-from CompartmentalSystems.smooth_model_run import SmoothModelRun 
+from CompartmentalSystems.pwc_model_run import PWCModelRun 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun
 from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs
 
 
 class TestDiscreteModelRun(InDirTest):
-    def test_from_SmoothModelRun(self):
+    def test_from_PWCModelRun(self):
         x_0,x_1,t,k,u = symbols("x_1,x_2,k,t,u")
         inputs={
              0:u
@@ -50,19 +50,19 @@ class TestDiscreteModelRun(InDirTest):
             ,u:1}
         delta_t=np.float(1)
         
-        smr = SmoothModelRun(srm, parameter_dict, start_values, times)
+        pwc_mr = PWCModelRun(srm, parameter_dict, start_values, times)
 
         
-        dmr = DiscreteModelRun.from_SmoothModelRun(smr)
-        smrs,_=smr.solve()
+        dmr = DiscreteModelRun.from_PWCModelRun(pwc_mr)
+        pwc_mrs,_=pwc_mr.solve()
         dmrs=dmr.solve()
-        self.assertTrue(np.allclose(dmrs,smrs))
+        self.assertTrue(np.allclose(dmrs,pwc_mrs))
         
         fig=plt.figure(figsize=(7,7))
         for i in [0,1]:
             ax=fig.add_subplot(2,1,1+i)
             plt.title("solutions")
-            ax.plot(times,smrs[:,i],'*',color='red',label="smr"+str(i),markersize=12)
+            ax.plot(times,pwc_mrs[:,i],'*',color='red',label="pwc_mr"+str(i),markersize=12)
             ax.plot(times,dmrs[:,i],'*',color='blue',label="dmr"+str(i),markersize=8)
             ax.legend()
         fig.savefig("pool_contents.pdf")
@@ -86,12 +86,12 @@ class TestDiscreteModelRun(InDirTest):
         start_values = np.array(ss).astype(np.float64)
         times = np.linspace(1919, 2009, 901)
         parameter_dict = {}
-        smr = SmoothModelRun(srm, parameter_dict, start_values, times)
-        smr.initialize_state_transition_operator_cache(
+        pwc_mr = PWCModelRun(srm, parameter_dict, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(
             lru_maxsize=None
         )
 
-        dmr = DiscreteModelRun.from_SmoothModelRun(smr)
+        dmr = DiscreteModelRun.from_PWCModelRun(pwc_mr)
 
         
 

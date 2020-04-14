@@ -16,12 +16,12 @@ from scipy.special import factorial
 from sympy import sin, symbols, Matrix, Symbol, exp, solve, Eq, pi, Piecewise, Function, ones
     
 import CompartmentalSystems.example_smooth_reservoir_models as ESRM
-import CompartmentalSystems.example_smooth_model_runs as ESMR
+import CompartmentalSystems.example_pwc_model_runs as ESMR
 
 from testinfrastructure.InDirTest import InDirTest
 #from testinfrastructure.helpers import pe
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
-from CompartmentalSystems.smooth_model_run import SmoothModelRun 
+from CompartmentalSystems.pwc_model_run import PWCModelRun 
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel 
 
 def pfile_C14Atm_NH():
@@ -30,8 +30,8 @@ def pfile_C14Atm_NH():
     return pfile
 
 
-class TestSmoothModelRun(InDirTest):
-#class TestSmoothModelRun(unittest.TestCase):
+class TestPWCModelRun(InDirTest):
+#class TestPWCModelRun(unittest.TestCase):
         
     def test_init(self):
         #create a valid model run complete with start ages
@@ -41,23 +41,23 @@ class TestSmoothModelRun(InDirTest):
         times = np.linspace(0, 20, 1600)
         start_values = np.array([10])
         pardict = {k: 1}
-        smr = SmoothModelRun(srm, pardict, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        self.assertEqual(smr.start_values, start_values)
-        self.assertTrue(all(smr.times==times))
+        pwc_mr = PWCModelRun(srm, pardict, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        self.assertEqual(pwc_mr.start_values, start_values)
+        self.assertTrue(all(pwc_mr.times==times))
         
         #create a valid model run without start ages
-        smr = SmoothModelRun(srm, pardict, start_values, times=times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, pardict, start_values, times=times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         #check if we can retrieve values back 
         #(although this looks too simple there was an error here)
-        self.assertEqual(smr.start_values, start_values)
-        self.assertTrue(all(smr.times==times))
+        self.assertEqual(pwc_mr.start_values, start_values)
+        self.assertTrue(all(pwc_mr.times==times))
        
         #check for incomplete param set
         pardict = {}
         with self.assertRaises(Exception):
-            smr = SmoothModelRun(srm, pardict, start_values, times=times)
+            pwc_mr = PWCModelRun(srm, pardict, start_values, times=times)
 
         
 
@@ -138,12 +138,12 @@ class TestSmoothModelRun(InDirTest):
         #times = np.linspace(0, 10, 101)
         #start_values = np.array([A_eq/2, T_eq*2, S_eq/3])
         start_values = np.array([A_eq, T_eq, S_eq])
-        nonlinear_smr = SmoothModelRun(nonlinear_srm, par_dict, start_values, times,func_set)
-        nonlinear_smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        linearized_smr = nonlinear_smr.linearize()
-        linearized_smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        nonlin_soln,_ = nonlinear_smr.solve()
-        lin_soln,_ = linearized_smr.solve()
+        nonlinear_pwc_mr = PWCModelRun(nonlinear_srm, par_dict, start_values, times,func_set)
+        nonlinear_pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        linearized_pwc_mr = nonlinear_pwc_mr.linearize()
+        linearized_pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        nonlin_soln,_ = nonlinear_pwc_mr.solve()
+        lin_soln,_ = linearized_pwc_mr.solve()
         self.assertTrue(
             np.allclose(
                 nonlin_soln,
@@ -216,14 +216,14 @@ class TestSmoothModelRun(InDirTest):
         # initialize model run 
         times = np.linspace(0, 10, 101)
         start_values = np.array([A_eq/2, T_eq*2, S_eq/3])
-        nonlinear_smr = SmoothModelRun(nonlinear_srm, par_dict, start_values, times)
-        nonlinear_smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        nonlinear_pwc_mr = PWCModelRun(nonlinear_srm, par_dict, start_values, times)
+        nonlinear_pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
       
 
-        linearized_smr = nonlinear_smr.linearize_old()
-        linearized_smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        nonlin_soln = nonlinear_smr.solve_old()
-        lin_soln = linearized_smr.solve_old()
+        linearized_pwc_mr = nonlinear_pwc_mr.linearize_old()
+        linearized_pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        nonlin_soln = nonlinear_pwc_mr.solve_old()
+        lin_soln = linearized_pwc_mr.solve_old()
         self.assertTrue(
             np.allclose(
                 nonlin_soln,
@@ -242,7 +242,7 @@ class TestSmoothModelRun(InDirTest):
             return np.array([p1, p2])
 
         max_order = 5
-        moments = SmoothModelRun.moments_from_densities(max_order, start_age_densities)
+        moments = PWCModelRun.moments_from_densities(max_order, start_age_densities)
 
         ref1 = np.array([factorial(n)/1**n for n in range(1, max_order+1)])
         ref2 = np.array([factorial(n)/2**n for n in range(1, max_order+1)]) 
@@ -259,7 +259,7 @@ class TestSmoothModelRun(InDirTest):
             return np.array([p1, p2])
 
         max_order = 1
-        moments = SmoothModelRun.moments_from_densities(max_order, start_age_densities)
+        moments = PWCModelRun.moments_from_densities(max_order, start_age_densities)
         self.assertTrue(np.isnan(moments[0,0]))
 
 
@@ -273,8 +273,8 @@ class TestSmoothModelRun(InDirTest):
                     [ 0,-2]])
         u = Matrix(2, 1, [0,1])
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
-        smr = SmoothModelRun(srm, parameter_dict={}, start_values=np.array([1,1]), times=np.linspace(0,1,10))
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, parameter_dict={}, start_values=np.array([1,1]), times=np.linspace(0,1,10))
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         a_ref = np.array(
             [[1.        , 1.        ],  
              [0.89488146, 0.90060046],
@@ -290,7 +290,7 @@ class TestSmoothModelRun(InDirTest):
         )
 
         ref = np.ndarray((10,2), np.float, a_ref)
-        soln,_ = smr.solve()
+        soln,_ = pwc_mr.solve()
         self.assertTrue(np.allclose(soln, ref))
 
 
@@ -331,10 +331,10 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1, 2, 3])
         times = np.linspace(t_min,t_max, 11)
-        smr = SmoothModelRun(srm, parameter_dict={}, start_values=start_values, times=times,func_set=func_set)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, parameter_dict={}, start_values=start_values, times=times,func_set=func_set)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         
-        soln,_ = smr.solve()
+        soln,_ = pwc_mr.solve()
 
 
     ##### fluxes as functions #####
@@ -354,11 +354,11 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5,5])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         
-        u = smr.external_input_flux_funcs()
-        o = smr.output_flux_funcs()
+        u = pwc_mr.external_input_flux_funcs()
+        o = pwc_mr.output_flux_funcs()
         # check the scalar versions
         self.assertTrue(np.allclose(u[0](0.5), 0.5))
         self.assertTrue(np.allclose(u[1](0.5), 1))
@@ -381,9 +381,9 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1,3])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        res=smr.output_vector_func(1)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        res=pwc_mr.output_vector_func(1)
 #        pe('res',locals())
         self.assertTrue(np.allclose(res, np.array([0.36809009, 1.10427026]),rtol=1e-3))
         
@@ -402,10 +402,10 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5,2])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         
-        u = smr.external_input_vector_func()
+        u = pwc_mr.external_input_vector_func()
         self.assertTrue(np.allclose(u(0.5), np.array([0.5, 0])))
 
 
@@ -424,8 +424,8 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1,3])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ref_a = np.array([[ 0.,          0.        ], # input starts right after t0
                           [ 1.,          1.42684416],
@@ -439,7 +439,7 @@ class TestSmoothModelRun(InDirTest):
                           [ 1.,          0.95644224],
                           [ 1.,          0.90979601]])
         ref = np.ndarray((11, 2), np.float, ref_a)
-        self.assertTrue(np.allclose(smr.external_input_vector, ref))
+        self.assertTrue(np.allclose(pwc_mr.external_input_vector, ref))
 
 
     def test_external_output_vector(self):
@@ -454,8 +454,8 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1])
         times = np.linspace(0, 1, 11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ref_a = np.array(
             [[1.        ], 
@@ -471,7 +471,7 @@ class TestSmoothModelRun(InDirTest):
              [0.36788092]]
         )
         ref = np.ndarray((11, 1), np.float, ref_a)
-        self.assertTrue(np.allclose(smr.external_output_vector, ref))
+        self.assertTrue(np.allclose(pwc_mr.external_output_vector, ref))
 
         # two-dimensional case
         C_0, C_1 = symbols('C_0 C_1')
@@ -484,8 +484,8 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1,3])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ref_a = np.array(
             [[1.        , 3.        ], 
@@ -501,7 +501,7 @@ class TestSmoothModelRun(InDirTest):
              [0.36788092, 1.10364277]]
         )
         ref = np.ndarray((11, 2), np.float, ref_a)
-        self.assertTrue(np.allclose(smr.external_output_vector, ref))
+        self.assertTrue(np.allclose(pwc_mr.external_output_vector, ref))
 
 
     ##### age density methods #####
@@ -519,13 +519,13 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
         start_age_densities = lambda a: np.exp(-a)*start_values
-        p_sv = smr.pool_age_densities_single_value(start_age_densities)
+        p_sv = pwc_mr.pool_age_densities_single_value(start_age_densities)
 
         a1_ref = np.array(
                 [[[ 0.        ,  0.        ],
@@ -592,18 +592,18 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
         start_age_densities = lambda a: np.exp(-a)*start_values
 
-        p = smr.pool_age_densities_func(start_age_densities)
+        p = pwc_mr.pool_age_densities_func(start_age_densities)
         pool_age_densities = p(ages)
-        system_age_density = smr.system_age_density(pool_age_densities)
+        system_age_density = pwc_mr.system_age_density(pool_age_densities)
         
-        age_densities = smr.age_densities(pool_age_densities, system_age_density)
+        age_densities = pwc_mr.age_densities(pool_age_densities, system_age_density)
 
         a_ref = np.array(
             [[[ 0.        ,  0.        ,  0.        ],
@@ -634,8 +634,8 @@ class TestSmoothModelRun(InDirTest):
         #output_fluxes = {0: (C_0-1)**2, 1: C_1}
         #internal_fluxes = {}
         #srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
-        #smr = SmoothModelRun(srm, {}, start_values, times)
-        #lmr=smr.linearize_old()
+        #pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        #lmr=pwc_mr.linearize_old()
         #ages = np.linspace(0,2,21)
         #p = lmr.pool_age_densities_func(start_age_densities)
         #pool_age_densities = p(ages)
@@ -652,13 +652,13 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
         start_age_densities = lambda a: np.exp(-a)*start_values
-        p_sv = smr.system_age_density_single_value(start_age_densities)
+        p_sv = pwc_mr.system_age_density_single_value(start_age_densities)
 
         a1_ref = np.array(
                 [[[ 0.        ,  0.        ],
@@ -723,15 +723,15 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
         start_age_densities = lambda a: np.exp(-a)*start_values
-        p = smr.pool_age_densities_func(start_age_densities)
+        p = pwc_mr.pool_age_densities_func(start_age_densities)
         age_densities = p(ages)
-        system_age_density = smr.system_age_density(age_densities)
+        system_age_density = pwc_mr.system_age_density(age_densities)
 
         a1_ref = np.array(
                 [[[ 0.        ,  0.        ],
@@ -799,21 +799,21 @@ class TestSmoothModelRun(InDirTest):
         times = np.linspace(0,1,3)
 
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
-        smr = SmoothModelRun(srm, parameter_dict={}, start_values=start_values, times=times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, parameter_dict={}, start_values=start_values, times=times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: 2*np.exp(-2*a)*start_values
 
         # the solution to be tested
         order = 1
-        ma_from_dens = smr.age_moment_vector_from_densities(order, start_age_densities)
+        ma_from_dens = pwc_mr.age_moment_vector_from_densities(order, start_age_densities)
 
         # test against solution from mean age system
         start_mean_ages = [0.5,0.5]
         n = srm.nr_pools
         start_age_moments = np.ndarray((1,n), np.float, np.array(start_mean_ages))
 
-        ref_ma = smr.age_moment_vector(1, start_age_moments)
+        ref_ma = pwc_mr.age_moment_vector(1, start_age_moments)
 
         self.assertTrue(np.allclose(ma_from_dens, ref_ma,rtol=2e-3))
 
@@ -826,9 +826,9 @@ class TestSmoothModelRun(InDirTest):
         
         start_values = np.array([1,1])
         times = np.linspace(0, 1, 10)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        n = smr.nr_pools
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        n = pwc_mr.nr_pools
 
         def start_age_densities(a):
             p1 = np.exp(-a) * start_values[0]
@@ -836,21 +836,21 @@ class TestSmoothModelRun(InDirTest):
         
             return np.array([p1, p2])
 
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(1, start_age_densities)
 
-        ma_ref = smr.age_moment_vector(1, start_age_moments)
-        ma_semi_explicit = smr.age_moment_vector_semi_explicit(1, start_age_moments)
+        ma_ref = pwc_mr.age_moment_vector(1, start_age_moments)
+        ma_semi_explicit = pwc_mr.age_moment_vector_semi_explicit(1, start_age_moments)
         self.assertTrue(np.allclose(ma_semi_explicit, ma_ref,rtol=1e-3))
 
         # test empty start_ages
-        ma_ref = smr.age_moment_vector(1)
-        ma_semi_explicit = smr.age_moment_vector_semi_explicit(1)
+        ma_ref = pwc_mr.age_moment_vector(1)
+        ma_semi_explicit = pwc_mr.age_moment_vector_semi_explicit(1)
         self.assertTrue(np.allclose(ma_semi_explicit, ma_ref,rtol=1e-3))  
 
         # test that nothing fails for second moment
-        start_age_moments = smr.moments_from_densities(2, start_age_densities)
-        smr.age_moment_vector_semi_explicit(2, start_age_moments)
-        smr.age_moment_vector_semi_explicit(2)
+        start_age_moments = pwc_mr.moments_from_densities(2, start_age_densities)
+        pwc_mr.age_moment_vector_semi_explicit(2, start_age_moments)
+        pwc_mr.age_moment_vector_semi_explicit(2)
 
         # test empty second pool at beginning
         x, y, t = symbols("x y t")
@@ -860,9 +860,9 @@ class TestSmoothModelRun(InDirTest):
         
         start_values = np.array([1,0])
         times = np.linspace(0, 1, 11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        n = smr.nr_pools
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        n = pwc_mr.nr_pools
 
         def start_age_densities(a):
             p1 = np.exp(-a) * start_values[0]
@@ -870,10 +870,10 @@ class TestSmoothModelRun(InDirTest):
         
             return np.array([p1, p2])
 
-        start_age_moments = smr.moments_from_densities(2, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(2, start_age_densities)
 
-        ma_ref = smr.age_moment_vector(2, start_age_moments)
-        ma_semi_explicit = smr.age_moment_vector_semi_explicit(2, start_age_moments)
+        ma_ref = pwc_mr.age_moment_vector(2, start_age_moments)
+        ma_semi_explicit = pwc_mr.age_moment_vector_semi_explicit(2, start_age_moments)
         self.assertTrue(np.allclose(ma_semi_explicit, ma_ref, equal_nan=True,rtol=1e-3))
 
 
@@ -886,16 +886,16 @@ class TestSmoothModelRun(InDirTest):
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array([1,1])
-        smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(1, start_age_densities)
     
         # set manually mean age in first pool to zero
         start_age_moments[0,0] = 0
 
-        ma_vec = smr.age_moment_vector(1, start_age_moments)
+        ma_vec = pwc_mr.age_moment_vector(1, start_age_moments)
 
         a_ref = np.array(
             [[0.        , 1.        ], 
@@ -921,16 +921,16 @@ class TestSmoothModelRun(InDirTest):
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array([1,0])
-        smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(1, start_age_densities)
     
         # set manually mean age in first pool to zero
         start_age_moments[0,0] = 0
 
-        ma_vec = smr.age_moment_vector(1, start_age_moments)
+        ma_vec = pwc_mr.age_moment_vector(1, start_age_moments)
         a_ref = np.array([[ 0.        , np.nan], 
                           [ 0.08202608, np.nan],
                           [ 0.14256586, np.nan],
@@ -955,16 +955,16 @@ class TestSmoothModelRun(InDirTest):
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array([1,0])
-        smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
-        start_age_moments = smr.moments_from_densities(2, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(2, start_age_densities)
     
         # set manually mean age in first pool to zero
         start_age_moments[0,0] = 0
 
-        ma_vec = smr.age_moment_vector(2, start_age_moments)
+        ma_vec = pwc_mr.age_moment_vector(2, start_age_moments)
         a_ref = np.array(
             [[2.        ,     np.nan], 
              [0.98004619, 0.00388956],
@@ -990,18 +990,18 @@ class TestSmoothModelRun(InDirTest):
         srm = SmoothReservoirModel.from_B_u(X, t, Matrix([[-1,0],[0,-1]]), u)
 
         start_values = np.array([1,1])
-        smr = SmoothModelRun(srm, {}, start_values, np.linspace(0,1,10))
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        n = smr.nr_pools
+        pwc_mr = PWCModelRun(srm, {}, start_values, np.linspace(0,1,10))
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        n = pwc_mr.nr_pools
         
         order = 2
         start_age_densities = lambda a: np.exp(-a) * start_values
-        start_age_moments = smr.moments_from_densities(order, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(order, start_age_densities)
 #        pe('start_age_moments',locals())
 #        pe('start_age_moments.shape',locals())
 
-        system_age_moment = smr.system_age_moment(order, start_age_moments)
-        age_moment_vector = smr.age_moment_vector(order, start_age_moments)
+        system_age_moment = pwc_mr.system_age_moment(order, start_age_moments)
+        age_moment_vector = pwc_mr.age_moment_vector(order, start_age_moments)
 
         for pool in range(n):
             self.assertTrue(np.allclose(age_moment_vector[:,pool], system_age_moment))
@@ -1013,16 +1013,16 @@ class TestSmoothModelRun(InDirTest):
         srm = SmoothReservoirModel.from_B_u(X, t, Matrix([[-1,0],[0,-1]]), u)
 
         start_values = np.array([0,0])
-        smr = SmoothModelRun(srm, {}, start_values, np.linspace(0,1,10))
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        n = smr.nr_pools
+        pwc_mr = PWCModelRun(srm, {}, start_values, np.linspace(0,1,10))
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        n = pwc_mr.nr_pools
         
         order = 1
         start_age_densities = lambda a: np.exp(-a) * start_values
-        start_age_moments = smr.moments_from_densities(order, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(order, start_age_densities)
 
-        age_moment_vector = smr.age_moment_vector(order, start_age_moments)
-        system_age_moment = smr.system_age_moment(order, start_age_moments)
+        age_moment_vector = pwc_mr.age_moment_vector(order, start_age_moments)
+        system_age_moment = pwc_mr.system_age_moment(order, start_age_moments)
 
         self.assertTrue(np.all(np.isnan(age_moment_vector[:,0])))
         self.assertTrue(np.isnan(age_moment_vector[0,1]))
@@ -1044,14 +1044,14 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
         start_age_densities = lambda a: np.exp(-a)*start_values
 
-        p_sv = smr.backward_transit_time_density_single_value_func(start_age_densities)
+        p_sv = pwc_mr.backward_transit_time_density_single_value_func(start_age_densities)
         self.assertTrue(np.allclose(p_sv(1, 1),(5+3)*np.exp(-1),rtol=1e-3 ))
 
 
@@ -1067,8 +1067,8 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
@@ -1126,9 +1126,9 @@ class TestSmoothModelRun(InDirTest):
                   [ 2.94303553,  2.94303558,  2.9430356,   2.94303559,  2.94303566,  2.94303564]])
         tt_ref = np.ndarray((3,6), np.float, tt_a_ref)
 
-        p = smr.pool_age_densities_func(start_age_densities)
+        p = pwc_mr.pool_age_densities_func(start_age_densities)
         age_densities = p(ages)
-        btt_dens = smr.backward_transit_time_density(age_densities)
+        btt_dens = pwc_mr.backward_transit_time_density(age_densities)
         self.assertTrue(np.allclose(btt_dens, tt_ref,rtol=1e-3))
 
 
@@ -1144,17 +1144,17 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
         start_age_densities = lambda a: np.exp(-a)*start_values
 
-        p_btt_sv = smr.backward_transit_time_density_single_value_func(
+        p_btt_sv = pwc_mr.backward_transit_time_density_single_value_func(
             start_age_densities
         )
-        p_ftt_sv = smr.forward_transit_time_density_single_value_func()
+        p_ftt_sv = pwc_mr.forward_transit_time_density_single_value_func()
     
         # we changed the behavior of u(t0) such as not to return 0 
         # by default to make the quantile computation consistent
@@ -1179,16 +1179,16 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1, 2])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(0,1,3)
         # negative ages will be cut off automatically
         start_age_densities = lambda a: np.exp(-a)*start_values
-        p = smr.pool_age_densities_func(start_age_densities)
+        p = pwc_mr.pool_age_densities_func(start_age_densities)
         age_densities = p(ages)
-        btt_arr = smr.backward_transit_time_density(age_densities)
-        p_ftt = smr.forward_transit_time_density_func()
+        btt_arr = pwc_mr.backward_transit_time_density(age_densities)
+        p_ftt = pwc_mr.forward_transit_time_density_func()
         ftt_arr = p_ftt(ages)
 
         for age in range(ftt_arr.shape[0]):
@@ -1214,19 +1214,19 @@ class TestSmoothModelRun(InDirTest):
         times = np.linspace(0,1,3)
 
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
-        smr = SmoothModelRun(srm, parameter_dict={}, start_values=start_values, times=times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, parameter_dict={}, start_values=start_values, times=times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: 2*np.exp(-2*a)*start_values
 
         # the solution to be tested
         order = 1
-        mbtt_from_dens = smr.backward_transit_time_moment_from_density(order, start_age_densities)
+        mbtt_from_dens = pwc_mr.backward_transit_time_moment_from_density(order, start_age_densities)
 
         # test against solution from mean age system
 
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
-        ref_mbtt = smr.backward_transit_time_moment(1, start_age_moments)
+        start_age_moments = pwc_mr.moments_from_densities(1, start_age_densities)
+        ref_mbtt = pwc_mr.backward_transit_time_moment(1, start_age_moments)
 
         self.assertTrue(np.allclose(mbtt_from_dens, ref_mbtt,rtol=1e-3))
         
@@ -1240,17 +1240,17 @@ class TestSmoothModelRun(InDirTest):
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array([1,1])
-        smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(1, start_age_densities)
     
         # set manually mean age in first pool to zero
         start_age_moments[0,0] = 0 # first moment, first pool
 
-        mbtt = smr.backward_transit_time_moment(1, start_age_moments)
-        #mbtt_ref = smr.mean_backward_transit_time(tuple(start_age_moments[0]))
+        mbtt = pwc_mr.backward_transit_time_moment(1, start_age_moments)
+        #mbtt_ref = pwc_mr.mean_backward_transit_time(tuple(start_age_moments[0]))
         mbtt_ref = np.array([
             0.66666667, 0.53307397, 0.46606145, 0.43533026, 0.42580755,
             0.42915127, 0.44056669, 0.45707406, 0.47678225, 0.49837578
@@ -1279,14 +1279,14 @@ class TestSmoothModelRun(InDirTest):
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array(-B**(-1)*u)
-        smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,11))
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times=np.linspace(0,1,11))
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a*k) / start_values*np.array(u)
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(1, start_age_densities)
     
-        mbtt = smr.backward_transit_time_moment(1, start_age_moments)
-        mftt = smr.forward_transit_time_moment(1)
+        mbtt = pwc_mr.backward_transit_time_moment(1, start_age_moments)
+        mftt = pwc_mr.forward_transit_time_moment(1)
 
         self.assertTrue(np.allclose(mbtt[1:], mftt[1:],rtol=1e-2))
         self.assertTrue(np.isnan(mftt[0]))
@@ -1301,16 +1301,16 @@ class TestSmoothModelRun(InDirTest):
         start_values = np.array([1])
         n = 101
         times = np.linspace(0, 100, n)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         # to keep the integration time in resonable bounds we lower the required accuracy 
-        mftts = smr.forward_transit_time_moment(1,epsrel=1e-2)
+        mftts = pwc_mr.forward_transit_time_moment(1,epsrel=1e-2)
         self.assertTrue(np.allclose(mftts[1:], np.ones((100,)),rtol=1e-2)) 
 
         # some code to show possible problems with the sto
-#        Phi = smr._state_transition_operator
+#        Phi = pwc_mr._state_transition_operator
 #        Phi(1, 0, [1])
-#        B = smr._state_transition_operator_values[0,:,:,:].reshape((101,))
+#        B = pwc_mr._state_transition_operator_values[0,:,:,:].reshape((101,))
 #
 #        from scipy.integrate import odeint
 #        def rhs(X, t):
@@ -1354,8 +1354,8 @@ class TestSmoothModelRun(InDirTest):
         start_values = np.array([1])
         n = 101
         times = np.linspace(0, 100, n)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -1364,7 +1364,7 @@ class TestSmoothModelRun(InDirTest):
         #for M in []:
             N = 1000
             if M == 0: N = 100
-            sim_dict = smr.apply_to_forward_transit_time_simulation(f_dict = {'mean': np.mean}, N = N, M = M)
+            sim_dict = pwc_mr.apply_to_forward_transit_time_simulation(f_dict = {'mean': np.mean}, N = N, M = M)
 
             for f_name, sub_dict in sim_dict.items():
                 points = ax.plot(times, sub_dict['values'], ls = '-', label = f_name + ', M=' + str(M))
@@ -1373,13 +1373,13 @@ class TestSmoothModelRun(InDirTest):
                 else:
                     ax.plot(fine_times, sub_dict['interpolation'](fine_times), ls = '--', label = f_name + ', interpolation, M=' + str(M), color = points[-1].get_color())
        
-        sim_dict = smr.apply_to_forward_transit_time_simulation(f_dict = {'mean': np.mean}, N = 100, MH = True)
+        sim_dict = pwc_mr.apply_to_forward_transit_time_simulation(f_dict = {'mean': np.mean}, N = 100, MH = True)
         for f_name, sub_dict in sim_dict.items():
             points = ax.plot(times, sub_dict['values'], ls = '-', label = f_name + ', MH')
             ax.plot(fine_times, sub_dict['interpolation'](fine_times), ls = '--', label = f_name + ', interpolation, MH', color = points[-1].get_color())
 
         # plot true value (if integration is possible)
-        mftts = smr.forward_transit_time_moment(1)
+        mftts = pwc_mr.forward_transit_time_moment(1)
         ax.plot(times, mftts, color = 'black', label = 'integrated')
 
         ax.legend() 
@@ -1402,37 +1402,37 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1, 3])
         times = np.linspace(0,50,5)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(0,50,5)
         start_age_densities = lambda a: np.exp(-a)*start_values
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(1, start_age_densities)
 
         # test if saving and loading yields no diferences
-        p = smr.pool_age_densities_func(start_age_densities)
+        p = pwc_mr.pool_age_densities_func(start_age_densities)
         pool_age_densities = p(ages)
-        system_age_density = smr.system_age_density(pool_age_densities)
+        system_age_density = pwc_mr.system_age_density(pool_age_densities)
         filename = 'age_dens.csv'
-        smr.save_pools_and_system_density_csv(filename, pool_age_densities, system_age_density, ages)
-        loaded_age_densities = smr.load_pools_and_system_densities_csv(filename, ages)
+        pwc_mr.save_pools_and_system_density_csv(filename, pool_age_densities, system_age_density, ages)
+        loaded_age_densities = pwc_mr.load_pools_and_system_densities_csv(filename, ages)
 
         self.assertTrue(np.allclose(pool_age_densities, loaded_age_densities[:,:,:2]))
 
-        pool_age_mean = smr.age_moment_vector(1, start_age_moments)
-        system_age_mean = smr.system_age_moment(1, start_age_moments)
-        smr.save_pools_and_system_value_csv('age_mean.csv', pool_age_mean, system_age_mean)
+        pool_age_mean = pwc_mr.age_moment_vector(1, start_age_moments)
+        system_age_mean = pwc_mr.system_age_moment(1, start_age_moments)
+        pwc_mr.save_pools_and_system_value_csv('age_mean.csv', pool_age_mean, system_age_mean)
 
-        loaded_pool_age_mean, loaded_system_age_mean = smr.load_pools_and_system_value_csv('age_mean.csv')
+        loaded_pool_age_mean, loaded_system_age_mean = pwc_mr.load_pools_and_system_value_csv('age_mean.csv')
         self.assertTrue(np.allclose(pool_age_mean,loaded_pool_age_mean))
         self.assertTrue(np.allclose(system_age_mean,loaded_system_age_mean))
 
         filename = 'btt_dens.csv'
-        btt_density = smr.backward_transit_time_density(pool_age_densities)
-        smr.save_density_csv(filename, btt_density, ages)
+        btt_density = pwc_mr.backward_transit_time_density(pool_age_densities)
+        pwc_mr.save_density_csv(filename, btt_density, ages)
 
-        btt_mean = smr.backward_transit_time_moment(1, start_age_moments)
-        smr.save_value_csv(filename, btt_mean)
+        btt_mean = pwc_mr.backward_transit_time_moment(1, start_age_moments)
+        pwc_mr.save_value_csv(filename, btt_mean)
 
 
     ##### plotting methods #####
@@ -1471,27 +1471,27 @@ class TestSmoothModelRun(InDirTest):
 
     def test_plot_internal_fluxes(self):
         fig = plt.figure()
-        smr = ESMR.nonlinear_two_pool()
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        smr.plot_internal_fluxes(fig)
+        pwc_mr = ESMR.nonlinear_two_pool()
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr.plot_internal_fluxes(fig)
         fig.savefig("plot.pdf")
         plt.close(fig.number)
 
 
     def test_plot_external_output_fluxes(self):
-        smr = ESMR.nonlinear_two_pool()
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = ESMR.nonlinear_two_pool()
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         fig = plt.figure()
-        smr.plot_external_output_fluxes(fig)
+        pwc_mr.plot_external_output_fluxes(fig)
         fig.savefig("plot.pdf")
         plt.close(fig.number)
 
 
     def test_plot_external_input_fluxes(self):
-        smr = ESMR.nonlinear_two_pool()
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = ESMR.nonlinear_two_pool()
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         fig = plt.figure()
-        smr.plot_external_input_fluxes(fig)
+        pwc_mr.plot_external_input_fluxes(fig)
         fig.savefig("plot.pdf")
         plt.close(fig.number)
 
@@ -1500,20 +1500,20 @@ class TestSmoothModelRun(InDirTest):
 
 
     def test_plot_mean_ages(self):
-        smr = ESMR.critics()
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = ESMR.critics()
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         fig = plt.figure()
-        smr.plot_mean_ages(fig, np.array([0,0]))
+        pwc_mr.plot_mean_ages(fig, np.array([0,0]))
         fig.savefig("plot.pdf")
         plt.close(fig.number)
 
 
     def test_plot_mean_backward_transit_time(self):
-        smr = ESMR.critics()
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = ESMR.critics()
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
-        smr.plot_mean_backward_transit_time(ax, np.array([0,0]))
+        pwc_mr.plot_mean_backward_transit_time(ax, np.array([0,0]))
         fig.savefig("plot.pdf")
         plt.close(fig.number)
 
@@ -1537,18 +1537,18 @@ class TestSmoothModelRun(InDirTest):
 #
 #        start_values = np.array([1, 3])
 #        times = np.linspace(0,10,11)
-#        smr = SmoothModelRun(srm, {}, start_values, times)
+#        pwc_mr = PWCModelRun(srm, {}, start_values, times)
 #
 #        ages = np.linspace(0,10,11)
 #        start_age_densities = lambda a: np.exp(-a)*start_values
-#        p = smr.pool_age_densities_func(start_age_densities)
+#        p = pwc_mr.pool_age_densities_func(start_age_densities)
 #        age_densities = p(ages)
 #        start_mean_ages = [1,1]
 #        pool = 0        
 #
 #        fig = plt.figure()
 #        ax = fig.add_subplot(111, projection='3d')
-#        smr.plot_age_density_pool(ax, pool, age_densities, start_age_densities, ages, start_mean_ages) 
+#        pwc_mr.plot_age_density_pool(ax, pool, age_densities, start_age_densities, ages, start_mean_ages) 
 #
 #        fig.savefig('testfig.pdf') 
 
@@ -1568,11 +1568,11 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
-        F_sv = smr.cumulative_pool_age_distributions_single_value(start_age_densities)
+        F_sv = pwc_mr.cumulative_pool_age_distributions_single_value(start_age_densities)
 
         ref = np.array([5-5*np.exp(-1), 3-3*np.exp(-1)])
         self.assertTrue(np.allclose(F_sv(1, 0), ref,rtol=1e-3))
@@ -1591,11 +1591,11 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([0, 0])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
-        F_sv = smr.cumulative_pool_age_distributions_single_value(start_age_densities)
+        F_sv = pwc_mr.cumulative_pool_age_distributions_single_value(start_age_densities)
         ref = np.array([(1.0-np.exp(-1))-np.exp(-1.0/2)*(1-np.exp(-1.0/2)),0])
         self.assertTrue(np.allclose(F_sv(0.5, 1), ref))
 
@@ -1610,11 +1610,11 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
-        F_sv = smr.cumulative_pool_age_distributions_single_value(start_age_densities)
+        F_sv = pwc_mr.cumulative_pool_age_distributions_single_value(start_age_densities)
         ref = np.array([(5-5*np.exp(-0.5))*np.exp(-0.5) + (1.0-np.exp(-0.5)),
                         (3-3*np.exp(-0.5))*np.exp(-0.5)])
         self.assertTrue(np.allclose(F_sv(1, 0.5), ref))
@@ -1632,11 +1632,11 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
-        F_sv = smr.cumulative_system_age_distribution_single_value(start_age_densities)
+        F_sv = pwc_mr.cumulative_system_age_distribution_single_value(start_age_densities)
         ref = np.array([(5-5*np.exp(-0.5))*np.exp(-0.5) + (1.0-np.exp(-0.5)),
                         (3-3*np.exp(-0.5))*np.exp(-0.5)])
         self.assertTrue(np.allclose(F_sv(1, 0.5), ref.sum()))
@@ -1660,23 +1660,23 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1, 0])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         def start_age_densities(a):
             return np.exp(-a)*start_values
         
         # compute the median with different numerical methods
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
-        start_values_q = smr.age_moment_vector(1, start_age_moments)
-        a_star_newton = smr.pool_age_distributions_quantiles(
+        start_age_moments = pwc_mr.moments_from_densities(1, start_age_densities)
+        start_values_q = pwc_mr.age_moment_vector(1, start_age_moments)
+        a_star_newton = pwc_mr.pool_age_distributions_quantiles(
             0.5,
             start_values=start_values_q,
             start_age_densities=start_age_densities,
             method='newton'
         )
-        a_star_brentq = smr.pool_age_distributions_quantiles(
+        a_star_brentq = pwc_mr.pool_age_distributions_quantiles(
             0.5,
             start_age_densities=start_age_densities,
             method='brentq'
@@ -1723,7 +1723,7 @@ class TestSmoothModelRun(InDirTest):
     
     def test_distribution_quantile(self):
         F = lambda a: 1-np.exp(-a)
-        q = SmoothModelRun.distribution_quantile(
+        q = PWCModelRun.distribution_quantile(
             quantile = 0.5,
             F = F,
             norm_const = None,
@@ -1732,7 +1732,7 @@ class TestSmoothModelRun(InDirTest):
         self.assertEqual(round(q, 5), round(np.log(2), 5))   
 
         F = lambda a: (1-np.exp(-a)) * 17
-        q = SmoothModelRun.distribution_quantile(
+        q = PWCModelRun.distribution_quantile(
             quantile = 0.5,
             F = F,
             norm_const = 17,
@@ -1753,15 +1753,15 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1, 0])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         
         # compute the median with different numerical methods
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
-        start_values_q = smr.age_moment_vector(1, start_age_moments)
-        a_star = smr.pool_age_distributions_quantiles_by_ode(0.5, start_age_densities=start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(1, start_age_densities)
+        start_values_q = pwc_mr.age_moment_vector(1, start_age_moments)
+        a_star = pwc_mr.pool_age_distributions_quantiles_by_ode(0.5, start_age_densities=start_age_densities)
         self.assertTrue(np.allclose(a_star[:,0], np.log(2)+times,rtol=1e-3))
 
         a, t = symbols('a t')
@@ -1791,13 +1791,13 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1, 0])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         
-        a_star_newton = smr.system_age_distribution_quantiles(0.5, start_age_densities=start_age_densities, method='newton')
-        a_star_brentq = smr.system_age_distribution_quantiles(0.5, start_age_densities=start_age_densities, method='brentq')
+        a_star_newton = pwc_mr.system_age_distribution_quantiles(0.5, start_age_densities=start_age_densities, method='newton')
+        a_star_brentq = pwc_mr.system_age_distribution_quantiles(0.5, start_age_densities=start_age_densities, method='brentq')
         
         self.assertTrue(np.allclose(a_star_newton, np.log(2),rtol=1e-3))
         self.assertTrue(np.allclose(a_star_brentq, np.log(2),rtol=1e-3))
@@ -1813,12 +1813,12 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([0, 0])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         
-        a_star = smr.system_age_distribution_quantiles(0.5, start_age_densities=start_age_densities)
+        a_star = pwc_mr.system_age_distribution_quantiles(0.5, start_age_densities=start_age_densities)
         self.assertTrue(np.isnan(a_star[0]))
 
 
@@ -1834,12 +1834,12 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1, 0])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         #F0 = lambda s: (1-np.exp(-s))*start_values
-        a_star = smr.system_age_distribution_quantiles_by_ode(
+        a_star = pwc_mr.system_age_distribution_quantiles_by_ode(
             0.5, 
             start_age_densities,
             max_step=0.1
@@ -1857,12 +1857,12 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([0, 0])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
         
-        a_star = smr.system_age_distribution_quantiles_by_ode(
+        a_star = pwc_mr.system_age_distribution_quantiles_by_ode(
             0.5,
             start_age_densities,
             max_step=0.01
@@ -1880,11 +1880,11 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1, 1])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
-        a_star = smr.system_age_distribution_quantiles_by_ode(
+        a_star = pwc_mr.system_age_distribution_quantiles_by_ode(
             0.5,
             start_age_densities,
             max_step=0.1
@@ -1905,41 +1905,41 @@ class TestSmoothModelRun(InDirTest):
         t_end = 1
         t_mid=(t_end-0)/2
         start_values = np.array([1,1])
-        smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,t_end ,11))
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times=np.linspace(0,t_end ,11))
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(1, start_age_densities)
     
         # set manually mean age in first pool to zero
         start_age_moments[0,0] = 0
 
-        ams_func = smr._solve_age_moment_system_single_value_old(1, start_age_moments)
+        ams_func = pwc_mr._solve_age_moment_system_single_value_old(1, start_age_moments)
         ams = ams_func(t_mid)
         soln = ams[:2]
-        self.assertTrue(np.allclose(soln, smr.solve_single_value_old()(t_mid)))
+        self.assertTrue(np.allclose(soln, pwc_mr.solve_single_value_old()(t_mid)))
         ma = ams[2:]
 
         ref = np.array([ 0.26884456,  0.90341213])
         self.assertTrue(np.allclose(ma, ref)) 
 
         ## test missing start_age_moments
-        ams_func = smr._solve_age_moment_system_single_value_old(1)
+        ams_func = pwc_mr._solve_age_moment_system_single_value_old(1)
         ams=ams_func(t_mid)
         soln = ams[:2]
-        self.assertTrue(np.allclose(soln, smr.solve_single_value_old()(t_mid)))
+        self.assertTrue(np.allclose(soln, pwc_mr.solve_single_value_old()(t_mid)))
         ma = ams[2:]
-        ref_ams_func = smr._solve_age_moment_system_single_value_old(1, np.zeros((1,2))) # 1 moment, 2 pools
+        ref_ams_func = pwc_mr._solve_age_moment_system_single_value_old(1, np.zeros((1,2))) # 1 moment, 2 pools
         ref_ams=ref_ams_func(t_mid)
         ref_ma = ref_ams[2:]
         self.assertTrue(np.allclose(ma, ref_ma))
 
         # test second order moments!
-        start_age_moments = smr.moments_from_densities(2, start_age_densities)
-        ams_func = smr._solve_age_moment_system_single_value_old(2, start_age_moments)
+        start_age_moments = pwc_mr.moments_from_densities(2, start_age_densities)
+        ams_func = pwc_mr._solve_age_moment_system_single_value_old(2, start_age_moments)
 
         # test missing start_age_moments
-        ams_func = smr._solve_age_moment_system_single_value_old(2)
+        ams_func = pwc_mr._solve_age_moment_system_single_value_old(2)
 
     
     def test_solve_age_moment_system_func(self):
@@ -1952,21 +1952,21 @@ class TestSmoothModelRun(InDirTest):
         t_end = 1
         t_mid=(t_end-0)/2
         start_values = np.array([1,1])
-        smr = SmoothModelRun(
+        pwc_mr = PWCModelRun(
             srm,
             {},
             start_values,
             times=np.linspace(0, t_end, 11)
         )
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(1, start_age_densities)
     
         # set manually mean age in first pool to zero
         start_age_moments[0,0] = 0
 
-        ams_func = smr._solve_age_moment_system_func(1, start_age_moments)
+        ams_func = pwc_mr._solve_age_moment_system_func(1, start_age_moments)
         ams = ams_func(np.array([t_mid,t_end]))
         #check that the time is the first dimension
         self.assertEqual(ams.shape,(2,4))
@@ -1976,7 +1976,7 @@ class TestSmoothModelRun(InDirTest):
         self.assertTrue(
             np.allclose(
                 soln,
-                smr.solve_func()(t_mid),
+                pwc_mr.solve_func()(t_mid),
                 rtol=1e-03
             )
         )
@@ -1985,29 +1985,29 @@ class TestSmoothModelRun(InDirTest):
         self.assertTrue(np.allclose(ma, ref)) 
 
         ## test missing start_age_moments
-        ams_func = smr._solve_age_moment_system_func(1)
+        ams_func = pwc_mr._solve_age_moment_system_func(1)
         ams = ams_func(t_mid)
         soln = ams[:2]
         self.assertTrue(
             np.allclose(
                 soln,
-                smr.solve_func()(t_mid),
+                pwc_mr.solve_func()(t_mid),
                 rtol=1e-03
             )
         )
         ma = ams[2:]
         # 1 moment, 2 pools
-        ref_ams_func = smr._solve_age_moment_system_func(1, np.zeros((1,2)))
+        ref_ams_func = pwc_mr._solve_age_moment_system_func(1, np.zeros((1,2)))
         ref_ams=ref_ams_func(t_mid)
         ref_ma = ref_ams[2:]
         self.assertTrue(np.allclose(ma, ref_ma))
 
         # test second order moments!
-        start_age_moments = smr.moments_from_densities(2, start_age_densities)
-        ams_func = smr._solve_age_moment_system_func(2, start_age_moments)
+        start_age_moments = pwc_mr.moments_from_densities(2, start_age_densities)
+        ams_func = pwc_mr._solve_age_moment_system_func(2, start_age_moments)
 
         # test missing start_age_moments
-        ams_func = smr._solve_age_moment_system_func(2)
+        ams_func = pwc_mr._solve_age_moment_system_func(2)
 
     def test_solve_age_moment_system_old(self):
         x, y, t = symbols("x y t")
@@ -2018,21 +2018,21 @@ class TestSmoothModelRun(InDirTest):
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array([1,1])
-        smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(1, start_age_densities)
     
         # set manually mean age in first pool to zero
         start_age_moments[0,0] = 0
 
-        ams = smr._solve_age_moment_system_old(1, start_age_moments)
+        ams = pwc_mr._solve_age_moment_system_old(1, start_age_moments)
         soln = ams[:,:2]
         self.assertTrue(
             np.allclose(
                 soln,
-                smr.solve()[0],
+                pwc_mr.solve()[0],
                 rtol=1e-03
             )
         )
@@ -2052,26 +2052,26 @@ class TestSmoothModelRun(InDirTest):
         self.assertTrue(np.allclose(ma, ref)) 
 
         # test missing start_age_moments
-        ams = smr._solve_age_moment_system_old(1)
+        ams = pwc_mr._solve_age_moment_system_old(1)
         soln = ams[:,:2]
         self.assertTrue(
             np.allclose(
                 soln,
-                smr.solve()[0],
+                pwc_mr.solve()[0],
                 rtol=1e-03
             )
         )
         ma = ams[:,2:]
-        ref_ams = smr._solve_age_moment_system_old(1, np.zeros((1,2))) # 1 moment, 2 pools
+        ref_ams = pwc_mr._solve_age_moment_system_old(1, np.zeros((1,2))) # 1 moment, 2 pools
         ref_ma = ref_ams[:,2:]
         self.assertTrue(np.allclose(ma, ref_ma))
 
         # test second order moments!
-        start_age_moments = smr.moments_from_densities(2, start_age_densities)
-        ams = smr._solve_age_moment_system_old(2, start_age_moments)
+        start_age_moments = pwc_mr.moments_from_densities(2, start_age_densities)
+        ams = pwc_mr._solve_age_moment_system_old(2, start_age_moments)
 
         # test missing start_age_moments
-        ams = smr._solve_age_moment_system_old(2)
+        ams = pwc_mr._solve_age_moment_system_old(2)
 
 
     def test_solve_age_moment_system(self):
@@ -2084,19 +2084,19 @@ class TestSmoothModelRun(InDirTest):
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array([1,1])
-        smr = SmoothModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times=np.linspace(0,1,10))
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a) * start_values
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+        start_age_moments = pwc_mr.moments_from_densities(1, start_age_densities)
     
         # set manually mean age in first pool to zero
         start_age_moments[0,0] = 0
 
-        ams,_ = smr._solve_age_moment_system(1, start_age_moments)
+        ams,_ = pwc_mr._solve_age_moment_system(1, start_age_moments)
         soln = ams[:,:nr_pools]
         self.assertTrue(
-                np.allclose(soln, smr.solve()[0], rtol=1e-03)
+                np.allclose(soln, pwc_mr.solve()[0], rtol=1e-03)
         )
         ma = ams[:,nr_pools:]
 
@@ -2127,20 +2127,20 @@ class TestSmoothModelRun(InDirTest):
 
 
         # test missing start_age_moments
-        ams,_ = smr._solve_age_moment_system(1)
+        ams,_ = pwc_mr._solve_age_moment_system(1)
         soln = ams[:,:nr_pools]
-        self.assertTrue(np.allclose(soln, smr.solve()[0], rtol=1e-03))
+        self.assertTrue(np.allclose(soln, pwc_mr.solve()[0], rtol=1e-03))
         ma = ams[:,nr_pools:]
-        ref_ams,_ = smr._solve_age_moment_system(1, np.zeros((1,nr_pools))) # 1 moment, nr_pools pools
+        ref_ams,_ = pwc_mr._solve_age_moment_system(1, np.zeros((1,nr_pools))) # 1 moment, nr_pools pools
         ref_ma = ref_ams[:,nr_pools:]
         self.assertTrue(np.allclose(ma, ref_ma))
 
         # test second order moments!
-        start_age_moments = smr.moments_from_densities(nr_pools, start_age_densities)
-        ams,_ = smr._solve_age_moment_system(nr_pools, start_age_moments)
+        start_age_moments = pwc_mr.moments_from_densities(nr_pools, start_age_densities)
+        ams,_ = pwc_mr._solve_age_moment_system(nr_pools, start_age_moments)
 
         # test missing start_age_moments
-        ams,_ = smr._solve_age_moment_system(nr_pools)
+        ams,_ = pwc_mr._solve_age_moment_system(nr_pools)
 
 
     def test_output_rate_vector_at_t(self):
@@ -2155,10 +2155,10 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1,3])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
-        self.assertTrue(np.allclose(smr.output_rate_vector_at_t(1), np.array([1, 1])))
+        self.assertTrue(np.allclose(pwc_mr.output_rate_vector_at_t(1), np.array([1, 1])))
         
     
     def test_output_rate_vector(self):
@@ -2173,11 +2173,11 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1])
         times = np.linspace(0, 1, 11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ref = np.ones((11, 1))
-        self.assertTrue(np.allclose(smr.output_rate_vector, ref))
+        self.assertTrue(np.allclose(pwc_mr.output_rate_vector, ref))
 
         # two-dimensional case
         C_0, C_1 = symbols('C_0 C_1')
@@ -2190,8 +2190,8 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([1,3])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ref_a = np.array([[ 1.        ,  3.        ], 
                           [ 0.90483744,  2.71451231],
@@ -2207,7 +2207,7 @@ class TestSmoothModelRun(InDirTest):
         ref = np.ones((11, 2))
         ref[:,0] = np.linspace(0, 1, 11)
         ref[:,1] = 2
-        self.assertTrue(np.allclose(smr.output_rate_vector, ref))
+        self.assertTrue(np.allclose(pwc_mr.output_rate_vector, ref))
 
 
     ##### age density methods #####
@@ -2225,11 +2225,11 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
-        p1_sv = smr._age_densities_1_single_value(start_age_densities)
+        p1_sv = pwc_mr._age_densities_1_single_value(start_age_densities)
 
         # negative ages will be cut off automatically
         ages = np.linspace(-1,1,3)
@@ -2283,7 +2283,7 @@ class TestSmoothModelRun(InDirTest):
                            [ 1.83939727]]])
         
         ref = np.ndarray((3,6,1), np.float, a_ref)
-        p1_sv = smr._age_densities_1_single_value()
+        p1_sv = pwc_mr._age_densities_1_single_value()
         res_l = [[p1_sv(a,t) for t in times] for a in ages]
         res = np.array(res_l)
         self.assertTrue(np.allclose(res, ref,rtol=1e-3))
@@ -2299,13 +2299,13 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
         start_age_densities = lambda a: np.exp(-a)*start_values
-        p1_sv = smr._age_densities_1_single_value(start_age_densities)
+        p1_sv = pwc_mr._age_densities_1_single_value(start_age_densities)
 
         a_ref = np.array(
                 [[[ 0.        ,  0.        ],
@@ -2358,7 +2358,7 @@ class TestSmoothModelRun(InDirTest):
                   [ 1.83939727,  1.10363836]]])
 
         ref = np.ndarray((3,6,2), np.float, a_ref)
-        p1_sv = smr._age_densities_1_single_value()
+        p1_sv = pwc_mr._age_densities_1_single_value()
         res_l = [[p1_sv(a,t) for t in times] for a in ages]
         res = np.array(res_l)
         self.assertTrue(np.allclose(res, ref,rtol=1e-3))
@@ -2376,11 +2376,11 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         start_age_densities = lambda a: np.exp(-a)*start_values
-        p1 = smr._age_densities_1(start_age_densities)
+        p1 = pwc_mr._age_densities_1(start_age_densities)
 
         # negative ages will be cut off automatically
         ages = np.linspace(-1,1,3)
@@ -2431,7 +2431,7 @@ class TestSmoothModelRun(InDirTest):
                            [ 1.83939727]]])
         
         ref = np.ndarray((3,6,1), np.float, a_ref)
-        p1 = smr._age_densities_1()
+        p1 = pwc_mr._age_densities_1()
         res = np.array(p1(ages))
         self.assertTrue(np.allclose(res, ref,rtol=1e-3))
 
@@ -2446,13 +2446,13 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
         start_age_densities = lambda a: np.exp(-a)*start_values
-        p1 = smr._age_densities_1(start_age_densities)
+        p1 = pwc_mr._age_densities_1(start_age_densities)
 
         a_ref = np.array(
                 [[[ 0.        ,  0.        ],
@@ -2503,7 +2503,7 @@ class TestSmoothModelRun(InDirTest):
                   [ 1.83939727,  1.10363836]]])
 
         ref = np.ndarray((3,6,2), np.float, a_ref)
-        p1 = smr._age_densities_1()
+        p1 = pwc_mr._age_densities_1()
         res = np.array(p1(ages))
         self.assertTrue(np.allclose(res, ref,rtol=1e-3))
 
@@ -2520,10 +2520,10 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
-        p2_sv = smr._age_densities_2_single_value()
+        p2_sv = pwc_mr._age_densities_2_single_value()
 
         # negative ages will be cut off automatically
         ages = np.linspace(-1,1,3)
@@ -2564,12 +2564,12 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
-        p2_sv = smr._age_densities_2_single_value()
+        p2_sv = pwc_mr._age_densities_2_single_value()
 
         a_ref = np.array(
                 [[[ 0.        ,  0.        ],
@@ -2611,10 +2611,10 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
-        p2 = smr._age_densities_2()
+        p2 = pwc_mr._age_densities_2()
 
         # negative ages will be cut off automatically
         ages = np.linspace(-1,1,3)
@@ -2653,12 +2653,12 @@ class TestSmoothModelRun(InDirTest):
 
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
-        p2 = smr._age_densities_2()
+        p2 = pwc_mr._age_densities_2()
 
         a_ref = np.array(
                 [[[ 0.        ,  0.        ],
@@ -2719,9 +2719,9 @@ class TestSmoothModelRun(InDirTest):
         start_values = np.array([7,4])
         start, end, ts = 1950, 2000, 0.5
         times = np.linspace(start, end, int((end+ts-start)/ts))
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        soln,_ = smr.solve()
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        soln,_ = pwc_mr.solve()
         
         atm_delta_14C = np.loadtxt(pfile_C14Atm_NH(), skiprows=1, delimiter=',')
         F_atm_delta_14C = interp1d(
@@ -2731,14 +2731,14 @@ class TestSmoothModelRun(InDirTest):
         )
 
         alpha = 1.18e-12
-        start_values_14C = smr.start_values * alpha
+        start_values_14C = pwc_mr.start_values * alpha
         Fa_func = lambda t: alpha * (F_atm_delta_14C(t)/1000+1)
-        smr_14C = smr.to_14C_only(
+        pwc_mr_14C = pwc_mr.to_14C_only(
             start_values_14C,
             Fa_func,
             0.0001
         )
-        soln_14C,_ = smr_14C.solve()
+        soln_14C,_ = pwc_mr_14C.solve()
 
 
     def test_to_14C_explicit(self):
@@ -2760,9 +2760,9 @@ class TestSmoothModelRun(InDirTest):
         start_values = np.array([7,4])
         start, end, ts = 1950, 2000, 0.5
         times = np.linspace(start, end, int((end+ts-start)/ts))
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        soln,_ = smr.solve()
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        soln,_ = pwc_mr.solve()
 
         atm_delta_14C = np.loadtxt(pfile_C14Atm_NH(), skiprows=1, delimiter=',')
         F_atm_delta_14C = interp1d(
@@ -2772,15 +2772,15 @@ class TestSmoothModelRun(InDirTest):
         )
 
         alpha = 1.18e-12
-        start_values_14C = smr.start_values * alpha
+        start_values_14C = pwc_mr.start_values * alpha
         Fa_func = lambda t: alpha * (F_atm_delta_14C(t)/1000+1)
-        smr_14C = smr.to_14C_explicit(
+        pwc_mr_14C = pwc_mr.to_14C_explicit(
             start_values_14C,
             Fa_func,
             0.0001
         )
 
-        soln_14C,_ = smr_14C.solve()
+        soln_14C,_ = pwc_mr_14C.solve()
 
 
     ##### temporary #####
@@ -2805,10 +2805,10 @@ class TestSmoothModelRun(InDirTest):
                                  u[1]/par_set[lamda_2]]) # steady-state
         start, end = 0, 10
         times = np.linspace(start, end, 101)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
-        result = smr._FTTT_lambda_bar(end, 5, np.array(u).astype(np.float64))
+        result = pwc_mr._FTTT_lambda_bar(end, 5, np.array(u).astype(np.float64))
         self.assertTrue(np.allclose(result,1,rtol=1e-3))
 
         # asymmetric case
@@ -2817,11 +2817,11 @@ class TestSmoothModelRun(InDirTest):
                                  u[1]/par_set[lamda_2]]) # steady-state
         start, end = 0, 0.000005
         times = np.linspace(start, end, 101)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         s = (start+end)/2
-        result = smr._FTTT_lambda_bar(end, s, np.array(u).astype(np.float64))
+        result = pwc_mr._FTTT_lambda_bar(end, s, np.array(u).astype(np.float64))
         self.assertEqual(round(result, 5),
                          round(-np.log((np.exp(-par_set[lamda_1]*(end-s))
                                        +np.exp(-par_set[lamda_2]*(end-s)))/2)/
@@ -2854,12 +2854,12 @@ class TestSmoothModelRun(InDirTest):
         start_values = np.array(par_set[I]/par_set[lamda]) # steady state
         start, end = 0, 10
         times = np.linspace(start, end, 101)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         #print(start_values)
-        #print('soln', smr.solve())
+        #print('soln', pwc_mr.solve())
 
-        result = smr._FTTT_lambda_bar_R(start, end)
+        result = pwc_mr._FTTT_lambda_bar_R(start, end)
         self.assertTrue(np.allclose(result, par_set[lamda],rtol=1e-3))
         
 
@@ -2881,10 +2881,10 @@ class TestSmoothModelRun(InDirTest):
         start_values = np.array(par_set[I]/par_set[lamda]) # steady state
         start, end = 0, 10
         times = np.linspace(start, end, 101)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
-        result = smr._FTTT_lambda_bar_S(start, end)
+        result = pwc_mr._FTTT_lambda_bar_S(start, end)
         self.assertEqual(round(result, 5), par_set[lamda])
 
         
@@ -2907,10 +2907,10 @@ class TestSmoothModelRun(InDirTest):
                                  u[1]/par_set[lamda_2]]) # steady-state
         start, end = 0, 10
         times = np.linspace(start, end, 101)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
-        result = smr._FTTT_lambda_bar_R_left_limit(start)
+        result = pwc_mr._FTTT_lambda_bar_R_left_limit(start)
         self.assertEqual(result, 1*1/2+1*1/2)
 
         # asymmetric case
@@ -2919,10 +2919,10 @@ class TestSmoothModelRun(InDirTest):
                                  u[1]/par_set[lamda_2]]) # steady-state
         start, end = 0, 10
         times = np.linspace(start, end, 101)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
-        result = smr._FTTT_lambda_bar_R_left_limit(start)
+        result = pwc_mr._FTTT_lambda_bar_R_left_limit(start)
         self.assertEqual(result, (3*1/6+2*1/4)/(1/6+1/4)),
 
 
@@ -2945,18 +2945,18 @@ class TestSmoothModelRun(InDirTest):
                                  u[1]/par_set[lamda_2]]) # steady-state
         start, end = 0, 10
         times = np.linspace(start, end, 101)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         s = 5
         t1 = 6
         result1 = 0
-        u_val = smr.external_input_vector_func()(s)
-        for i in range(smr.nr_pools):
-            result1 += u_val[i] * smr._alpha_s_i(s, i, t1)
+        u_val = pwc_mr.external_input_vector_func()(s)
+        for i in range(pwc_mr.nr_pools):
+            result1 += u_val[i] * pwc_mr._alpha_s_i(s, i, t1)
         result1 /= u_val.sum()
 
-        result2 = smr._alpha_s(s, t1, u_val)
+        result2 = pwc_mr._alpha_s(s, t1, u_val)
 
         self.assertTrue(np.allclose(result1, 1-np.exp(-(t1-s)),rtol=1e-3))
         self.assertTrue(np.allclose(result1, result2,rtol=1e-3))
@@ -2967,18 +2967,18 @@ class TestSmoothModelRun(InDirTest):
                                  u[1]/par_set[lamda_2]]) # steady-state
         start, end = 0, 10
         times = np.linspace(start, end, 101)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         s = 5
         t1 = 6
         result1 = 0
-        u_val = smr.external_input_vector_func()(s)
-        for i in range(smr.nr_pools):
-            result1 += u_val[i] * smr._alpha_s_i(s, i, t1)
+        u_val = pwc_mr.external_input_vector_func()(s)
+        for i in range(pwc_mr.nr_pools):
+            result1 += u_val[i] * pwc_mr._alpha_s_i(s, i, t1)
         result1 /= u_val.sum()
 
-        result2 = smr._alpha_s(s, t1, u_val)
+        result2 = pwc_mr._alpha_s(s, t1, u_val)
 
         self.assertEqual(round(result1,3), 
             round(1-(np.exp(-par_set[lamda_1]*(t1-s))*u_val[0]+
@@ -3006,29 +3006,29 @@ class TestSmoothModelRun(InDirTest):
                                  u[1]/par_set[lamda_2]]) # steady-state
         start, end = 0, 10
         times = np.linspace(start, end, 101)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         s = 5
         t1 = 6
         
-        result0 = smr._EFFTT_s_i(s, 0, t1)
+        result0 = pwc_mr._EFFTT_s_i(s, 0, t1)
         ref=(np.exp(3)-4)/(3*np.exp(3)-3)
 #        pe('(result0,ref)',locals())
         self.assertEqual(round(result0,3), 
                          round(ref,3))
-        result1 = smr._EFFTT_s_i(s, 1, t1)
+        result1 = pwc_mr._EFFTT_s_i(s, 1, t1)
         self.assertEqual(round(result1,5), 
                          round((np.exp(2)-3)/(2*np.exp(2)-2),5))
     
         # check that splitting over the pools is necessary
-        u_val = smr.external_input_vector_func()(s)
-        Phi = smr._state_transition_operator
+        u_val = pwc_mr.external_input_vector_func()(s)
+        Phi = pwc_mr._state_transition_operator
 
         def F_FTT(a):
             return 1 - Phi(s+a,s, u_val).sum()/u_val.sum()
 
-        alpha_s = smr._alpha_s(s, t1, u_val)
+        alpha_s = pwc_mr._alpha_s(s, t1, u_val)
         def integrand(a):
             return 1 - F_FTT(a)/alpha_s
       
@@ -3057,17 +3057,17 @@ class TestSmoothModelRun(InDirTest):
                                  u[1]/par_set[lamda_2]]) # steady-state
         start, end = 0, 10
         times = np.linspace(start, end, 101)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         s = 5
         t1 = 6
         
-        o = ones(smr.nr_pools, 1)
-        Phi = smr._state_transition_operator
+        o = ones(pwc_mr.nr_pools, 1)
+        Phi = pwc_mr._state_transition_operator
         v = Phi(t1, s, np.array(u).astype(np.float64))
         v_normed = v/sum(v)
-        res=smr._TR(s, t1, v)-(t1-s)
+        res=pwc_mr._TR(s, t1, v)-(t1-s)
         ref=(-o.T * (B.subs(par_set)**-1) * v_normed)[0]
         #print("#################################################")
         #print(res)
@@ -3096,51 +3096,51 @@ class TestSmoothModelRun(InDirTest):
                                  u[1]/par_set[lamda_2]], dtype=np.float64) # steady-state
         start, end = 0, 10
         times = np.linspace(start, end, 101)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         # dealing with s in the middle of the interval
         s = 5
         t1 = 6
         t0 = 0
-        u_val = smr.external_input_vector_func()(s)
+        u_val = pwc_mr.external_input_vector_func()(s)
 
-        n = smr.nr_pools
-        alpha_s_is = [smr._alpha_s_i(s, i, t1) for i in range(n)]
-        EFFT_s_is = [smr._EFFTT_s_i(s, i, t1) for i in range(n)]
+        n = pwc_mr.nr_pools
+        alpha_s_is = [pwc_mr._alpha_s_i(s, i, t1) for i in range(n)]
+        EFFT_s_is = [pwc_mr._EFFTT_s_i(s, i, t1) for i in range(n)]
         finite = sum([u_val[i] * alpha_s_is[i] * EFFT_s_is[i] 
                             for i in range(n)])
 
-        Phi = smr._state_transition_operator
+        Phi = pwc_mr._state_transition_operator
         v = Phi(t1,s,u_val)
         alpha_s = sum([u_val[i] * alpha_s_is[i] 
                             for i in range(n)])/u_val.sum()
-        remaining = (1-alpha_s) * u_val.sum() * smr._TR(s, t1, v)
+        remaining = (1-alpha_s) * u_val.sum() * pwc_mr._TR(s, t1, v)
 
 
-        self.assertEqual(round(smr._FTTT_finite_plus_remaining(s,t1,t0),3), 
+        self.assertEqual(round(pwc_mr._FTTT_finite_plus_remaining(s,t1,t0),3), 
                          round(finite+remaining,3))
 
         # dealing with s at the beginning of the interval
         s = 0
         t1 = 6
         t0 = 0
-        u_val = smr.start_values
+        u_val = pwc_mr.start_values
 
-        n = smr.nr_pools
-        alpha_s_is = [smr._alpha_s_i(s, i, t1) for i in range(n)]
-        EFFT_s_is = [smr._EFFTT_s_i(s, i, t1) for i in range(n)]
+        n = pwc_mr.nr_pools
+        alpha_s_is = [pwc_mr._alpha_s_i(s, i, t1) for i in range(n)]
+        EFFT_s_is = [pwc_mr._EFFTT_s_i(s, i, t1) for i in range(n)]
         finite = sum([u_val[i] * alpha_s_is[i] * EFFT_s_is[i] 
                             for i in range(n)])
 
-        Phi = smr._state_transition_operator
+        Phi = pwc_mr._state_transition_operator
         v = Phi(t1,s,u_val)
         alpha_s = sum([u_val[i] * alpha_s_is[i] 
                             for i in range(n)])/u_val.sum()
-        remaining = (1-alpha_s) * u_val.sum() * smr._TR(s, t1, v)
+        remaining = (1-alpha_s) * u_val.sum() * pwc_mr._TR(s, t1, v)
 
 
-        self.assertEqual(round(smr._FTTT_finite_plus_remaining(s,t1,t0),4), 
+        self.assertEqual(round(pwc_mr._FTTT_finite_plus_remaining(s,t1,t0),4), 
                          round(finite+remaining,4))
 
     @unittest.skip("A function for Martin's idea, not used now")
@@ -3161,12 +3161,12 @@ class TestSmoothModelRun(InDirTest):
         start_values = np.array([u[0]/par_set[lamda]], dtype=np.float64) # steady-state
         start, end = 0, 10
         times = np.linspace(start, end, 101)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         t0 = 0
         t1 = 1
-        result = np.array([smr._FTTT_conditional(t1,t0) 
+        result = np.array([pwc_mr._FTTT_conditional(t1,t0) 
                                 for t1 in range(1, 11)])
         
         self.assertTrue(np.allclose(result, np.array([1]*10),rtol=1e-3))
@@ -3189,11 +3189,11 @@ class TestSmoothModelRun(InDirTest):
                                  u[1]/par_set[lamda_2]], dtype=np.float64) # steady-state
         start, end = 0, 10
         times = np.linspace(start, end, 101)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         t0 = 0
-        result = np.array([smr._FTTT_conditional(t1,t0) 
+        result = np.array([pwc_mr._FTTT_conditional(t1,t0) 
                                 for t1 in range(1, 11)])
         
         self.assertTrue(np.allclose(result, np.array([1]*10),rtol=1e-3))
@@ -3217,11 +3217,11 @@ class TestSmoothModelRun(InDirTest):
                                  u[1]/par_set[lamda_2]], dtype=np.float64) # steady-state
         start, end = 0, 22
         times = np.linspace(start, end, 11)
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         t0 = 0
-        result = np.array([smr._FTTT_conditional(t1,t0) 
+        result = np.array([pwc_mr._FTTT_conditional(t1,t0) 
                                 for t1 in times[1:]])
         
         # tested is here only that no error eccurs

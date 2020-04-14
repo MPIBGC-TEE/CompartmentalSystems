@@ -1,4 +1,4 @@
-"""Module for numerical treatment of smooth reservoir models.
+"""Module for numerical treatment of piece-wise continuous reservoir models.
 
 An abstract 
 :class:`~.smooth_reservoir_model.SmoothReservoirModel` is 
@@ -115,7 +115,7 @@ def check_parameter_dict_complete(model, parameter_dict, func_set):
 
     return free_names
 
-class SmoothModelRun(object):
+class PWCModelRun(object):
     """Class for a model run based on a 
     :class:`~.smooth_reservoir_model.SmoothReservoirModel`.
 
@@ -136,7 +136,7 @@ class SmoothModelRun(object):
 
     def __init__(self, model, parameter_dict, 
                         start_values, times, func_set=None):
-        """Return a SmoothModelRun instance.
+        """Return a PWCModelRun instance.
 
         Args:
             model (:class:`~.smooth_reservoir_model.SmoothReservoirModel`): 
@@ -219,15 +219,15 @@ class SmoothModelRun(object):
         return B_func
     
     def linearize_old(self):
-        """Return a linearized SmoothModelRun instance.
+        """Return a linearized PWCModelRun instance.
 
         Linearization happens along the solution trajectory. Only for linear 
         systems all functionality is guaranteed,
         this is why nonlinear systems should be linearized first.
 
         Returns:
-            :class:`SmoothModelRun`: A linearized version of the original 
-            :class:`SmoothModelRun`, with the solutions now being part 
+            :class:`PWCModelRun`: A linearized version of the original 
+            :class:`PWCModelRun`, with the solutions now being part 
             of ``func_set``.
         """
         sol_funcs = self.sol_funcs_old()
@@ -281,15 +281,15 @@ class SmoothModelRun(object):
 
 
     def linearize(self):
-        """Return a linearized SmoothModelRun instance.
+        """Return a linearized PWCModelRun instance.
 
         Linearization happens along the solution trajectory. Only for linear 
         systems all functionality is guaranteed,
         this is why nonlinear systems should be linearized first.
 
         Returns:
-            :class:`SmoothModelRun`: A linearized version of the original 
-            :class:`SmoothModelRun`, with the solutions now being part 
+            :class:`PWCModelRun`: A linearized version of the original 
+            :class:`PWCModelRun`, with the solutions now being part 
             of ``func_set``.
         """
         #sol_funcs = self.sol_funcs()
@@ -345,7 +345,7 @@ class SmoothModelRun(object):
 
     @staticmethod
     #fixme mm 2018-9-5:
-    # Why is this is mehtod of class SmoothModelRun?
+    # Why is this is mehtod of class PWCModelRun?
     # It does not rely on the class definition in any 
     # way. 
     # Is it because the helper module is not exposed in the API?
@@ -1823,7 +1823,7 @@ class SmoothModelRun(object):
     #fixme:
     # since time units and units are related to those
     # of the other fluxes it would be more consistent
-    # to make them a property of SmoothModelRun and use
+    # to make them a property of PWCModelRun and use
     # them in the other plots as well
 
         times = self.times
@@ -3241,7 +3241,7 @@ class SmoothModelRun(object):
 
 #    def to_14C_only(self, start_values_14C, atm_delta_14C, decay_rate=0.0001209681):
     def to_14C_only(self, start_values_14C, Fa_func, decay_rate=0.0001209681):
-        """Construct and return a :class:`SmoothModelRun` instance that
+        """Construct and return a :class:`PWCModelRun` instance that
            models the 14C component of the original model run.
     
         Args:
@@ -3253,11 +3253,11 @@ class SmoothModelRun(object):
             decay rate (float, optional): The decay rate to be used, defaults to
                 ``0.0001209681`` (daily).
         Returns:
-            :class:`SmoothModelRun`
+            :class:`PWCModelRun`
         """
         srm_14C = self.model.to_14C_only('lamda_14C', 'Fa_14C')
 
-        # create SmoothModelRun for 14C
+        # create PWCModelRun for 14C
         par_set_14C = {k:v for k, v in self.parameter_dict.items()}
         par_set_14C['lamda_14C'] = decay_rate
         #fixme: use 14C equilibrium start values
@@ -3271,7 +3271,7 @@ class SmoothModelRun(object):
         function_string = 'Fa_14C(' + srm_14C.time_symbol.name + ')'
         func_set_14C[function_string] = Fa_func
 
-        smr_14C = SmoothModelRun_14C(
+        smr_14C = PWCModelRun_14C(
             srm_14C, 
             par_set_14C,
             start_values_14C,
@@ -3284,7 +3284,7 @@ class SmoothModelRun(object):
 
     #fixme: adapt to 'to_14C_only' interface
     def to_14C_explicit(self, start_values_14C, Fa_func, decay_rate=0.0001209681):
-        """Construct and return a :class:`SmoothModelRun` instance that
+        """Construct and return a :class:`PWCModelRun` instance that
            models the 14C component additional to the original model run.
     
         Args:
@@ -3296,11 +3296,11 @@ class SmoothModelRun(object):
             decay rate (float, optional): The decay rate to be used, defaults to
                 ``0.0001209681`` (daily).
         Returns:
-            :class:`SmoothModelRun`
+            :class:`PWCModelRun`
         """
         srm_14C = self.model.to_14C_explicit('lamda_14C', 'Fa_14C')
 
-        # create SmoothModelRun for 14C
+        # create PWCModelRun for 14C
         par_set_14C = {k:v for k, v in self.parameter_dict.items()}
         par_set_14C['lamda_14C'] = decay_rate
 
@@ -3318,7 +3318,7 @@ class SmoothModelRun(object):
         function_string = 'Fa_14C(' + srm_14C.time_symbol.name + ')'
         func_set_14C[function_string] = Fa_func
 
-        smr_14C = SmoothModelRun(
+        smr_14C = PWCModelRun(
             srm_14C, 
             par_set_14C,
             start_values_14C_cb,
@@ -4420,10 +4420,10 @@ class SmoothModelRun(object):
 
 
 
-class SmoothModelRun_14C(SmoothModelRun):
+class PWCModelRun_14C(PWCModelRun):
 
     def __init__(self, srm, par_set, start_values, times, func_set, decay_rate):
-        SmoothModelRun.__init__(
+        PWCModelRun.__init__(
             self, 
             srm, 
             par_set,

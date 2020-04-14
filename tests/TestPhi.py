@@ -14,7 +14,7 @@ from sympy.printing import pprint
 from testinfrastructure.InDirTest import InDirTest
 #from testinfrastructure.helpers import pe
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
-from CompartmentalSystems.smooth_model_run import SmoothModelRun 
+from CompartmentalSystems.pwc_model_run import PWCModelRun 
 from CompartmentalSystems.BlockIvp import BlockIvp
 from CompartmentalSystems.Cache import Cache
 from CompartmentalSystems.helpers_reservoir import (
@@ -45,8 +45,8 @@ class TestPhi(InDirTest):
         t_max   = 4
         nt=200
         times = np.linspace(t_0, t_max, nt)
-        smr = SmoothModelRun(srm, {}, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None, size=2)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None, size=2)
         
 
         nr_pools=srm.nr_pools
@@ -58,10 +58,10 @@ class TestPhi(InDirTest):
         bvs = [ baseVector(i) for i in range(nr_pools)]
 
         blivp= x_phi_ivp(
-            smr.model
-            ,smr.parameter_dict
-            ,smr.func_set
-            ,smr.start_values
+            pwc_mr.model
+            ,pwc_mr.parameter_dict
+            ,pwc_mr.func_set
+            ,pwc_mr.start_values
             ,x_block_name='sol'
             ,phi_block_name='Phi_2d'
         )
@@ -80,9 +80,9 @@ class TestPhi(InDirTest):
                 # test the vectored valued results
                 for x in bvs:
                     for phi_x in [
-                            smr._state_transition_operator(t,s,x)
+                            pwc_mr._state_transition_operator(t,s,x)
                             ,
-                            smr._state_transition_operator_for_linear_systems(t,s,x)
+                            pwc_mr._state_transition_operator_for_linear_systems(t,s,x)
                         ]:
                         with self.subTest():
                             self.assertTrue( 
@@ -130,14 +130,14 @@ class TestPhi(InDirTest):
         func_dict={}
         start_x= np.array([x0_0,x0_1]) #make it a column vector for later use
         #create the model run
-        smr=SmoothModelRun(
+        pwc_mr=PWCModelRun(
              model=srm
             ,parameter_dict= parameter_dict
             ,start_values=start_x
             ,times=times
             ,func_set=func_dict
         )
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None, size=4)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None, size=4)
 
         nr_pools=srm.nr_pools
 
@@ -147,7 +147,7 @@ class TestPhi(InDirTest):
             return e_i
         bvs = [ baseVector(i) for i in range(nr_pools)]
         
-        smrl=smr.linearize_old()
+        pwc_mrl=pwc_mr.linearize_old()
         
         for s in  np.linspace(t_0,t_max,5):
             for t in  np.linspace(s,t_max,5):
@@ -159,25 +159,25 @@ class TestPhi(InDirTest):
                     with self.subTest():
                         self.assertTrue( 
                             np.allclose(
-                                smr._state_transition_operator(t,s,x),
-                                smrl._state_transition_operator_for_linear_systems(t,s,x),
+                                pwc_mr._state_transition_operator(t,s,x),
+                                pwc_mrl._state_transition_operator_for_linear_systems(t,s,x),
                                 rtol=1.5*1e-2
                             )
                         )
 
         blivp= x_phi_ivp(
-            smr.model
-            ,smr.parameter_dict
-            ,smr.func_set
-            ,smr.start_values
+            pwc_mr.model
+            ,pwc_mr.parameter_dict
+            ,pwc_mr.func_set
+            ,pwc_mr.start_values
             ,x_block_name='sol'
             ,phi_block_name='Phi_2d'
         )
         blivp_l= x_phi_ivp(
-            smrl.model
-            ,smrl.parameter_dict
-            ,smrl.func_set
-            ,smrl.start_values
+            pwc_mrl.model
+            ,pwc_mrl.parameter_dict
+            ,pwc_mrl.func_set
+            ,pwc_mrl.start_values
             ,x_block_name='sol'
             ,phi_block_name='Phi_2d'
         )
@@ -191,7 +191,7 @@ class TestPhi(InDirTest):
                         self.assertTrue( 
                             np.allclose(
                                 np.matmul(phi_mat,x).reshape(nr_pools,),
-                                smr._state_transition_operator(t,t_0,x),
+                                pwc_mr._state_transition_operator(t,t_0,x),
                                 rtol=1.5*1e-2
                             )
                         )
@@ -200,7 +200,7 @@ class TestPhi(InDirTest):
         t_0     = 0
         t_max   = 4
         cache_times= np.linspace(t_0, t_max, 5) # 3 intermediate times 
-        cache=Cache(keys=cache_times,values=None,smr_hash=None)
+        cache=Cache(keys=cache_times,values=None,pwc_mr_hash=None)
         # -> 2  phi matrices, 
         # Phi[0]=Phi(t=2,s=0),Phi[1]= Phi(t=4,s=2)
         self.assertEqual(cache.phi_ind(1),1) 
@@ -256,7 +256,7 @@ class TestPhi(InDirTest):
         func_dict={}
         start_x= np.array([x0_0,x0_1]) #make it a column vector for later use
         #create the model run
-        smr=SmoothModelRun(
+        pwc_mr=PWCModelRun(
              model=srm
             ,parameter_dict= parameter_dict
             ,start_values=start_x
@@ -264,8 +264,8 @@ class TestPhi(InDirTest):
             ,func_set=func_dict
         )
         nr_pools=srm.nr_pools
-        #smr.initialize _state_transition_operator_cache_2b(size=3)
-        cache= smr._compute_state_transition_operator_cache(size=2)
+        #pwc_mr.initialize _state_transition_operator_cache_2b(size=3)
+        cache= pwc_mr._compute_state_transition_operator_cache(size=2)
 
         phi_2_0=cache.values[0]
         #print(phi_2_0)
@@ -278,13 +278,13 @@ class TestPhi(InDirTest):
             e_i[i] = 1
             return e_i
         bvs = [ baseVector(i) for i in range(nr_pools)]
-        smrl=smr.linearize_old()
+        pwc_mrl=pwc_mr.linearize_old()
         for ind,phi in enumerate(cache.values):
             tmin=cache.keys[ind]
             tmax=cache.keys[ind+1]
             for x in bvs:
                 with self.subTest():
-                    phi_x_old=smrl._state_transition_operator_for_linear_systems(tmax,tmin,x)
+                    phi_x_old=pwc_mrl._state_transition_operator_for_linear_systems(tmax,tmin,x)
                     phi_x_mat=np.matmul(phi,x).reshape(nr_pools,)
                     self.assertTrue( 
                         np.allclose(
@@ -446,13 +446,13 @@ class TestPhi(InDirTest):
 
         start_values = np.array([1, 2, 3])
         times = np.linspace(t_min,t_max, 11)
-        smr = SmoothModelRun(srm, parameter_dict={}, start_values=start_values, times=times,func_set=func_set)
+        pwc_mr = PWCModelRun(srm, parameter_dict={}, start_values=start_values, times=times,func_set=func_set)
         
-        soln,_ = smr.solve()
+        soln,_ = pwc_mr.solve()
         # To be able to check if a stored state_transition_operator cache 
-        # is applicable to the SmoothModelRun object it is supposed to speed up
-        #print(smr.myhash())  
-        smr.myhash()  
+        # is applicable to the PWCModelRun object it is supposed to speed up
+        #print(pwc_mr.myhash())  
+        pwc_mr.myhash()  
 
     @unittest.skip('we do not save the STO cache to disk anymore')
     def test_save_and_load_state_transition_operator_cache(self):
@@ -468,27 +468,27 @@ class TestPhi(InDirTest):
         start_values = np.array([5, 3])
         times = np.linspace(0,1,6)
 
-        smr = SmoothModelRun(srm, {}, start_values, times)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
         
         #ages = np.linspace(-1,1,3)
         # negative ages will be cut off automatically
         #start_age_densities = lambda a: np.exp(-a)*start_values
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None, size=100)
+        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None, size=100)
         
-        ca = smr._state_transition_operator_cache
+        ca = pwc_mr._state_transition_operator_cache
 
         filename = 'sto.cache'
-        smr.save_state_transition_operator_cache(filename)
-        smr.load_state_transition_operator_cache(filename)
+        pwc_mr.save_state_transition_operator_cache(filename)
+        pwc_mr.load_state_transition_operator_cache(filename)
     
-        self.assertTrue(np.all(ca==smr._state_transition_operator_cache))
+        self.assertTrue(np.all(ca==pwc_mr._state_transition_operator_cache))
         
         # now we change the model run and make sure that the 
         # saved cache is recognized as invalid.
         start_values_2 = np.array([6, 3])
-        smr = SmoothModelRun(srm, {}, start_values_2, times)
+        pwc_mr = PWCModelRun(srm, {}, start_values_2, times)
         with self.assertRaises(Exception):
-            smr.load_state_transition_operator_cache(filename)
+            pwc_mr.load_state_transition_operator_cache(filename)
 
 
 
@@ -504,11 +504,11 @@ class TestPhi(InDirTest):
 
         start_values = np.array([5])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
 
         x = np.array([1])
 
-        Phix = smr._state_transition_operator(1,0,x)
+        Phix = pwc_mr._state_transition_operator(1,0,x)
 
         self.assertEqual(Phix.shape, (1,))
         self.assertTrue(abs(Phix-np.exp(-1))<1e-03)
@@ -525,16 +525,16 @@ class TestPhi(InDirTest):
 
         start_values = np.array([5,3])
         times = np.linspace(0,1,11)
-        smr = SmoothModelRun(srm, {}, start_values, times)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
 
         x = np.array([1,3])
-        Phix = smr._state_transition_operator(1,0,x)
+        Phix = pwc_mr._state_transition_operator(1,0,x)
        
         self.assertEqual(Phix.shape, (2,))
         
         # test t<t_0
         with self.assertRaises(Exception):
-            Phix = smr._state_transition_operator(0,1,x)
+            Phix = pwc_mr._state_transition_operator(0,1,x)
 
         # test if operator works correctly also late in time
         C = Symbol('C')
@@ -547,9 +547,9 @@ class TestPhi(InDirTest):
 
         start_values = np.array([5])
         times = np.linspace(0,100,101)
-        smr = SmoothModelRun(srm, {}, start_values, times)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
 
         x = np.array([1])
 
-        Phix = smr._state_transition_operator(91,89,x)
+        Phix = pwc_mr._state_transition_operator(91,89,x)
         self.assertTrue(abs(Phix-np.exp(-2))<1e-03)
