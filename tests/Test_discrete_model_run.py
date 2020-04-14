@@ -54,7 +54,7 @@ class TestDiscreteModelRun(InDirTest):
 
         
         dmr = DiscreteModelRun.from_PWCModelRun(pwc_mr)
-        pwc_mrs,_=pwc_mr.solve()
+        pwc_mrs=pwc_mr.solve()
         dmrs=dmr.solve()
         self.assertTrue(np.allclose(dmrs,pwc_mrs))
         

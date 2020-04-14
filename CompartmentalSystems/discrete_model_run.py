@@ -31,16 +31,16 @@ class DiscreteModelRun(object):
         self.dts = np.diff(self.times).astype(np.float64)
 
     @classmethod
-    def from_PWCModelRun(cls,smr,data_times=None): 
+    def from_PWCModelRun(cls,pwc_mr,data_times=None): 
         if data_times is None:
-            data_times = smr.times
+            data_times = pwc_mr.times
 
         def Phi(t,s):
             blivp= x_phi_ivp(
-                smr.model
-                ,smr.parameter_dict
-                ,smr.func_set
-                ,smr.start_values
+                pwc_mr.model
+                ,pwc_mr.parameter_dict
+                ,pwc_mr.func_set
+                ,pwc_mr.start_values
                 ,x_block_name='sol'
                 ,phi_block_name='Phi_2d'
             )
@@ -48,26 +48,26 @@ class DiscreteModelRun(object):
             phi_mat=sol_dict['Phi_2d'][-1,...]
             return phi_mat
 
-        nr_pools=smr.nr_pools
-        #data_times=smr.times
+        nr_pools=pwc_mr.nr_pools
+        #data_times=pwc_mr.times
         n=len(data_times)
         Bs = np.zeros((n-1, nr_pools, nr_pools)) 
         us = np.zeros((n-1, nr_pools)) 
         start_index = 0
-        soln,sol_func=smr.solve()
+        soln, sol_func = pwc_mr.solve(), pwc_mr.solve_func()
         print("##################################")
         for k in range(start_index, n-1):
             delta_t=data_times[k+1]-data_times[k]
             B=Phi(data_times[k+1],data_times[k])
             Bs[k,:,:] = B
             #u=sol(tk)-phi(t_k,t_k+1)*x(t_k) which is identical but much cheaper
-            #soln,sol_func=smr.solve()
+            #soln=pwc_mr.solve()
             #print("##################################")
             u=sol_func(data_times[k+1])-np.matmul(B,sol_func(data_times[k]))
 
             us[k,:] = u
 
-        return cls(smr.start_values,data_times,Bs,us)
+        return cls(pwc_mr.start_values,data_times,Bs,us)
 
 
     @classmethod

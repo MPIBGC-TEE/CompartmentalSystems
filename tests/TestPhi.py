@@ -448,7 +448,7 @@ class TestPhi(InDirTest):
         times = np.linspace(t_min,t_max, 11)
         pwc_mr = PWCModelRun(srm, parameter_dict={}, start_values=start_values, times=times,func_set=func_set)
         
-        soln,_ = pwc_mr.solve()
+        soln = pwc_mr.solve()
         # To be able to check if a stored state_transition_operator cache 
         # is applicable to the PWCModelRun object it is supposed to speed up
         #print(pwc_mr.myhash())  

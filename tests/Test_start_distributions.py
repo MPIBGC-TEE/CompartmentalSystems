@@ -1,4 +1,3 @@
-
 # vim:set ff=unix expandtab ts=4 sw=4:
 from concurrencytest import ConcurrentTestSuite, fork_for_tests
 import sys
@@ -114,9 +113,9 @@ class TestStartDistributions(InDirTest):
             times=times[t0_index:], 
             func_set=func_set)
         mean_ages1 =         ref_run.age_moment_vector(1,m0[0:1,:])
-        sol1,_     =         ref_run.solve()
+        sol1     =         ref_run.solve()
         mean_ages2 = second_half_run.age_moment_vector(1,moments_t0[0:1,:])
-        sol2,_     = second_half_run.solve()
+        sol2     = second_half_run.solve()
         # compare them with the reference run
         self.assertTrue(
             np.allclose(

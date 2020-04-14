@@ -142,8 +142,8 @@ class TestPWCModelRun(InDirTest):
         nonlinear_pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         linearized_pwc_mr = nonlinear_pwc_mr.linearize()
         linearized_pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        nonlin_soln,_ = nonlinear_pwc_mr.solve()
-        lin_soln,_ = linearized_pwc_mr.solve()
+        nonlin_soln = nonlinear_pwc_mr.solve()
+        lin_soln = linearized_pwc_mr.solve()
         self.assertTrue(
             np.allclose(
                 nonlin_soln,
@@ -290,7 +290,7 @@ class TestPWCModelRun(InDirTest):
         )
 
         ref = np.ndarray((10,2), np.float, a_ref)
-        soln,_ = pwc_mr.solve()
+        soln = pwc_mr.solve()
         self.assertTrue(np.allclose(soln, ref))
 
 
@@ -334,7 +334,7 @@ class TestPWCModelRun(InDirTest):
         pwc_mr = PWCModelRun(srm, parameter_dict={}, start_values=start_values, times=times,func_set=func_set)
         pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         
-        soln,_ = pwc_mr.solve()
+        soln = pwc_mr.solve()
 
 
     ##### fluxes as functions #####
@@ -2032,7 +2032,7 @@ class TestPWCModelRun(InDirTest):
         self.assertTrue(
             np.allclose(
                 soln,
-                pwc_mr.solve()[0],
+                pwc_mr.solve(),
                 rtol=1e-03
             )
         )
@@ -2057,7 +2057,7 @@ class TestPWCModelRun(InDirTest):
         self.assertTrue(
             np.allclose(
                 soln,
-                pwc_mr.solve()[0],
+                pwc_mr.solve(),
                 rtol=1e-03
             )
         )
@@ -2096,7 +2096,7 @@ class TestPWCModelRun(InDirTest):
         ams,_ = pwc_mr._solve_age_moment_system(1, start_age_moments)
         soln = ams[:,:nr_pools]
         self.assertTrue(
-                np.allclose(soln, pwc_mr.solve()[0], rtol=1e-03)
+                np.allclose(soln, pwc_mr.solve(), rtol=1e-03)
         )
         ma = ams[:,nr_pools:]
 
@@ -2129,7 +2129,7 @@ class TestPWCModelRun(InDirTest):
         # test missing start_age_moments
         ams,_ = pwc_mr._solve_age_moment_system(1)
         soln = ams[:,:nr_pools]
-        self.assertTrue(np.allclose(soln, pwc_mr.solve()[0], rtol=1e-03))
+        self.assertTrue(np.allclose(soln, pwc_mr.solve(), rtol=1e-03))
         ma = ams[:,nr_pools:]
         ref_ams,_ = pwc_mr._solve_age_moment_system(1, np.zeros((1,nr_pools))) # 1 moment, nr_pools pools
         ref_ma = ref_ams[:,nr_pools:]
@@ -2721,7 +2721,7 @@ class TestPWCModelRun(InDirTest):
         times = np.linspace(start, end, int((end+ts-start)/ts))
         pwc_mr = PWCModelRun(srm, par_set, start_values, times)
         pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        soln,_ = pwc_mr.solve()
+        soln = pwc_mr.solve()
         
         atm_delta_14C = np.loadtxt(pfile_C14Atm_NH(), skiprows=1, delimiter=',')
         F_atm_delta_14C = interp1d(
@@ -2738,7 +2738,7 @@ class TestPWCModelRun(InDirTest):
             Fa_func,
             0.0001
         )
-        soln_14C,_ = pwc_mr_14C.solve()
+        soln_14C = pwc_mr_14C.solve()
 
 
     def test_to_14C_explicit(self):
@@ -2751,10 +2751,12 @@ class TestPWCModelRun(InDirTest):
         state_vector = Matrix(2, 1, [C_1, C_2])
         time_symbol = Symbol('t')
 
-        srm = SmoothReservoirModel.from_B_u(state_vector,
-                                            time_symbol,
-                                            B,
-                                            u)
+        srm = SmoothReservoirModel.from_B_u(
+            state_vector,
+            time_symbol,
+            B,
+            u
+        )
 
         par_set = {lamda_1: 0.5, lamda_2: 0.2}
         start_values = np.array([7,4])
@@ -2762,7 +2764,7 @@ class TestPWCModelRun(InDirTest):
         times = np.linspace(start, end, int((end+ts-start)/ts))
         pwc_mr = PWCModelRun(srm, par_set, start_values, times)
         pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        soln,_ = pwc_mr.solve()
+        soln = pwc_mr.solve()
 
         atm_delta_14C = np.loadtxt(pfile_C14Atm_NH(), skiprows=1, delimiter=',')
         F_atm_delta_14C = interp1d(
@@ -2780,7 +2782,7 @@ class TestPWCModelRun(InDirTest):
             0.0001
         )
 
-        soln_14C,_ = pwc_mr_14C.solve()
+        soln_14C = pwc_mr_14C.solve()
 
 
     ##### temporary #####

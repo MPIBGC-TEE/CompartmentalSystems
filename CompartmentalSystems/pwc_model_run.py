@@ -446,8 +446,13 @@ class PWCModelRun(object):
             at the times given in the time grid.
             funct is a function of time where f(t) is a numpy.ndarray with shape: (nr_pools,)
         """
-        return self._solve_age_moment_system(0, None, alternative_times, 
-                        alternative_start_values)
+        soln, sol_func = self._solve_age_moment_system(
+            0, 
+            None,
+            alternative_times,
+            alternative_start_values
+        )
+        return soln
 
     ##### fluxes as functions #####
     
@@ -478,7 +483,7 @@ class PWCModelRun(object):
         times = self.times
 
 
-        #sol,vec_sol_func = self.solve()
+        #sol = self.solve()
         vec_sol_func = self.solve_func()
         # the factorie is necessary to avoid untstrict evaluation
         def func_maker(pool):
@@ -661,7 +666,7 @@ class PWCModelRun(object):
         Returns:
             numpy.ndarray: len(times) x nr_pools, ``solution/output_vector``
         """
-        soln,_ = self.solve()
+        soln = self.solve()
         output_vec = self.external_output_vector
 
         # take care of possible division by zero
@@ -678,7 +683,7 @@ class PWCModelRun(object):
         Returns:
             numpy.ndarray: len(times) x nr_pools x nr_pools
         """
-        soln,_ = self.solve()
+        soln = self.solve()
         B_func = self.B_func()
         return np.array([B_func(t) * soln[k] 
                             for k, t in enumerate(self.times)])
@@ -840,7 +845,7 @@ class PWCModelRun(object):
         p_sv = self.pool_age_densities_single_value(start_age_densities)
         times = self.times
         #x = self.solve_old()
-        x,_ = self.solve()
+        x = self.solve()
         n   = self.nr_pools
         k   = order
 
@@ -924,7 +929,7 @@ class PWCModelRun(object):
             return part1_time(t) + part2_time(t)
 
         #soln = self.solve_old()
-        soln,_ = self.solve()
+        soln = self.solve()
 
         def both_parts_normalized_at_time_index(ti):
             t = times[ti]
@@ -997,7 +1002,7 @@ class PWCModelRun(object):
 
             # find last time index that contains an empty pool --> ti
             #soln = self.solve_old()
-            soln,_ = self.solve()
+            soln = self.solve()
             ti = len(times)-1
             content = soln[ti,:]
             while not (0 in content) and (ti>0): 
@@ -1059,7 +1064,7 @@ class PWCModelRun(object):
         age_moment_vector = self.age_moment_vector(order, start_age_moments)
         age_moment_vector[np.isnan(age_moment_vector)] = 0
         #soln = self.solve_old()
-        soln,_ = self.solve()
+        soln = self.solve()
          
         total_mass = soln.sum(1) # row sum
         total_mass[total_mass==0] = np.nan
@@ -1829,7 +1834,7 @@ class PWCModelRun(object):
         times = self.times
         n = self.nr_pools
         #soln = self.solve_old()
-        soln,_ = self.solve()
+        soln = self.solve()
 
 
         def make_ax_nice(ax, title):
@@ -1870,7 +1875,7 @@ class PWCModelRun(object):
         """
         times = self.times
         #soln = self.solve_old()
-        soln,_ = self.solve()
+        soln = self.solve()
         ax.plot(soln[:, i], soln[:, j])
         
         x0 = soln[0, i]
@@ -2352,7 +2357,7 @@ class PWCModelRun(object):
         """
         n = self.nr_pools
         #soln = self.solve_old()
-        soln,_ = self.solve()
+        soln = self.solve()
         if soln[0,:].sum() == 0:
             start_age_densities = lambda a: np.zeros((n,))
 
@@ -2434,7 +2439,7 @@ class PWCModelRun(object):
         """
         n = self.nr_pools
         #soln = self.solve_old()
-        soln,_ = self.solve()
+        soln = self.solve()
         if soln[0,:].sum() == 0:
             start_age_densities = lambda a: np.zeros((n,))
         
@@ -2566,7 +2571,7 @@ class PWCModelRun(object):
         """
         n = self.nr_pools
         #soln = self.solve_old()
-        soln,_ = self.solve()
+        soln = self.solve()
         if soln[0,:].sum() == 0:
             start_age_densities = lambda a: np.zeros((n,))
 
@@ -2581,7 +2586,7 @@ class PWCModelRun(object):
         F_sv = self.cumulative_pool_age_distributions_single_value(
                     start_age_densities=start_age_densities, F0=F0)
         #soln = self.solve_old()
-        soln,_ = self.solve()
+        soln = self.solve()
 
         res = []
         for pool in range(n):
@@ -2641,7 +2646,7 @@ class PWCModelRun(object):
         """
         n = self.nr_pools
         #soln = self.solve_old()
-        soln,_ = self.solve()
+        soln = self.solve()
         if soln[0,:].sum() == 0:
             start_age_densities = lambda a: np.zeros((n,))
 
@@ -2651,7 +2656,7 @@ class PWCModelRun(object):
         F_sv = self.cumulative_system_age_distribution_single_value(
                     start_age_densities=start_age_densities, F0=F0)
         #soln = self.solve_old()
-        soln,_ = self.solve()
+        soln = self.solve()
         start_age_moments = self.moments_from_densities(1, start_age_densities)
         
         if start_values is None: 
@@ -3095,7 +3100,7 @@ class PWCModelRun(object):
             numpy.ndarray: The computed quantile values over the time grid.
         """
         #soln = self.solve_old()
-        #soln,_ = self.solve()
+        #soln = self.solve()
         vec_sol_func = self.x_solve_func_skew()
         soln = vec_sol_func(self.times)
         # check if system is empty at the beginning,
@@ -3367,12 +3372,13 @@ class PWCModelRun(object):
 
         t0 = self.times[0]
         t_max = self.times[-1]
-        soln,func = self._solve_age_moment_system(
-                                                max_order, 
-                                                start_age_moments, 
-                                                #times=new_times, 
-                                                start_values=start_values
-                    )
+        soln, func = self._solve_age_moment_system(
+            max_order, 
+            start_age_moments, 
+            #times=new_times, 
+            start_values=start_values
+        )
+
         def save_func(times):
             if isinstance(times,np.ndarray):
                 if times[0]<t0 or times[-1]>t_max:
@@ -3834,7 +3840,7 @@ class PWCModelRun(object):
     #this function should be rewritten using the vector valued solution 
     def _flux_vector(self, flux_vec_symbolic):
         #sol = self.solve_old()
-        sol,_ = self.solve()
+        sol = self.solve()
         srm = self.model
         n = self.nr_pools
         times = self.times
@@ -4438,7 +4444,7 @@ class PWCModelRun_14C(PWCModelRun):
         # remove the decay because it is not part of respiration
         correction_rates = - np.ones_like(r) * self.decay_rate
         #soln = self.solve_old()
-        soln,_ = self.solve()
+        soln = self.solve()
         correction = correction_rates * soln
         r += correction
 
