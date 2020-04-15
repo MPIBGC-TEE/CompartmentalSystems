@@ -7,7 +7,7 @@ from sympy import Symbol, Matrix, symbols, diag, zeros, simplify, Function
 from sympy.printing import pprint
 from copy import deepcopy
 
-from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.pwc_model_run import PWCModelRun
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from testinfrastructure.InDirTest import InDirTest
 ######### TestClass #############

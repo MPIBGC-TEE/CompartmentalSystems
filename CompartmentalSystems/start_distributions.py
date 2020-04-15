@@ -115,7 +115,7 @@ from CompartmentalSystems.helpers_reservoir import \
     jacobian, func_subs,\
     numerical_function_from_expression,\
     warning,deprecation_warning
-from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.pwc_model_run import PWCModelRun
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 #from testinfrastructure.helpers import pe
 
@@ -123,7 +123,7 @@ def start_age_distributions_from_empty_spinup(srm,t_max,parameter_dict,func_set)
     """
     Finite age spin up from empty pools 
  
-    Creates a SmoothModelRun object with empty pools at :math:`t=0`, 
+    Creates a PWCModelRun object with empty pools at :math:`t=0`, 
     runs it until :math:`t=t_{max}` an returns the age distribution at
     :math:`t_{max}`
 
@@ -156,7 +156,7 @@ def start_age_distributions_from_empty_spinup(srm,t_max,parameter_dict,func_set)
     # although the ode solver guarantees a minimum it gets better if you force it to make smaller steps...
     #times=[0,t_max]
     times=np.linspace(0,t_max,101) 
-    spin_up_mr = SmoothModelRun(
+    spin_up_mr = PWCModelRun(
             srm, 
             parameter_dict=parameter_dict, 
             start_values=np.zeros(srm.nr_pools), 
@@ -165,7 +165,7 @@ def start_age_distributions_from_empty_spinup(srm,t_max,parameter_dict,func_set)
     
     # p_sv(a,t) returns the mass of age a at time t
     p_sv = spin_up_mr.pool_age_densities_single_value(a_dist_at_start_of_spinup)
-    sol_t_max=spin_up_mr.solve()[0][-1,:]
+    sol_t_max=spin_up_mr.solve()[-1,:]
 
     def a_dist_at_end_of_spinup(age):
         return p_sv(age,t_max)
@@ -304,7 +304,7 @@ def compute_fixedpoint_numerically(srm,t0,x0,parameter_dict,func_set):
 
 def start_age_moments_from_empty_spinup(srm,t_max,parameter_dict,func_set,max_order):
     times=np.linspace(0,t_max,101) 
-    spin_up_mr = SmoothModelRun(
+    spin_up_mr = PWCModelRun(
             srm, 
             parameter_dict=parameter_dict, 
             start_values=np.zeros(srm.nr_pools), 
@@ -320,7 +320,7 @@ def start_age_moments_from_empty_spinup(srm,t_max,parameter_dict,func_set,max_or
     #second line second moment (columns are pools)
     moment_arr=np.stack(moment_vector_list,0) 
     
-    sol_t_max=spin_up_mr.solve()[0][-1,:]
+    sol_t_max=spin_up_mr.solve()[-1,:]
     return moment_arr, sol_t_max
 
 def start_age_moments_from_zero_initial_content(srm,max_order):

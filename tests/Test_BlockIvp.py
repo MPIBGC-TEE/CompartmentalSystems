@@ -1,8 +1,10 @@
+import unittest
+
 from testinfrastructure.InDirTest import InDirTest
 #from testinfrastructure.helpers import pe
 import numpy as np
 
-from CompartmentalSystems.BlockIvp import BlockIvp
+from CompartmentalSystems.BlockIvp import BlockIvp, custom_solve_ivp
 
 class TestBlockIvp(InDirTest):
     def test_solution(self):
@@ -45,3 +47,63 @@ class TestBlockIvp(InDirTest):
         res = bivp.block_solve(t_span=(0,t_max))
         self.assertTrue(np.allclose(res['x1'][-1],ref['x1'],rtol=1e-2))
         self.assertTrue(np.allclose(res['x2'][-1],ref['x2'],rtol=1e-2))
+
+
+    def test_custom_solve_ivp(self):
+        def func(t, x):
+            return -0.2*x
+        
+        disc_times = np.linspace(0, 10, 11)
+        for dim in [1,2]:
+            with self.subTest():   
+                x0 = 1 + np.arange(dim).reshape(dim,)
+                t_span = (disc_times[0], disc_times[-1])
+        
+                sol_obj = custom_solve_ivp(
+                    func,
+                    t_span,
+                    x0,
+                    t_eval = disc_times,
+                    dense_output = True
+                )
+           
+                sol_obj2 = custom_solve_ivp(
+                    func,
+                    t_span,
+                    x0,
+                    t_eval = disc_times,
+                    disc_times   = disc_times,
+                    dense_output = True
+                )
+               
+                self.assertTrue(
+                    np.allclose(
+                        sol_obj.y,
+                        sol_obj2.y,
+                        atol = 1e-03
+                    )
+                )
+                self.assertTrue(
+                    np.allclose(
+                        sol_obj.sol(disc_times),
+                        sol_obj2.sol(disc_times),
+                        atol = 1e-03 
+                    )
+                )
+
+
+################################################################################
+
+
+if __name__ == '__main__':
+    suite=unittest.defaultTestLoader.discover(".",pattern=__file__)
+
+#    # Run same tests across 16 processes
+#    concurrent_suite = ConcurrentTestSuite(suite, fork_for_tests(1))
+#    runner = unittest.TextTestRunner()
+#    res=runner.run(concurrent_suite)
+#    # to let the buildbot fail we set the exit value !=0 if either a failure or error occurs
+#    if (len(res.errors)+len(res.failures))>0:
+#        sys.exit(1)
+
+    unittest.main()

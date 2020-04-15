@@ -1,3 +1,3 @@
 cd tests
 pip list
-python run_tests.py
+python run_tests_serial.py

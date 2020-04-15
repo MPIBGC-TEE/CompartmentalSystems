@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.4.1
+#       jupytext_version: 1.4.2
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -851,5 +851,9 @@ s += ", ".join(["%01.2f yr" %\
                 ftt_medians_ff_only_5yrs[1][k] for k in range(len(years))]) + "."
 display(Markdown(s))
 # -
+
+from jupyter_core.paths import jupyter_config_dir
+jupyter_config_dir()
+
 
 # Done.

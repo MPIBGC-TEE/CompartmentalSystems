@@ -122,7 +122,7 @@ class SmoothReservoirModel(object):
         # this is a kind of circular dependency 
         # or at least a clumsy, duplicating and therefore error prone approach 
         # at a one-to-many relationship
-        # there is no need to store SmoothModelRun objects in ReservoirModel 
+        # there is no need to store PWCModelRun objects in ReservoirModel 
         # objects since we already have the 
         # attribute model_run_combinations in class Model
         #self.model_runs=[]
@@ -300,7 +300,7 @@ It gave up for the following expression: ${e}."""
         # fixme mm:
         # we do not seem to have a check that makes sure 
         # that the argument B is compartmental
-        # maybe the fixme belongs rather to the SmoothModelRun class since 
+        # maybe the fixme belongs rather to the PWCModelRun class since 
         # we perhaps need parameters 
         
         input_fluxes = dict()

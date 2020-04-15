@@ -7,10 +7,10 @@ import numpy as np
 # to persist the lru cache in the future
 class Cache:
     
-    def __init__(self,keys,values,smr_hash):
+    def __init__(self,keys,values,pwc_mr_hash):
         self.keys=keys
         self.values=values
-        self.myhash=smr_hash
+        self.myhash=pwc_mr_hash
 
     @classmethod
     def from_file(cls,filename):
