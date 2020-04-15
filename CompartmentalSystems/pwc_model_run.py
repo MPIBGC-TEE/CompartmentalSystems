@@ -51,6 +51,7 @@ from functools import reduce
 #from testinfrastructure.helpers import pe
 
 from .smooth_reservoir_model import SmoothReservoirModel
+from .model_run import ModelRun
 from .helpers_reservoir import (
     deprecation_warning
 	,warning
@@ -115,7 +116,7 @@ def check_parameter_dict_complete(model, parameter_dict, func_set):
 
     return free_names
 
-class PWCModelRun(object):
+class PWCModelRun(ModelRun):
     """Class for a model run based on a 
     :class:`~.smooth_reservoir_model.SmoothReservoirModel`.
 
@@ -432,12 +433,10 @@ class PWCModelRun(object):
         return self._solve_age_moment_system_old(0, None, alternative_times, 
                         alternative_start_values)
 
-    def solve(self, alternative_times = None, alternative_start_values=None):
+    def solve(self,  alternative_start_values=None):
         """Solve the model and return a solution grid as well as a solution function of time. If the solution has been computed previously (even by other methods) the cached result will be returned.
 
         Args:
-            alternative_times (numpy.array): If not given, the original time 
-                grid is used.
             alternative_start_values (numpy.array): If not given, 
                 the original start_values are used.
 
@@ -449,7 +448,6 @@ class PWCModelRun(object):
         soln, sol_func = self._solve_age_moment_system(
             0, 
             None,
-            alternative_times,
             alternative_start_values
         )
         return soln
@@ -3404,16 +3402,15 @@ class PWCModelRun(object):
         return save_func 
 
     def _solve_age_moment_system(self, max_order, 
-            start_age_moments=None, times=None, start_values=None, store=True):
+            start_age_moments=None, start_values=None, store=True):
         # this function caches the interpolation function instead of the values
         
         #if max_order < 1:
         #    raise(ValueError("For numerical consistency we use the age moment system only for order >=1 (mean). Use solve instead!"))
 
-        if not ((times is None) and (start_values is None)): store = False
+        if not (start_values is None): store = False
 
-        if times is None: 
-            times = self.times
+        times = self.times
 
         if start_values is None: start_values = self.start_values
 

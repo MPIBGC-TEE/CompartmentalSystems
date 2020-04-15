@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from . import picklegzip
 from .helpers_reservoir import x_phi_ivp
-
+from .model_run import ModelRun
 ################################################################################
 
 
@@ -21,7 +21,7 @@ class DMRError(Exception):
 ################################################################################
 
 
-class DiscreteModelRun(object):
+class DiscreteModelRun(ModelRun):
     def __init__(self, start_values, times, Bs, us):
         self.nr_pools = len(us[0])
         self.start_values = start_values.reshape((self.nr_pools,))

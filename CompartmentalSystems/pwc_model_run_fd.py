@@ -23,6 +23,7 @@ class Error(Exception):
 
 
 class PWCModelRunFD(PWCModelRun):
+#class PWCModelRunFD(ModelRun):
     def __init__(self, model, parameter_set, 
                         start_values, times, func_set=None):
 

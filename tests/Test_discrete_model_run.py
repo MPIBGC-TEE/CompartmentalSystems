@@ -94,5 +94,28 @@ class TestDiscreteModelRun(InDirTest):
         dmr = DiscreteModelRun.from_PWCModelRun(pwc_mr)
 
         
+    def test_reconstruct_from_data(self):
+        # copied from test_age_moment_vector
+        x, y, t = symbols("x y t")
+        state_vector = Matrix([x,y])
+        B = Matrix([[-1, 0],
+                    [ 0,-2]])
+        u = Matrix(2, 1, [9,1])
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
+
+        start_values = np.array([1,1])
+        times=np.linspace(0,1,100)
+        pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        dmr_1 = DiscreteModelRun.from_PWCModelRun(pwc_mr)
+
+        xs, Fs, rs, us = pwc_mr._fake_discretized_output(times)
+        dmr_2 = DiscreteModelRun.reconstruct_from_data(times, start_values,xs, Fs, rs, us)
+        self.assertTrue(np.all(pwc_mr.solve()==dmr_1.solve()))
+        
+        pwc_mr_fd = PWCModelRunFD.reconstruct_from_data(t, times, start_values, xs , Fs, rs, us)
+        self.assertTrue(np.allclose(pwc_mr.solve(),pwc_mr_fd.solve(),rtol=1e03))
+        self.assertTrue(np.all(pwc_mr.solve()==dmr_2.solve()))
+        #self.assertTrue(np.all(dmr_1.solve()==dmr_2.solve()))
+        #print(dmr_1.solve()-dmr_2.solve())
 
 
