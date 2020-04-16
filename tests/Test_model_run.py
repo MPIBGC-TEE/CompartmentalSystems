@@ -20,7 +20,7 @@ class TestModelRun(unittest.TestCase):
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array([1,1])
-        times=np.linspace(0,1,100)
+        times=np.linspace(0,1,10)
         pwc_mr = PWCModelRun(srm, {}, start_values, times)
         #pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
         dmr_1 = DiscreteModelRun.from_PWCModelRun(pwc_mr)
@@ -29,6 +29,6 @@ class TestModelRun(unittest.TestCase):
         dmr_2 = DiscreteModelRun.reconstruct_from_data(times, start_values,xs, Fs, rs, us)
         self.assertTrue(np.all(pwc_mr.solve()==dmr_1.solve()))
         
-        pwc_mr_fd = PWCModelRunFD.reconstruct_from_data(t, times, start_values, xs , Fs, rs, us)
+        pwc_mr_fd = PWCModelRunFD(t, times, start_values, xs , Fs, rs, us)
         self.assertTrue(np.allclose(pwc_mr.solve(),pwc_mr_fd.solve(),rtol=1e03))
 

@@ -7,8 +7,9 @@ from sympy import  Matrix, symbols, zeros, Function
 from tqdm import tqdm
 #
 #from CompartmentalSystems import picklegzip
-from CompartmentalSystems.pwc_model_run import PWCModelRun
-from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
+from .model_run import ModelRun
+from .pwc_model_run import PWCModelRun
+from .smooth_reservoir_model import SmoothReservoirModel
 
 
 ################################################################################
@@ -22,29 +23,19 @@ class Error(Exception):
 ################################################################################
 
 
-class PWCModelRunFD(PWCModelRun):
-#class PWCModelRunFD(ModelRun):
-    def __init__(self, model, parameter_set, 
-                        start_values, times, func_set=None):
+#class PWCModelRunFD(PWCModelRun):
+class PWCModelRunFD(ModelRun):
+    def __init__(self, time_symbol, data_times, start_values, xs, Fs, rs, data_us):
 
-        super().__init__(
-            model,
-            parameter_set,
-            start_values,
-            times,
-            func_set
-        )
-        self.disc_times = times
+        self.data_times = data_times
+        cls = self.__class__
+        disc_times = data_times
+        print('reconstructing us')
+        us = cls.reconstruct_us(data_times, data_us)
 
-    
-    @classmethod
-    def load_from_dict(cls, pwc_mr_fd_dict):
-        start_values = pwc_mr_fd_dict['start_values']
-        time_symbol  = pwc_mr_fd_dict['time_symbol']
-        Bs           = pwc_mr_fd_dict['Bs']
-        us           = pwc_mr_fd_dict['us']
-        times        = pwc_mr_fd_dict['times']
-
+        print('reconstructing Bs')
+        Bs = cls.reconstruct_Bs(data_times, xs, Fs, rs, us)
+        
         nr_pools = len(start_values)
         strlen   = len(str(nr_pools))
         pool_str = lambda i: ("{:0"+str(strlen)+"d}").format(i)
@@ -58,8 +49,8 @@ class PWCModelRunFD(PWCModelRun):
         )
         time_symbol = srm_generic.time_symbol
 
-        u_funcs = cls.u_pwc(times, us)
-        B_funcs = cls.B_pwc(times, Bs)
+        u_funcs = cls.u_pwc(data_times, us)
+        B_funcs = cls.B_pwc(data_times, Bs)
     
         def func_maker_u(pool):
             def func(s):
@@ -84,36 +75,29 @@ class PWCModelRunFD(PWCModelRun):
                 func_set['b_'+pool_str(i)+pool_str(j)+'('+time_symbol.name+')'] = \
                         func_maker_B(i,j)
 
-        pwc_mr_fd = cls(
+        self.pwc_mr=PWCModelRun(
             srm_generic, 
             par_set, 
             start_values, 
-            times,
-            func_set = func_set,
+            data_times,
+            func_set=func_set,
+            disc_times=disc_times 
         )
-        return pwc_mr_fd
+
+    def solve(self,alternative_start_values:np.ndarray=None): 
+        return self.pwc_mr.solve(alternative_start_values)
+
+    def B_func(self, vec_sol_func=None):
+        return self.pwc_mr.B_func(vec_sol_func)
+ 
+    def external_input_vector_func(self, cut_off = True):
+        return self.pwc_mr.external_input_vector_func(cut_off)
+
+    @property
+    def times(self):
+        return self.data_times
 
 
-    @classmethod
-    def reconstruct_from_data(cls, time_symbol, times, start_values, xs, 
-                                 Fs, rs, data_us):
-        print('reconstructing us')
-        us = cls.reconstruct_us(times, data_us)
-
-        print('reconstructing Bs')
-        Bs = cls.reconstruct_Bs(times, xs, Fs, rs, us)
-        
-        pwc_mr_fd_dict = {
-            'start_values': start_values,
-            'time_symbol':  time_symbol,
-            'Bs':           Bs,
-            'us':           us,
-            'times':        times,
-        }
-
-        return cls.load_from_dict(pwc_mr_fd_dict)
-#
-#
 #    
 #    @classmethod
 #    def load_from_file(cls, filename):
@@ -550,12 +534,12 @@ class PWCModelRunFD(PWCModelRun):
 
 
     def to_14C_only(self, start_values_14C, Fa_func, decay_rate=0.0001209681):
-        pwc_mr_fd_14C = super().to_14C_only(
+        pwc_mr_fd_14C = self.pwc_mr.to_14C_only(
             start_values_14C,
             Fa_func,
+#            disc_times = self.data_times,
             decay_rate = decay_rate
         )
-        pwc_mr_fd_14C.disc_times = self.disc_times
 
         return pwc_mr_fd_14C
 

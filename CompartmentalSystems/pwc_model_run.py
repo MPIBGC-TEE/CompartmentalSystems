@@ -136,7 +136,7 @@ class PWCModelRun(ModelRun):
     """
 
     def __init__(self, model, parameter_dict, 
-                        start_values, times, func_set=None):
+                        start_values, times, func_set=None, disc_times=None):
         """Return a PWCModelRun instance.
 
         Args:
@@ -149,6 +149,7 @@ class PWCModelRun(ModelRun):
                 Typically created by ``numpy.linspace``.
             func_set (dict): ``{f: func}`` with ``f`` being a SymPy symbol and 
                 ``func`` being a Python function. Defaults to ``dict()``.
+            disc_times (list): ``known discontinuities (times) for any of the fluxes``.
 
         Raises:
             Error: If ``start_values`` is not a ``numpy.array``.
@@ -187,7 +188,7 @@ class PWCModelRun(ModelRun):
         #self._state_transition_operator_cache = None
         self._external_input_vector_func = None
 
-        self.disc_times = None
+        self.disc_times = disc_times
 
     def __str__(self):
         return str(
@@ -1025,7 +1026,7 @@ class PWCModelRun(ModelRun):
                 #ams = self._solve_age_moment_system_old(
                 #    order, new_start_age_moments, times[ti+1:], start_values)
                 ams,_ = self._solve_age_moment_system(
-                    order, new_start_age_moments, times[ti+1:], start_values)
+                    order, new_start_age_moments, start_values, times[ti+1:])
                 amv2 = ams[:,n*order:]
 
                 # put the two parts together
@@ -3280,12 +3281,12 @@ class PWCModelRun(ModelRun):
             start_values_14C,
             times_14C,
             func_set_14C,
+            self.disc_times,
             decay_rate
         )
 
         return smr_14C
 
-    #fixme: adapt to 'to_14C_only' interface
     def to_14C_explicit(self, start_values_14C, Fa_func, decay_rate=0.0001209681):
         """Construct and return a :class:`PWCModelRun` instance that
            models the 14C component additional to the original model run.
@@ -3326,6 +3327,7 @@ class PWCModelRun(ModelRun):
             par_set_14C,
             start_values_14C_cb,
             times_14C,
+            self.disc_times,
             func_set_14C
         )
 
@@ -3402,15 +3404,16 @@ class PWCModelRun(ModelRun):
         return save_func 
 
     def _solve_age_moment_system(self, max_order, 
-            start_age_moments=None, start_values=None, store=True):
+            start_age_moments=None, start_values=None, times=None, store=True):
         # this function caches the interpolation function instead of the values
         
         #if max_order < 1:
         #    raise(ValueError("For numerical consistency we use the age moment system only for order >=1 (mean). Use solve instead!"))
 
-        if not (start_values is None): store = False
+        if not  ((times is None) and (start_values is None)): store = False
 
-        times = self.times
+        if times is None:
+            times = self.times
 
         if start_values is None: start_values = self.start_values
 
@@ -4425,14 +4428,16 @@ class PWCModelRun(ModelRun):
 
 class PWCModelRun_14C(PWCModelRun):
 
-    def __init__(self, srm, par_set, start_values, times, func_set, decay_rate):
+    def __init__(self, srm, par_set, start_values, times, func_set, disc_times, decay_rate):
         PWCModelRun.__init__(
             self, 
             srm, 
             par_set,
             start_values,
             times,
-            func_set)
+            func_set,
+            disc_times
+        )
         self.decay_rate = decay_rate
 
     @property 

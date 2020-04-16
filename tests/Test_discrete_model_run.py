@@ -93,7 +93,7 @@ class TestDiscreteModelRun(InDirTest):
 
         dmr = DiscreteModelRun.from_PWCModelRun(pwc_mr)
 
-        
+    @unittest.skip        
     def test_reconstruct_from_data(self):
         # copied from test_age_moment_vector
         x, y, t = symbols("x y t")
