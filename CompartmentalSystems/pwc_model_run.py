@@ -3327,8 +3327,8 @@ class PWCModelRun(ModelRun):
             par_set_14C,
             start_values_14C_cb,
             times_14C,
-            self.disc_times,
-            func_set_14C
+            func_set_14C,
+            self.disc_times
         )
 
         return smr_14C

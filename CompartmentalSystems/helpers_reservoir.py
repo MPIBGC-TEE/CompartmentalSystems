@@ -197,7 +197,7 @@ def numerical_rhs(
         ,parameter_dict
         ,func_dict):
 
-    FL=numerical_function_from_expression(
+    FL = numerical_function_from_expression(
             rhs
             ,(time_symbol,)+tuple(state_vector)
             ,parameter_dict
@@ -297,7 +297,7 @@ def numsol_symbolical_system(
     ):
     nr_pools = len(state_vector)
     t_min    = times[0]
-    t_max     = times[-1]
+    t_max    = times[-1]
 
     if times[0] == times[-1]: 
         return start_values.reshape((1, nr_pools))
@@ -337,10 +337,10 @@ def numsol_symbolical_system(
     #        method='LSODA'
     #    )
     #np.seterr(**old_settings)
-    res=custom_solve_ivp(
+    res = custom_solve_ivp(
         fun=num_rhs
-        ,y0           = start_values
         ,t_span       = (t_min, t_max)
+        ,y0           = start_values
         ,t_eval       = times
         ,disc_times   = disc_times
         ,dense_output = dense_output
