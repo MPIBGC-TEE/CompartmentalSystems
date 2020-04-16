@@ -97,6 +97,18 @@ class PWCModelRunFD(ModelRun):
     def times(self):
         return self.data_times
 
+    @property
+    def external_input_vector(self) :
+        return self.pwc_mr.external_input_vector
+
+    @property
+    def internal_flux_matrix(self):
+        return self.pwc_mr.internal_flux_matrix
+    
+    @property
+    def external_output_vector(self) :
+        return self.pwc_mr.external_output_vector
+
 
 #    
 #    @classmethod

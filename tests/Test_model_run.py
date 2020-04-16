@@ -10,8 +10,7 @@ from CompartmentalSystems.discrete_model_run import DiscreteModelRun
 
 
 class TestModelRun(unittest.TestCase):
-    def test_roundtrip(self):
-        # copied from test_age_moment_vector
+    def setUp(self):
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
         B = Matrix([[-1, 0],
@@ -20,15 +19,46 @@ class TestModelRun(unittest.TestCase):
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
         start_values = np.array([1,1])
+        self.start_values = start_values
         times=np.linspace(0,1,10)
-        pwc_mr = PWCModelRun(srm, {}, start_values, times)
-        #pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        dmr_1 = DiscreteModelRun.from_PWCModelRun(pwc_mr)
+        self.times=times
 
-        xs, Fs, rs, us = pwc_mr._fake_discretized_output(times)
-        dmr_2 = DiscreteModelRun.reconstruct_from_data(times, start_values,xs, Fs, rs, us)
-        self.assertTrue(np.all(pwc_mr.solve()==dmr_1.solve()))
+        self.pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        xs, Fs, rs, us = self.pwc_mr._fake_discretized_output(times)
+        self.pwc_mr_fd = PWCModelRunFD(t, times, start_values, xs , Fs, rs, us)
+        self.dmr_from_pwc = DiscreteModelRun.from_PWCModelRun(self.pwc_mr)
+
+    def test_roundtrip(self):
+
+        xs, Fs, rs, us = self.pwc_mr._fake_discretized_output(self.times)
+        dmr_2 = DiscreteModelRun.reconstruct_from_data(self.times, self.start_values,xs, Fs, rs, us)
+        self.assertTrue(np.all(self.pwc_mr.solve()==self.dmr_from_pwc.solve()))
         
-        pwc_mr_fd = PWCModelRunFD(t, times, start_values, xs , Fs, rs, us)
-        self.assertTrue(np.allclose(pwc_mr.solve(),pwc_mr_fd.solve(),rtol=1e03))
+        self.assertTrue(np.allclose(self.pwc_mr.solve(),self.pwc_mr_fd.solve(),rtol=1e-3))
 
+    def test_external_input_vector(self):
+        self.assertTrue(
+            np.allclose(
+                self.pwc_mr.external_input_vector[:-1],
+                self.dmr_from_pwc.external_input_vector,
+#                rtol=1e-03
+            )
+        )
+
+    def test_internal_flux_matrix(self):
+        self.assertTrue(
+            np.allclose(
+                self.pwc_mr.internal_flux_matrix[:-1],
+                self.dmr_from_pwc.internal_flux_matrix,
+#                rtol=1e-03
+            )
+        )
+
+    def test_external_output_vector(self):
+        self.assertTrue(
+            np.allclose(
+                self.pwc_mr.external_output_vector[:-1],
+                self.dmr_from_pwc.external_output_vector,
+#                rtol=1e-03
+            )
+        )
