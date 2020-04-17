@@ -32,7 +32,7 @@ class TestDiscreteModelRun(InDirTest):
     def test_from_PWCModelRun(self):
         x_0,x_1,t,k,u = symbols("x_1,x_2,k,t,u")
         inputs={
-             0:u
+             0:u*(2-sin(t))
             ,1:u
         }
         outputs={
@@ -46,8 +46,8 @@ class TestDiscreteModelRun(InDirTest):
         x0=np.float(10)
         start_values = np.array([x0,x0])
         parameter_dict = {
-             k: -1
-            ,u:1}
+             k: -1.2
+            ,u:1.7}
         delta_t=np.float(1)
         
         pwc_mr = PWCModelRun(srm, parameter_dict, start_values, times)
@@ -69,6 +69,7 @@ class TestDiscreteModelRun(InDirTest):
         self.assertTrue(True)
 
 
+    #@unittest.skip        
     def test_start_value_format(self):
 
         ## create ReservoirModel

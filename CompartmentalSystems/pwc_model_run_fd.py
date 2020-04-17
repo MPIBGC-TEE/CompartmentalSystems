@@ -25,13 +25,14 @@ class Error(Exception):
 
 #class PWCModelRunFD(PWCModelRun):
 class PWCModelRunFD(ModelRun):
-    def __init__(self, time_symbol, data_times, start_values, xs, Fs, rs, data_us):
+    def __init__(self, time_symbol, data_times, start_values, xs, Fs, rs, gross_Us):
 
         self.data_times = data_times
         cls = self.__class__
         disc_times = data_times
         print('reconstructing us')
-        us = cls.reconstruct_us(data_times, data_us)
+        #us = cls.reconstruct_us(data_times, gross_Us)
+        us = gross_Us/self.dts.reshape(-1,1)
 
         print('reconstructing Bs')
         Bs = cls.reconstruct_Bs(data_times, xs, Fs, rs, us)
@@ -83,6 +84,15 @@ class PWCModelRunFD(ModelRun):
             func_set=func_set,
             disc_times=disc_times 
         )
+        self.us=us
+        self.Bs=Bs
+    
+    @property
+    def dts(self):
+        """
+        The lengths of the time 
+        """
+        return np.diff(self.data_times).astype(np.float64)
 
     def solve(self,alternative_start_values:np.ndarray=None): 
         return self.pwc_mr.solve(alternative_start_values)
@@ -98,8 +108,9 @@ class PWCModelRunFD(ModelRun):
         return self.data_times
 
     @property
-    def external_input_vector(self) :
-        return self.pwc_mr.external_input_vector
+    def acc_external_input_vector(self):
+        return self.us*self.dts.reshape(-1,1)
+
 
     @property
     def internal_flux_matrix(self):
@@ -336,20 +347,20 @@ class PWCModelRunFD(ModelRun):
 
         return B_funcs
 
-    @classmethod
-    def reconstruct_u(cls, dt, data_u):
-        return data_u / dt
+    #@classmethod
+    #def reconstruct_u(cls, dt, data_U):
+    #    return data_U / dt
 
-    @classmethod
-    def reconstruct_us(cls, times, data_us):
-        us = np.zeros_like(data_us)
-        for k in range(len(times)-1):
-            dt = times[k+1] - times[k]
+    #@classmethod
+    #def reconstruct_us(cls, times, gross_Us):
+    #    us = np.zeros_like(gross_Us)
+    #    for k in range(len(times)-1):
+    #        #dt = times[k+1] - times[k]
 
-            #dt = dt.item().days ##### to be removed or made safe
-            us[k,:] = cls.reconstruct_u(dt, data_us[k])
+    #        #dt = dt.item().days ##### to be removed or made safe
+    #        us[k,:] = cls.reconstruct_u(self.dts[k], gross_Us[k])
 
-        return us
+    #    return us
 
     @classmethod
     def u_pwc(cls, times, us):

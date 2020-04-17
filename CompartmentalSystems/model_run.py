@@ -11,7 +11,10 @@ class ModelRun(metaclass=ABCMeta):
         pass
     
     @abstractproperty
-    def external_input_vector(self) :
+    def acc_external_input_vector(self) :
+        """
+        Accumulated fluxes (flux u integrated over the time step)
+        """
         pass
 
     @abstractproperty

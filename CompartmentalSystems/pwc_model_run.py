@@ -54,29 +54,29 @@ from .smooth_reservoir_model import SmoothReservoirModel
 from .model_run import ModelRun
 from .helpers_reservoir import (
     deprecation_warning
-	,warning
-	,make_cut_func_set
-	,has_pw
-	,numsol_symbolic_system_old
+    ,warning
+    ,make_cut_func_set
+    ,has_pw
+    ,numsol_symbolic_system_old
     ,numsol_symbolical_system 
-	,arrange_subplots
-	, melt
+    ,arrange_subplots
+    ,melt
     ,generalized_inverse_CDF
-	, draw_rv 
-	,stochastic_collocation_transform
+    ,draw_rv 
+    ,stochastic_collocation_transform
     ,numerical_rhs
     ,numerical_rhs_old
-	, MH_sampling
-	, save_csv 
-	,load_csv
-	, stride
-	,f_of_t_maker
-	,const_of_t_maker
-	,numerical_function_from_expression
-	#,x_phi_ivp
-	,x_phi_ode
-	,phi_tmax
-	,x_tmax
+    ,MH_sampling
+    ,save_csv 
+    ,load_csv
+    ,stride
+    ,f_of_t_maker
+    ,const_of_t_maker
+    ,numerical_function_from_expression
+    ,x_phi_ivp
+    ,x_phi_ode
+    ,phi_tmax
+    ,x_tmax
     ,print_quantile_error_statisctics
     ,custom_lru_cache_wrapper
 )
@@ -631,20 +631,39 @@ class PWCModelRun(ModelRun):
 
     ##### fluxes as vector over self.times #####
 
+    @property
+    def acc_external_input_vector(self):
+        """Return the grid of accumulated external input vectors.
+
+        Returns:
+            numpy.ndarray: len(times) x nr_pools
+        """
+        f_vec=self.external_input_vector_func()
+        times=self.times
+        res = np.array(
+            [
+                [
+                    quad(lambda t:f_vec(t)[i],times[k],times[k+1])
+                    for i in range(self.nr_pools) 
+                ]
+                for k in range(len(times)-1)
+            ]
+        )
+        #err=res[:,:,1]
+        return res[:,:,0]
+    
 
     @property
     #this function should be rewritten using the vector values solution 
     def external_input_vector(self):
         """Return the grid of external input vectors.
 
-        The input at time :math:`t_0` is set to zero by definition.
-
         Returns:
             numpy.ndarray: len(times) x nr_pools
         """
         res = self._flux_vector(self.model.external_inputs)
         # no inputs at t0 (only >t0)
-        res[0,:] = np.zeros((self.nr_pools,))
+        #res[0,:] = np.zeros((self.nr_pools,))
         
         return res
 
@@ -4407,20 +4426,21 @@ class PWCModelRun(ModelRun):
     
             rs.append(r)
     
-        us = []
-        for k in range(len(data_times)-1):
-            a = data_times[k]
-            b = data_times[k+1]
+        #us = []
+        #for k in range(len(data_times)-1):
+        #    a = data_times[k]
+        #    b = data_times[k+1]
     
-            u = np.zeros((nr_pools,))
-            u_func = self.external_input_vector_func()
-            for j in range(nr_pools):
-                def integrand(s):
-                    return u_func(s)[j]
+        #    u = np.zeros((nr_pools,))
+        #    u_func = self.external_input_vector_func()
+        #    for j in range(nr_pools):
+        #        def integrand(s):
+        #            return u_func(s)[j]
     
-                u[j] = quad(integrand, a, b)[0]
+        #        u[j] = quad(integrand, a, b)[0]
     
-            us.append(u)
+        #    us.append(u)
+        us=self.acc_external_input_vector
     
         return xs, Fs, rs, us
 
