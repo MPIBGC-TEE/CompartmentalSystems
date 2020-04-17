@@ -9,6 +9,9 @@ from tqdm import tqdm
 
 from . import picklegzip
 from .helpers_reservoir import x_phi_ivp
+from .model_run import ModelRun
+
+
 ################################################################################
 
 
@@ -20,10 +23,16 @@ class DMRError(Exception):
 ################################################################################
 
 
-class DiscreteModelRun():
-    def __init__(self, start_values, times, Bs, xs):
+class DiscreteModelRun(ModelRun):
+    def __init__(self, start_values, times, Bs, xs, gross_Us):
         """
-        net_Us accumulated fluxes (flux u integrated over the time step)
+        Note: The net_Us can be computed from the solution but there
+        is no way to guess the gross_Us from the net_Us or the solution
+        without assumptions about the state transition operator in the         intervals induced by the times argument. Therefore we have 
+        to provide gross_Us separately.
+
+        gross_Us accumulated fluxes (flux u integrated over the time step)
+
         Bs State transition operators for one time step
         """
         self.nr_pools = len(start_values)
@@ -31,6 +40,7 @@ class DiscreteModelRun():
         self.times = times
         self.Bs = Bs
         self.xs=xs
+        self.gross_Us = gross_Us
 
     @property
     def net_Us(self):
@@ -53,7 +63,8 @@ class DiscreteModelRun():
     def from_PWCModelRun(cls,pwc_mr,data_times=None): 
         if data_times is None:
             data_times = pwc_mr.times
-
+        # fixme:
+        # get the Phis from pwc_mr
         def Phi(t,s):
             blivp = x_phi_ivp(
                 pwc_mr.model
@@ -68,7 +79,6 @@ class DiscreteModelRun():
             return phi_mat
 
         nr_pools=pwc_mr.nr_pools
-        #data_times=pwc_mr.times
         n=len(data_times)
         Bs = np.zeros((n-1, nr_pools, nr_pools)) 
         for k in range(n-1):
@@ -82,21 +92,17 @@ class DiscreteModelRun():
             data_times,
             Bs,
             pwc_mr.solve()
+            pwc_mr.acc_external_input_vector
         )
 
 
     @classmethod
-    def reconstruct_from_fluxes_and_solution(cls, data_times, xs, Fs, rs):
-        nr_pools = len(xs[0])
-
-        net_Us = np.nan * np.ones_like(rs)
+    def reconstruct_from_fluxes_and_solution(cls, data_times, xs, Fs, rs,gross_Us):
         for k in range(len(net_Us)):
-            for j in range(nr_pools):
-                net_Us[k,j] = xs[k+1,j] - (xs[k,j] + Fs[k,j,:].sum() - rs[k,j])
             B = cls.reconstruct_B(xs[k], Fs[k], rs[k], k)
             Bs[k,:,:] = B
 
-        dmr = cls(xs[0], data_times, Bs, net_Us)
+        dmr = cls(xs[0], data_times, Bs, xs, gross_Us)
         return dmr
 
     @classmethod
@@ -172,6 +178,11 @@ class DiscreteModelRun():
         r = rho * soln
 
         return r
+
+    @property
+    def acc_external_input_vector(self):
+        return self.gross_Us
+
 
     @property
     def internal_flux_matrix(self):
