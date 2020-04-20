@@ -10,18 +10,18 @@ class ModelRun(metaclass=ABCMeta):
     def solve(self,alternative_start_values:np.ndarray=None): 
         pass
     
-    @abstractproperty
-    def acc_external_input_vector(self) :
+    @abstractmethod
+    def acc_external_input_vector(self):
         """
         Accumulated fluxes (flux u integrated over the time step)
         """
         pass
 
-    @abstractproperty
-    def internal_flux_matrix(self):
+    @abstractmethod
+    def acc_internal_flux_matrix(self):
         pass
     
-    @abstractproperty
-    def external_output_vector(self) :
+    @abstractmethod
+    def acc_external_output_vector(self) :
         pass
 

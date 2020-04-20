@@ -1,13 +1,11 @@
 import numpy as np
-
 from numpy.linalg import matrix_power, pinv
 from scipy.linalg import inv
 from scipy.special import factorial, binom
 from sympy import Matrix
-
 from tqdm import tqdm
+from functools import lru_cache
 
-from . import picklegzip
 from .helpers_reservoir import x_phi_ivp
 from .model_run import ModelRun
 
@@ -23,26 +21,33 @@ class DMRError(Exception):
 ################################################################################
 
 
-class DiscreteModelRun(ModelRun):
-    def __init__(self, start_values, times, Bs, xs, gross_Us):
+class DiscreteModelRun():
+    def __init__(self, times, Bs, xs):
         """
-        Note: The net_Us can be computed from the solution but there
-        is no way to guess the gross_Us from the net_Us or the solution
-        without assumptions about the state transition operator in the         intervals induced by the times argument. Therefore we have 
-        to provide gross_Us separately.
-
-        gross_Us accumulated fluxes (flux u integrated over the time step)
-
         Bs State transition operators for one time step
         """
-        self.nr_pools = len(start_values)
-        self.start_values = start_values.reshape((self.nr_pools,))
         self.times = times
         self.Bs = Bs
-        self.xs=xs
-        self.gross_Us = gross_Us
+        self.xs = xs
 
     @property
+    def start_values(self):
+        return self.xs[0,:]
+    
+    @property
+    def nr_pools(self):
+        return len(self.start_values)
+
+    @classmethod
+    def from_Bs_and_net_Us(cls, start_values, times, Bs, net_Us):
+        """
+        Bs State transition operators for one time step
+        """
+        xs = cls._solve(Bs, net_Us)
+        return cls(times, Bs, xs)
+
+    @property
+    @lru_cache()
     def net_Us(self):
         n=len(self.Bs)
         return np.array(
@@ -60,9 +65,7 @@ class DiscreteModelRun(ModelRun):
         return np.diff(self.times).astype(np.float64)
 
     @classmethod
-    def from_PWCModelRun(cls,pwc_mr,data_times=None): 
-        if data_times is None:
-            data_times = pwc_mr.times
+    def Bs_from_PWCModelRun(cls,pwc_mr,data_times=None): 
         # fixme:
         # get the Phis from pwc_mr
         def Phi(t,s):
@@ -81,43 +84,57 @@ class DiscreteModelRun(ModelRun):
         nr_pools=pwc_mr.nr_pools
         n=len(data_times)
         Bs = np.zeros((n-1, nr_pools, nr_pools)) 
+        
         for k in range(n-1):
             delta_t=data_times[k+1]-data_times[k]
             B=Phi(data_times[k+1],data_times[k])
             Bs[k,:,:] = B
+
+        return Bs
+
+    @classmethod
+    def from_PWCModelRun(cls,pwc_mr,data_times=None): 
+        if data_times is None:
+            data_times = pwc_mr.times
        
-        
         return cls(
-            pwc_mr.start_values,
             data_times,
-            Bs,
+            cls.Bs_from_PWCModelRun(pwc_mr,data_times),
             pwc_mr.solve()
-            pwc_mr.acc_external_input_vector
         )
 
-
     @classmethod
-    def reconstruct_from_fluxes_and_solution(cls, data_times, xs, Fs, rs,gross_Us):
-        for k in range(len(net_Us)):
-            B = cls.reconstruct_B(xs[k], Fs[k], rs[k], k)
-            Bs[k,:,:] = B
-
-        dmr = cls(xs[0], data_times, Bs, xs, gross_Us)
+    def reconstruct_from_fluxes_and_solution(cls, data_times, xs, Fs, rs):
+        Bs = cls.reconstruct_Bs(xs,Fs,rs)
+        dmr = cls(xs[0], data_times, Bs, xs)
         return dmr
+    
+    @classmethod
+    def reconstruct_Bs(cls, xs, Fs, rs):
+        Bs = np.nan * np.ones_like(Fs)
+        for k in range(len(rs)):
+            try:
+                B = cls.reconstruct_B(xs[k], Fs[k], rs[k])
+                Bs[k,:,:] = B
+            except DMRError as e:
+                msg = str(e) + 'time step %d' % k
+                raise(DMRError(msg))
+    
+        return Bs
 
     @classmethod
-    def reconstruct_B(cls, x, F, r, k):
+    def reconstruct_B(cls, x, F, r):
         nr_pools = len(x)
 
         B = np.identity(nr_pools)
         if len(np.where(F<0)[0]) > 0:
 #            print('\n\n', np.where(F<0), '\n\n')
-            raise(DMRError('Negative flux: time step %d' % k))
+            raise(DMRError('Negative flux: '))
     
         # construct off-diagonals
         for j in range(nr_pools):
             if x[j] < 0:
-                raise(DMRError('Content negative: pool %d, time %d ' % (j,k)))
+                raise(DMRError('Content negative: pool %d, ' % j))
             if x[j] != 0:
                 B[:,j] = F[:,j] / x[j]
             else:
@@ -131,7 +148,7 @@ class DiscreteModelRun(ModelRun):
                     #print(j, x, F, r, '\n\n')
 #                    print('diagonal value = ', B[j,j])
 #                    print('pool content = ', x[j])
-                    raise(DMRError('Diag. val < 0: pool %d, time %d' % (j,k)))
+                    raise(DMRError('Diag. val < 0: pool %d, ' % j))
             else:
                 B[j,j] = 1
    
@@ -157,21 +174,18 @@ class DiscreteModelRun(ModelRun):
 #        return Bs
 
     def solve(self):
-        #if not hasattr(self, 'soln'):
-        #    start_values = self.start_values
-        #    soln = [start_values]
-        #    for k in range(len(self.times)-1):
-        #        x_old = soln[k]
-        #        x_new = self.Bs[k] @ x_old + self.net_Us[k]
-        #        soln.append(x_new)
-    
-        #    self.soln = np.array(soln)        
-
-        #return self.soln
         return self.xs
+
+    @classmethod
+    def _solve(cls, start_values, Bs, net_Us):
+        xs = np.nan*np.ones((len(Bs)+1,len(start_values)))
+        xs[0,:] = start_values
+        for k in range(0, len(net_Us)):
+            xs[k+1] = self.Bs[k] @ xs[k] + self.net_Us[k]
+
+        return xs 
     
-    @property
-    def external_output_vector(self):
+    def acc_external_output_vector(self):
         n = self.nr_pools
         rho = np.array([1-B.sum(0).reshape((n,)) for B in self.Bs])
         soln = self.solve()[:-1]
@@ -179,13 +193,9 @@ class DiscreteModelRun(ModelRun):
 
         return r
 
-    @property
-    def acc_external_input_vector(self):
-        return self.gross_Us
-
-
-    @property
-    def internal_flux_matrix(self):
+    def acc_internal_flux_matrix(self):
+        # fixme mm 20-04-2020: 
+        # potential gain by use of sparse matrices
         Bs = self.Bs
         soln = self.solve()[:-1]
         return np.array([Bs[k] * soln[k] for k in range(len(Bs))])
@@ -516,46 +526,3 @@ class DiscreteModelRun(ModelRun):
             decay_rate)
 
         return dmr_14C
-
-
-################################################################################
-
-
-class DiscreteModelRun_14C(DiscreteModelRun):
-
-    def __init__(self, start_values, times, Bs, net_Us, decay_rate):
-        super().__init__(self, start_values, times, Bs, net_Us)
-        self.decay_rate = decay_rate
-
-    @property
-    def external_output_vector(self):
-        n = self.nr_pools
-        Bs = self.Bs
-        dts = self.dts
-        decay_rate = self.decay_rate
-        rho = np.array([(1-Bs[k].sum(0).reshape((n,))) 
-                          * np.exp(-decay_rate*dts[k]) for k in range(len(Bs))])
-        soln = self.solve()
-        r = rho * soln[:-1]
-
-        return r
-
-
-#    def solve(self):
-#        if not hasattr(self, 'soln2'):
-#            dts = self.dts
-#            decay_rate = self.decay_rate
-#            start_values = self.start_values
-#            soln2 = [start_values]
-#            for k in range(len(self.times)-1):
-#                x_new = soln2[k].copy()
-#                #x_new = x_new + self.net_Us[k]
-#                B = self.Bs[k] * np.exp(decay_rate*dts[k])
-#                x_new = B @ x_new + self.net_Us[k]
-#                x_new = x_new * np.exp(-decay_rate*dts[k])
-#                soln2.append(x_new)
-#    
-#            self.soln2 = np.array(soln2)        
-#
-#        return self.soln2
-#        

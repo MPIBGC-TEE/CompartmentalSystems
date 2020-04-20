@@ -543,6 +543,34 @@ class PWCModelRun(ModelRun):
         """
         return self._flux_funcs(self.model.output_fluxes)
     
+    def acc_external_output_vector(self, data_times=None):
+        """Return the vectors of accumulated external outputs.
+
+        Returns:
+            numpy.ndarray: len(times)-1 x nr_pools
+        """
+        times = self.times if data_times is None else data_times
+        nt=len(times)-1
+        res = np.zeros((nt,self.nr_pools))
+        for k in range(nt):
+            for pool_nr, func in self.output_flux_funcs().items():
+                res[k,pool_nr] = quad(func,times[k],times[k+1])[0]
+        
+        return res
+        #f_vec=self.external_input_vector_func()
+        #times=self.times
+        #res = np.array(
+        #    [
+        #        [
+        #            quad(lambda t:f_vec(t)[i],times[k],times[k+1])
+        #            for i in range(self.nr_pools) 
+        #        ]
+        #        for k in range(len(times)-1)
+        #    ]
+        #)
+        #err=res[:,:,1]
+
+
     #fixme: here _func indicated that this here is already a function of t
     # on other occasions _func indicated that a function is returned
     def output_vector_func(self, t):
@@ -631,13 +659,14 @@ class PWCModelRun(ModelRun):
 
     ##### fluxes as vector over self.times #####
 
-    @property
-    def acc_external_input_vector(self):
+    def acc_external_input_vector(self, data_times=None):
         """Return the grid of accumulated external input vectors.
 
         Returns:
             numpy.ndarray: len(times) x nr_pools
         """
+        times = self.times if data_times is None else data_times
+
         f_vec=self.external_input_vector_func()
         times=self.times
         res = np.array(
@@ -694,18 +723,31 @@ class PWCModelRun(ModelRun):
         return output_vec/soln
 
     #fixme hm: test
-    @property
-    def internal_flux_matrix(self):
+    def acc_internal_flux_matrix(self, data_times=None):
         """Return the grid of flux matrices.
 
         Returns:
             numpy.ndarray: len(times) x nr_pools x nr_pools
         """
-        soln = self.solve()
-        B_func = self.B_func()
-        return np.array([B_func(t) * soln[k] 
-                            for k, t in enumerate(self.times)])
+        times = self.times if data_times is None else data_times
+        nr_pools = self.nr_pools
 
+        Fs = []
+        for k in range(len(times)-1):
+            a = times[k]
+            b = times[k+1]
+    
+            F = np.zeros((nr_pools, nr_pools))
+            for key in self.model.internal_fluxes.keys():
+                j, i = key
+                def integrand(s):
+                    return self.B_func(x_func)(s)[i,j] * x_func(s)[j]
+    
+                F[i,j] = quad(integrand, a, b)[0]
+                        
+            Fs.append(F)
+    
+        return np.array(Fs)
 
     ##### age density methods #####
     
@@ -4392,7 +4434,7 @@ class PWCModelRun(ModelRun):
         ## prepare some fake output data
         #x = self.solve_single_value_old()
         x_func = self.solve_func()
-        xs = [x_func(ti) for ti in data_times]
+        xs = x_func(data_times)
     
         nr_pools = self.nr_pools
         
@@ -4411,6 +4453,7 @@ class PWCModelRun(ModelRun):
                         F[i,j] = quad(integrand, a, b)[0]
                         
             Fs.append(F)
+        #Fs = self.acc_internal_flux_matrix(data_times)
     
         rs = []
         for k in range(len(data_times)-1):
@@ -4440,7 +4483,7 @@ class PWCModelRun(ModelRun):
         #        u[j] = quad(integrand, a, b)[0]
     
         #    us.append(u)
-        us=self.acc_external_input_vector
+        us = self.acc_external_input_vector(data_times)
     
         return xs, Fs, rs, us
 
