@@ -25,17 +25,16 @@ class Error(Exception):
 
 #class PWCModelRunFD(PWCModelRun):
 class PWCModelRunFD(ModelRun):
-    def __init__(self, time_symbol, data_times, start_values, xs, Fs, rs, gross_Us):
+    def __init__(self, time_symbol, data_times, start_values, xs, gross_Us, gross_Fs, gross_Rs):
 
         self.data_times = data_times
         cls = self.__class__
         disc_times = data_times
         print('reconstructing us')
         #us = cls.reconstruct_us(data_times, gross_Us)
-        us = gross_Us/self.dts.reshape(-1,1)
 
         print('reconstructing Bs')
-        Bs = cls.reconstruct_Bs(data_times, xs, Fs, rs, us)
+        Bs = cls.reconstruct_Bs(data_times, xs, gross_Us, gross_Fs, gross_Rs)
         
         nr_pools = len(start_values)
         strlen   = len(str(nr_pools))
@@ -43,6 +42,7 @@ class PWCModelRunFD(ModelRun):
         par_set  = dict()
         func_set = dict()
     
+        us = gross_Us / self.dts.reshape(-1,1)
         srm_generic = cls.create_srm_generic(
             time_symbol,
             Bs,
@@ -107,17 +107,26 @@ class PWCModelRunFD(ModelRun):
     def times(self):
         return self.data_times
 
-    def acc_external_input_vector(self):
+    def acc_gross_external_input_vector(self):
         return self.us*self.dts.reshape(-1,1)
 
-
-    def acc_internal_flux_matrix(self):
-        return self.pwc_mr.acc_internal_flux_matrix()
+    def acc_gross_internal_flux_matrix(self):
+        return self.pwc_mr.acc_gross_internal_flux_matrix()
     
-    def acc_external_output_vector(self) :
-        return self.pwc_mr.acc_external_output_vector()
+    def acc_gross_external_output_vector(self) :
+        return self.pwc_mr.acc_gross_external_output_vector()
 
+    def acc_net_external_input_vector(self):
+        return self.pwc_mr.acc_net_external_input_vector()
 
+    def acc_net_internal_flux_matrix(self):
+        return self.pwc_mr.acc_net_internal_flux_matrix()
+    
+    def acc_net_external_output_vector(self) :
+        return self.pwc_mr.acc_net_external_output_vector()
+
+    def fake_discretized_Bs(self, data_times=None):
+        return self.pwc_mr.fake_discretized_Bs(data_times)
 #    
 #    @classmethod
 #    def load_from_file(cls, filename):
@@ -163,18 +172,19 @@ class PWCModelRunFD(ModelRun):
 #
 #
     @classmethod
-    def reconstruct_B_surrogate(cls, dt, x0, F, r, u, B0, x1):
+    def reconstruct_B_surrogate(cls, dt, x0, gross_U, gross_F, gross_R, B0, x1):
         ## reconstruct a B that meets F and r possibly well,
         ## B0 is some initial guess for the optimization
         nr_pools = len(x0)
         VAL = 0
+        gross_u = gross_U/dt
     
         ## integrate x by trapezoidal rule
         def x_trapz(tr_times, B):
             def x(tau):
                 M = expm(tau*B)
-#                x = M @ x0 + inv(B) @ (-np.identity(nr_pools)+M) @ u
-                x = M @ x0 + pinv(B) @ (-np.identity(nr_pools)+M) @ u
+#                x = M @ x0 + inv(B) @ (-np.identity(nr_pools)+M) @ gross_u
+                x = M @ x0 + pinv(B) @ (-np.identity(nr_pools)+M) @ gross_u
                 return x
     
             xs, x1 = np.array(list(map(x, tr_times))), x(tr_times[-1])
@@ -204,11 +214,11 @@ class PWCModelRunFD(ModelRun):
             nonlocal VAL
             VAL = res0 
 
-            res1_int = F.reshape((nr_pools**2,))[int_indices.tolist()]
+            res1_int = gross_F.reshape((nr_pools**2,))[int_indices.tolist()]
             res2_int = pars[:len(int_indices)] * int_x[(int_indices % nr_pools).tolist()]
             res_int = np.abs(res1_int-res2_int)
     
-            res1_ext = r[(ext_indices-nr_pools**2).tolist()] 
+            res1_ext = gross_R[(ext_indices-nr_pools**2).tolist()] 
             res2_ext = pars[len(int_indices):] * int_x[(ext_indices-nr_pools**2).tolist()]
             res_ext = np.abs(res1_ext-res2_ext)
 
@@ -240,10 +250,10 @@ class PWCModelRunFD(ModelRun):
         par_indices = []
         for i in range(nr_pools):
             for j in range(nr_pools):
-                if (F[i,j] > 0):
+                if (gross_F[i,j] > 0):
                     par_indices.append(i*nr_pools+j)
         for i in range(nr_pools):
-            if r[i] > 0:
+            if gross_R[i] > 0:
                 par_indices.append(nr_pools**2+i)
     
         par_indices = np.array(par_indices)
@@ -294,7 +304,7 @@ class PWCModelRunFD(ModelRun):
 
 
     @classmethod
-    def reconstruct_Bs(cls, times, xs, Fs, rs, us):
+    def reconstruct_Bs(cls, times, xs, gross_Us, gross_Fs, gross_Rs):
         nr_pools = len(xs[0])
     
         def guess_B0(dt, x_approx, F, r):
@@ -321,8 +331,17 @@ class PWCModelRunFD(ModelRun):
         Bs = np.zeros((len(times)-1, nr_pools, nr_pools))
         for k in tqdm(range(len(times)-1)):
             dt = times[k+1] - times[k]
-            B0 = guess_B0(dt, (xs[k]+xs[k+1])/2, Fs[k], rs[k])
-            B, x = cls.reconstruct_B_surrogate(dt, x, Fs[k], rs[k], us[k], B0, xs[k+1])
+            B0 = guess_B0(dt, (xs[k]+xs[k+1])/2, gross_Fs[k], gross_Rs[k])
+            B, x = cls.reconstruct_B_surrogate(
+                dt,
+                x,
+                gross_Us[k],
+                gross_Fs[k],
+                gross_Rs[k],
+                B0,
+                xs[k+1]
+            )
+            
             Bs[k,:,:] = B
     
         return Bs

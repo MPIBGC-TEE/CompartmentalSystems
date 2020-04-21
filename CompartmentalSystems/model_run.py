@@ -11,17 +11,33 @@ class ModelRun(metaclass=ABCMeta):
         pass
     
     @abstractmethod
-    def acc_external_input_vector(self):
+    def acc_gross_external_input_vector(self):
         """
         Accumulated fluxes (flux u integrated over the time step)
         """
         pass
 
     @abstractmethod
-    def acc_internal_flux_matrix(self):
+    def acc_gross_internal_flux_matrix(self):
         pass
     
     @abstractmethod
-    def acc_external_output_vector(self) :
+    def acc_gross_external_output_vector(self) :
         pass
+    
+    @abstractmethod
+    def acc_net_external_input_vector(self):
+        """
+        Accumulated fluxes (flux u integrated over the time step)
+        """
+        pass
+
+    @abstractmethod
+    def acc_net_internal_flux_matrix(self):
+        pass
+    
+    @abstractmethod
+    def acc_net_external_output_vector(self) :
+        pass
+
 

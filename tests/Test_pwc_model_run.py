@@ -24,11 +24,7 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.pwc_model_run import PWCModelRun 
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel 
 
-def pfile_C14Atm_NH():
-    p=Path(deepcopy(__file__))
-    pfile = p.parents[1].joinpath('CompartmentalSystems','Data','C14Atm_NH.csv')
-    return pfile
-
+from CompartmentalSystems.pwc_model_run_14C import  pfile_C14Atm_NH
 
 class TestPWCModelRun(InDirTest):
 #class TestPWCModelRun(unittest.TestCase):
@@ -427,19 +423,23 @@ class TestPWCModelRun(InDirTest):
         pwc_mr = PWCModelRun(srm, {}, start_values, times)
         pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
-        ref_a = np.array([[ 0.,          0.        ], # input starts right after t0
-                          [ 1.,          1.42684416],
-                          [ 1.,          1.35725616],
-                          [ 1.,          1.29106198],
-                          [ 1.,          1.22809615],
-                          [ 1.,          1.16820118],
-                          [ 1.,          1.11122731],
-                          [ 1.,          1.05703214],
-                          [ 1.,          1.00548009],
-                          [ 1.,          0.95644224],
-                          [ 1.,          0.90979601]])
-        ref = np.ndarray((11, 2), np.float, ref_a)
-        self.assertTrue(np.allclose(pwc_mr.external_input_vector, ref))
+        ref_a = np.array(
+            [[ 1.,          1.42684416],
+             [ 1.,          1.35725616],
+             [ 1.,          1.29106198],
+             [ 1.,          1.22809615],
+             [ 1.,          1.16820118],
+             [ 1.,          1.11122731],
+             [ 1.,          1.05703214],
+             [ 1.,          1.00548009],
+             [ 1.,          0.95644224],
+             [ 1.,          0.90979601]]
+        )
+        ref = np.ndarray((10, 2), np.float, ref_a)
+        self.assertTrue(np.allclose(
+            pwc_mr.external_input_vector[1:],
+            ref
+        ))
 
 
     def test_external_output_vector(self):
@@ -2700,45 +2700,6 @@ class TestPWCModelRun(InDirTest):
     ##### 14C methods #####
 
     
-    def test_to_14C_only(self):
-        # we test only that the construction works and can be solved,
-        # not the actual solution values
-        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
-        B = Matrix([[-lamda_1,        0],
-                    [       0, -lamda_2]])
-        u = Matrix(2, 1, [1, 1])
-        state_vector = Matrix(2, 1, [C_1, C_2])
-        time_symbol = Symbol('t')
-
-        srm = SmoothReservoirModel.from_B_u(state_vector,
-                                            time_symbol,
-                                            B,
-                                            u)
-
-        par_set = {lamda_1: 0.5, lamda_2: 0.2}
-        start_values = np.array([7,4])
-        start, end, ts = 1950, 2000, 0.5
-        times = np.linspace(start, end, int((end+ts-start)/ts))
-        pwc_mr = PWCModelRun(srm, par_set, start_values, times)
-        pwc_mr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        soln = pwc_mr.solve()
-        
-        atm_delta_14C = np.loadtxt(pfile_C14Atm_NH(), skiprows=1, delimiter=',')
-        F_atm_delta_14C = interp1d(
-            atm_delta_14C[:,0],
-            atm_delta_14C[:,1],
-            fill_value = 'extrapolate'
-        )
-
-        alpha = 1.18e-12
-        start_values_14C = pwc_mr.start_values * alpha
-        Fa_func = lambda t: alpha * (F_atm_delta_14C(t)/1000+1)
-        pwc_mr_14C = pwc_mr.to_14C_only(
-            start_values_14C,
-            Fa_func,
-            0.0001
-        )
-        soln_14C = pwc_mr_14C.solve()
 
 
     def test_to_14C_explicit(self):

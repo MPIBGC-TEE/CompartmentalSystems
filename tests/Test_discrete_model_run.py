@@ -30,43 +30,132 @@ from CompartmentalSystems.helpers_reservoir import numerical_function_from_expre
 
 class TestDiscreteModelRun(InDirTest):
     def test_from_PWCModelRun(self):
-        x_0,x_1,t,k,u = symbols("x_1,x_2,k,t,u")
+        x_0,x_1,t,k,u = symbols("x_0,x_1,k,t,u")
         inputs={
-             0:u*(2-sin(t))
-            ,1:u
+             0: u*(2-2*sin(2*t))
+            ,1: u
         }
         outputs={
-             0:-x_0*k
-            ,1:-x_1**3*k
+             0: x_0*k
+            ,1: x_1**2*k
         }
-        internal_fluxes={}
+        internal_fluxes = {
+            (0,1): x_0,
+            (1,0): 0.5*x_1
+        }
         srm=SmoothReservoirModel([x_0,x_1],t,inputs,outputs,internal_fluxes)
-        t_max=.5
+        t_max=2*np.pi
         times = np.linspace(0, t_max, 11)
         x0=np.float(10)
         start_values = np.array([x0,x0])
         parameter_dict = {
-             k: -1.2
-            ,u:1.7}
+             k:  0.012
+            ,u: 10.7}
         delta_t=np.float(1)
         
         pwc_mr = PWCModelRun(srm, parameter_dict, start_values, times)
 
         
-        dmr = DiscreteModelRun.from_PWCModelRun(pwc_mr)
-        pwc_mrs=pwc_mr.solve()
-        dmrs=dmr.solve()
-        self.assertTrue(np.allclose(dmrs,pwc_mrs))
+        xs, net_Us, net_Fs, net_Rs = pwc_mr.fake_net_discretized_output(times)
+        xs, gross_Us, gross_Fs, gross_Rs = pwc_mr.fake_gross_discretized_output(times)
+        print(gross_Fs)
+        print(net_Fs)
+        print('########### difference ##########')
+        print(gross_Fs-net_Fs)
+
+        dmr_from_pwc = DiscreteModelRun.from_PWCModelRun(pwc_mr)
+        dmr_from_fake_net_data = DiscreteModelRun.reconstruct_from_fluxes_and_solution(
+            times,
+            xs,
+            net_Fs,
+            net_Rs
+        )
+        dmr_from_fake_gross_data_ffas = DiscreteModelRun.reconstruct_from_fluxes_and_solution(
+            times,
+            xs,
+            gross_Fs,
+            gross_Rs
+        )
+        dmr_from_fake_gross_data_ff = DiscreteModelRun.from_fluxes(
+            start_values,
+            times,
+            gross_Us,
+            gross_Fs,
+            gross_Rs
+        )
+
+        self.assertTrue(
+            np.allclose(
+                pwc_mr.solve(),
+                dmr_from_pwc.solve()
+            )
+        )
+
+        self.assertTrue(
+            np.allclose(
+                pwc_mr.solve(),
+                dmr_from_fake_net_data.solve()
+            )
+        )
+       
+        # very unexpectedly the solution
+        # can be reconstructed from the right start_value
+        # the WRONG inputs WRONG internal fluxes and
+        # WRONG outputs
+        self.assertTrue(
+            np.allclose(
+                pwc_mr.solve(),
+                dmr_from_fake_gross_data_ff.solve(),
+                rtol=1e-3
+            )
+        )
+
+
+        # Here we also expect different results.
+        # We again abuse the DiscreteModelRun class
+        # but this time we give it the right solution 
+        # which will be reproduced
+        self.assertTrue(
+            np.allclose(
+                pwc_mr.solve(),
+                dmr_from_fake_gross_data_ffas.solve()
+            )
+        )
+        # but the net influxes will be wrong
+        self.assertFalse(
+            np.allclose(
+                pwc_mr.acc_net_external_input_vector(),
+                dmr_from_fake_gross_data_ffas.net_Us
+            )
+        )
+        
         
         fig=plt.figure(figsize=(7,7))
+        n=4
         for i in [0,1]:
-            ax=fig.add_subplot(2,1,1+i)
+            ax=fig.add_subplot(n*2,1,1+i)
             plt.title("solutions")
-            ax.plot(times,pwc_mrs[:,i],'*',color='red',label="pwc_mr"+str(i),markersize=12)
-            ax.plot(times,dmrs[:,i],'*',color='blue',label="dmr"+str(i),markersize=8)
+            ax.plot(times,pwc_mr.solve()[:,i],'*',color='red',label="pwc_mr"+str(i),markersize=12)
+            ax.plot(times,dmr_from_fake_gross_data_ff.solve()[:,i],'*',color='blue',label="dmr"+str(i),markersize=8)
+            ax.legend()
+            
+            ax=fig.add_subplot(n*2,1,2+1+i)
+            plt.title("solutions")
+            ax.plot(times,pwc_mr.solve()[:,i] - dmr_from_fake_gross_data_ff.solve()[:,i],'*',color='blue',label="dmr"+str(i),markersize=8)
+            ax.legend()
+            
+            ax=fig.add_subplot(n*2,1,2*2+1+i)
+            plt.title("net influxes")
+            ax.plot(times[:-1],pwc_mr.acc_net_external_input_vector()[:,i],'*',color='red',label="pwc_mr"+str(i),markersize=12)
+            ax.plot(times[:-1],dmr_from_fake_gross_data_ffas.net_Us[:,i],'*',color='blue',label="dmr"+str(i),markersize=8)
+            ax.legend()
+            
+            ax=fig.add_subplot(n*2,1,3*2+1+i)
+            plt.title("net outfluxes")
+            ax.plot(times[:-1],pwc_mr.acc_net_external_output_vector()[:,i],'*',color='red',label="pwc_mr"+str(i),markersize=12)
+            ax.plot(times[:-1],dmr_from_fake_gross_data_ffas.acc_net_external_output_vector()[:,i],'*',color='blue',label="dmr"+str(i),markersize=8)
             ax.legend()
         fig.savefig("pool_contents.pdf")
-        self.assertTrue(True)
 
 
     #@unittest.skip        

@@ -875,3 +875,42 @@ def print_quantile_error_statisctics(qs_ode, qs_pi):
     print('max. rel. err (%):', '{: 6.2f}'.format(np.max(rel_err)))
     print()
 
+
+def net_Fs_from_discrete_Bs_and_xs(Bs, xs):
+    nr_pools = xs.shape[1]
+    nt = len(Bs)
+
+    net_Fs = np.zeros((nt, nr_pools, nr_pools))
+    for k in range(nt):
+        for j in range(nr_pools):
+            for i in range(nr_pools):
+                if i != j:
+                    net_Fs[k,i,j] = Bs[k,i,j] * xs[k,j]
+
+    return net_Fs
+
+def net_Rs_from_discrete_Bs_and_xs(Bs, xs):
+    nr_pools = xs.shape[1]
+    nt = len(Bs)
+
+    net_Rs = np.zeros((nt, nr_pools))
+    for k in range(nt):
+        for j in range(nr_pools):
+             net_Rs[k,j] = (1-sum(Bs[k,:,j])) * xs[k,j]
+
+    return net_Rs
+
+def net_Us_from_discrete_Bs_and_xs(Bs, xs):
+    nr_pools = xs.shape[1]
+    nt = len(Bs)
+
+    net_Us = np.zeros((nt, nr_pools))
+    for k in range(nt):
+        net_Us[k] = xs[k+1] - Bs[k] @ xs[k]
+
+    return net_Us
+
+
+
+
+

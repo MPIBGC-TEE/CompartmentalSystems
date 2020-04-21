@@ -6,9 +6,13 @@ from sympy import Matrix
 from tqdm import tqdm
 from functools import lru_cache
 
-from .helpers_reservoir import x_phi_ivp
 from .model_run import ModelRun
-
+from .helpers_reservoir import (
+    net_Us_from_discrete_Bs_and_xs,
+    net_Fs_from_discrete_Bs_and_xs,
+    net_Rs_from_discrete_Bs_and_xs
+)
+    
 
 ################################################################################
 
@@ -30,6 +34,24 @@ class DiscreteModelRun():
         self.Bs = Bs
         self.xs = xs
 
+    def acc_net_internal_flux_matrix(self):
+        Bs = self.Bs
+        xs = self.xs
+        
+        return net_Fs_from_discrete_Bs_and_xs(Bs, xs)
+    
+    def acc_net_external_output_vector(self):
+        xs = self.xs
+        Bs = self.Bs
+        
+        return net_Rs_from_discrete_Bs_and_xs(Bs, xs)
+    
+    def acc_net_external_input_vector(self):
+        xs = self.xs
+        Bs = self.Bs
+        
+        return net_Us_from_discrete_Bs_and_xs(Bs, xs)
+    
     @property
     def start_values(self):
         return self.xs[0,:]
@@ -43,8 +65,23 @@ class DiscreteModelRun():
         """
         Bs State transition operators for one time step
         """
-        xs = cls._solve(Bs, net_Us)
+        xs = cls._solve(start_values, Bs, net_Us)
         return cls(times, Bs, xs)
+
+    @classmethod
+    def from_fluxes(cls, start_values, times, net_Us, net_Fs, net_Rs):
+        Bs = cls.reconstruct_Bs_without_xs(
+            start_values,
+            net_Us,
+            net_Fs,
+            net_Rs
+        )
+        return cls.from_Bs_and_net_Us(
+            start_values,
+            times,
+            Bs,
+            net_Us
+        )
 
     @property
     @lru_cache()
@@ -64,33 +101,33 @@ class DiscreteModelRun():
         """
         return np.diff(self.times).astype(np.float64)
 
-    @classmethod
-    def Bs_from_PWCModelRun(cls,pwc_mr,data_times=None): 
-        # fixme:
-        # get the Phis from pwc_mr
-        def Phi(t,s):
-            blivp = x_phi_ivp(
-                pwc_mr.model
-                ,pwc_mr.parameter_dict
-                ,pwc_mr.func_set
-                ,pwc_mr.start_values
-                ,x_block_name='sol'
-                ,phi_block_name='Phi_2d'
-            )
-            sol_dict=blivp.block_solve(t_span=(s,t))
-            phi_mat=sol_dict['Phi_2d'][-1,...]
-            return phi_mat
+    #@classmethod
+    #def Bs_from_PWCModelRun(cls,pwc_mr,data_times=None): 
+    #    # fixme:
+    #    # get the Phis from pwc_mr
+    #    def Phi(t,s):
+    #        blivp = x_phi_ivp(
+    #            pwc_mr.model
+    #            ,pwc_mr.parameter_dict
+    #            ,pwc_mr.func_set
+    #            ,pwc_mr.start_values
+    #            ,x_block_name='sol'
+    #            ,phi_block_name='Phi_2d'
+    #        )
+    #        sol_dict=blivp.block_solve(t_span=(s,t))
+    #        phi_mat=sol_dict['Phi_2d'][-1,...]
+    #        return phi_mat
 
-        nr_pools=pwc_mr.nr_pools
-        n=len(data_times)
-        Bs = np.zeros((n-1, nr_pools, nr_pools)) 
-        
-        for k in range(n-1):
-            delta_t=data_times[k+1]-data_times[k]
-            B=Phi(data_times[k+1],data_times[k])
-            Bs[k,:,:] = B
+    #    nr_pools=pwc_mr.nr_pools
+    #    n=len(data_times)
+    #    Bs = np.zeros((n-1, nr_pools, nr_pools)) 
+    #    
+    #    for k in range(n-1):
+    #        delta_t=data_times[k+1]-data_times[k]
+    #        B=Phi(data_times[k+1],data_times[k])
+    #        Bs[k,:,:] = B
 
-        return Bs
+    #    return Bs
 
     @classmethod
     def from_PWCModelRun(cls,pwc_mr,data_times=None): 
@@ -99,23 +136,38 @@ class DiscreteModelRun():
        
         return cls(
             data_times,
-            cls.Bs_from_PWCModelRun(pwc_mr,data_times),
-            pwc_mr.solve()
+            pwc_mr.fake_discretized_Bs(data_times),
+            pwc_mr.solve_func()(data_times)
         )
 
     @classmethod
     def reconstruct_from_fluxes_and_solution(cls, data_times, xs, Fs, rs):
         Bs = cls.reconstruct_Bs(xs,Fs,rs)
-        dmr = cls(xs[0], data_times, Bs, xs)
+        dmr = cls(data_times, Bs, xs)
         return dmr
     
     @classmethod
-    def reconstruct_Bs(cls, xs, Fs, rs):
+    def reconstruct_Bs(cls, xs, Fs, Rs):
         Bs = np.nan * np.ones_like(Fs)
-        for k in range(len(rs)):
+        for k in range(len(Rs)):
             try:
-                B = cls.reconstruct_B(xs[k], Fs[k], rs[k])
+                B = cls.reconstruct_B(xs[k], Fs[k], Rs[k])
                 Bs[k,:,:] = B
+            except DMRError as e:
+                msg = str(e) + 'time step %d' % k
+                raise(DMRError(msg))
+    
+        return Bs
+
+    @classmethod
+    def reconstruct_Bs_without_xs(cls, start_values, Us, Fs, Rs):
+        x = start_values
+        Bs = np.nan * np.ones_like(Fs)
+        for k in range(len(Rs)):
+            try:
+                B = cls.reconstruct_B(x, Fs[k], Rs[k])
+                Bs[k,:,:] = B
+                x = B @ x + Us[k]
             except DMRError as e:
                 msg = str(e) + 'time step %d' % k
                 raise(DMRError(msg))
@@ -181,7 +233,7 @@ class DiscreteModelRun():
         xs = np.nan*np.ones((len(Bs)+1,len(start_values)))
         xs[0,:] = start_values
         for k in range(0, len(net_Us)):
-            xs[k+1] = self.Bs[k] @ xs[k] + self.net_Us[k]
+            xs[k+1] = Bs[k] @ xs[k] + net_Us[k]
 
         return xs 
     

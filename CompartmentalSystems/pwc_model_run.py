@@ -79,7 +79,11 @@ from .helpers_reservoir import (
     ,x_tmax
     ,print_quantile_error_statisctics
     ,custom_lru_cache_wrapper
+    ,net_Us_from_discrete_Bs_and_xs
+    ,net_Fs_from_discrete_Bs_and_xs
+    ,net_Rs_from_discrete_Bs_and_xs
 )
+
 from .BlockIvp import BlockIvp, custom_solve_ivp
 from .Cache import Cache
 
@@ -543,32 +547,20 @@ class PWCModelRun(ModelRun):
         """
         return self._flux_funcs(self.model.output_fluxes)
     
-    def acc_external_output_vector(self, data_times=None):
+    def acc_gross_external_output_vector(self, data_times=None):
         """Return the vectors of accumulated external outputs.
 
         Returns:
             numpy.ndarray: len(times)-1 x nr_pools
         """
         times = self.times if data_times is None else data_times
-        nt=len(times)-1
+        nt = len(times)-1
         res = np.zeros((nt,self.nr_pools))
         for k in range(nt):
             for pool_nr, func in self.output_flux_funcs().items():
                 res[k,pool_nr] = quad(func,times[k],times[k+1])[0]
         
         return res
-        #f_vec=self.external_input_vector_func()
-        #times=self.times
-        #res = np.array(
-        #    [
-        #        [
-        #            quad(lambda t:f_vec(t)[i],times[k],times[k+1])
-        #            for i in range(self.nr_pools) 
-        #        ]
-        #        for k in range(len(times)-1)
-        #    ]
-        #)
-        #err=res[:,:,1]
 
 
     #fixme: here _func indicated that this here is already a function of t
@@ -659,27 +651,20 @@ class PWCModelRun(ModelRun):
 
     ##### fluxes as vector over self.times #####
 
-    def acc_external_input_vector(self, data_times=None):
+    def acc_gross_external_input_vector(self, data_times=None):
         """Return the grid of accumulated external input vectors.
 
         Returns:
             numpy.ndarray: len(times) x nr_pools
         """
         times = self.times if data_times is None else data_times
-
-        f_vec=self.external_input_vector_func()
-        times=self.times
-        res = np.array(
-            [
-                [
-                    quad(lambda t:f_vec(t)[i],times[k],times[k+1])
-                    for i in range(self.nr_pools) 
-                ]
-                for k in range(len(times)-1)
-            ]
-        )
-        #err=res[:,:,1]
-        return res[:,:,0]
+        nt = len(times)-1
+        res = np.zeros((nt, self.nr_pools))
+        for k in range(nt):
+            for pool_nr, func in self.external_input_flux_funcs().items():
+                res[k,pool_nr] = quad(func,times[k],times[k+1])[0]
+        
+        return res
     
 
     @property
@@ -723,31 +708,22 @@ class PWCModelRun(ModelRun):
         return output_vec/soln
 
     #fixme hm: test
-    def acc_internal_flux_matrix(self, data_times=None):
+    def acc_gross_internal_flux_matrix(self, data_times=None):
         """Return the grid of flux matrices.
 
         Returns:
             numpy.ndarray: len(times) x nr_pools x nr_pools
         """
         times = self.times if data_times is None else data_times
-        nr_pools = self.nr_pools
-
-        Fs = []
-        for k in range(len(times)-1):
-            a = times[k]
-            b = times[k+1]
-    
-            F = np.zeros((nr_pools, nr_pools))
-            for key in self.model.internal_fluxes.keys():
+        nt = len(times)-1
+        res = np.zeros((nt, self.nr_pools, self.nr_pools))
+        for k in range(nt):
+            for key, func in self.internal_flux_funcs().items():
                 j, i = key
-                def integrand(s):
-                    return self.B_func(x_func)(s)[i,j] * x_func(s)[j]
-    
-                F[i,j] = quad(integrand, a, b)[0]
-                        
-            Fs.append(F)
-    
-        return np.array(Fs)
+                res[k,i,j] = quad(func,times[k],times[k+1])[0]
+        
+        return res
+
 
     ##### age density methods #####
     
@@ -3304,60 +3280,13 @@ class PWCModelRun(ModelRun):
     ########## 14C methods #########
 
 
-#    def to_14C_only(self, start_values_14C, atm_delta_14C, decay_rate=0.0001209681):
-    def to_14C_only(self, start_values_14C, Fa_func, decay_rate=0.0001209681):
-        """Construct and return a :class:`PWCModelRun` instance that
-           models the 14C component of the original model run.
-    
-        Args:
-            start_values_14C (numpy.nd_array, nr_pools): 14C start values.
-            atm_delta_14C (func(t)): returns 
-            (numpy.ndarray, 2 x length): A table consisting of
-                years and :math:`\\Delta^{14}C` values. The first row serves
-                as header.
-            decay rate (float, optional): The decay rate to be used, defaults to
-                ``0.0001209681`` (daily).
-        Returns:
-            :class:`PWCModelRun`
-        """
-        srm_14C = self.model.to_14C_only('lamda_14C', 'Fa_14C')
-
-        # create PWCModelRun for 14C
-        par_set_14C = {k:v for k, v in self.parameter_dict.items()}
-        par_set_14C['lamda_14C'] = decay_rate
-        #fixme: use 14C equilibrium start values
-        times_14C = self.times
-
-        #Fa_atm = copy(atm_delta_14C)
-        #Fa_atm[:,1] = Fa_atm[:,1]/1000 + 1
-        #Fa_func = interp1d(Fa_atm[:,0], Fa_atm[:,1])
-
-        func_set_14C = {k:v for k,v in self.func_set.items()}
-        function_string = 'Fa_14C(' + srm_14C.time_symbol.name + ')'
-        func_set_14C[function_string] = Fa_func
-
-        smr_14C = PWCModelRun_14C(
-            srm_14C, 
-            par_set_14C,
-            start_values_14C,
-            times_14C,
-            func_set_14C,
-            self.disc_times,
-            decay_rate
-        )
-
-        return smr_14C
-
     def to_14C_explicit(self, start_values_14C, Fa_func, decay_rate=0.0001209681):
         """Construct and return a :class:`PWCModelRun` instance that
            models the 14C component additional to the original model run.
     
         Args:
             start_values_14C (numpy.nd_array, nr_pools): 14C start values.
-            atm_delta_14C (func(t)): returns 
-            (numpy.ndarray, 2 x length): A table consisting of
-                years and :math:`\\Delta^{14}C` values. The first row serves
-                as header.
+            Fa_func (func(t)): returns atmospheric fraction to be multiplied with the input vector 
             decay rate (float, optional): The decay rate to be used, defaults to
                 ``0.0001209681`` (daily).
         Returns:
@@ -3452,7 +3381,7 @@ class PWCModelRun(ModelRun):
                 else:
                     return np.rollaxis(func(times),-1,0)
             else:
-                if times <t0 or times>t_max:
+                if (times < t0) or (times > t_max):
                     raise Exception("""
                         t<t0 or t>t_max: solve_ivp returns an interpolated
                         function, which does not check if the functions is called
@@ -3776,8 +3705,8 @@ class PWCModelRun(ModelRun):
             t0_phi_ind=cache.phi_ind(t0)
             t_phi_ind =cache.phi_ind( t)
             my_phi_tmax =cache._cached_phi_tmax 
-            def phi(t, s,t_max):
-                x_s=tuple(solve_func(s))
+            def phi(t, s, t_max):
+                x_s = tuple(solve_func(s))
                 return my_phi_tmax(
                     s,
                     t_max,
@@ -3795,7 +3724,7 @@ class PWCModelRun(ModelRun):
             # catch the corner cases where the cache is useless.
             if (t_phi_ind-t0_phi_ind) < 1:
                 return np.matmul(
-                    phi(t, t0,t_max=cache.end_time_from_phi_ind(t_phi_ind)),
+                    phi(t, t0, t_max=cache.end_time_from_phi_ind(t_phi_ind)),
                     x
                 ).reshape((nr_pools,))
 
@@ -3803,9 +3732,9 @@ class PWCModelRun(ModelRun):
         
             ## first integrate x to tm1: y = Phi(tm1, t_0)x
             if tm1 != t0:
-                phi_tm1_t0=phi(tm1, t0,tm1)
+                phi_tm1_t0 = phi(tm1, t0,tm1)
             else:
-                phi_tm1_t0=start_Phi_2d
+                phi_tm1_t0 = start_Phi_2d
 
 
             x_tm1 = tuple(solve_func(tm1))
@@ -3818,8 +3747,7 @@ class PWCModelRun(ModelRun):
 
         else:
             def phi(t, s):
-                #
-                x_s=solve_func(s)
+                x_s = solve_func(s)
                 start_Phi_2d = np.identity(nr_pools)
                 start_blocks = [
                     (x_block_name, x_s),
@@ -3828,7 +3756,7 @@ class PWCModelRun(ModelRun):
                 blivp = block_ode.blockIvp(start_blocks)
                 
                 return blivp.block_solve(t_span=(s, t))[phi_block_name][-1,...]
-            y_t_t0 = (np.matmul(phi(t,t0), x)).reshape((nr_pools,))
+            y_t_t0 = (np.matmul(phi(t, t0), x)).reshape((nr_pools,))
             return y_t_t0
 
 
@@ -4429,91 +4357,96 @@ class PWCModelRun(ModelRun):
 
         return (A+B)/(C+D)
 
+    def fake_discretized_Bs(self,data_times=None): 
+        if data_times is None:
+            data_times = self.times
+        
+        # fixme:
+        # get the Phis from self
+        def Phi(t,s):
+            blivp = x_phi_ivp(
+                self.model
+                ,self.parameter_dict
+                ,self.func_set
+                ,self.start_values
+                ,x_block_name='sol'
+                ,phi_block_name='Phi_2d'
+            )
+            sol_dict = blivp.block_solve(t_span=(s,t))
+            phi_mat = sol_dict['Phi_2d'][-1,...]
+            return phi_mat
 
-    def _fake_discretized_output(self, data_times):
+        nr_pools = self.nr_pools
+        n = len(data_times)
+        Bs = np.zeros((n-1, nr_pools, nr_pools)) 
+        
+        for k in range(n-1):
+            B = Phi(data_times[k+1], data_times[k])
+            Bs[k,:,:] = B
+
+        return Bs
+
+    def acc_net_internal_flux_matrix(self, data_times=None):    
+        if data_times is None:
+            data_times = self.times
+
+        x_func = self.solve_func()
+        xs = x_func(data_times)
+
+        nt = len(data_times)-1
+        nr_pools = self.nr_pools
+        Bs = self.fake_discretized_Bs(data_times)
+        
+        return net_Fs_from_discrete_Bs_and_xs(Bs, xs)
+
+    def acc_net_external_output_vector(self, data_times=None):
+        if data_times is None:
+            data_times = self.times
+
+        x_func = self.solve_func()
+        xs = x_func(data_times)
+        
+        nt = len(data_times)-1
+        nr_pools = self.nr_pools
+        Bs = self.fake_discretized_Bs(data_times)
+        
+        return net_Rs_from_discrete_Bs_and_xs(Bs, xs)
+
+    def acc_net_external_input_vector(self, data_times=None):    
+        if data_times is None:
+            data_times = self.times
+
+        x_func = self.solve_func()
+        xs = x_func(data_times)
+        
+        nt = len(data_times)-1
+        nr_pools = self.nr_pools
+        Bs = self.fake_discretized_Bs(data_times)
+        
+        return net_Us_from_discrete_Bs_and_xs(Bs, xs)
+    
+    def fake_net_discretized_output(self, data_times):
+        x_func = self.solve_func()
+        xs = x_func(data_times)
+    
+        net_Fs = self.acc_net_internal_flux_matrix(data_times)
+        net_Rs = self.acc_net_external_output_vector(data_times)
+        net_Us = self.acc_net_external_input_vector(data_times)
+
+        return xs, net_Us, net_Fs, net_Rs
+
+    def fake_gross_discretized_output(self, data_times):
         ## prepare some fake output data
         #x = self.solve_single_value_old()
         x_func = self.solve_func()
         xs = x_func(data_times)
     
-        nr_pools = self.nr_pools
-        
-        Fs = []
-        for k in range(len(data_times)-1):
-            a = data_times[k]
-            b = data_times[k+1]
+        gross_Fs = self.acc_gross_internal_flux_matrix(data_times)
+        gross_Rs = self.acc_gross_external_output_vector(data_times)
+        gross_Us = self.acc_gross_external_input_vector(data_times)
     
-            F = np.zeros((nr_pools, nr_pools))
-            for j in range(nr_pools):
-                for i in range(nr_pools):
-                    if i != j:
-                        def integrand(s):
-                            return self.B_func(x_func)(s)[i,j] * x_func(s)[j]
-    
-                        F[i,j] = quad(integrand, a, b)[0]
-                        
-            Fs.append(F)
-        #Fs = self.acc_internal_flux_matrix(data_times)
-    
-        rs = []
-        for k in range(len(data_times)-1):
-            a = data_times[k]
-            b = data_times[k+1]
-    
-            r = np.zeros((nr_pools,))
-            for j in range(nr_pools):
-                def integrand(s):
-                    return -sum(self.B_func(x_func)(s)[:,j]) * x_func(s)[j]
-    
-                r[j] = quad(integrand, a, b)[0]
-    
-            rs.append(r)
-    
-        #us = []
-        #for k in range(len(data_times)-1):
-        #    a = data_times[k]
-        #    b = data_times[k+1]
-    
-        #    u = np.zeros((nr_pools,))
-        #    u_func = self.external_input_vector_func()
-        #    for j in range(nr_pools):
-        #        def integrand(s):
-        #            return u_func(s)[j]
-    
-        #        u[j] = quad(integrand, a, b)[0]
-    
-        #    us.append(u)
-        us = self.acc_external_input_vector(data_times)
-    
-        return xs, Fs, rs, us
+        return xs, gross_Us, gross_Fs, gross_Rs
 
-
-
-class PWCModelRun_14C(PWCModelRun):
-
-    def __init__(self, srm, par_set, start_values, times, func_set, disc_times, decay_rate):
-        PWCModelRun.__init__(
-            self, 
-            srm, 
-            par_set,
-            start_values,
-            times,
-            func_set,
-            disc_times
-        )
-        self.decay_rate = decay_rate
-
-    @property 
-    def external_output_vector(self):
-        r = super().external_output_vector
-        # remove the decay because it is not part of respiration
-        correction_rates = - np.ones_like(r) * self.decay_rate
-        #soln = self.solve_old()
-        soln = self.solve()
-        correction = correction_rates * soln
-        r += correction
-
-        return r
         
 
  
