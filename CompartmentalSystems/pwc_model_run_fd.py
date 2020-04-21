@@ -88,6 +88,10 @@ class PWCModelRunFD(ModelRun):
         self.Bs=Bs
     
     @property
+    def model(self):
+        return self.pwc_mr.model
+
+    @property
     def dts(self):
         """
         The lengths of the time 
