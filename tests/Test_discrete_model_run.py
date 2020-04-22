@@ -4,9 +4,6 @@
 import inspect
 import sys 
 import unittest
-import matplotlib
-matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
-import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 from scipy.integrate import quad
@@ -26,7 +23,7 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.pwc_model_run import PWCModelRun 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun
 from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs
-
+from CompartmentalSystems.model_run import plot_attributes, plot_stocks_and_net_fluxes
 
 class TestDiscreteModelRun(InDirTest):
     def test_from_PWCModelRun(self):
@@ -45,7 +42,7 @@ class TestDiscreteModelRun(InDirTest):
         }
         srm=SmoothReservoirModel([x_0,x_1],t,inputs,outputs,internal_fluxes)
         t_max=2*np.pi
-        times = np.linspace(0, t_max, 11)
+        times = np.linspace(0, t_max, 21)
         x0=np.float(10)
         start_values = np.array([x0,x0])
         parameter_dict = {
@@ -58,10 +55,6 @@ class TestDiscreteModelRun(InDirTest):
         
         xs, net_Us, net_Fs, net_Rs = pwc_mr.fake_net_discretized_output(times)
         xs, gross_Us, gross_Fs, gross_Rs = pwc_mr.fake_gross_discretized_output(times)
-        print(gross_Fs)
-        print(net_Fs)
-        print('########### difference ##########')
-        print(gross_Fs-net_Fs)
 
         dmr_from_pwc = DiscreteModelRun.from_PWCModelRun(pwc_mr)
         dmr_from_fake_net_data = DiscreteModelRun.reconstruct_from_fluxes_and_solution(
@@ -128,37 +121,36 @@ class TestDiscreteModelRun(InDirTest):
                 dmr_from_fake_gross_data_ffas.net_Us
             )
         )
-        
-        
-        fig=plt.figure(figsize=(7,7))
-        n=4
-        for i in [0,1]:
-            ax=fig.add_subplot(n*2,1,1+i)
-            plt.title("solutions")
-            ax.plot(times,pwc_mr.solve()[:,i],'*',color='red',label="pwc_mr"+str(i),markersize=12)
-            ax.plot(times,dmr_from_fake_gross_data_ff.solve()[:,i],'*',color='blue',label="dmr"+str(i),markersize=8)
-            ax.legend()
-            
-            ax=fig.add_subplot(n*2,1,2+1+i)
-            plt.title("solutions")
-            ax.plot(times,pwc_mr.solve()[:,i] - dmr_from_fake_gross_data_ff.solve()[:,i],'*',color='blue',label="dmr"+str(i),markersize=8)
-            ax.legend()
-            
-            ax=fig.add_subplot(n*2,1,2*2+1+i)
-            plt.title("net influxes")
-            ax.plot(times[:-1],pwc_mr.acc_net_external_input_vector()[:,i],'*',color='red',label="pwc_mr"+str(i),markersize=12)
-            ax.plot(times[:-1],dmr_from_fake_gross_data_ffas.net_Us[:,i],'*',color='blue',label="dmr"+str(i),markersize=8)
-            ax.legend()
-            
-            ax=fig.add_subplot(n*2,1,3*2+1+i)
-            plt.title("net outfluxes")
-            ax.plot(times[:-1],pwc_mr.acc_net_external_output_vector()[:,i],'*',color='red',label="pwc_mr"+str(i),markersize=12)
-            ax.plot(times[:-1],dmr_from_fake_gross_data_ffas.acc_net_external_output_vector()[:,i],'*',color='blue',label="dmr"+str(i),markersize=8)
-            ax.legend()
-        fig.savefig("pool_contents.pdf")
+        #plot_attributes(
+        #    [
+        #        pwc_mr,
+        #        dmr_from_fake_net_data,
+        #        dmr_from_fake_gross_data_ff,
+        #        dmr_from_fake_gross_data_ffas
+        #    ],
+        #    'plot.pdf'
+        #)       
+        plot_stocks_and_net_fluxes(
+            [
+                pwc_mr,
+                dmr_from_fake_net_data,
+                dmr_from_fake_gross_data_ff,
+                dmr_from_fake_gross_data_ffas
+            ],
+            'stocks_and_net_fluxes.pdf'
+        )       
+        #plot_stocks_and_gross_fluxes(
+        #    [
+        #        pwc_mr,
+        #        dmr_from_fake_net_data,
+        #        dmr_from_fake_gross_data_ff,
+        #        dmr_from_fake_gross_data_ffas
+        #    ],
+        #    'stocks_and_gross_fluxes.pdf'
+        #)       
 
 
-    #@unittest.skip        
+    @unittest.skip        
     def test_start_value_format(self):
 
         ## create ReservoirModel

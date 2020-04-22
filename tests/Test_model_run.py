@@ -7,7 +7,11 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.pwc_model_run import PWCModelRun
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 from CompartmentalSystems.discrete_model_run_with_gross_fluxes import DiscreteModelRunWithGrossFluxes
-
+from CompartmentalSystems.model_run import (
+    plot_attributes,
+    plot_stocks_and_net_fluxes,
+    plot_stocks_and_gross_fluxes
+)
 
 class TestModelRun(unittest.TestCase):
     def setUp(self):
