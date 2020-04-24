@@ -101,33 +101,6 @@ class DiscreteModelRun():
         """
         return np.diff(self.times).astype(np.float64)
 
-    #@classmethod
-    #def Bs_from_PWCModelRun(cls,pwc_mr,data_times=None): 
-    #    # fixme:
-    #    # get the Phis from pwc_mr
-    #    def Phi(t,s):
-    #        blivp = x_phi_ivp(
-    #            pwc_mr.model
-    #            ,pwc_mr.parameter_dict
-    #            ,pwc_mr.func_set
-    #            ,pwc_mr.start_values
-    #            ,x_block_name='sol'
-    #            ,phi_block_name='Phi_2d'
-    #        )
-    #        sol_dict=blivp.block_solve(t_span=(s,t))
-    #        phi_mat=sol_dict['Phi_2d'][-1,...]
-    #        return phi_mat
-
-    #    nr_pools=pwc_mr.nr_pools
-    #    n=len(data_times)
-    #    Bs = np.zeros((n-1, nr_pools, nr_pools)) 
-    #    
-    #    for k in range(n-1):
-    #        delta_t=data_times[k+1]-data_times[k]
-    #        B=Phi(data_times[k+1],data_times[k])
-    #        Bs[k,:,:] = B
-
-    #    return Bs
 
     @classmethod
     def from_PWCModelRun(cls,pwc_mr,data_times=None): 

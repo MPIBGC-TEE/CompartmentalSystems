@@ -132,10 +132,11 @@ class TestDiscreteModelRun(InDirTest):
         #)       
         plot_stocks_and_net_fluxes(
             [
-                pwc_mr,
-                dmr_from_fake_net_data,
-                dmr_from_fake_gross_data_ff,
-                dmr_from_fake_gross_data_ffas
+                pwc_mr
+                ,dmr_from_fake_net_data
+                ,dmr_from_pwc
+                ,dmr_from_fake_gross_data_ff
+                ,dmr_from_fake_gross_data_ffas
             ],
             'stocks_and_net_fluxes.pdf'
         )       

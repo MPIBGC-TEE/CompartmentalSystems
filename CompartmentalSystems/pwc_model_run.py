@@ -73,7 +73,6 @@ from .helpers_reservoir import (
     ,f_of_t_maker
     ,const_of_t_maker
     ,numerical_function_from_expression
-    ,x_phi_ivp
     ,x_phi_ode
     ,phi_tmax
     ,x_tmax
@@ -203,6 +202,13 @@ class PWCModelRun(ModelRun):
 
     
     def B_func(self, vec_sol_func=None):
+        # Design comment:
+        # Note that the vec_sol_func argument is necessary because
+        # we have slight differences in solutions coming from different
+        # numerical solutions. If we intended to apply B_func to 
+        # values not belonging to the solution, we would not do so
+        # in an instace method but a separate function.
+
         if vec_sol_func == None:
             vec_sol_func = self.solve_func()
         
@@ -3686,78 +3692,8 @@ class PWCModelRun(ModelRun):
         return self._x_phi_block_ode_cache,x_block_name,phi_block_name
 
     def _state_transition_operator(self, t, t0, x):
-        if t0 > t:
-            raise(Error("Evaluation before t0 is not possible"))
-        if t0 == t:
-            return x.flatten() 
-        
-        nr_pools=self.nr_pools
-        
-        start_Phi_2d=np.identity(nr_pools)
-        solve_func=self.solve_func()
-        block_ode,x_block_name,phi_block_name=self._x_phi_block_ode()
-        
+        return np.matmul(self.Phi(t, t0), x).reshape((self.nr_pools,))
 
-        if hasattr(self,'_state_transition_operator_cache'):
-
-            cache=self._state_transition_operator_cache
-            cache_times=cache.keys
-            t0_phi_ind=cache.phi_ind(t0)
-            t_phi_ind =cache.phi_ind( t)
-            my_phi_tmax =cache._cached_phi_tmax 
-            def phi(t, s, t_max):
-                x_s = tuple(solve_func(s))
-                return my_phi_tmax(
-                    s,
-                    t_max,
-                    block_ode,
-                    x_s,
-                    x_block_name,
-                    phi_block_name
-                )(t)
-            t0_phi_ind = cache.phi_ind(t0)
-            t_phi_ind  = cache.phi_ind( t)
-
-#            t_max = self.times[-1]
-            t_max = cache.end_time_from_phi_ind(t_phi_ind)
-
-            # catch the corner cases where the cache is useless.
-            if (t_phi_ind-t0_phi_ind) < 1:
-                return np.matmul(
-                    phi(t, t0, t_max=cache.end_time_from_phi_ind(t_phi_ind)),
-                    x
-                ).reshape((nr_pools,))
-
-            tm1 = cache.end_time_from_phi_ind(t0_phi_ind)
-        
-            ## first integrate x to tm1: y = Phi(tm1, t_0)x
-            if tm1 != t0:
-                phi_tm1_t0 = phi(tm1, t0,tm1)
-            else:
-                phi_tm1_t0 = start_Phi_2d
-
-
-            x_tm1 = tuple(solve_func(tm1))
-            phi_t_tm1 = phi(t,tm1,self.times[-1])
-            phi_t_t0 = np.matmul(phi_t_tm1, phi_tm1_t0)
-
-           
-            res_cache = np.matmul(phi_t_t0,x).reshape((nr_pools,))
-            return res_cache
-
-        else:
-            def phi(t, s):
-                x_s = solve_func(s)
-                start_Phi_2d = np.identity(nr_pools)
-                start_blocks = [
-                    (x_block_name, x_s),
-                    (phi_block_name, start_Phi_2d) 
-                ]
-                blivp = block_ode.blockIvp(start_blocks)
-                
-                return blivp.block_solve(t_span=(s, t))[phi_block_name][-1,...]
-            y_t_t0 = (np.matmul(phi(t, t0), x)).reshape((nr_pools,))
-            return y_t_t0
 
 
     def _state_transition_operator_for_linear_systems(self, t, t0, x):
@@ -4356,32 +4292,88 @@ class PWCModelRun(ModelRun):
         D = quad(D_integrand, t0, t1)[0]
 
         return (A+B)/(C+D)
+    def Phi_func(self):
+        # note that the functions used to produce the matrix 
+        # self.Phi are cached (if the cache is initialized)
+        # so that the repeated calls by the following lambda
+        # are actually cheap
+        return lambda T, S: self.Phi(T, S)
+
+    def Phi(self, T, S):
+        nr_pools=self.nr_pools
+        start_Phi_2d=np.identity(nr_pools)
+        
+        if S > T:
+            raise(Error("Evaluation before S is not possible"))
+        if S == T:
+            return start_Phi_2d
+        
+        solve_func=self.solve_func()
+        block_ode,x_block_name,phi_block_name=self._x_phi_block_ode()
+        
+        if hasattr(self,'_state_transition_operator_cache'):
+            cache = self._state_transition_operator_cache
+            cache_times = cache.keys
+            S_phi_ind = cache.phi_ind(S)
+            T_phi_ind = cache.phi_ind(T)
+            my_phi_tmax = cache._cached_phi_tmax 
+            def phi(t, s, t_max):
+                x_s = tuple(solve_func(s))
+                return my_phi_tmax(
+                    s,
+                    t_max,
+                    block_ode,
+                    x_s,
+                    x_block_name,
+                    phi_block_name
+                )(t)
+            S_phi_ind = cache.phi_ind(S)
+            T_phi_ind  = cache.phi_ind(T)
+
+#            t_max = self.times[-1]
+            t_max = cache.end_time_from_phi_ind(T_phi_ind)
+
+            # catch the corner cases where the cache is useless.
+            if (T_phi_ind-S_phi_ind) < 1:
+                return phi(T, S, t_max=cache.end_time_from_phi_ind(T_phi_ind)),
+
+            tm1 = cache.end_time_from_phi_ind(S_phi_ind)
+        
+            ## first integrate to tm1: 
+            if tm1 != S:
+                phi_tm1_S = phi(tm1, S, tm1)
+            else: 
+                phi_tm1_S = start_Phi_2d
+
+
+            phi_T_tm1 = phi(T, tm1, self.times[-1])
+            return np.matmul(phi_T_tm1, phi_tm1_S)
+
+        else:
+            def phi(t, s):
+                x_s = solve_func(s)
+                start_Phi_2d = np.identity(nr_pools)
+                start_blocks = [
+                    (x_block_name, x_s),
+                    (phi_block_name, start_Phi_2d) 
+                ]
+                blivp = block_ode.blockIvp(start_blocks)
+                
+                return blivp.block_solve(t_span=(s, t))[phi_block_name][-1,...]
+            return phi(T, S)
 
     def fake_discretized_Bs(self,data_times=None): 
         if data_times is None:
             data_times = self.times
         
-        # fixme:
-        # get the Phis from self
-        def Phi(t,s):
-            blivp = x_phi_ivp(
-                self.model
-                ,self.parameter_dict
-                ,self.func_set
-                ,self.start_values
-                ,x_block_name='sol'
-                ,phi_block_name='Phi_2d'
-            )
-            sol_dict = blivp.block_solve(t_span=(s,t))
-            phi_mat = sol_dict['Phi_2d'][-1,...]
-            return phi_mat
 
         nr_pools = self.nr_pools
         n = len(data_times)
         Bs = np.zeros((n-1, nr_pools, nr_pools)) 
         
         for k in range(n-1):
-            B = Phi(data_times[k+1], data_times[k])
+            B= self.Phi(data_times[k+1], data_times[k])
+            
             Bs[k,:,:] = B
 
         return Bs

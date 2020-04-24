@@ -20,7 +20,6 @@ from CompartmentalSystems.Cache import Cache
 from CompartmentalSystems.helpers_reservoir import (
 numerical_function_from_expression
     ,numerical_rhs
-    ,x_phi_ivp
     ,integrate_array_func_for_nested_boundaries
     ,array_quad_result
     ,array_integration_by_ode
@@ -57,25 +56,13 @@ class TestPhi(InDirTest):
             return e_i
         bvs = [ baseVector(i) for i in range(nr_pools)]
 
-        blivp= x_phi_ivp(
-            pwc_mr.model
-            ,pwc_mr.parameter_dict
-            ,pwc_mr.func_set
-            ,pwc_mr.start_values
-            ,x_block_name='sol'
-            ,phi_block_name='Phi_2d'
-        )
         for s in  np.linspace(t_0,t_max,5):
             for t in  np.linspace(s,t_max,5):
-                sol_dict=blivp.block_solve(t_span=(s,t))
-                
-                sol_skew=sol_dict['sol'][-1,...]
-                phi_mat=sol_dict['Phi_2d'][-1,...]
                 
                 phi_ref=np.eye(2)*np.exp(-(t-s))
                 # test the matrix valued results
                 with self.subTest():
-                    self.assertTrue( np.allclose( phi_mat,phi_ref,rtol=1e-2))
+                    self.assertTrue( np.allclose( pwc_mr.Phi(t,s),phi_ref,rtol=1e-2))
                 
                 # test the vectored valued results
                 for x in bvs:
@@ -165,26 +152,28 @@ class TestPhi(InDirTest):
                             )
                         )
 
-        blivp= x_phi_ivp(
-            pwc_mr.model
-            ,pwc_mr.parameter_dict
-            ,pwc_mr.func_set
-            ,pwc_mr.start_values
-            ,x_block_name='sol'
-            ,phi_block_name='Phi_2d'
-        )
-        blivp_l= x_phi_ivp(
-            pwc_mrl.model
-            ,pwc_mrl.parameter_dict
-            ,pwc_mrl.func_set
-            ,pwc_mrl.start_values
-            ,x_block_name='sol'
-            ,phi_block_name='Phi_2d'
-        )
+        #blivp= x_phi_ivp(
+        #    pwc_mr.model
+        #    ,pwc_mr.parameter_dict
+        #    ,pwc_mr.func_set
+        #    ,pwc_mr.start_values
+        #    ,x_block_name='sol'
+        #    ,phi_block_name='Phi_2d'
+        #)
+        #blivp_l= x_phi_ivp(
+        #    pwc_mrl.model
+        #    ,pwc_mrl.parameter_dict
+        #    ,pwc_mrl.func_set
+        #    ,pwc_mrl.start_values
+        #    ,x_block_name='sol'
+        #    ,phi_block_name='Phi_2d'
+        #)
         for t in  np.linspace(t_0,t_max,6):
             for phi_mat in [
-                                blivp.block_solve(t_span=(t_0,t))['Phi_2d'][-1,...] ,
-                                blivp_l.block_solve(t_span=(t_0,t))['Phi_2d'][-1,...]
+                                pwc_mr.Phi(t,t_0),
+                                #blivp.block_solve(t_span=(t_0,t))['Phi_2d'][-1,...] ,
+                                pwc_mrl.Phi(t,t_0)
+                                #blivp_l.block_solve(t_span=(t_0,t))['Phi_2d'][-1,...]
                             ]:
                 for x in bvs:
                     with self.subTest():
@@ -294,119 +283,119 @@ class TestPhi(InDirTest):
                         )
                     )
 
-    def test_x_phi_ivp_linear(self):
-        # We compute Phi_t0(t) =Phi(t,t_0) with fixed t_0
-        # This can be computed by a skew product system
-        # and can be used to compute the state-transition operator 
-        # as function of both time arguments
-        k_0_val=1
-        k_1_val=2
-        x0_0=np.float(1)
-        x0_1=np.float(1)
-        delta_t=np.float(1)
-        # 
-        var(["x_0","x_1","k_0","k_1","t","u"])
-        #
-        inputs={
-             0:u
-            ,1:u
-        }
-        outputs={
-             0:x_0*k_0
-            ,1:x_1*k_1
-        }
-        internal_fluxes={}
-        srm=SmoothReservoirModel(
-                 state_vector       =[x_0,x_1]
-                ,time_symbol        =t
-                ,input_fluxes       =inputs
-                ,output_fluxes      =outputs
-                ,internal_fluxes    =internal_fluxes
-        )
-        # for this system we know the state transition operator (for fixed t0) to be a simple matrix exponential
-        def Phi_ref(times):
-            #if isinstance(times,np.ndarray): 
-            #    #3d array
-            res=np.zeros((len(times),nr_pools,nr_pools))
-            res[:,0,0]=np.exp(-k_0_val*times)
-            res[:,1,1]=np.exp(-k_1_val*times)
-            #else: 
-            #    #2d array for scalar time
-            #    res=np.zeros((nr_pools,nr_pools))
-            #    res[0,0]=np.exp(-k_0_val*times)
-            #    res[1,1]=np.exp(-k_1_val*times)
-            return(res)
+    #def test_x_phi_ivp_linear(self):
+    #    # We compute Phi_t0(t) =Phi(t,t_0) with fixed t_0
+    #    # This can be computed by a skew product system
+    #    # and can be used to compute the state-transition operator 
+    #    # as function of both time arguments
+    #    k_0_val=1
+    #    k_1_val=2
+    #    x0_0=np.float(1)
+    #    x0_1=np.float(1)
+    #    delta_t=np.float(1)
+    #    # 
+    #    var(["x_0","x_1","k_0","k_1","t","u"])
+    #    #
+    #    inputs={
+    #         0:u
+    #        ,1:u
+    #    }
+    #    outputs={
+    #         0:x_0*k_0
+    #        ,1:x_1*k_1
+    #    }
+    #    internal_fluxes={}
+    #    srm=SmoothReservoirModel(
+    #             state_vector       =[x_0,x_1]
+    #            ,time_symbol        =t
+    #            ,input_fluxes       =inputs
+    #            ,output_fluxes      =outputs
+    #            ,internal_fluxes    =internal_fluxes
+    #    )
+    #    # for this system we know the state transition operator (for fixed t0) to be a simple matrix exponential
+    #    def Phi_ref(times):
+    #        #if isinstance(times,np.ndarray): 
+    #        #    #3d array
+    #        res=np.zeros((len(times),nr_pools,nr_pools))
+    #        res[:,0,0]=np.exp(-k_0_val*times)
+    #        res[:,1,1]=np.exp(-k_1_val*times)
+    #        #else: 
+    #        #    #2d array for scalar time
+    #        #    res=np.zeros((nr_pools,nr_pools))
+    #        #    res[0,0]=np.exp(-k_0_val*times)
+    #        #    res[1,1]=np.exp(-k_1_val*times)
+    #        return(res)
 
-        t_max=4
-        times = np.linspace(0, t_max, 11)
-        parameter_dict = {
-             k_0: k_0_val
-            ,k_1: k_1_val
-            ,u:1
+    #    t_max=4
+    #    times = np.linspace(0, t_max, 11)
+    #    parameter_dict = {
+    #         k_0: k_0_val
+    #        ,k_1: k_1_val
+    #        ,u:1
 
-        }
-        func_dict={}
-        nr_pools=srm.nr_pools
-        nq=nr_pools*nr_pools
-        sol_rhs=numerical_rhs(
-             srm.state_vector
-            ,srm.time_symbol
-            ,srm.F
-            ,parameter_dict
-            ,func_dict
-        )
-        #
-        start_x= np.array([x0_0,x0_1])
-        start_Int_Phi_u=np.zeros(nr_pools)
-        t_span=(0,t_max)
-        #        
-        #)
-        block_ivp=x_phi_ivp(srm,parameter_dict,func_dict,start_x,x_block_name='sol',phi_block_name='Phi')
+    #    }
+    #    func_dict={}
+    #    nr_pools=srm.nr_pools
+    #    nq=nr_pools*nr_pools
+    #    sol_rhs=numerical_rhs(
+    #         srm.state_vector
+    #        ,srm.time_symbol
+    #        ,srm.F
+    #        ,parameter_dict
+    #        ,func_dict
+    #    )
+    #    #
+    #    start_x= np.array([x0_0,x0_1])
+    #    start_Int_Phi_u=np.zeros(nr_pools)
+    #    t_span=(0,t_max)
+    #    #        
+    #    #)
+    #    #block_ivp=x_phi_ivp(srm,parameter_dict,func_dict,start_x,x_block_name='sol',phi_block_name='Phi')
 
-        sol_dict =block_ivp.block_solve(t_span=t_span,t_eval=times) 
-        sol_values  = sol_dict["sol"]
-        Phi_values  = sol_dict["Phi"]
-        
-        # for comparison solve the original system without the phi rows
-        sol=solve_ivp(fun=sol_rhs,t_span=(0,t_max),y0=start_x,t_eval=times,method='LSODA')
-        # and make sure that is identical with the block rhs by using the interpolation function
-        # for the block system and apply it to the grid that the solver chose for sol
-        sol_func_dict  = block_ivp.block_solve_functions(t_span=t_span)
-        sol_func  = sol_func_dict["sol"]
-        Phi_func  = sol_func_dict["Phi"]
+    #    sol_dict =block_ivp.block_solve(t_span=t_span,t_eval=times) 
+    #    sol_values  = sol_dict["sol"]
+    #    Phi_values  = sol_dict["Phi"]
+    #    
+    #    # for comparison solve the original system without the phi rows
+    #    sol=solve_ivp(fun=sol_rhs,t_span=(0,t_max),y0=start_x,t_eval=times,method='LSODA')
+    #    # and make sure that is identical with the block rhs by using the interpolation function
+    #    # for the block system and apply it to the grid that the solver chose for sol
+    #    sol_func_dict  = block_ivp.block_solve_functions(t_span=t_span)
+    #    sol_func  = sol_func_dict["sol"]
+    #    Phi_func  = sol_func_dict["Phi"]
 
-        self.assertTrue(np.allclose(np.moveaxis(sol.y,-1,0),sol_func(sol.t),rtol=1e-2))
-        # check Phi
-        self.assertTrue(np.allclose(Phi_values,Phi_ref(times),atol=1e-2))
-        self.assertTrue(
-            np.allclose(
-                np.stack([Phi_func(t) for t in times],axis=0),
-                Phi_ref(times),
-                atol=1e-2
-            )
-        )
+    #    self.assertTrue(np.allclose(np.moveaxis(sol.y,-1,0),sol_func(sol.t),rtol=1e-2))
+    #    # check Phi
+    #    self.assertTrue(np.allclose(Phi_values,Phi_ref(times),atol=1e-2))
+    #    self.assertTrue(
+    #        np.allclose(
+    #            np.stack([Phi_func(t) for t in times],axis=0),
+    #            Phi_ref(times),
+    #            atol=1e-2
+    #        )
+    #    )
 
-        fig=plt.figure(figsize=(7,7))
-        ax1=fig.add_subplot(2,1,1)
-        ax1.plot(times,               sol.y[0,:],'o',color='red' ,label="sol[0]")
-        ax1.plot(times,               sol.y[1,:],'x',color='red' ,label="sol[1]")
-        #
-        ax1.plot(times,               sol_func(times)[:,0],'*',color='blue' ,label="sol[0]")
-        ax1.plot(times,               sol_func(times)[:,1],'+',color='blue' ,label="sol[1]")
-        #
-        ax1.plot(times, sol_values[:,0],'*',color='green',label="sol_values[0]")
-        ax1.plot(times, sol_values[:,1],'+',color='green',label="sol_values[1]")
-        #
-        ax1.legend()
+    #    fig=plt.figure(figsize=(7,7))
+    #    ax1=fig.add_subplot(2,1,1)
+    #    ax1.plot(times,               sol.y[0,:],'o',color='red' ,label="sol[0]")
+    #    ax1.plot(times,               sol.y[1,:],'x',color='red' ,label="sol[1]")
+    #    #
+    #    ax1.plot(times,               sol_func(times)[:,0],'*',color='blue' ,label="sol[0]")
+    #    ax1.plot(times,               sol_func(times)[:,1],'+',color='blue' ,label="sol[1]")
+    #    #
+    #    ax1.plot(times, sol_values[:,0],'*',color='green',label="sol_values[0]")
+    #    ax1.plot(times, sol_values[:,1],'+',color='green',label="sol_values[1]")
+    #    #
+    #    ax1.legend()
 
-        ax2=fig.add_subplot(2,1,2)
-        ax2.plot(times  ,Phi_ref(times)[:,0,0],'o',color='red'  ,label="Phi_ref[0,0]")
-        ax2.plot(times  ,Phi_ref(times)[:,1,1],'x',color='red'  ,label="Phi_ref[1,1]")
+    #    ax2=fig.add_subplot(2,1,2)
+    #    ax2.plot(times  ,Phi_ref(times)[:,0,0],'o',color='red'  ,label="Phi_ref[0,0]")
+    #    ax2.plot(times  ,Phi_ref(times)[:,1,1],'x',color='red'  ,label="Phi_ref[1,1]")
 
-        ax2.plot(times, Phi_values[:,0,0],'*',color='green',label="Phi_values[0,0]")
-        ax2.plot(times, Phi_values[:,1,1],'+',color='green',label="Phi_values[1,1]")
-        ax2.legend()
-        fig.savefig("solutions.pdf")
+    #    ax2.plot(times, Phi_values[:,0,0],'*',color='green',label="Phi_values[0,0]")
+    #    ax2.plot(times, Phi_values[:,1,1],'+',color='green',label="Phi_values[1,1]")
+    #    ax2.legend()
+    #    fig.savefig("solutions.pdf")
 
         
     def test_cache_hash(self): 

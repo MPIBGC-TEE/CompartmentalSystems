@@ -1,5 +1,3 @@
-import matplotlib
-matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 import numpy as np
 from abc import ABCMeta, abstractmethod, abstractproperty
@@ -32,7 +30,7 @@ def plot_attributes(mrs, file_name):
                 for k, mr in enumerate(mrs):
                     y = getattr(mr, meth)()[:,i],
                     ax.plot(
-                        mr.times[:len(y)]
+                        mr.times[:len(y)],
                         y,
                         '*',
                         color      = colors[k],
@@ -75,7 +73,7 @@ def _plot_stocks_and_fluxes(mrs, net_or_gross, file_name):
             for k, mr in enumerate(mrs):
                 y = getattr(mr, meth)()[:,i]
                 ax.plot(
-                    mr.times[:len(y)]
+                    mr.times[:len(y)],
                     y,
                     '*',
                     color      = colors[k],
@@ -92,7 +90,7 @@ def _plot_stocks_and_fluxes(mrs, net_or_gross, file_name):
             for k, mr in enumerate(mrs):
                 y = getattr(mr, meth)()[:,j]
                 ax.plot(
-                    mr.times[:len(y)]
+                    mr.times[:len(y)],
                     y,
                     '*',
                     color      = colors[k],
@@ -111,7 +109,7 @@ def _plot_stocks_and_fluxes(mrs, net_or_gross, file_name):
                     for k, mr in enumerate(mrs):
                         y = getattr(mr, meth)()[:,i,j]
                         ax.plot(
-                            mr.times[:len(y)]
+                            mr.times[:len(y)],
                             y,
                             '*',
                             color      = colors[k],
@@ -128,7 +126,7 @@ def _plot_stocks_and_fluxes(mrs, net_or_gross, file_name):
             for k, mr in enumerate(mrs):
                 y = getattr(mr, meth)()[:,i]
                 ax.plot(
-                    mr.times[:len(y)]
+                    mr.times[:len(y)],
                     y,
                     '*',
                     color      = colors[k],
