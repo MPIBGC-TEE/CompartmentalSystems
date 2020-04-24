@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 def plot_attributes(mrs, file_name):    
     colors = ['red','blue','orange','green','yellow','black']
     labels = ['mr_ref','mr_1','mr_2','mr_3','mr_4','mr_5']
-    markersizes = [12,10,8,6,4,2]
+    markersizes = [8,6,4,2,1,.5]
     lc = len(colors)
     if len(mrs) > lc: 
         raise(Exception("only "+str(lc)+" different modelruns supported."))
@@ -47,10 +47,11 @@ def plot_stocks_and_net_fluxes(mrs, file_name):
 def plot_stocks_and_gross_fluxes(mrs, file_name):
     _plot_stocks_and_fluxes(mrs, 'gross', file_name)
 
-def plot_stocks_and_fluxes(mrs, file_name):    
+def plot_stocks_and_fluxes(mrs, file_name,labels=None):    
     colors = ['red','blue','orange','green','yellow','black']
-    labels = ['mr_ref','mr_1','mr_2','mr_3','mr_4','mr_5']
-    markersizes = [12,10,8,6,4,2]
+    if labels is None:
+        labels = ['mr_ref','mr_1','mr_2','mr_3','mr_4','mr_5']
+    markersizes = [8,6,4,2,1,.5]
     lc = len(colors)
     if len(mrs) > lc: 
         raise(Exception("only "+str(lc)+" different modelruns supported."))
@@ -94,7 +95,7 @@ def plot_stocks_and_fluxes(mrs, file_name):
                         y,
                         symb,
                         color      = colors[k],
-                        label      = labels[k],
+                        label      = labels[k]+'_'+net_or_gross,
                         markersize = markersizes[k]
                     )
                     ax.legend()
@@ -111,7 +112,7 @@ def plot_stocks_and_fluxes(mrs, file_name):
                         y,
                         symb,
                         color      = colors[k],
-                        label      = labels[k],
+                        label      = labels[k]+'_'+net_or_gross,
                         markersize = markersizes[k]
                     )
                     ax.legend()
@@ -130,7 +131,7 @@ def plot_stocks_and_fluxes(mrs, file_name):
                                 y,
                                 symb,
                                 color      = colors[k],
-                                label      = labels[k],
+                                label      = labels[k]+'_'+net_or_gross,
                                 markersize = markersizes[k]
                             )
                             ax.legend()

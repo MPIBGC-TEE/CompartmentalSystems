@@ -26,10 +26,18 @@ class TestModelRun(InDirTest):
 
         start_values = np.array([1,1])
         self.start_values = start_values
-        times=np.linspace(0,30,51)
+        t_0 = 0
+        t_max = 10
+        ntmo = 10
+        fac = 2
+        times=np.linspace(t_0,t_max,ntmo+1)
         self.times=times
+        times_fine = np.linspace(t_0,t_max,fac*ntmo+1)
+        times_extra_fine = np.linspace(t_0,t_max,fac**2*ntmo+1) 
 
         self.pwc_mr = PWCModelRun(srm, {}, start_values, times)
+        self.pwc_mr_fine = PWCModelRun(srm, {}, start_values, times_fine)
+        self.pwc_mr_extra_fine = PWCModelRun(srm, {}, start_values, times_extra_fine)
 
     @unittest.skip
     def test_DiscreteModelRunWithGrossFluxes_from_PWCModelRun(self):
@@ -51,40 +59,47 @@ class TestModelRun(InDirTest):
                  ))
 
     def test_DiscretizationError(self):
-        times_fine=np.linspace(0,30,201)
         #self.pwc_mr_fine = PWCModelRun(srm, {}, start_values, times_fine)
-        times=self.pwc_mr.times
-        xs, gross_Us, gross_Fs, gross_Rs = self.pwc_mr.fake_gross_discretized_output(times)
-        xs_fine, gross_Us_fine, gross_Fs_fine, gross_Rs_fine = self.pwc_mr.fake_gross_discretized_output(times_fine)
+        raise
+
+    def test_net_vs_gross_for_different_time_steps(self):
+        #self.pwc_mr_fine = PWCModelRun(srm, {}, start_values, times_fine)
+        #times=self.pwc_mr.times
+        #times_fine=self.pwc_mr_fine.times
+        #xs, gross_Us, gross_Fs, gross_Rs = self.pwc_mr.fake_gross_discretized_output(times)
+        #xs_fine, gross_Us_fine, gross_Fs_fine, gross_Rs_fine = self.pwc_mr.fake_gross_discretized_output(times_fine)
         # build discrete models by abusing the gross fluxes
         # as net fluxes
-        dmr_wrong = DiscreteModelRunWithGrossFluxes.reconstruct_from_fluxes_and_solution(
-           times,
-           xs,
-           net_Us = gross_Us,
-           net_Fs = gross_Fs,
-           net_Rs = gross_Rs,
-           gross_Us = gross_Us,
-           gross_Fs = gross_Fs,
-           gross_Rs = gross_Rs
-        )
-        dmr_wrong_fine = DiscreteModelRunWithGrossFluxes.reconstruct_from_fluxes_and_solution(
-           times_fine,
-           xs_fine,
-           net_Us = gross_Us_fine,
-           net_Fs = gross_Fs_fine,
-           net_Rs = gross_Rs_fine,
-           gross_Us = gross_Us_fine,
-           gross_Fs = gross_Fs_fine,
-           gross_Rs = gross_Rs_fine
-        )
+        #dmr_wrong = DiscreteModelRunWithGrossFluxes.reconstruct_from_fluxes_and_solution(
+        #   times,
+        #   xs,
+        #   net_Us = gross_Us,
+        #   net_Fs = gross_Fs,
+        #   net_Rs = gross_Rs,
+        #   gross_Us = gross_Us,
+        #   gross_Fs = gross_Fs,
+        #   gross_Rs = gross_Rs
+        #)
+        #dmr_wrong_fine = DiscreteModelRunWithGrossFluxes.reconstruct_from_fluxes_and_solution(
+        #   times_fine,
+        #   xs_fine,
+        #   net_Us = gross_Us_fine,
+        #   net_Fs = gross_Fs_fine,
+        #   net_Rs = gross_Rs_fine,
+        #   gross_Us = gross_Us_fine,
+        #   gross_Fs = gross_Fs_fine,
+        #   gross_Rs = gross_Rs_fine
+        #)
         plot_stocks_and_fluxes(
             [
                 self.pwc_mr
-                ,dmr_wrong
-                ,dmr_wrong_fine
-            ],
-            'stocks_and_fluxes.pdf'
+                ,self.pwc_mr_fine
+                ,self.pwc_mr_extra_fine
+                #,dmr_wrong
+                #,dmr_wrong_fine
+            ]
+            ,'stocks_and_fluxes.pdf'
+            , labels = ['mr_normal','mr_fine','mr_extra_fine']
         )       
 
     @unittest.skip
