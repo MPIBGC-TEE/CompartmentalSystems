@@ -8,7 +8,6 @@ from sympy import Matrix
 from tqdm import tqdm
 
 from . import picklegzip
-from .helpers_reservoir import x_phi_ivp
 from .model_run import ModelRun
 from .discrete_model_run import DiscreteModelRun
 

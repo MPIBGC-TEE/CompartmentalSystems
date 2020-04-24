@@ -42,7 +42,8 @@ class TestDiscreteModelRun(InDirTest):
         }
         srm=SmoothReservoirModel([x_0,x_1],t,inputs,outputs,internal_fluxes)
         t_max=2*np.pi
-        times = np.linspace(0, t_max, 21)
+        times = np.linspace(0, t_max, 321)
+        times_fine = np.linspace(0, t_max, 321)
         x0=np.float(10)
         start_values = np.array([x0,x0])
         parameter_dict = {
@@ -51,10 +52,12 @@ class TestDiscreteModelRun(InDirTest):
         delta_t=np.float(1)
         
         pwc_mr = PWCModelRun(srm, parameter_dict, start_values, times)
+        pwc_mr_fine = PWCModelRun(srm, parameter_dict, start_values, times_fine)
 
         
         xs, net_Us, net_Fs, net_Rs = pwc_mr.fake_net_discretized_output(times)
         xs, gross_Us, gross_Fs, gross_Rs = pwc_mr.fake_gross_discretized_output(times)
+        xs_fine, gross_Us_fine, gross_Fs_fine, gross_Rs_fine = pwc_mr_fine.fake_gross_discretized_output(times_fine)
 
         dmr_from_pwc = DiscreteModelRun.from_PWCModelRun(pwc_mr)
         dmr_from_fake_net_data = DiscreteModelRun.reconstruct_from_fluxes_and_solution(
@@ -75,6 +78,13 @@ class TestDiscreteModelRun(InDirTest):
             gross_Us,
             gross_Fs,
             gross_Rs
+        )
+        dmr_from_fake_gross_data_ff_fine = DiscreteModelRun.from_fluxes(
+            start_values,
+            times_fine,
+            gross_Us_fine,
+            gross_Fs_fine,
+            gross_Rs_fine
         )
 
         self.assertTrue(
@@ -133,10 +143,10 @@ class TestDiscreteModelRun(InDirTest):
         plot_stocks_and_net_fluxes(
             [
                 pwc_mr
-                ,dmr_from_fake_net_data
-                ,dmr_from_pwc
+                #,dmr_from_fake_net_data
+                #,dmr_from_pwc
                 ,dmr_from_fake_gross_data_ff
-                ,dmr_from_fake_gross_data_ffas
+                ,dmr_from_fake_gross_data_ff_fine
             ],
             'stocks_and_net_fluxes.pdf'
         )       

@@ -609,23 +609,6 @@ def x_phi_ode(
     )
 
 
-#def x_phi_ivp(srm, parameter_dict, func_dict,start_x,x_block_name='x',phi_block_name='phi'):
-#        
-#    nr_pools=srm.nr_pools
-#
-#    #create the additional startvector for the components of Phi
-#    start_Phi_2d=np.identity(nr_pools)
-#    
-#    block_ode=x_phi_ode(
-#        srm,
-#        parameter_dict,
-#        func_dict,
-#        x_block_name,
-#        phi_block_name
-#    )
-#    start_blocks=[ (x_block_name,start_x), (phi_block_name,start_Phi_2d) ]
-#    block_ivp=block_ode.blockIvp( start_blocks )
-#    return block_ivp
 
 def integrate_array_func_for_nested_boundaries(
          f          :Callable[ [float] ,np.ndarray ]     

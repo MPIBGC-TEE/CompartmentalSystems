@@ -200,6 +200,12 @@ class PWCModelRun(ModelRun):
                 +["id "+str(key)+" "+str(id(val)) for key,val in   self.parameter_dict.items()]
                 )  
 
+    @property
+    def dts(self):
+        """
+        The lengths of the time intervals.
+        """
+        return np.diff(self.times).astype(np.float64)
     
     def B_func(self, vec_sol_func=None):
         # Design comment:
