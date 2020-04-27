@@ -4341,8 +4341,7 @@ class PWCModelRun(ModelRun):
 
             # catch the corner cases where the cache is useless.
             if (T_phi_ind-S_phi_ind) < 1:
-                return phi(T, S, t_max=cache.end_time_from_phi_ind(T_phi_ind)),
-
+                return phi(T, S, t_max=cache.end_time_from_phi_ind(T_phi_ind))
             tm1 = cache.end_time_from_phi_ind(S_phi_ind)
         
             ## first integrate to tm1: 
@@ -4350,7 +4349,6 @@ class PWCModelRun(ModelRun):
                 phi_tm1_S = phi(tm1, S, tm1)
             else: 
                 phi_tm1_S = start_Phi_2d
-
 
             phi_T_tm1 = phi(T, tm1, self.times[-1])
             return np.matmul(phi_T_tm1, phi_tm1_S)
@@ -4368,19 +4366,16 @@ class PWCModelRun(ModelRun):
                 return blivp.block_solve(t_span=(s, t))[phi_block_name][-1,...]
             return phi(T, S)
 
-    def fake_discretized_Bs(self,data_times=None): 
+    def fake_discretized_Bs(self, data_times=None): 
         if data_times is None:
             data_times = self.times
         
-
         nr_pools = self.nr_pools
         n = len(data_times)
-        Bs = np.zeros((n-1, nr_pools, nr_pools)) 
+        Bs = np.zeros((n-1, nr_pools, nr_pools))
         
         for k in range(n-1):
-            B= self.Phi(data_times[k+1], data_times[k])
-            
-            Bs[k,:,:] = B
+            Bs[k,:,:] = self.Phi(data_times[k+1], data_times[k])
 
         return Bs
 

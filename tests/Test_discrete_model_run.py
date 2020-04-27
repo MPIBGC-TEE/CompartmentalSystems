@@ -23,7 +23,7 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.pwc_model_run import PWCModelRun 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun
 from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs
-from CompartmentalSystems.model_run import plot_attributes, plot_stocks_and_net_fluxes
+from CompartmentalSystems.model_run import plot_attributes, plot_stocks_and_fluxes
 
 class TestDiscreteModelRun(InDirTest):
     def test_from_PWCModelRun(self):
@@ -42,8 +42,8 @@ class TestDiscreteModelRun(InDirTest):
         }
         srm=SmoothReservoirModel([x_0,x_1],t,inputs,outputs,internal_fluxes)
         t_max=2*np.pi
-        times = np.linspace(0, t_max, 321)
-        times_fine = np.linspace(0, t_max, 321)
+        times = np.linspace(0, t_max, 21)
+        times_fine = np.linspace(0, t_max, 81)
         x0=np.float(10)
         start_values = np.array([x0,x0])
         parameter_dict = {
@@ -140,7 +140,7 @@ class TestDiscreteModelRun(InDirTest):
         #    ],
         #    'plot.pdf'
         #)       
-        plot_stocks_and_net_fluxes(
+        plot_stocks_and_fluxes(
             [
                 pwc_mr
                 #,dmr_from_fake_net_data
@@ -148,7 +148,7 @@ class TestDiscreteModelRun(InDirTest):
                 ,dmr_from_fake_gross_data_ff
                 ,dmr_from_fake_gross_data_ff_fine
             ],
-            'stocks_and_net_fluxes.pdf'
+            'stocks_and_fluxes.pdf'
         )       
         #plot_stocks_and_gross_fluxes(
         #    [
@@ -161,7 +161,7 @@ class TestDiscreteModelRun(InDirTest):
         #)       
 
 
-    @unittest.skip        
+    #@unittest.skip        
     def test_start_value_format(self):
 
         ## create ReservoirModel
@@ -186,29 +186,5 @@ class TestDiscreteModelRun(InDirTest):
 
         dmr = DiscreteModelRun.from_PWCModelRun(pwc_mr)
 
-    @unittest.skip        
-    def test_reconstruct_from_data(self):
-        # copied from test_age_moment_vector
-        x, y, t = symbols("x y t")
-        state_vector = Matrix([x,y])
-        B = Matrix([[-1, 0],
-                    [ 0,-2]])
-        u = Matrix(2, 1, [9,1])
-        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
-
-        start_values = np.array([1,1])
-        times=np.linspace(0,1,100)
-        pwc_mr = PWCModelRun(srm, {}, start_values, times)
-        dmr_1 = DiscreteModelRun.from_PWCModelRun(pwc_mr)
-
-        xs, Fs, rs, us = pwc_mr._fake_discretized_output(times)
-        dmr_2 = DiscreteModelRun.reconstruct_from_data(times, start_values,xs, Fs, rs, us)
-        self.assertTrue(np.all(pwc_mr.solve()==dmr_1.solve()))
-        
-        pwc_mr_fd = PWCModelRunFD.reconstruct_from_data(t, times, start_values, xs , Fs, rs, us)
-        self.assertTrue(np.allclose(pwc_mr.solve(),pwc_mr_fd.solve(),rtol=1e03))
-        self.assertTrue(np.all(pwc_mr.solve()==dmr_2.solve()))
-        #self.assertTrue(np.all(dmr_1.solve()==dmr_2.solve()))
-        #print(dmr_1.solve()-dmr_2.solve())
 
 

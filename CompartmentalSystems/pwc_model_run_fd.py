@@ -3,6 +3,7 @@ import numpy as np
 from numpy.linalg import pinv
 from scipy.linalg import expm#, inv
 from scipy.optimize import root# least_squares
+from scipy.integrate import solve_ivp
 from sympy import  Matrix, symbols, zeros, Function
 from tqdm import tqdm
 #
@@ -25,7 +26,7 @@ class Error(Exception):
 
 #class PWCModelRunFD(PWCModelRun):
 class PWCModelRunFD(ModelRun):
-    def __init__(self, time_symbol, data_times, start_values, xs, gross_Us, gross_Fs, gross_Rs):
+    def __init__(self, time_symbol, data_times, start_values, gross_Us, gross_Fs, gross_Rs):
 
         self.data_times = data_times
         cls = self.__class__
@@ -34,7 +35,13 @@ class PWCModelRunFD(ModelRun):
         #us = cls.reconstruct_us(data_times, gross_Us)
 
         print('reconstructing Bs')
-        Bs = cls.reconstruct_Bs(data_times, xs, gross_Us, gross_Fs, gross_Rs)
+        Bs = cls.reconstruct_Bs(
+            data_times,
+            start_values,
+            gross_Us,
+            gross_Fs,
+            gross_Rs
+        )
         
         nr_pools = len(start_values)
         strlen   = len(str(nr_pools))
@@ -126,7 +133,7 @@ class PWCModelRunFD(ModelRun):
     def acc_net_internal_flux_matrix(self):
         return self.pwc_mr.acc_net_internal_flux_matrix()
     
-    def acc_net_external_output_vector(self) :
+    def acc_net_external_output_vector(self):
         return self.pwc_mr.acc_net_external_output_vector()
 
     def fake_discretized_Bs(self, data_times=None):
@@ -176,23 +183,30 @@ class PWCModelRunFD(ModelRun):
 #
 #
     @classmethod
-    def reconstruct_B_surrogate(cls, dt, x0, gross_U, gross_F, gross_R, B0, x1):
+    def reconstruct_B_surrogate(cls, dt, x0, gross_U, gross_F, gross_R, B0):
         ## reconstruct a B that meets F and r possibly well,
         ## B0 is some initial guess for the optimization
         nr_pools = len(x0)
-        VAL = 0
         gross_u = gross_U/dt
     
-        ## integrate x by trapezoidal rule
-        def x_trapz(tr_times, B):
-            def x(tau):
-                M = expm(tau*B)
-#                x = M @ x0 + inv(B) @ (-np.identity(nr_pools)+M) @ gross_u
-                x = M @ x0 + pinv(B) @ (-np.identity(nr_pools)+M) @ gross_u
-                return x
+        def x_tau(tau, B):
+            M = expm(tau*B)
+            return M @ x0 + pinv(B) @ (-np.identity(nr_pools)+M) @ gross_u
+
+        ## integrate x
+        def integrate_x(tr_times, B):
+            def rhs(tau,X):
+                return x_tau(tau, B)
     
-            xs, x1 = np.array(list(map(x, tr_times))), x(tr_times[-1])
-            return np.trapz(xs, tr_times, axis=0), x1
+            #xs = np.array(list(map(x, tr_times))), x(tr_times[-1])
+            #int_x np.trapz(xs, tr_times, axis=0)
+            int_x = solve_ivp(
+                fun = rhs
+                ,t_span = (tr_times[0],tr_times[-1])
+                ,y0=np.zeros_like(x0)
+            ).y[...,-1]
+            return int_x 
+            
     
         ## convert parameter vector to compartmental matrix
         def pars_to_matrix(pars):
@@ -209,14 +223,9 @@ class PWCModelRunFD(ModelRun):
         ## internal fluxes F and outfluxes r
         def g_tr(pars):
             B = pars_to_matrix(pars)
-            tr_times = np.linspace(0, dt, 11)
-
-            int_x, x1_tmp = x_trapz(tr_times, B)
-            res0 = 0
-            ## keep the next line if next x-value is also a constraint
-            res0 = np.sum(np.abs(x1_tmp-x1))
-            nonlocal VAL
-            VAL = res0 
+            #tr_times = np.linspace(0, dt, 11)
+            tr_times = (0, dt)
+            int_x = integrate_x(tr_times, B)
 
             res1_int = gross_F.reshape((nr_pools**2,))[int_indices.tolist()]
             res2_int = pars[:len(int_indices)] * int_x[(int_indices % nr_pools).tolist()]
@@ -284,32 +293,14 @@ class PWCModelRunFD(ModelRun):
 #        )
     
         B = pars_to_matrix(y.x)
-        ## correct for empty pools, avoid vanishing rows/cols
-#        print(np.where(x0==0))
-#        print(np.where(x1==0))
-#        for j in range(nr_pools):
-##            if (x0[j] == 0) and (x1[j] == 0):
-#            if (x0[j] == 0) or (x1[j] == 0):
-##                print(j)
-#                B[j,j] = np.mean(np.diag(B))
-    
-#        print(B0)
-#        print(x0)
-#        print(x1)
-#        print(B)
-#        print(np.where(np.diag(B)==0))
 
-#        print(VAL, VAL/x1.sum(), flush=True)
-#        input()
-        
-        tr_times = np.linspace(0, dt, 11)
-        int_x, x1_tmp = x_trapz(tr_times, B)
-        return B, x1_tmp
+        x1 = x_tau(dt, B)
+        return B, x1
 
 
     @classmethod
-    def reconstruct_Bs(cls, times, xs, gross_Us, gross_Fs, gross_Rs):
-        nr_pools = len(xs[0])
+    def reconstruct_Bs(cls, times, start_values, gross_Us, gross_Fs, gross_Rs):
+        nr_pools = len(start_values)
     
         def guess_B0(dt, x_approx, F, r):
             nr_pools = len(x_approx)
@@ -331,11 +322,12 @@ class PWCModelRunFD(ModelRun):
         
             return B
     
-        x = xs[0]
+        x = start_values
         Bs = np.zeros((len(times)-1, nr_pools, nr_pools))
         for k in tqdm(range(len(times)-1)):
             dt = times[k+1] - times[k]
-            B0 = guess_B0(dt, (xs[k]+xs[k+1])/2, gross_Fs[k], gross_Rs[k])
+#            B0 = guess_B0(dt, (xs[k]+xs[k+1])/2, gross_Fs[k], gross_Rs[k])
+            B0 = guess_B0(dt, x, gross_Fs[k], gross_Rs[k])
             B, x = cls.reconstruct_B_surrogate(
                 dt,
                 x,
@@ -343,7 +335,6 @@ class PWCModelRunFD(ModelRun):
                 gross_Fs[k],
                 gross_Rs[k],
                 B0,
-                xs[k+1]
             )
             
             Bs[k,:,:] = B
