@@ -22,7 +22,7 @@ class TestModelRun(InDirTest):
         u = Matrix(2, 1, [9,1])
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
-        start_values = np.array([100,100])
+        start_values = np.array([10,40])
         self.start_values = start_values
         self.t_0 = 0
         self.t_max = 10
