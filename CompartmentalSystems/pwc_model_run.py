@@ -83,7 +83,8 @@ from .helpers_reservoir import (
     ,net_Rs_from_discrete_Bs_and_xs
 )
 
-from .BlockIvp import BlockIvp, custom_solve_ivp
+from .BlockIvp import BlockIvp
+from .myOdeResult import custom_solve_ivp
 from .Cache import Cache
 
 class Error(Exception):

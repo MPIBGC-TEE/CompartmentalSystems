@@ -18,7 +18,9 @@ from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
 from .BlockOde import BlockOde
-from .BlockIvp import BlockIvp, custom_solve_ivp
+from .BlockIvp import BlockIvp
+from myOdeResult import custom_solve_ivp
+
 #from testinfrastructure.helpers import pe
 
 
@@ -680,12 +682,12 @@ def array_integration_by_ode(
         else:
             return f(tau).flatten()
     
-    ys= custom_solve_ivp(
-        fun=rhs
-        ,y0=np.zeros(n)
-        ,t_span=(a,b)
+    ys = custom_solve_ivp(
+        fun     = rhs
+        ,y0     = np.zeros(n)
+        ,t_span = (a,b)
     ).y
-    val=ys[:,-1].reshape(test.shape)
+    val = ys[:,-1].reshape(test.shape)
     return val
 
 def array_integration_by_values(

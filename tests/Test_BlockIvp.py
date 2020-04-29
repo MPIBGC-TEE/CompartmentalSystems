@@ -6,10 +6,16 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg') # Must come before any import of matplotlib.pyplot or pylab to get rid of the stupid warning!
 import matplotlib.pyplot as plt
+from sympy import Symbol, Piecewise
+from scipy.interpolate import interp1d
 
-from CompartmentalSystems.BlockIvp import BlockIvp, custom_solve_ivp
+from CompartmentalSystems.BlockIvp import BlockIvp
+from CompartmentalSystems.myOdeResult import custom_solve_ivp
+
 
 class TestBlockIvp(InDirTest):
+
+    @unittest.skip
     def test_solution(self):
         x1_shape=(5,5)
         x2_shape=(2,)
@@ -53,96 +59,109 @@ class TestBlockIvp(InDirTest):
 
 
     def test_custom_solve_ivp(self):
-        from sympy import Symbol, Piecewise
         t=Symbol('t')
-        ms = [1, 1/2, 2, -1/2, -1, -2]
-        disc_times=[1,2,3,4]
-        m = Piecewise(
-            (ms[0], t<disc_times[0]),
-            (ms[1], t<disc_times[1]),
-            (ms[2], t<disc_times[2]),
-            (ms[3], t<disc_times[3]),
-            (-2, True)
+        #ms = [1, 1/2, 2, -1/2, -1, -2]
+        #disc_times=[1,2,3,4]
+        #m = Piecewise(
+        #    (ms[0], t<disc_times[0]),
+        #    (ms[1], t<disc_times[1]),
+        #    (ms[2], t<disc_times[2]),
+        #    (ms[3], t<disc_times[3]),
+        #    (-2, True)
+        #)
+        #t_start = disc_times[0]-1
+        #t_end = disc_times[-1]+1
+        #  
+        #times = np.linspace(t_start, t_end, t_end*100+1)
+################ new
+        ms = [1, -1, 1]
+        disc_times = [410, 820]
+        t_start = 0
+        t_end = 1000
+        ref_times = np.arange(t_start, t_end, 10)
+        times = np.array([0, 300, 600, 900])
+        t_span = (t_start, t_end)
+
+        m_l = Piecewise(
+            (ms[0], t <= disc_times[0]),
+            (ms[1], t <=  disc_times[1]),
+            (ms[2], True)
         )
-        t_start = disc_times[0]-1
-        t_end = disc_times[-1]+1
-          
-        def func(t, x):
-            return np.ones_like(x)*m.subs({'t':t})
-            #return np.ones_like(x)*(t_end/2-np.ceil(t))
+        m_r = Piecewise(
+            (ms[0], t < disc_times[0]),
+            (ms[1], t <  disc_times[1]),
+            (ms[2], True)
+        )
+        def func_l(t, x):
+            return np.ones_like(x)*m_l.subs({'t':t})
 
-        times = np.linspace(t_start, t_end, t_end*100+1)
+        def func_r(t, x):
+            return np.ones_like(x)*m_r.subs({'t':t})
 
-        #for dim in [1,2]:
-        #    with self.subTest():   
-        dim = 1
-        x0 = np.asarray([1])
-        ref = np.zeros((dim,len(times)))
-        dt = np.diff(times)
-        ref[0,0] = x0
-        for k, t in enumerate(times[:-1]):
-            ref[0,k+1] = ref[0,k] + func(t,646549)*dt[k]
+        x0 = np.asarray([0])
 
-        t_span = (times[0], times[-1])
-        
+        ref_func = interp1d(
+            [t_start] + list(disc_times) + [t_end],
+            [0.,410.,0.,180.]
+        )
+        #ref_func = interp1d(ref_times, ref[0,:], fill_value='extrapolate')
+
+        # To see the differencte between a many piece and
+        # a one piece solotion 
+        # we deliberately chose a combination
+        # of method and first step where the 
+        # solver will get lost if it does not restart
+        # at the disc times.
         sol_obj = custom_solve_ivp(
-            func,
+            func_l,
             t_span,
             x0,
             t_eval = times,
             dense_output = True,
-            #method = 'LSODA'
+            method = 'RK45',
+            first_step = None
         )
-        print('#########################3 sol_obj.y')
-        #print(sol_obj.y)
-        print(sol_obj.y.shape)
-        
-        sol_obj_2 = custom_solve_ivp(
-            func,
-            t_span,
-            x0,
-            t_eval = times,
-            disc_times   = disc_times,
-            dense_output = True,
-            #method = 'LSODA'
-        )
-       # # compare values 
-       # self.assertTrue(
-       #     np.allclose(
-       #         ref,
-       #         sol_obj.y,
-       #         atol = 1e-03
-       #     )
-       # )
-       # self.assertTrue(
-       #     np.allclose(
-       #         ref,
-       #         sol_obj_2.y,
-       #         atol = 1e-03
-       #     )
-       # )
 
-       # # compare functions 
-       # self.assertTrue(
-       #     np.allclose(
-       #         ref,
-       #         sol_obj.sol(times),
-       #         atol = 1e-03 
-       #     )
-       # )
-       # self.assertTrue(
-       #     np.allclose(
-       #         ref,
-       #         sol_obj_2.sol(times),
-       #         atol = 1e-03 
-       #     )
-       # )
+        self.assertFalse(
+            np.allclose(
+                ref_func(times),
+                sol_obj.y[0,:],
+                atol = 400
+            )
+        )
+
+        sol_obj_pw = custom_solve_ivp(
+            func_l,
+            t_span,
+            x0,
+            #t_eval = times,
+            dense_output = True,
+            method = 'RK45',
+            first_step = None,
+            disc_times = disc_times,
+            deriv_r = func_r
+        )
+
+        self.assertTrue(
+            np.allclose(
+                ref_func(sol_obj_pw.t),
+                sol_obj_pw.y[0,:]
+            )
+        )
+
+        print(sol_obj_pw)
+        self.assertTrue(
+            np.allclose(
+                ref_func(sol_obj_pw.t),
+                sol_obj_pw.sol(sol_obj_pw.t)[0,:]
+            )
+        )
         #labels=['obj.y','obj_2.y','obj.sol(times)','obj_2.sol(times)']
         ress = [
                 sol_obj.y, 
                 #sol_obj_2.y, 
                 #sol_obj.sol(times), 
-                sol_obj_2.sol(times)
+                #sol_obj_2.sol(times)
         ]
         labels=['obj.sol(times)','obj_2.sol(times)']
         fig,axs = plt.subplots(
@@ -151,29 +170,42 @@ class TestBlockIvp(InDirTest):
         )
         ax = axs[0,0]
         ax.plot(
-            times
-            ,ref[0,:]
+            ref_times
+            ,ref_func(ref_times),
+            color = 'blue'
+        #    ,ls = '-'
         )
         ax.plot(
             times
-            ,ress[0][0,:]
+            ,ref_func(times)
+            ,'*'
         )
         ax.plot(
-            times
-            ,ress[1][0,:]
+            sol_obj.t
+            ,sol_obj.y[0,:]
+            ,'o'
+            #ls = '--'
         )
-        #ax.legend()
-        #ax = axs[1,0]
-        ##ress = [sol_obj.y ,sol_obj_2.y ,sol_obj.sol(times) ,sol_obj_2.sol(times)]
-        #ress = [sol_obj.sol(times) ,sol_obj_2.sol(times)]
-        #for nr, res in enumerate(ress):
-        #    ax.plot(
-        #        times
-        #        ,(ref-res)[0,:]
-        #        ,label = labels[nr]
-        #    )
-        #ax.legend()
+
+        ax.plot(
+            sol_obj_pw.t
+            ,sol_obj_pw.y[0,:]
+            ,'+'
+            #ls = '--'
+        )
+       # ax = axs[1,0]
+       # for nr, res in enumerate(ress):
+       #     ax.plot(
+       #         times
+       #         ,(ref-res)[0,:]
+       #         ,label = labels[nr]
+       #     )
+       # ax.legend()
         fig.savefig('inaccuracies.pdf',tight_layout = True)
+
+
+
+
 
 
 ################################################################################
