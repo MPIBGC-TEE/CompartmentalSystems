@@ -28,7 +28,6 @@ def custom_solve_ivp(deriv_l, t_span, y0, **kwargs):
 
 
     def sub_solve_ivp(sub_fun, t_span, y0_sub, **kwargs):   
-        print(t_span)
         # prevent the solver from overreaching (scipy bug)
         if 'first_step' not in kwargs.keys():
             t_min, t_max = t_span
@@ -59,6 +58,15 @@ def custom_solve_ivp(deriv_l, t_span, y0, **kwargs):
 
         #soln = np.nan * np.zeros(y0.shape + (len(disc_times),))
         #soln[:,0] = y0
+
+        def wrapper_maker(t_mid, f_l, f_r):
+            def wrapper(t):
+                if t <= t_mid:
+                    return f_l(t)
+                else:
+                    return f_r(t)
+            return wrapper
+
 
         solns = dict()
         soln_times = dict()
@@ -98,48 +106,42 @@ def custom_solve_ivp(deriv_l, t_span, y0, **kwargs):
             soln_times[i] = ts_i
 
             ############# make a wrapper maker ###########
-            raise()
             if dense_output:
-                def wrapper(t):
-                    if t <= t_span_l[1]:
-                        return sol_obj_i_l.sol(t)
-                    else:
-                        return sol_obj_i_r.sol(t)
-            
-                sol_funcs[i] = wrapper
+                t_mid = t_span_l[1]
+                f_l = sol_obj_i_l.sol
+                f_r = sol_obj_i_r.sol
+                sol_funcs[i] = wrapper_maker(t_mid, f_l, f_r)
 
-        return myOdeResult(solns, soln_times, sol_funcs, disc_times)
+        return myOdeResult(solns, soln_times, sol_funcs, boundaries)
 
         
 class myOdeResult(OdeResult):
-    def __init__(self, solns, soln_times, sol_funcs, disc_times):
+    def __init__(self, solns, soln_times, sol_funcs, boundaries):
         inds = range(len(soln_times.keys()))
         l = [soln_times[i][:-1] for i in inds[:-1]] + [soln_times[inds[-1]]]
-        print('WEG')
         l_weg = [soln_times[i][-1] for i in inds[:-1]]
-        print(l_weg)
         self.t = np.concatenate(l)
 
         l_weg = [solns[i][:,-1] for i in inds[:-1]]
-        print(l_weg)
         l = [solns[i][:,:-1] for i in inds[:-1]] + [solns[inds[-1]]]
         self.y = np.concatenate(l,axis=-1) 
 
         self.sol = sol_funcs
 
         if sol_funcs is not None:
-            def sol(self):
+            def sol(times):
                 def index(t):
-                    i = np.where((disc_times<=t) & (t<=disc_times[-1]))[0][-1]
-                    return min(i, len(disc_times)-2)
+                    i = np.where((boundaries<=t) & (t<=boundaries[-1]))[0][-1]
+                    return min(i, len(boundaries)-2)
         
                 def sol_func(t):
                     i = index(t)
                     return sol_funcs[i](t)
         
                 sol_func_v = np.vectorize(sol_func, signature='()->(n)')
-        
-                sol = lambda t: sol_func_v(t).transpose()
+                return sol_func_v(times).transpose()
+
             self.sol = sol
+
 
 

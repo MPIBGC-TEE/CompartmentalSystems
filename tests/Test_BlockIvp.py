@@ -149,7 +149,6 @@ class TestBlockIvp(InDirTest):
             )
         )
 
-        print(sol_obj_pw)
         self.assertTrue(
             np.allclose(
                 ref_func(sol_obj_pw.t),
