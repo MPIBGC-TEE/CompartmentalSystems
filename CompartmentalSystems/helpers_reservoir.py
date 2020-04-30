@@ -516,8 +516,14 @@ def stride(data, strides):
     return data[np.ix_(*index_list)]
 
 def is_compartmental(M):    
-    gen=range(M.shape[0])
-    return all([M.is_square,all([M[i,i]<=0 for i in gen]), all([sum(M[i,:])<=0 for i in gen])])    
+    gen = range(M.shape[0])
+    return all(
+        [
+            M.is_square,
+            all([M[j,j] <= 0 for j in gen]),
+            all([sum(M[:,j]) <= 0 for j in gen])
+        ]
+    )    
     
 def make_cut_func_set(func_set):
     def unify_index(expr):
@@ -541,20 +547,21 @@ def make_cut_func_set(func_set):
     return cut_func_set
 
 
-def f_of_t_maker(sol_funcs,ol):
+def f_of_t_maker(sol_funcs, ol):
     def ot(t):
         sv = [sol_funcs[i](t) for i in range(len(sol_funcs))]
-        tup = tuple(sv)+(t,)
+        tup = tuple(sv) + (t,)
         res = ol(*tup)
-        return(res)
-    return(ot)
+        return res
+    return ot
+
 def const_of_t_maker(const):
     
     def const_arr_fun(possible_vec_arg):
         if isinstance(possible_vec_arg,Number):
             return const #also a number
         else:
-            return(const*np.ones_like(possible_vec_arg))
+            return const*np.ones_like(possible_vec_arg)
     return const_arr_fun
 
 def x_phi_ode(
@@ -573,7 +580,6 @@ def x_phi_ode(
         ,func_dict
     )
     
-    from sympy import simplify
     B_sym = srm.compartmental_matrix
 
     tup = (srm.time_symbol,) + tuple(srm.state_vector)

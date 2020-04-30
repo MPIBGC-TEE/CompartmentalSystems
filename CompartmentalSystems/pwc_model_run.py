@@ -2573,8 +2573,15 @@ class PWCModelRun(ModelRun):
     ##### quantiles #####
 
 
-    def pool_age_distributions_quantiles(self, quantile,  start_values=None, 
-            start_age_densities=None, F0=None, method='brentq', tol=1e-8):
+    def pool_age_distributions_quantiles(
+            self,
+            quantile,
+            start_values        = None, 
+            start_age_densities = None,
+            F0                  = None,
+            method              = 'brentq',
+            tol                 = 1e-8
+        ):
         """Return pool age distribution quantiles over the time grid.
 
         The compuation is done by computing the generalized inverse of the 
@@ -2618,7 +2625,6 @@ class PWCModelRun(ModelRun):
             The computed quantile values over the time-pool grid.
         """
         n = self.nr_pools
-        #soln = self.solve_old()
         soln = self.solve()
         if soln[0,:].sum() == 0:
             start_age_densities = lambda a: np.zeros((n,))
@@ -2632,25 +2638,36 @@ class PWCModelRun(ModelRun):
             start_values = np.ones((len(times), n))
 
         F_sv = self.cumulative_pool_age_distributions_single_value(
-                    start_age_densities=start_age_densities, F0=F0)
-        #soln = self.solve_old()
-        soln = self.solve()
+            start_age_densities = start_age_densities,
+            F0                  = F0
+        )
 
         res = []
         for pool in range(n):
             print('Pool:', pool)
             F_sv_pool = lambda a, t: F_sv(a,t)[pool]
-            res.append(self.distribution_quantiles(quantile,
-                                           F_sv_pool,
-                                           norm_consts = soln[:,pool],
-                                           start_values = start_values[:,pool],
-                                           method = method,
-                                           tol = tol))
+            res.append(
+                self.distribution_quantiles(
+                    quantile,
+                    F_sv_pool,
+                    norm_consts  = soln[:,pool],
+                    start_values = start_values[:,pool],
+                    method       = method,
+                    tol          = tol
+                )
+        )
 
         return np.array(res).transpose()
     
-    def system_age_distribution_quantiles(self, quantile, start_values=None, 
-            start_age_densities=None, F0=None, method='brentq', tol=1e-8):
+    def system_age_distribution_quantiles(
+            self,
+            quantile,
+            start_values        = None, 
+            start_age_densities = None,
+            F0                  = None,
+            method              = 'brentq',
+            tol                 = 1e-8
+        ):
         """Return system age distribution quantiles over the time grid.
 
         The compuation is done by computing the generalized inverse of the 
@@ -2693,7 +2710,6 @@ class PWCModelRun(ModelRun):
             numpy.array: The computed quantile values over the time grid.
         """
         n = self.nr_pools
-        #soln = self.solve_old()
         soln = self.solve()
         if soln[0,:].sum() == 0:
             start_age_densities = lambda a: np.zeros((n,))
@@ -2702,19 +2718,23 @@ class PWCModelRun(ModelRun):
             raise(Error('Either F0 or start_age_densities must be given.'))
         
         F_sv = self.cumulative_system_age_distribution_single_value(
-                    start_age_densities=start_age_densities, F0=F0)
+            start_age_densities = start_age_densities,
+            F0                  = F0
+        )
         #soln = self.solve_old()
-        soln = self.solve()
         start_age_moments = self.moments_from_densities(1, start_age_densities)
         
         if start_values is None: 
             start_values = self.system_age_moment(1, start_age_moments)
-        a_star = self.distribution_quantiles(quantile, 
-                                             F_sv, 
-                                             norm_consts = soln.sum(1), 
-                                             start_values=start_values, 
-                                             method=method,
-                                             tol=tol)
+
+        a_star = self.distribution_quantiles(
+            quantile, 
+            F_sv, 
+            norm_consts  = soln.sum(1), 
+            start_values = start_values, 
+            method       = method,
+            tol          = tol
+        )
 
         return a_star
 
@@ -3682,20 +3702,20 @@ class PWCModelRun(ModelRun):
 
 
     def _x_phi_block_ode(self):
-        x_block_name='x'
-        phi_block_name='phi'
-        if not(hasattr(self,'_x_phi_block_ode_cache')):
-            nr_pools=self.nr_pools
+        x_block_name = 'x'
+        phi_block_name = 'phi'
+        if not(hasattr(self, '_x_phi_block_ode_cache')):
+            nr_pools = self.nr_pools
             
-            block_ode=x_phi_ode(
+            block_ode = x_phi_ode(
                 self.model,
                 self.parameter_dict,
                 self.func_set,
                 x_block_name,
                 phi_block_name
             )
-            self._x_phi_block_ode_cache=block_ode
-        return self._x_phi_block_ode_cache,x_block_name,phi_block_name
+            self._x_phi_block_ode_cache = block_ode
+        return self._x_phi_block_ode_cache, x_block_name, phi_block_name
 
     def _state_transition_operator(self, t, t0, x):
         return np.matmul(self.Phi(t, t0), x).reshape((self.nr_pools,))
@@ -3964,13 +3984,13 @@ class PWCModelRun(ModelRun):
         flux_funcs = {}
         tup = tuple(m.state_variables) + (m.time_symbol,)
         for key, expression in expr_dict.items():
-            if isinstance(expression,Number):
+            if isinstance(expression, Number):
                 # in this case (constant flux) lambdify for some reason 
                 # does not return a vectorized function but one that
                 # allways returns a number even when it is called with 
                 # an array argument. We therfore create such a function 
                 # ourselves
-                flux_funcs[key]=const_of_t_maker(expression)
+                flux_funcs[key] = const_of_t_maker(expression)
             else:
                 # fixme mm 11-5-2018 
                 # the sympify in the next line should be unnecesary since 
@@ -3978,7 +3998,7 @@ class PWCModelRun(ModelRun):
                 # and now also not Numbers
                 #o_par = sympify(expression, locals=_clash).subs(self.parameter_dict)
                 o_par = expression.subs(self.parameter_dict)
-                cut_func_set=make_cut_func_set(self.func_set)
+                cut_func_set = make_cut_func_set(self.func_set)
                 ol = lambdify(tup, o_par, modules = [cut_func_set, 'numpy'])
                 #ol = numerical_function_from_expression(expression,tup,self.parameter_dict,self.func_set) 
                 flux_funcs[key] = f_of_t_maker(sol_funcs, ol)
@@ -4298,6 +4318,11 @@ class PWCModelRun(ModelRun):
         D = quad(D_integrand, t0, t1)[0]
 
         return (A+B)/(C+D)
+
+
+        #### Important again ####
+
+
     def Phi_func(self):
         # note that the functions used to produce the matrix 
         # self.Phi are cached (if the cache is initialized)
@@ -4314,8 +4339,8 @@ class PWCModelRun(ModelRun):
         if S == T:
             return start_Phi_2d
         
-        solve_func=self.solve_func()
-        block_ode,x_block_name,phi_block_name=self._x_phi_block_ode()
+        solve_func = self.solve_func()
+        block_ode, x_block_name, phi_block_name = self._x_phi_block_ode()
         
         if hasattr(self,'_state_transition_operator_cache'):
             cache = self._state_transition_operator_cache
