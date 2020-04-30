@@ -10,7 +10,7 @@ from sympy import Symbol, Piecewise
 from scipy.interpolate import interp1d
 
 from CompartmentalSystems.BlockIvp import BlockIvp
-from CompartmentalSystems.myOdeResult import custom_solve_ivp
+from CompartmentalSystems.myOdeResult import solve_ivp_pwc
 
 
 class TestBlockIvp(InDirTest):
@@ -58,22 +58,8 @@ class TestBlockIvp(InDirTest):
         self.assertTrue(np.allclose(res['x2'][-1],ref['x2'],rtol=1e-2))
 
 
-    def test_custom_solve_ivp(self):
-        t=Symbol('t')
-        #ms = [1, 1/2, 2, -1/2, -1, -2]
-        #disc_times=[1,2,3,4]
-        #m = Piecewise(
-        #    (ms[0], t<disc_times[0]),
-        #    (ms[1], t<disc_times[1]),
-        #    (ms[2], t<disc_times[2]),
-        #    (ms[3], t<disc_times[3]),
-        #    (-2, True)
-        #)
-        #t_start = disc_times[0]-1
-        #t_end = disc_times[-1]+1
-        #  
-        #times = np.linspace(t_start, t_end, t_end*100+1)
-################ new
+    def test_solve_ivp_pwc(self):
+        t = Symbol('t')
         ms = [1, -1, 1]
         disc_times = [410, 820]
         t_start = 0
@@ -81,46 +67,38 @@ class TestBlockIvp(InDirTest):
         ref_times = np.arange(t_start, t_end, 10)
         times = np.array([0, 300, 600, 900])
         t_span = (t_start, t_end)
-
-        m_l = Piecewise(
-            (ms[0], t <= disc_times[0]),
-            (ms[1], t <=  disc_times[1]),
+        #first build a single rhs
+        m = Piecewise(
+            (ms[0], t<disc_times[0]),
+            (ms[1], t<disc_times[1]),
             (ms[2], True)
         )
-        m_r = Piecewise(
-            (ms[0], t < disc_times[0]),
-            (ms[1], t <  disc_times[1]),
-            (ms[2], True)
-        )
-        def func_l(t, x):
-            return np.ones_like(x)*m_l.subs({'t':t})
-
-        def func_r(t, x):
-            return np.ones_like(x)*m_r.subs({'t':t})
-
+        rhs = lambda t, x: m.subs({'t': t})
         x0 = np.asarray([0])
-
-        ref_func = interp1d(
-            [t_start] + list(disc_times) + [t_end],
-            [0.,410.,0.,180.]
-        )
-        #ref_func = interp1d(ref_times, ref[0,:], fill_value='extrapolate')
-
         # To see the differencte between a many piece and
         # a one piece solotion 
         # we deliberately chose a combination
         # of method and first step where the 
         # solver will get lost if it does not restart
         # at the disc times.
-        sol_obj = custom_solve_ivp(
-            func_l,
+        sol_obj = solve_ivp_pwc(
+            rhs,
             t_span,
             x0,
             t_eval = times,
-            dense_output = True,
             method = 'RK45',
             first_step = None
         )
+        def funcmaker(m):
+            return lambda t, x: m
+        
+        rhss = [funcmaker(m) for m in ms]            
+
+        ref_func = interp1d(
+            [t_start] + list(disc_times) + [t_end],
+            [0.,410.,0.,180.]
+        )
+
 
         self.assertFalse(
             np.allclose(
@@ -130,17 +108,16 @@ class TestBlockIvp(InDirTest):
             )
         )
 
-        sol_obj_pw = custom_solve_ivp(
-            func_l,
+        sol_obj_pw = solve_ivp_pwc(
+            rhss,
             t_span,
             x0,
             #t_eval = times,
-            dense_output = True,
             method = 'RK45',
             first_step = None,
-            disc_times = disc_times,
-            deriv_r = func_r
+            disc_times = disc_times
         )
+
 
         self.assertTrue(
             np.allclose(
@@ -151,38 +128,58 @@ class TestBlockIvp(InDirTest):
 
         self.assertTrue(
             np.allclose(
-                ref_func(sol_obj_pw.t),
-                sol_obj_pw.sol(sol_obj_pw.t)[0,:]
+                ref_func(ref_times),
+                sol_obj_pw.sol(ref_times)[0,:]
             )
         )
-        #labels=['obj.y','obj_2.y','obj.sol(times)','obj_2.sol(times)']
-        ress = [
-                sol_obj.y, 
-                #sol_obj_2.y, 
-                #sol_obj.sol(times), 
-                #sol_obj_2.sol(times)
-        ]
-        labels=['obj.sol(times)','obj_2.sol(times)']
-        fig,axs = plt.subplots(
-                nrows = 2,
-                ncols = 2
+
+        sol_obj_pw_t_eval = solve_ivp_pwc(
+            rhss,
+            t_span,
+            x0,
+            t_eval = times,
+            method = 'RK45',
+            first_step = None,
+            disc_times = disc_times
         )
-        ax = axs[0,0]
+        
+        self.assertTrue(
+            np.allclose(
+                times,
+                sol_obj_pw_t_eval.t
+            )
+        )
+        
+        self.assertTrue(
+            np.allclose(
+                ref_func(times),
+                sol_obj_pw_t_eval.y[0,:]
+            )
+        )
+
+
+        fig, ax = plt.subplots(
+                nrows = 1,
+                ncols = 1
+        )
         ax.plot(
             ref_times
-            ,ref_func(ref_times),
-            color = 'blue'
+            ,ref_func(ref_times)
+            ,color = 'blue'
+            ,label='ref'
         #    ,ls = '-'
         )
         ax.plot(
             times
             ,ref_func(times)
             ,'*'
+            ,label='ref points'
         )
         ax.plot(
             sol_obj.t
             ,sol_obj.y[0,:]
             ,'o'
+            ,label='pure solve_ivp'
             #ls = '--'
         )
 
@@ -190,21 +187,11 @@ class TestBlockIvp(InDirTest):
             sol_obj_pw.t
             ,sol_obj_pw.y[0,:]
             ,'+'
+            ,label='solve_ivp_pwc'
             #ls = '--'
         )
-       # ax = axs[1,0]
-       # for nr, res in enumerate(ress):
-       #     ax.plot(
-       #         times
-       #         ,(ref-res)[0,:]
-       #         ,label = labels[nr]
-       #     )
-       # ax.legend()
-        fig.savefig('inaccuracies.pdf',tight_layout = True)
-
-
-
-
+        ax.legend()
+        fig.savefig('inaccuracies.pdf', tight_layout = True)
 
 
 ################################################################################

@@ -15,7 +15,6 @@ Counting of compartment/pool/reservoir numbers start at zero and the
 total number of pools is :math:`d`.
 """
 
-from __future__ import division
 from numbers import Number
 from copy import copy, deepcopy
 from matplotlib import cm
@@ -84,7 +83,7 @@ from .helpers_reservoir import (
 )
 
 from .BlockIvp import BlockIvp
-from .myOdeResult import custom_solve_ivp
+from .myOdeResult import solve_ivp_pwc
 from .Cache import Cache
 
 class Error(Exception):

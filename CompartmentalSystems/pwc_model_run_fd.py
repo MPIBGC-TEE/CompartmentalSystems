@@ -46,7 +46,7 @@ class PWCModelRunFD(ModelRun):
         nr_pools = len(start_values)
         strlen   = len(str(nr_pools))
         pool_str = lambda i: ("{:0"+str(strlen)+"d}").format(i)
-        par_set  = dict()
+        par_dicts  = [dict()] * len(us)
         func_set = dict()
     
         us = gross_Us / self.dts.reshape(-1,1)
@@ -57,39 +57,54 @@ class PWCModelRunFD(ModelRun):
         )
         time_symbol = srm_generic.time_symbol
 
-        u_funcs = cls.u_pwc(data_times, us)
-        B_funcs = cls.B_pwc(data_times, Bs)
-    
-        def func_maker_u(pool):
-            def func(s):
-                return u_funcs[pool](s)
-            return func
-    
-        v = srm_generic.external_inputs
-        for i in range(nr_pools):
-#        if v[i].is_Function:
-            func_set['u_'+pool_str(i)+'('+time_symbol.name+')'] = func_maker_u(i)
-    
-        def func_maker_B(p_to, p_from):
-            def func(s):
-                return B_funcs[(p_to, p_from)](s)
-            return func
-    
-        M = srm_generic.compartmental_matrix
-        for j in range(nr_pools):
-            for i in range(nr_pools):
-#                if M[i,j].is_Function:
-#                if not M[i,j].is_constant():
-                func_set['b_'+pool_str(i)+pool_str(j)+'('+time_symbol.name+')'] = \
-                        func_maker_B(i,j)
+        #u_funcs = cls.u_pwc(data_times, us)
+        #B_funcs = cls.B_pwc(data_times, Bs)
 
-        self.pwc_mr=PWCModelRun(
+        #def func_maker_u(pool):
+        #    def func(s):
+        #        return u_funcs[pool](s)
+        #    return func
+    
+        #def func_maker_B(k, p_to, p_from):
+        #    def func(s):
+        #        return Bs[k, p_to, p_from]
+        #    return func
+    
+        #func_dicts = []
+        #for k in range(len(us)):
+        #    func_dict = dict()
+        #    for j in range(nr_pools):
+        #        for i in range(nr_pools):
+        #            func_dict['b_'+pool_str(i)+pool_str(j)+'('+time_symbol.name+')'] = \
+        #                func_maker_B(k, i, j)
+
+        #    for i in range(nr_pool s):
+        #        func_dict['u_'+pool_str(i)+'('+time_symbol.name+')'] = func_maker_u(i)
+
+        #    func_dicts.append(func_dict)
+
+        par_dicts = []
+        for k in range(len(us)):
+            par_dict = dict()
+            for j in range(nr_pools):
+                for i in range(nr_pools):
+                    par_dict['b_'+pool_str(i)+pool_str(j)] = Bs[k,i,j]
+
+            for i in range(nr_pools):
+                par_dict['u_'+pool_str(i)] = us[i]
+
+            par_dicts.append(par_dict)
+
+
+        func_dicts = [dict()] * len(us)
+
+        self.pwc_mr = PWCModelRun(
             srm_generic, 
-            par_set, 
+            par_dicts, 
             start_values, 
             data_times,
-            func_set=func_set,
-            disc_times=disc_times 
+            func_dicts = func_dicts,
+            disc_times = disc_times 
         )
         self.us=us
         self.Bs=Bs

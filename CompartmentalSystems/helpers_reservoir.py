@@ -19,7 +19,7 @@ from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
 from .BlockOde import BlockOde
 from .BlockIvp import BlockIvp
-from myOdeResult import custom_solve_ivp
+from .myOdeResult import solve_ivp_pwc
 
 #from testinfrastructure.helpers import pe
 
@@ -290,8 +290,10 @@ def numsol_symbolical_system(
          state_vector
         ,time_symbol
         ,rhs
-        ,parameter_dict
-        ,func_set
+#        ,parameter_dict
+#        ,func_set
+        ,parameter_dicts
+        ,func_dicts
         ,start_values
         ,times
         ,dense_output
@@ -304,43 +306,35 @@ def numsol_symbolical_system(
     if times[0] == times[-1]: 
         return start_values.reshape((1, nr_pools))
 
-    num_rhs = numerical_rhs(
-        state_vector,
-        time_symbol,
-        rhs, 
-        parameter_dict,
-        func_set
-    )
+#    num_rhs = numerical_rhs(
+#        state_vector,
+#        time_symbol,
+#        rhs, 
+#        parameter_dict,
+#        func_set
+#    )
 
-    #old_settings = np.geterr()    
-    #np.seterr(all='raise')
-    #try:
-    #    res=solve_ivp(
-    #        num_rhs,
-    #        y0=start_values,
-    #        t_span=(t_min, t_max),
-    #        first_step=(t_max-t_min)/2 if t_max != t_min else None, # prevent the solver from overreaching (scipy bug)
-    #        t_eval=times,
-    #        #rtol=1e-08,
-    #        #atol=1e-08,
-    #        dense_output=dense_output,
-    #        #method='LSODA'
-    #    )
-    #except FloatingPointError:
-    #    res=solve_ivp(
-    #        num_rhs,
-    #        y0=start_values,
-    #        t_span=(t_min, t_max),
-    #        first_step=(t_max-t_min)/2 if t_max != t_min else None, # prevent the solver from overreaching (scipy bug)
-    #        t_eval=times,
-    #        #rtol=1e-08,
-    #        #atol=1e-08,
-    #        dense_output=dense_output,
-    #        method='LSODA'
-    #    )
-    #np.seterr(**old_settings)
-    res = custom_solve_ivp(
-        fun=num_rhs
+    num_rhss = [
+        numerical_rhs(
+            state_vector,
+            time_symbol,
+            rhs, 
+            parameter_dict,
+            func_dict
+        )
+        for parameter_dict, func_dict in zip(parameter_dicts, func_dicts)
+    ]
+
+#    res = custom_solve_ivp(
+#        fun=num_rhs
+#        ,t_span       = (t_min, t_max)
+#        ,y0           = start_values
+#        ,t_eval       = times
+#        ,disc_times   = disc_times
+#        ,dense_output = dense_output
+#    )
+    res = solve_ivp_pwc(
+        rhss          = num_rhss
         ,t_span       = (t_min, t_max)
         ,y0           = start_values
         ,t_eval       = times

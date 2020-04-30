@@ -1,6 +1,6 @@
 from typing import Callable,Iterable,Union,Optional,List,Tuple 
 import numpy as np
-from .myOdeResult import custom_solve_ivp
+from .myOdeResult import solve_ivp_pwc
 
 
 class BlockIvp:
