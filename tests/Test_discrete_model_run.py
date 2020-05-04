@@ -15,18 +15,18 @@ from typing import Callable,Iterable,Union,Optional,List,Tuple
 from copy import copy
     
 import CompartmentalSystems.example_smooth_reservoir_models as ESRM
-import CompartmentalSystems.example_pwc_model_runs as ESMR
+import CompartmentalSystems.example_smooth_model_runs as ESMR
 
 from testinfrastructure.InDirTest import InDirTest
 #from testinfrastructure.helpers import pe
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
-from CompartmentalSystems.pwc_model_run import PWCModelRun 
+from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun
 from CompartmentalSystems.helpers_reservoir import numerical_function_from_expression,numerical_rhs
 from CompartmentalSystems.model_run import plot_attributes, plot_stocks_and_fluxes
 
 class TestDiscreteModelRun(InDirTest):
-    def test_from_PWCModelRun(self):
+    def test_from_SmoothModelRun(self):
         x_0,x_1,t,k,u = symbols("x_0,x_1,k,t,u")
         inputs={
              0: u*(2-2*sin(2*t))
@@ -51,15 +51,15 @@ class TestDiscreteModelRun(InDirTest):
             ,u: 10.7}
         delta_t=np.float(1)
         
-        pwc_mr = PWCModelRun(srm, parameter_dict, start_values, times)
-        pwc_mr_fine = PWCModelRun(srm, parameter_dict, start_values, times_fine)
+        smr = SmoothModelRun(srm, parameter_dict, start_values, times)
+        smr_fine = SmoothModelRun(srm, parameter_dict, start_values, times_fine)
 
         
-        xs, net_Us, net_Fs, net_Rs = pwc_mr.fake_net_discretized_output(times)
-        xs, gross_Us, gross_Fs, gross_Rs = pwc_mr.fake_gross_discretized_output(times)
-        xs_fine, gross_Us_fine, gross_Fs_fine, gross_Rs_fine = pwc_mr_fine.fake_gross_discretized_output(times_fine)
+        xs, net_Us, net_Fs, net_Rs = smr.fake_net_discretized_output(times)
+        xs, gross_Us, gross_Fs, gross_Rs = smr.fake_gross_discretized_output(times)
+        xs_fine, gross_Us_fine, gross_Fs_fine, gross_Rs_fine = smr_fine.fake_gross_discretized_output(times_fine)
 
-        dmr_from_pwc = DiscreteModelRun.from_PWCModelRun(pwc_mr)
+        dmr_from_pwc = DiscreteModelRun.from_SmoothModelRun(smr)
         dmr_from_fake_net_data = DiscreteModelRun.reconstruct_from_fluxes_and_solution(
             times,
             xs,
@@ -89,14 +89,14 @@ class TestDiscreteModelRun(InDirTest):
 
         self.assertTrue(
             np.allclose(
-                pwc_mr.solve(),
+                smr.solve(),
                 dmr_from_pwc.solve()
             )
         )
 
         self.assertTrue(
             np.allclose(
-                pwc_mr.solve(),
+                smr.solve(),
                 dmr_from_fake_net_data.solve()
             )
         )
@@ -107,7 +107,7 @@ class TestDiscreteModelRun(InDirTest):
         # WRONG outputs
         self.assertTrue(
             np.allclose(
-                pwc_mr.solve(),
+                smr.solve(),
                 dmr_from_fake_gross_data_ff.solve(),
                 rtol=1e-3
             )
@@ -120,20 +120,20 @@ class TestDiscreteModelRun(InDirTest):
         # which will be reproduced
         self.assertTrue(
             np.allclose(
-                pwc_mr.solve(),
+                smr.solve(),
                 dmr_from_fake_gross_data_ffas.solve()
             )
         )
         # but the net influxes will be wrong
         self.assertFalse(
             np.allclose(
-                pwc_mr.acc_net_external_input_vector(),
+                smr.acc_net_external_input_vector(),
                 dmr_from_fake_gross_data_ffas.net_Us
             )
         )
         #plot_attributes(
         #    [
-        #        pwc_mr,
+        #        smr,
         #        dmr_from_fake_net_data,
         #        dmr_from_fake_gross_data_ff,
         #        dmr_from_fake_gross_data_ffas
@@ -142,7 +142,7 @@ class TestDiscreteModelRun(InDirTest):
         #)       
         plot_stocks_and_fluxes(
             [
-                pwc_mr
+                smr
                 #,dmr_from_fake_net_data
                 #,dmr_from_pwc
                 ,dmr_from_fake_gross_data_ff
@@ -152,7 +152,7 @@ class TestDiscreteModelRun(InDirTest):
         )       
         #plot_stocks_and_gross_fluxes(
         #    [
-        #        pwc_mr,
+        #        smr,
         #        dmr_from_fake_net_data,
         #        dmr_from_fake_gross_data_ff,
         #        dmr_from_fake_gross_data_ffas
@@ -179,12 +179,12 @@ class TestDiscreteModelRun(InDirTest):
         start_values = np.array(ss).astype(np.float64)
         times = np.linspace(1919, 2009, 901)
         parameter_dict = {}
-        pwc_mr = PWCModelRun(srm, parameter_dict, start_values, times)
-        pwc_mr.initialize_state_transition_operator_cache(
+        smr = SmoothModelRun(srm, parameter_dict, start_values, times)
+        smr.initialize_state_transition_operator_cache(
             lru_maxsize=None
         )
 
-        dmr = DiscreteModelRun.from_PWCModelRun(pwc_mr)
+        dmr = DiscreteModelRun.from_SmoothModelRun(smr)
 
 
 

@@ -103,14 +103,14 @@ class DiscreteModelRun():
 
 
     @classmethod
-    def from_PWCModelRun(cls,pwc_mr,data_times=None): 
+    def from_SmoothModelRun(cls,smr,data_times=None): 
         if data_times is None:
-            data_times = pwc_mr.times
+            data_times = smr.times
        
         return cls(
             data_times,
-            pwc_mr.fake_discretized_Bs(data_times),
-            pwc_mr.solve_func()(data_times)
+            smr.fake_discretized_Bs(data_times),
+            smr.solve_func()(data_times)
         )
 
     @classmethod

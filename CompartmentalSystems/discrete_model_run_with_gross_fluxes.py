@@ -61,19 +61,19 @@ class DiscreteModelRunWithGrossFluxes(DiscreteModelRun, ModelRun):
         return self.gross_Rs
 
     @classmethod
-    def from_PWCModelRun(cls, pwc_mr, data_times=None): 
+    def from_SmoothModelRun(cls, smr, data_times=None): 
         if data_times is None:
-            data_times = pwc_mr.times
+            data_times = smr.times
        
-        f_solve = pwc_mr.solve_func()
+        f_solve = smr.solve_func()
         xs = f_solve(data_times)
         return cls(
             data_times,
-            pwc_mr.fake_discretized_Bs(data_times),
+            smr.fake_discretized_Bs(data_times),
             xs,
-            pwc_mr.acc_gross_external_input_vector(data_times),
-            pwc_mr.acc_gross_internal_flux_matrix(data_times),
-            pwc_mr.acc_gross_external_output_vector(data_times)
+            smr.acc_gross_external_input_vector(data_times),
+            smr.acc_gross_internal_flux_matrix(data_times),
+            smr.acc_gross_external_output_vector(data_times)
         )
 
     @classmethod

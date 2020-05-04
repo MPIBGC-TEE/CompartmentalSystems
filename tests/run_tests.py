@@ -13,8 +13,8 @@ def main():
     # make the execution in subdirectories impossible 
     #print("\n###################### running single tests ##########################\n")
     #s1=unittest.TestSuite()
-    #from  Test_pwc_model_run import TestPWCModelRun
-    #s1.addTest(TestPWCModelRun('test_linearize'))
+    #from Test_smooth_model_run import TestSmoothModelRun
+    #s1.addTest(TestSmoothModelRun('test_linearize'))
     #r = unittest.TextTestRunner()
     #res = r.run(s1)
     #if len(res.errors) + len(res.failures) > 0:

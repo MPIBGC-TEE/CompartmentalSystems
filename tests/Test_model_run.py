@@ -5,7 +5,7 @@ from sympy import symbols, Matrix
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel  
 
-from CompartmentalSystems.pwc_model_run import PWCModelRun
+from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD
 from CompartmentalSystems.discrete_model_run_with_gross_fluxes import DiscreteModelRunWithGrossFluxes
 from CompartmentalSystems.model_run import (
@@ -30,12 +30,12 @@ class TestModelRun(InDirTest):
         self.fac = 2
         self.times=np.linspace(self.t_0,self.t_max,self.ntmo+1)
 
-        self.pwc_mr = PWCModelRun(srm, {}, start_values, self.times)
+        self.smr = SmoothModelRun(srm, {}, start_values, self.times)
 
 
     #@unittest.skip
-    def test_DiscreteModelRunWithGrossFluxes_from_PWCModelRun(self):
-        dmr = DiscreteModelRunWithGrossFluxes.from_PWCModelRun(self.pwc_mr)
+    def test_DiscreteModelRunWithGrossFluxes_from_SmoothModelRun(self):
+        dmr = DiscreteModelRunWithGrossFluxes.from_SmoothModelRun(self.smr)
         meths = [
             "solve"
             ,"acc_gross_external_input_vector"
@@ -48,7 +48,7 @@ class TestModelRun(InDirTest):
         for meth in meths:
             with self.subTest():
                  self.assertTrue(np.allclose(
-                     getattr(self.pwc_mr, meth)()
+                     getattr(self.smr, meth)()
                      ,getattr(dmr, meth)()
                  ))
 
@@ -56,36 +56,36 @@ class TestModelRun(InDirTest):
     def test_net_vs_gross_for_different_time_steps(self):
         times_fine = np.linspace(self.t_0,self.t_max,self.fac*self.ntmo+1)
         times_extra_fine = np.linspace(self.t_0,self.t_max,self.fac**2*self.ntmo+1) 
-        pwc_mr=self.pwc_mr
+        smr=self.smr
         
-        pwc_mr_fine = PWCModelRun(
-            pwc_mr.model
-            ,pwc_mr.parameter_dict 
-            ,pwc_mr.start_values
+        smr_fine = SmoothModelRun(
+            smr.model
+            ,smr.parameter_dict 
+            ,smr.start_values
             ,times_fine
-            ,pwc_mr.func_set
+            ,smr.func_set
         )
-        pwc_mr_extra_fine = PWCModelRun(
-            pwc_mr.model
-            ,pwc_mr.parameter_dict 
-            ,pwc_mr.start_values
+        smr_extra_fine = SmoothModelRun(
+            smr.model
+            ,smr.parameter_dict 
+            ,smr.start_values
             ,times_extra_fine
-            ,pwc_mr.func_set
+            ,smr.func_set
         )
         # We build a discrete model where we use the gross fluxes
         # as arguments for BOTH (net and gross) fluxes.
         # This simulates the real world scenario.
         # Since the net fluxes are different from the gross fluxes
         # the discrete model assumes wrong net fluxes.
-        # The correct values would be given by pwc_mr_fine.
+        # The correct values would be given by smr_fine.
         # For a smaller step size the gross fluxes would be essentially
         # the same (interpolating original ones) but the difference
         # to the net fluxes would be smaller, since the latter approach 
         # the gross fluxes in the limit of small time steps.
         # So the bigger the time step the bigger the error in the 
         # net fluxes and hence the reconstruction of the discrete Bs.
-        xs_fine, net_Us_fine, net_Fs_fine, net_Rs_fine = self.pwc_mr.fake_net_discretized_output(times_fine)
-        xs_fine, gross_Us_fine, gross_Fs_fine, gross_Rs_fine = self.pwc_mr.fake_gross_discretized_output(times_fine)
+        xs_fine, net_Us_fine, net_Fs_fine, net_Rs_fine = self.smr.fake_net_discretized_output(times_fine)
+        xs_fine, gross_Us_fine, gross_Fs_fine, gross_Rs_fine = self.smr.fake_gross_discretized_output(times_fine)
         dmr_wrong_fine = DiscreteModelRunWithGrossFluxes.reconstruct_from_fluxes_and_solution(
            times_fine,
            xs_fine,
@@ -98,9 +98,9 @@ class TestModelRun(InDirTest):
         )
         plot_stocks_and_fluxes(
             [
-                self.pwc_mr
-                ,pwc_mr_fine
-                ,pwc_mr_extra_fine
+                self.smr
+                ,smr_fine
+                ,smr_extra_fine
                 ,dmr_wrong_fine
             ]
             ,'stocks_and_fluxes.pdf'
@@ -109,9 +109,9 @@ class TestModelRun(InDirTest):
 
     #@unittest.skip
     def test_DiscreteModelRunFromFakeData(self):
-        times = self.pwc_mr.times
-        xs, net_Us, net_Fs, net_Rs = self.pwc_mr.fake_net_discretized_output(times)
-        xs, gross_Us, gross_Fs, gross_Rs = self.pwc_mr.fake_gross_discretized_output(times)
+        times = self.smr.times
+        xs, net_Us, net_Fs, net_Rs = self.smr.fake_net_discretized_output(times)
+        xs, gross_Us, gross_Fs, gross_Rs = self.smr.fake_gross_discretized_output(times)
         
         dmr = DiscreteModelRunWithGrossFluxes.reconstruct_from_fluxes_and_solution(
            times,
@@ -135,19 +135,19 @@ class TestModelRun(InDirTest):
         for meth in meths:
             with self.subTest():
                  self.assertTrue(np.allclose(
-                     getattr(self.pwc_mr, meth)()
+                     getattr(self.smr, meth)()
                      ,getattr(dmr, meth)()
                  ))
 
     @unittest.skip
     def test_PWCRunFD(self):
-        times = self.pwc_mr.times
-        xs, gross_Us, gross_Fs, gross_Rs = self.pwc_mr.fake_gross_discretized_output(times)
+        times = self.smr.times
+        xs, gross_Us, gross_Fs, gross_Rs = self.smr.fake_gross_discretized_output(times)
         
         pwc_mr_fd = PWCModelRunFD(
-            self.pwc_mr.model.time_symbol
+            self.smr.model.time_symbol
             ,times
-            ,self.pwc_mr.start_values
+            ,self.smr.start_values
             ,gross_Us
             ,gross_Fs
             ,gross_Rs
@@ -163,7 +163,7 @@ class TestModelRun(InDirTest):
         ]
         for meth in meths:
             with self.subTest():
-                 ref = getattr(self.pwc_mr, meth)()
+                 ref = getattr(self.smr, meth)()
                  res = getattr(pwc_mr_fd, meth)()
                  self.assertTrue(np.allclose(
                      ref 
@@ -175,7 +175,7 @@ class TestModelRun(InDirTest):
                  ))
         plot_stocks_and_fluxes(
             [
-                self.pwc_mr
+                self.smr
                 ,pwc_mr_fd
             ],
             'stocks_and_fluxes.pdf'

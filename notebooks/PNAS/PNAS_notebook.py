@@ -52,7 +52,7 @@ from scipy.interpolate import interp1d
 # load the compartmental model packages
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
-from CompartmentalSystems.pwc_model_run import PWCModelRun
+from CompartmentalSystems.smooth_model_run import SmoothModelRun
 
 ## technical part for notebook ##
 
@@ -214,7 +214,7 @@ par_dicts = [par_dict_v1, par_dict_v2]
 # create the nonlinear model run and the according cache
 smrs = []
 for version in versions:
-    smr = PWCModelRun(srm, par_dicts[version], start_values, times, func_set)
+    smr = SmoothModelRun(srm, par_dicts[version], start_values, times, func_set)
     smr.initialize_state_transition_operator_cache(
         lru_maxsize = 5000,
         size        =  100
@@ -593,8 +593,8 @@ for nr, fig in enumerate(figs):
 # + hide_input=false hide_output=false run_control={"marked": false} variables={"\"%1.2f\" % age_mean[2017-1765, 0]": {}, "\"%1.2f\" % age_median[2017-1765, 0]": {}}
 s = "In the year 2017, the mean age of carbon in the atmosphere is"
 s += " %1.2f yr (linear: %1.2f)" % (age_means[0][2017-1765, 0], age_means[1][2017-1765, 0])
-#s += " and the median age is equal to"
-#s += " %1.2f yr (%1.2f)." % (age_medians[0][2017-1765, 0], age_medians[1][2017-1765, 0])
+s += " and the median age is equal to"
+s += " %1.2f yr (%1.2f)." % (age_medians[0][2017-1765, 0], age_medians[1][2017-1765, 0])
 display(Markdown(s))
 
 # + [markdown] hide_input=false hide_output=false run_control={"marked": false}
@@ -667,7 +667,7 @@ for version in versions:
     # set up fossil fuel only system
     start_values_ff_only = np.zeros((3,)) # no fossil fuels in the system in 1765
     srm_ff_only = SmoothReservoirModel.from_B_u(state_vector, time_symbol, B, u)
-    smr_ff_only = PWCModelRun(
+    smr_ff_only = SmoothModelRun(
         srm_ff_only,
         linear_smr.parameter_dict,
         start_values_ff_only,
@@ -851,9 +851,5 @@ s += ", ".join(["%01.2f yr" %\
                 ftt_medians_ff_only_5yrs[1][k] for k in range(len(years))]) + "."
 display(Markdown(s))
 # -
-
-from jupyter_core.paths import jupyter_config_dir
-jupyter_config_dir()
-
 
 # Done.

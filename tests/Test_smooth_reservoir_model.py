@@ -6,7 +6,6 @@ import unittest
 import numpy as np
 from sympy import Symbol, Matrix, symbols, diag, zeros, simplify, Function
 
-from CompartmentalSystems.pwc_model_run import PWCModelRun
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from testinfrastructure.InDirTest import InDirTest
 #from testinfrastructure.helpers import  pe,pp

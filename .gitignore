@@ -9,3 +9,5 @@ tests/bins/tmp/*
 *.pyc
 .tox/
 */.mypy_cache
+*/.ipynb
+

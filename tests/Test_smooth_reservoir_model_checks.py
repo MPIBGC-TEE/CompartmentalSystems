@@ -7,10 +7,13 @@ from sympy import Symbol, Matrix, symbols, diag, zeros, simplify, Function
 from sympy.printing import pprint
 from copy import deepcopy
 
-from CompartmentalSystems.pwc_model_run import PWCModelRun
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from testinfrastructure.InDirTest import InDirTest
+
+
 ######### TestClass #############
+
+
 class TestSmoothReservoirModelChecks(InDirTest):
     def test_free_symbols(self):
         t,C_1, C_2, C_3, k_1, k_2, k_3, a_12, a_13, a_21, a_23, a_31, a_32, u_1, u_2, u_3, gamma, xi \

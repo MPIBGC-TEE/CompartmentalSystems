@@ -9,7 +9,7 @@ from tqdm import tqdm
 #
 #from CompartmentalSystems import picklegzip
 from .model_run import ModelRun
-from .pwc_model_run_2 import PWCModelRun2
+from .pwc_model_run import PWCModelRun
 from .smooth_reservoir_model import SmoothReservoirModel
 
 
@@ -99,7 +99,7 @@ class PWCModelRunFD(ModelRun):
 
         func_dicts = [dict()] * len(us)
 
-        self.pwc_mr = PWCModelRun2(
+        self.pwc_mr = PWCModelRun(
             srm_generic, 
             par_dicts, 
             start_values, 
@@ -187,7 +187,7 @@ class PWCModelRunFD(ModelRun):
 #
 #
 #    def to_smooth_model_run(self):
-#        pwc_mr = PWCModelRun(
+#        smr = SmoothModelRun(
 #            self.model, 
 #            self.parameter_set, 
 #            self.start_values, 
@@ -195,7 +195,7 @@ class PWCModelRunFD(ModelRun):
 #            self.func_set
 #        )
 #
-#        return pwc_mr
+#        return smr
 #
 #
     @classmethod
