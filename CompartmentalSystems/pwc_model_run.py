@@ -138,8 +138,8 @@ class PWCModelRun(ModelRun):
     system, the system is at the position of a ``(d+1)`` st pool.
     """
 
-    def __init__(self, model, parameter_dict, 
-                        start_values, times, func_set=None, disc_times=None):
+    def __init__(self, model, parameter_dicts, 
+                        start_values, times, func_dicts=None, disc_times=None):
         """Return a PWCModelRun instance.
 
         Args:
@@ -159,20 +159,30 @@ class PWCModelRun(ModelRun):
         """
         # we cannot use dict() as default because the test suite makes weird 
         # things with it! But that is bad style anyways
-        if parameter_dict is None: parameter_dict = dict()
-        if func_set is None: func_set = dict()
         
-        # check parameter_dict + func_set for completeness
-        free_symbols = check_parameter_dict_complete(
-                            model, 
-                            parameter_dict, 
-                            func_set)
-        if free_symbols != set():
-            raise(Error('Missing parameter values for ' + str(free_symbols)))
+        if disc_times = None:
+            disc_times = tuple()
+
+        self.disc_times = disc_times
+
+        if parameter_dicts is None: 
+            parameter_dicts = (dict()) * (len(disc_times)+1)
+        if func_dicts is None: 
+            func_dicts = (dict()) * len(disc_times)+1)
+        
+        # check parameter_dicts + func_dicts for completeness
+        for pd,fd in zip(parameter_dicts,func_dicts):
+            free_symbols = check_parameter_dict_complete(
+                model, 
+                pd,
+                fd
+            )
+            if free_symbols != set():
+                raise(Error('Missing parameter values for ' + str(free_symbols)))
 
 
         self.model = model
-        self.parameter_dict = frozendict(parameter_dict)
+        self.parameter_dicts = (frozendict(pd) for pd in parameter_dicts)
         self.times = times
         # make sure that start_values are an array,
         # even a one-dimensional one
@@ -187,19 +197,15 @@ class PWCModelRun(ModelRun):
         #for f in func_set.keys():
         #    if not isinstance(f,UndefinedFunction):
         #        raise(Error("The keys of the func_set should be of type:  sympy.core.function.UndefinedFunction"))
-        self.func_set = frozendict(func_set)
+        self.func_dicts = (frozendict(fd) for fd in func_dicts)
         #self._state_transition_operator_cache = None
         self._external_input_vector_func = None
 
-        self.disc_times = disc_times
 
-    def __str__(self):
-        return str(
-                 [ 'id(self)'+str(id(self)), 'id(model)'+str(id(self.model))]
-                +["id "+str(key)+" "+str(id(val)) for key,val in   self.func_set.items()]
-                +["id "+str(key)+" "+str(id(val)) for key,val in   self.parameter_dict.items()]
-                )  
-
+    @property
+    def nr_intervls(self):
+        return len(self.disc_times)+1
+        
     @property
     def dts(self):
         """
@@ -221,7 +227,7 @@ class PWCModelRun(ModelRun):
         # we inject the soltution into B to get the linearized version
         srm = self.model
         tup = (srm.time_symbol,) + tuple(srm.state_vector)
-        numfun=numerical_function_from_expression(
+        numfun = numerical_function_from_expression(
             srm.compartmental_matrix,
             tup,
             self.parameter_dict,

@@ -161,9 +161,9 @@ def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
     # results if the tuple argument to lambdify does not contain all free
     # symbols of the lambdified expression.
     # To avoid this case here we check this.
-    expr_par=expr.subs(parameter_dict)
-    ss_expr=expr_par.free_symbols
-    ss_tup=set([s for s in tup])
+    expr_par = expr.subs(parameter_dict)
+    ss_expr = expr_par.free_symbols
+    ss_tup = set([s for s in tup])
 
     if not(ss_expr.issubset(ss_tup)):
         raise Exception("The free symbols of the expression: ${0} are not a subset of the symbols in the tuple argument:${1}".format(ss_expr,ss_tup))
@@ -172,7 +172,7 @@ def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
     #expr_par=expr.subs(parameter_dict)
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
     
-    def expr_func_save_0_over_0(*val):
+    def expr_func_safe_0_over_0(*val):
         with np.errstate(invalid='raise'):
             try:
                 res = expr_func(*val)
@@ -190,7 +190,7 @@ def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
 
         return res
 
-    return expr_func_save_0_over_0
+    return expr_func_safe_0_over_0
 
 def numerical_rhs(
          state_vector

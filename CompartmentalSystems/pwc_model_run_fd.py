@@ -4,7 +4,7 @@ from numpy.linalg import pinv
 from scipy.linalg import expm#, inv
 from scipy.optimize import root# least_squares
 from scipy.integrate import solve_ivp
-from sympy import  Matrix, symbols, zeros, Function
+from sympy import Matrix, symbols, zeros, Function
 from tqdm import tqdm
 #
 #from CompartmentalSystems import picklegzip

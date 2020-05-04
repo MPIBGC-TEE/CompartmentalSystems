@@ -152,22 +152,6 @@ class TestPhi(InDirTest):
                             )
                         )
 
-        #blivp= x_phi_ivp(
-        #    pwc_mr.model
-        #    ,pwc_mr.parameter_dict
-        #    ,pwc_mr.func_set
-        #    ,pwc_mr.start_values
-        #    ,x_block_name='sol'
-        #    ,phi_block_name='Phi_2d'
-        #)
-        #blivp_l= x_phi_ivp(
-        #    pwc_mrl.model
-        #    ,pwc_mrl.parameter_dict
-        #    ,pwc_mrl.func_set
-        #    ,pwc_mrl.start_values
-        #    ,x_block_name='sol'
-        #    ,phi_block_name='Phi_2d'
-        #)
         for t in  np.linspace(t_0,t_max,6):
             for phi_mat in [
                                 pwc_mr.Phi(t,t_0),
