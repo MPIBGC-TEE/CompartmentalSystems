@@ -153,11 +153,11 @@ class BlockIvp:
         # This will be the new solve 
         # returns a dict of the block solutions (either values or functions depending on the "dense_output" keyword 
         # of solve_ivp
-        sol_obj = custom_solve_ivp(
-                 fun          = self.rhs
+        sol_obj = solve_ivp_pwc(
+                 rhss         = self.rhs
                 ,t_span       = t_span
                 ,y0           = self.start_vec
-                ,dense_output = False
+                #,dense_output = False
                 ,**kwargs
             )
 
@@ -179,11 +179,11 @@ class BlockIvp:
         return block_sols
 
     def block_solve_functions(self, t_span, first_step=None, **kwargs):
-        sol_obj = custom_solve_ivp(
-                 fun          = self.rhs
+        sol_obj = solve_ivp_pwc(
+                 rhss         = self.rhs
                 ,t_span       = t_span
                 ,y0           = self.start_vec
-                ,dense_output = True
+                #,dense_output = True
                 ,**kwargs
             )
         def block_sol(block_name):

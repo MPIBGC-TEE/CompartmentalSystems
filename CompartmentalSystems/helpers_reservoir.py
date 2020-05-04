@@ -296,8 +296,8 @@ def numsol_symbolical_system(
         ,func_dicts
         ,start_values
         ,times
-        ,dense_output
-        ,disc_times=None
+        #,dense_output
+        ,disc_times=()
     ):
     nr_pools = len(state_vector)
     t_min    = times[0]
@@ -306,15 +306,7 @@ def numsol_symbolical_system(
     if times[0] == times[-1]: 
         return start_values.reshape((1, nr_pools))
 
-#    num_rhs = numerical_rhs(
-#        state_vector,
-#        time_symbol,
-#        rhs, 
-#        parameter_dict,
-#        func_set
-#    )
-
-    num_rhss = [
+    num_rhss = tuple(
         numerical_rhs(
             state_vector,
             time_symbol,
@@ -323,23 +315,15 @@ def numsol_symbolical_system(
             func_dict
         )
         for parameter_dict, func_dict in zip(parameter_dicts, func_dicts)
-    ]
+    )
 
-#    res = custom_solve_ivp(
-#        fun=num_rhs
-#        ,t_span       = (t_min, t_max)
-#        ,y0           = start_values
-#        ,t_eval       = times
-#        ,disc_times   = disc_times
-#        ,dense_output = dense_output
-#    )
     res = solve_ivp_pwc(
         rhss          = num_rhss
         ,t_span       = (t_min, t_max)
         ,y0           = start_values
-        ,t_eval       = times
+        ,t_eval       = tuple(times)
         ,disc_times   = disc_times
-        ,dense_output = dense_output
+        #,dense_output = dense_output
     )
 
     #adapt to the old interface since our code at the moment expects it
@@ -682,7 +666,7 @@ def array_integration_by_ode(
         else:
             return f(tau).flatten()
     
-    ys = custom_solve_ivp(
+    ys = solve_ivp_pwc(
         fun     = rhs
         ,y0     = np.zeros(n)
         ,t_span = (a,b)
@@ -899,3 +883,31 @@ def net_Us_from_discrete_Bs_and_xs(Bs, xs):
 
 
 
+def check_parameter_dict_complete(model, parameter_dict, func_set):
+    """Check if the parameter set  the function set are complete 
+       to enable a model run.
+
+    Args:
+        model (:class:`~.smooth_reservoir_model.SmoothReservoirModel`): 
+            The reservoir model on which the model run bases.
+        parameter_dict (dict): ``{x: y}`` with ``x`` being a SymPy symbol 
+            and ``y`` being a numerical value.
+        func_set (dict): ``{f: func}`` with ``f`` being a SymPy symbol and 
+            ``func`` being a Python function. Defaults to ``dict()``.
+    Returns:
+        free_symbols (set): set of free symbols, parameter_dict is complete if
+                            ``free_symbols`` is the empty set
+    """
+    free_symbols = model.F.subs(parameter_dict).free_symbols
+    #print('fs', free_symbols)
+    free_symbols -= {model.time_symbol}
+    #print(free_symbols)
+    free_symbols -= set(model.state_vector)
+    #print(free_symbols)
+
+    # remove function names, are given as strings
+    free_names = set([symbol.name for symbol in free_symbols])
+    func_names = set([key for key in func_set.keys()])
+    free_names = free_names - func_names
+
+    return free_names

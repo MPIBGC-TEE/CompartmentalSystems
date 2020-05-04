@@ -9,7 +9,7 @@ from tqdm import tqdm
 #
 #from CompartmentalSystems import picklegzip
 from .model_run import ModelRun
-from .pwc_model_run import PWCModelRun
+from .pwc_model_run_2 import PWCModelRun2
 from .smooth_reservoir_model import SmoothReservoirModel
 
 
@@ -33,6 +33,8 @@ class PWCModelRunFD(ModelRun):
         disc_times = data_times
         print('reconstructing us')
         #us = cls.reconstruct_us(data_times, gross_Us)
+        #self.dts = np.diff(self.data_times).astype(np.float64)
+        us = gross_Us / self.dts.reshape(-1,1)
 
         print('reconstructing Bs')
         Bs = cls.reconstruct_Bs(
@@ -43,13 +45,12 @@ class PWCModelRunFD(ModelRun):
             gross_Rs
         )
         
-        nr_pools = len(start_values)
-        strlen   = len(str(nr_pools))
-        pool_str = lambda i: ("{:0"+str(strlen)+"d}").format(i)
-        par_dicts  = [dict()] * len(us)
-        func_set = dict()
+        nr_pools  = len(start_values)
+        strlen    = len(str(nr_pools))
+        pool_str  = lambda i: ("{:0"+str(strlen)+"d}").format(i)
+        par_dicts = [dict()] * len(us)
+        func_set  = dict()
     
-        us = gross_Us / self.dts.reshape(-1,1)
         srm_generic = cls.create_srm_generic(
             time_symbol,
             Bs,
@@ -98,7 +99,7 @@ class PWCModelRunFD(ModelRun):
 
         func_dicts = [dict()] * len(us)
 
-        self.pwc_mr = PWCModelRun(
+        self.pwc_mr = PWCModelRun2(
             srm_generic, 
             par_dicts, 
             start_values, 
@@ -106,8 +107,8 @@ class PWCModelRunFD(ModelRun):
             func_dicts = func_dicts,
             disc_times = disc_times 
         )
-        self.us=us
-        self.Bs=Bs
+        self.us = us
+        self.Bs = Bs
     
     @property
     def model(self):

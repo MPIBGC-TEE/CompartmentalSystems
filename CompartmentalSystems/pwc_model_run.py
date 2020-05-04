@@ -80,6 +80,7 @@ from .helpers_reservoir import (
     ,net_Us_from_discrete_Bs_and_xs
     ,net_Fs_from_discrete_Bs_and_xs
     ,net_Rs_from_discrete_Bs_and_xs
+    ,check_parameter_dict_complete
 )
 
 from .BlockIvp import BlockIvp
@@ -90,34 +91,6 @@ class Error(Exception):
     """Generic error occurring in this module."""
     pass
 
-def check_parameter_dict_complete(model, parameter_dict, func_set):
-    """Check if the parameter set  the function set are complete 
-       to enable a model run.
-
-    Args:
-        model (:class:`~.smooth_reservoir_model.SmoothReservoirModel`): 
-            The reservoir model on which the model run bases.
-        parameter_dict (dict): ``{x: y}`` with ``x`` being a SymPy symbol 
-            and ``y`` being a numerical value.
-        func_set (dict): ``{f: func}`` with ``f`` being a SymPy symbol and 
-            ``func`` being a Python function. Defaults to ``dict()``.
-    Returns:
-        free_symbols (set): set of free symbols, parameter_dict is complete if
-                            ``free_symbols`` is the empty set
-    """
-    free_symbols = model.F.subs(parameter_dict).free_symbols
-    #print('fs', free_symbols)
-    free_symbols -= {model.time_symbol}
-    #print(free_symbols)
-    free_symbols -= set(model.state_vector)
-    #print(free_symbols)
-
-    # remove function names, are given as strings
-    free_names = set([symbol.name for symbol in free_symbols])
-    func_names = set([key for key in func_set.keys()])
-    free_names = free_names - func_names
-
-    return free_names
 
 class PWCModelRun(ModelRun):
     """Class for a model run based on a 
@@ -138,8 +111,8 @@ class PWCModelRun(ModelRun):
     system, the system is at the position of a ``(d+1)`` st pool.
     """
 
-    def __init__(self, model, parameter_dicts, 
-                        start_values, times, func_dicts=None, disc_times=None):
+    def __init__(self, model, parameter_dict, 
+                        start_values, times, func_set=None ):
         """Return a PWCModelRun instance.
 
         Args:
@@ -152,37 +125,26 @@ class PWCModelRun(ModelRun):
                 Typically created by ``numpy.linspace``.
             func_set (dict): ``{f: func}`` with ``f`` being a SymPy symbol and 
                 ``func`` being a Python function. Defaults to ``dict()``.
-            disc_times (list): ``known discontinuities (times) for any of the fluxes``.
 
         Raises:
             Error: If ``start_values`` is not a ``numpy.array``.
         """
         # we cannot use dict() as default because the test suite makes weird 
         # things with it! But that is bad style anyways
+        if parameter_dict is None: parameter_dict = dict()
+        if func_set is None: func_set = dict()
         
-        if disc_times = None:
-            disc_times = tuple()
-
-        self.disc_times = disc_times
-
-        if parameter_dicts is None: 
-            parameter_dicts = (dict()) * (len(disc_times)+1)
-        if func_dicts is None: 
-            func_dicts = (dict()) * len(disc_times)+1)
+        # check parameter_dict + func_set for completeness
+        free_symbols = check_parameter_dict_complete(
+                            model, 
+                            parameter_dict, 
+                            func_set)
+        if free_symbols != set():
+            raise(Error('Missing parameter values for ' + str(free_symbols)))
         
-        # check parameter_dicts + func_dicts for completeness
-        for pd,fd in zip(parameter_dicts,func_dicts):
-            free_symbols = check_parameter_dict_complete(
-                model, 
-                pd,
-                fd
-            )
-            if free_symbols != set():
-                raise(Error('Missing parameter values for ' + str(free_symbols)))
-
 
         self.model = model
-        self.parameter_dicts = (frozendict(pd) for pd in parameter_dicts)
+        self.parameter_dict = frozendict(parameter_dict)
         self.times = times
         # make sure that start_values are an array,
         # even a one-dimensional one
@@ -197,14 +159,19 @@ class PWCModelRun(ModelRun):
         #for f in func_set.keys():
         #    if not isinstance(f,UndefinedFunction):
         #        raise(Error("The keys of the func_set should be of type:  sympy.core.function.UndefinedFunction"))
-        self.func_dicts = (frozendict(fd) for fd in func_dicts)
+        self.func_set = frozendict(func_set)
         #self._state_transition_operator_cache = None
         self._external_input_vector_func = None
 
 
-    @property
-    def nr_intervls(self):
-        return len(self.disc_times)+1
+    def __str__(self):
+        return str(
+                 [ 'id(self)'+str(id(self)), 'id(model)'+str(id(self.model))]
+                +["id "+str(key)+" "+str(id(val)) for key,val in   self.func_set.items()]
+                +["id "+str(key)+" "+str(id(val)) for key,val in   self.parameter_dict.items()]
+                )  
+ 
+
         
     @property
     def dts(self):
@@ -3102,8 +3069,8 @@ class PWCModelRun(ModelRun):
 
         #short_res = odeint(rhs, sv, times, atol=tol, mxstep=10000)
         rhs2 = lambda t_val, y: rhs(y, t_val)
-        short_res = custom_solve_ivp(
-            fun    = rhs2,
+        short_res = solve_ivp_pwc(
+            rhss   = (rhs2,),
             y0     = np.array([sv]).reshape(1,),
             t_span = (times[0], times[-1]),
             t_eval = times,
@@ -3282,8 +3249,8 @@ class PWCModelRun(ModelRun):
 
         #short_res = odeint(rhs, sv, times, atol=tol, mxstep=10000)
         rhs2 = lambda t_val, y: rhs(y, t_val)
-        short_res = custom_solve_ivp(
-            fun    = rhs2,
+        short_res = solve_ivp_pwc(
+            rhss   = (rhs2,),
             y0     = np.array([sv]).reshape(1,),
             t_span = (times[0], times[-1]),
             t_eval = times,
@@ -3356,7 +3323,6 @@ class PWCModelRun(ModelRun):
             start_values_14C_cb,
             times_14C,
             func_set_14C,
-            self.disc_times
         )
 
         return smr_14C
@@ -3485,12 +3451,12 @@ class PWCModelRun(ModelRun):
             state_vector,
             srm.time_symbol,
             rhs,
-            self.parameter_dict,
-            self.func_set,
+            [self.parameter_dict],
+            [self.func_set],
             new_start_values, 
             times,
-            dense_output=True,
-            disc_times=self.disc_times
+            #dense_output=True,
+            #disc_times=self.disc_times
         )
         def restrictionMaker(order):
             #pe('soln[:,:]',locals())

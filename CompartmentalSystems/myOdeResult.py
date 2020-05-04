@@ -4,23 +4,16 @@ import numpy as np
 from functools import lru_cache
 from collections.abc import Iterable
 
-def solve_ivp_pwc(rhss, t_span, y0, **kwargs):
+def solve_ivp_pwc(rhss, t_span, y0, disc_times=(), **kwargs):
     if not isinstance(rhss, Iterable):
-        rhss = [rhss]
+        rhss = (rhss,)
+    assert(len(rhss) == len(disc_times) + 1)
 
     kwargs['dense_output'] = True
 
     if 'method' not in kwargs.keys():
         kwargs['method'] = 'Radau'
     
-    if 'disc_times' in kwargs.keys():
-        disc_times = kwargs['disc_times']
-        del kwargs['disc_times']
-
-        assert(len(rhss) == len(disc_times) + 1)
-    else:
-        disc_times = None
-
     if 't_eval' in kwargs.keys():
         t_eval = kwargs['t_eval']
         del kwargs['t_eval']
@@ -49,7 +42,7 @@ def solve_ivp_pwc(rhss, t_span, y0, **kwargs):
 
         return sol_obj
 
-    if disc_times is None:
+    if len(disc_times) == 0 :
         return sub_solve_ivp(
             rhss[0],
             t_span,

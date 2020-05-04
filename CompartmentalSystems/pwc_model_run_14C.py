@@ -11,7 +11,7 @@ def pfile_C14Atm_NH():
 
 class PWCModelRun_14C(PWCModelRun):
 
-    def __init__(self, srm, par_set, start_values, times, func_set, disc_times, decay_rate):
+    def __init__(self, srm, par_set, start_values, times, func_set, decay_rate):
         PWCModelRun.__init__(
             self, 
             srm, 
@@ -19,7 +19,6 @@ class PWCModelRun_14C(PWCModelRun):
             start_values,
             times,
             func_set,
-            disc_times
         )
         self.decay_rate = decay_rate
 
@@ -72,7 +71,6 @@ class PWCModelRun_14C(PWCModelRun):
             start_values_14C,
             times_14C,
             func_set_14C,
-            pwc_mr.disc_times,
             decay_rate
         )
 

@@ -8,10 +8,12 @@ from sympy import Function, Matrix, sin, symbols
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.pwc_model_run import PWCModelRun
 
-from CompartmentalSystems.pwc_model_run_fd import PWCModelRunFD as PWCMRFD
+from CompartmentalSystems.pwc_model_run_2 import PWCModelRun2 
 
-class TestPWCModelRunFD(unittest.TestCase):
+class TestPWCModelRun2(unittest.TestCase):
 
+    @unittest.skip
+    def test_solve(self):
         x, y, t, k = symbols("x y t k")
         u_1= Function('u_1')(x,t)
         state_vector = Matrix([x,y])
@@ -54,8 +56,8 @@ class TestPWCModelRunFD(unittest.TestCase):
 
         gross_Us = np.concatenate(
             [
-                mr.acc_gross_external_input_vector(
-                    np.array([mr.times[0], mr.times[-1]])
+                mr_pwc.acc_gross_external_input_vector(
+                    np.array([mr_pwc.times[0], mr_pwc.times[-1]])
                 ) 
                 for mr_pwc in mr_pwcs
             ],
@@ -65,7 +67,7 @@ class TestPWCModelRunFD(unittest.TestCase):
         gross_Fs = np.concatenate(
             [
                 mr_pwc.acc_gross_internal_flux_matrix(
-                    np.array([mr.times[0], mr.times[-1]])
+                    np.array([mr_pwc.times[0], mr_pwc.times[-1]])
                 ) 
                 for mr_pwc in mr_pwcs
             ],
@@ -75,14 +77,14 @@ class TestPWCModelRunFD(unittest.TestCase):
         gross_Rs = np.concatenate(
             [
                 mr_pwc.acc_gross_external_output_vector(
-                    np.array([mr.times[0], mr.times[-1]])
+                    np.array([mr_pwc.times[0], mr_pwc.times[-1]])
                 ) 
                 for mr_pwc in mr_pwcs
             ],
             axis = 0
         )
 
-        mr_pwc_fd = PWCMRFD(
+        mr_pwc_2 = PWCModelRun2(
             t,
             np.array([t_0]+disc_times+[t_max]),
             start_values,
@@ -90,7 +92,7 @@ class TestPWCModelRunFD(unittest.TestCase):
             gross_Fs,
             gross_Rs
         )
-        mr_pwc_fd.solve()
+        mr_pwc_2.solve()
 
 
 #    @unittest.skip('The tested function is not reasonable.')
