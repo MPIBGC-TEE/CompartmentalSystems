@@ -29,7 +29,7 @@ class PWCModelRun(ModelRun):
         disc_times,
         func_dicts=None
     ):
-        if not disc_times:
+        if len(disc_times) == 0:
             raise(Error("No 'disc_times' given"))
 
         self.disc_times = disc_times

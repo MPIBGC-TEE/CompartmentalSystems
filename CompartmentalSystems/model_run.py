@@ -76,7 +76,7 @@ def plot_stocks_and_fluxes(mrs, file_name, labels=None):
                 )
                 ax.legend()
 
-        def f(X, Y): X/Y[:len(X)]
+        def f(X, Y): return X / Y[:len(X)]
         for symb, net_or_gross in zip(["o", "*-"], ["gross", "net"]):
             # influxes
             tit = 'acc external input vector'
