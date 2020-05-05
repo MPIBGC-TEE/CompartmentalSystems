@@ -4,7 +4,6 @@ from frozendict import frozendict
 from sympy import flatten, lambdify
 from scipy.integrate import quad
 
-from .smooth_reservoir_model import SmoothReservoirModel
 from .model_run import ModelRun
 from .helpers_reservoir import (
     numsol_symbolical_system,
