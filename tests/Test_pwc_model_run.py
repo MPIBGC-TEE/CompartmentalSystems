@@ -1,9 +1,7 @@
 import unittest
 
 import numpy as np
-from scipy.linalg import inv
-
-from sympy import Function, Matrix, sin, symbols
+from sympy import Function, Matrix, symbols
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
