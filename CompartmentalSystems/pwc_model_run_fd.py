@@ -24,7 +24,6 @@ class Error(Exception):
 ################################################################################
 
 
-#class PWCModelRunFD(PWCModelRun):
 class PWCModelRunFD(ModelRun):
     def __init__(self, time_symbol, data_times, start_values, gross_Us, gross_Fs, gross_Rs):
 
@@ -113,6 +112,12 @@ class PWCModelRunFD(ModelRun):
     @property
     def model(self):
         return self.pwc_mr.model
+
+
+    @property
+    def nr_pools(self):
+        return self.pwc_mr.nr_pools
+
 
     @property
     def dts(self):

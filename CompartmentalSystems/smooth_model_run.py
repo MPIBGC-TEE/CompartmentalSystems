@@ -46,7 +46,6 @@ from scipy.interpolate import interp1d, UnivariateSpline
 from scipy.optimize import newton, brentq, minimize
 
 from tqdm import tqdm
-from functools import reduce
 #from testinfrastructure.helpers import pe
 
 from .smooth_reservoir_model import SmoothReservoirModel
@@ -160,8 +159,6 @@ class SmoothModelRun(ModelRun):
         #    if not isinstance(f,UndefinedFunction):
         #        raise(Error("The keys of the func_set should be of type:  sympy.core.function.UndefinedFunction"))
         self.func_set = frozendict(func_set)
-        #self._state_transition_operator_cache = None
-        self._external_input_vector_func = None
 
 
     def __str__(self):
@@ -374,7 +371,7 @@ class SmoothModelRun(ModelRun):
     @property
     def nr_pools(self):
         """int: Return the number of pools involved in the model."""
-        return(self.model.nr_pools)
+        return self.model.nr_pools
 
     def solve_single_value_old(self, alternative_start_values=None):
         """Solve the model and return a function of time.
@@ -423,8 +420,8 @@ class SmoothModelRun(ModelRun):
         return self._solve_age_moment_system_old(0, None, alternative_times, 
                         alternative_start_values)
 
-    def solve(self,  alternative_start_values=None):
-        """Solve the model and return a solution grid as well as a solution function of time. If the solution has been computed previously (even by other methods) the cached result will be returned.
+    def solve(self, alternative_start_values=None):
+        """Solve the model and return a solution grid. If the solution has been computed previously (even by other methods) the cached result will be returned.
 
         Args:
             alternative_start_values (numpy.array): If not given, 
@@ -433,7 +430,6 @@ class SmoothModelRun(ModelRun):
         Returns:
             numpy.ndarray: len(times) x nr_pools, contains the pool contents 
             at the times given in the time grid.
-            funct is a function of time where f(t) is a numpy.ndarray with shape: (nr_pools,)
         """
         soln, sol_func = self._solve_age_moment_system(
             0, 
@@ -583,7 +579,7 @@ class SmoothModelRun(ModelRun):
             be valid everywhere which might be dangerous if they are
             extrapolated from data.
         """
-        if self._external_input_vector_func is None:
+        if not hasattr(self, '_external_input_vector_func'):
             t0 = self.times[0]
             # cut off inputs until t0 (exclusive)
             if cut_off:

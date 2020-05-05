@@ -7,20 +7,18 @@ from sympy import Function, Matrix, sin, symbols
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
-
 from CompartmentalSystems.pwc_model_run import PWCModelRun 
 
 class TestPWCModelRun(unittest.TestCase):
 
-    @unittest.skip
-    def test_solve(self):
+    def setUp(self):
         x, y, t, k = symbols("x y t k")
-        u_1= Function('u_1')(x,t)
+        u_1 = Function('u_1')(x,t)
         state_vector = Matrix([x,y])
         B = Matrix([[-1,  1.5],
                     [ k, -2  ]])
         u = Matrix(2, 1, [u_1, 1])
-        srm = SmoothReservoirModel.from_B_u(
+        self.srm = SmoothReservoirModel.from_B_u(
             state_vector,
             t,
             B,
@@ -30,129 +28,96 @@ class TestPWCModelRun(unittest.TestCase):
         start_values = np.array([10, 40])
         t_0 = 0
         t_max = 10
+        times = np.linspace(t_0, t_max, 11)
         disc_times = [5]
         
-        ps = [{k:1}, {k:.5}]
-        fs = [{u_1: lambda x, t: 9}, {u_1: lambda x, t: 3}]
+        parameter_dicts = [{k:1}, {k:.5}]
+        func_dicts = [{u_1: lambda x, t: 9}, {u_1: lambda x, t: 3}]
+
+        self.pwc_mr = PWCModelRun(
+            self.srm,
+            parameter_dicts,
+            start_values,
+            times,
+            disc_times,
+            func_dicts
+        )
+
         timess = [
-            np.linspace(t_0, disc_times[0], 10),
-            np.linspace(disc_times[0], t_max, 10)
+            np.linspace(t_0, disc_times[0], 6),
+            np.linspace(disc_times[0], t_max, 6)
         ]
 
         smrs = []
         tmp_start_values = start_values
         for i in range(len(disc_times)+1):
             smrs.append(
-                PWCModelRun(
-                    srm,
-                    parameter_dict = ps[i],
+                SmoothModelRun(
+                    self.srm,
+                    parameter_dict = parameter_dicts[i],
                     start_values = tmp_start_values,
                     times = timess[i],
-                    func_set = fs[i]
+                    func_set = func_dicts[i]
                 ) 
             )
             tmp_start_values = smrs[i].solve()[-1]
+        self.smrs = smrs
 
 
-        gross_Us = np.concatenate(
-            [
-                smr.acc_gross_external_input_vector(
-                    np.array([smr.times[0], smr.times[-1]])
-                ) 
-                for smr in smrs
-            ],
-            axis = 0
-        )
-
-        gross_Fs = np.concatenate(
-            [
-                smr.acc_gross_internal_flux_matrix(
-                    np.array([smr.times[0], smr.times[-1]])
-                ) 
-                for smr in smrs
-            ],
-            axis = 0
-        )
-
-        gross_Rs = np.concatenate(
-            [
-                smr.acc_gross_external_output_vector(
-                    np.array([smr.times[0], smr.times[-1]])
-                ) 
-                for smr in smrs
-            ],
-            axis = 0
-        )
-
-        pwc_mr = PWCModelRun(
-            t,
-            np.array([t_0]+disc_times+[t_max]),
-            start_values,
-            gross_Us,
-            gross_Fs,
-            gross_Rs
-        )
-        pwc_mr.solve()
+    def test_nr_pools(self):
+        self.assertEqual(self.srm.nr_pools, self.pwc_mr.nr_pools)
 
 
-#    @unittest.skip('The tested function is not reasonable.')
-#    def test_find_equilibrium_model(self):
-#        ## create ReservoirModel
-#        C_1, C_2 = symbols('C_1 C_2')
-#        state_vector = Matrix(2, 1, [C_1, C_2]) 
-#        t = symbols('t')
-#        lamda_1 = Function('lamda_1')(t)
-#        lamda_2 = Function('lamda_2')(t)
-#        B = Matrix([[-lamda_1,      0.5*lamda_2],
-#                    [       0,         -lamda_2]])
-#        u = Matrix(2, 1, [0.3,0.5*0.5*sin(1/100*t)])
-#    
-#        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
-#    
-#        ## create ModelRun
-#        def rate_1(t):
-#            return 0.1+1/20*np.sin(1/10*t)
-#    
-#        def rate_2(t):
-#            return 0.05
-#    
-#        par_set = {}
-#        func_set = {lamda_1: rate_1, lamda_2: rate_2}
-#        start_values = np.array([40, 0])
-#        times = np.linspace(0, 10, 101)
-#        
-#        pwc_mr = PWCModelRun(srm, par_set, start_values, times, func_set)
-#
-#        ## create fake discrete data
-#        nr_data_points = 3
-#        data_times = np.round(np.linspace(times[0], times[-1], nr_data_points),5)
-#        delta_t = (times[-1]-times[0]) / (nr_data_points-1)
-#        xs, Fs, rs, data_us = pwc_mr._fake_discretized_output(data_times)
-#    
-#        pwc_mr_fd = PWCMRFD.reconstruct_from_data(
-#            t,
-#            data_times, 
-#            start_values, 
-#            xs, 
-#            Fs,
-#            rs, 
-#            data_us)
-#
-#        xss = pwc_mr.solve()[-1,...]
-#        B0 = pwc_mr_fd.Bs[-1]
-#        u0 = pwc_mr_fd.us[-1]
-#
-#        B, u = pwc_mr_fd.find_equilibrium_model(xss, B0, u0)
-#        print(xss)
-#        print(-inv(B) @ u)
-#        self.assertTrue(np.allclose(-inv(B) @ u, xss))
+    def test_dts(self):
+        dts_smrs = [smr.dts for smr in self.smrs]
+        dts_ref = np.concatenate(dts_smrs)
+        self.assertTrue(np.all(dts_ref == self.pwc_mr.dts))
+
+
+    def test_init(self):
+        # automatically tested by setUp
+        pass
+
+
+    def test_solve(self):
+        soln_smrs = [smr.solve() for smr in self.smrs]
+        l = [soln[:-1] for soln in soln_smrs[:-1]] + [soln_smrs[-1]]
+        soln_ref = np.concatenate(l, axis=0)
+        self.assertTrue(np.allclose(soln_ref, self.pwc_mr.solve()))
+    
+
+    @unittest.skip
+    def test_acc_gross_external_input_vector(self):
+        raise(Exception('To be implemented'))
+
+    @unittest.skip
+    def test_acc_gross_internal_flux_matrix(self):
+        raise(Exception('To be implemented'))
+    
+    @unittest.skip
+    def test_acc_gross_external_output_vector(self) :
+        raise(Exception('To be implemented'))
+    
+    @unittest.skip
+    def test_acc_net_external_input_vector(self):
+        raise(Exception('To be implemented'))
+
+    @unittest.skip
+    def test_acc_net_internal_flux_matrix(self):
+        raise(Exception('To be implemented'))
+    
+    @unittest.skip
+    def test_acc_net_external_output_vector(self) :
+        raise(Exception('To be implemented'))
 
 
 ################################################################################
 
 
 if __name__ == '__main__':
+    suite = unittest.defaultTestLoader.discover(".",pattern=__file__)
     unittest.main()
+
 
 
 

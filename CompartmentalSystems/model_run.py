@@ -142,8 +142,29 @@ def plot_stocks_and_fluxes(mrs, file_name, labels=None):
 class ModelRun(metaclass=ABCMeta):
     # abstractmehtods HAVE to be overloaded in the subclasses
     # the decorator should only be used inside a class definition
+
+    @abstractproperty
+    def nr_pools(self):
+        pass
+    
+    @abstractproperty
+    def dts(self):
+        pass
+    
     @abstractmethod
-    def solve(self,alternative_start_values:np.ndarray=None): 
+    def solve(self, alternative_start_values=None): 
+        """Solve the model and return a solution grid. If the solution has been 
+            computed previously (even by other methods) the cached result will
+            be returned.
+
+        Args:
+            alternative_start_values (numpy.array): If not given, 
+                the original start_values are used.
+
+        Returns:
+            numpy.ndarray: len(times) x nr_pools, contains the pool contents 
+            at the times given in the time grid.
+        """
         pass
     
     @abstractmethod
@@ -155,10 +176,6 @@ class ModelRun(metaclass=ABCMeta):
 
     @abstractmethod
     def acc_gross_internal_flux_matrix(self):
-        pass
-    
-    @abstractproperty
-    def dts(self):
         pass
     
     @abstractmethod
