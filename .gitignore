@@ -9,5 +9,6 @@ tests/bins/tmp/*
 *.pyc
 .tox/
 */.mypy_cache
-.ipynb
-
+*.ipynb
+/notebooks/PNAS/output_data_v1/*
+/notebooks/PNAS/output_data_v2/*

@@ -464,12 +464,8 @@ class SmoothModelRun(ModelRun):
             List of Python functions ``[f[i]]``, where ``f[i](t)`` returns 
                 pool i's content at time ``t``.
         """
-        times = self.times
-
-
-        #sol = self.solve()
         vec_sol_func = self.solve_func()
-        # the factorie is necessary to avoid untstrict evaluation
+        # the factory is necessary to avoid unstrict evaluation
         def func_maker(pool):
             def func(t):
                 return vec_sol_func(t)[pool]
