@@ -1,9 +1,8 @@
 # vim:set ff=unix expandtab ts=4 sw=4:
 from __future__ import division
-from typing import Callable,Iterable,Union,Optional,List,Tuple,Sequence
-
-from functools import lru_cache,reduce, _CacheInfo, _lru_cache_wrapper 
-import numpy as np 
+from typing import Callable, Tuple, Sequence
+from functools import lru_cache, _CacheInfo, _lru_cache_wrapper
+import numpy as np
 import matplotlib.pyplot as plt
 import inspect
 from collections import namedtuple
@@ -13,67 +12,70 @@ from scipy.interpolate import lagrange
 from scipy.optimize import brentq
 from scipy.stats import norm
 from string import Template
-from sympy import flatten, gcd, lambdify, DiracDelta, solve, Matrix,diff
+from sympy import gcd, lambdify, DiracDelta, solve, Matrix, diff
 from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
 from .BlockOde import BlockOde
-from .BlockIvp import BlockIvp
 from .myOdeResult import solve_ivp_pwc
-
-#from testinfrastructure.helpers import pe
 
 
 def warning(txt):
     print('############################################')
-    calling_frame=inspect.getouterframes(inspect.currentframe(),2)
-    func_name=calling_frame[1][3]
+    calling_frame = inspect.getouterframes(inspect.currentframe(), 2)
+    func_name = calling_frame[1][3]
     print("Warning in function {0}:".format(func_name))
     print(txt)
 
+
 def deprecation_warning(txt):
     print('############################################')
-    calling_frame=inspect.getouterframes(inspect.currentframe(),2)
-    func_name=calling_frame[1][3]
+    calling_frame = inspect.getouterframes(inspect.currentframe(), 2)
+    func_name = calling_frame[1][3]
     print("The function {0} is deprecated".format(func_name))
     print(txt)
 
-def flux_dict_string(d,indent=0):
-    s=""
-    for k,val in d.items():
-        s+=' '*indent+str(k)+": "+str(val)+"\n"
+
+def flux_dict_string(d, indent=0):
+    s = ""
+    for k, val in d.items():
+        s += ' '*indent+str(k)+": "+str(val)+"\n"
 
     return s
 
-def func_subs(t,Func_expr,func,t0):
+
+def func_subs(t, Func_expr, func, t0):
     """
-    returns the function part_func 
+    returns the function part_func
     where part_func(_,_,...) =func(_,t=t0,_..) (func partially applied to t0)
-    The position of argument t in the argument list is found 
+    The position of argument t in the argument list is found
     by examining the Func_expression argument.
-    Args: 
+    Args:
         t (sympy.symbol): the symbol to be replaced by t0
         t0 (value)      : the value to which the function will be applied
-        func (function) : a python function 
+        func (function) : a python function
         Func_exprs (sympy.Function) : An expression for an undefined Function
 
     """
-    assert(isinstance(type(Func_expr),UndefinedFunction))
-    pos=Func_expr.args.index(t)
+    assert(isinstance(type(Func_expr), UndefinedFunction))
+    pos = Func_expr.args.index(t)
+
     def frozen(*args):
-        #tuples are immutable
-        l=list(args)
-        l.insert(pos,t0)
-        new_args=tuple(l)
+        # tuples are immutable
+        L = list(args)
+        L.insert(pos, t0)
+        new_args = tuple(L)
         return func(*new_args)
     return frozen
 
-def jacobian(vec,state_vec):
+
+def jacobian(vec, state_vec):
     dim1 = vec.rows
     dim2 = state_vec.rows
-    return(Matrix(dim1,dim2,lambda i,j: diff(vec[i],state_vec[j])))
+    return Matrix(dim1, dim2, lambda i, j: diff(vec[i], state_vec[j]))
 
-#fixme: test
+
+# fixme: test
 def has_pw(expr):
     if expr.is_Matrix:
         for c in list(expr):
@@ -89,10 +91,10 @@ def has_pw(expr):
             return True
     return False
 
- 
+
 def is_DiracDelta(expr):
     """Check if expr is a Dirac delta function."""
-    if len(expr.args) != 1: 
+    if len(expr.args) != 1:
         return False
 
     arg = expr.args[0]
@@ -118,7 +120,7 @@ def parse_input_function(u_i, time_symbol):
                     dirac_arg = arg.args[0]
                     zeros = solve(dirac_arg)
                     imp_t += zeros
-    
+
                 if arg.is_Piecewise:
                     for pw_arg in arg.args:
                         cond = pw_arg[1]
@@ -126,7 +128,7 @@ def parse_input_function(u_i, time_symbol):
                             atoms = cond.args
                             zeros = solve(atoms[0] - atoms[1])
                             p += zeros
-                
+
                 rek(arg, imp_t, p)
 
     rek(u_i, impulse_times, pieces)
@@ -148,15 +150,16 @@ def factor_out_from_matrix(M):
     try:
         return gcd(list(M))
     except(PolynomialError):
-        #print('no factoring out possible')
-        #fixme: does not work if a function of X, t is in the expressios,
+        # print('no factoring out possible')
+        # fixme: does not work if a function of X, t is in the expressios,
         # we could make it work...if we really wanted to
         return 1
 
-def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
+
+def numerical_function_from_expression(expr, tup, parameter_dict, func_set):
     # the function returns a function that given numeric arguments
     # returns a numeric result.
-    # This is a more specific requirement than a function returned by lambdify 
+    # This is a more specific requirement than a function returned by lambdify
     # which can still return symbolic
     # results if the tuple argument to lambdify does not contain all free
     # symbols of the lambdified expression.
@@ -169,9 +172,9 @@ def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
         raise Exception("The free symbols of the expression: ${0} are not a subset of the symbols in the tuple argument:${1}".format(ss_expr,ss_tup))
 
     cut_func_set = make_cut_func_set(func_set)
-    #expr_par=expr.subs(parameter_dict)
+#    expr_par=expr.subs(parameter_dict)
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
-    
+
     def expr_func_safe_0_over_0(*val):
         with np.errstate(invalid='raise'):
             try:
@@ -181,29 +184,24 @@ def numerical_function_from_expression(expr,tup,parameter_dict:dict,func_set):
                     with np.errstate(invalid='ignore'):
                         res = expr_func(*val)
                         res = np.nan_to_num(res, copy=False)
-                        #print('FPE, iveids')
-                        #print('val', *val)
-                else:
-                    pass
-                    #print('FPE, no iveids')
-                    #print('val', *val)
-
         return res
 
     return expr_func_safe_0_over_0
 
+
 def numerical_rhs(
-         state_vector
-        ,time_symbol
-        ,rhs 
-        ,parameter_dict
-        ,func_dict):
+    state_vector,
+    time_symbol,
+    rhs ,
+    parameter_dict,
+    func_dict
+):
 
     FL = numerical_function_from_expression(
-            rhs
-            ,(time_symbol,)+tuple(state_vector)
-            ,parameter_dict
-            ,func_dict
+        rhs,
+        (time_symbol,)+tuple(state_vector),
+        parameter_dict,
+        func_dict
     )
     
     # 2.) Write a wrapper that transformes Matrices to numpy.ndarrays and accepts array instead of the separate arguments for the states)
@@ -287,21 +285,18 @@ def numsol_symbolic_system_old(
     return odeint(num_rhs, start_values, times, mxstep=10000)
 
 def numsol_symbolical_system(
-         state_vector
-        ,time_symbol
-        ,rhs
-#        ,parameter_dict
-#        ,func_set
-        ,parameter_dicts
-        ,func_dicts
-        ,start_values
-        ,times
-        #,dense_output
-        ,disc_times=()
+        state_vector,
+        time_symbol,
+        rhs,
+        parameter_dicts,
+        func_dicts,
+        start_values,
+        times,
+        disc_times=()
     ):
     nr_pools = len(state_vector)
-    t_min    = times[0]
-    t_max    = times[-1]
+    t_min = times[0]
+    t_max = times[-1]
 
     if times[0] == times[-1]: 
         return start_values.reshape((1, nr_pools))
@@ -318,16 +313,16 @@ def numsol_symbolical_system(
     )
 
     res = solve_ivp_pwc(
-        rhss          = num_rhss
-        ,t_span       = (t_min, t_max)
-        ,y0           = start_values
-        ,t_eval       = tuple(times)
-        ,disc_times   = disc_times
-        #,dense_output = dense_output
+        rhss=num_rhss,
+        t_span=(t_min, t_max),
+        y0=start_values,
+        t_eval=tuple(times),
+        disc_times=disc_times
     )
 
-    #adapt to the old interface since our code at the moment expects it
-    values = np.rollaxis(res.y,-1,0)
+    # adapt to the old ode_int interface 
+    # since our code at the moment expects it
+    values = np.rollaxis(res.y, -1, 0)
     return (values, res.sol)
 
 def arrange_subplots(n):
@@ -549,51 +544,68 @@ def const_of_t_maker(const):
     return const_arr_fun
 
 def x_phi_ode(
-        srm, 
-        parameter_dict, 
-        func_dict,
-        x_block_name='x',
-        phi_block_name='phi'
-    ):
+    srm, 
+    parameter_dicts, 
+    func_dicts,
+    x_block_name='x',
+    phi_block_name='phi',
+    disc_times=()
+):
     nr_pools = srm.nr_pools
-    sol_rhs = numerical_rhs(
-         srm.state_vector
-        ,srm.time_symbol
-        ,srm.F
-        ,parameter_dict
-        ,func_dict
-    )
-    
+
+    sol_rhss = []
+    for pd, fd in zip(parameter_dicts, func_dicts):
+        sol_rhs = numerical_rhs(
+            srm.state_vector,
+            srm.time_symbol,
+            srm.F,
+            pd,
+            fd
+        )
+        sol_rhss.append(sol_rhs)
+ 
     B_sym = srm.compartmental_matrix
-
     tup = (srm.time_symbol,) + tuple(srm.state_vector)
-    B_func_non_lin = numerical_function_from_expression(
-        B_sym,
-        tup,
-        parameter_dict,
-        func_dict
-    )
-    
-    def Phi_rhs(t, x, Phi_2d):
-        #print('B', B_func_non_lin(t, *x))
-        #print('Phi_2d', Phi_2d)
-        res = np.matmul(B_func_non_lin(t, *x), Phi_2d)
-        return res
 
-    #create the additional startvector for the components of Phi
+    B_funcs_non_lin = []
+    for pd, fd in zip(parameter_dicts, func_dicts):
+        B_func_non_lin = numerical_function_from_expression(
+            B_sym,
+            tup,
+            pd,
+            fd
+        )
+        B_funcs_non_lin.append(B_func_non_lin)
+
+    def Phi_rhs_maker(B_func_non_lin):
+        def Phi_rhs(t, x, Phi_2d):
+#            print('B', B_func_non_lin(t, *x))
+#            print('Phi_2d', Phi_2d)
+            res = np.matmul(B_func_non_lin(t, *x), Phi_2d)
+            return res
+        return Phi_rhs
     
-    return BlockOde(
-        time_str = srm.time_symbol.name
-        ,block_names_and_shapes = [
-            (x_block_name,(nr_pools,))
-            ,(phi_block_name,(nr_pools,nr_pools,))
+    Phi_rhss = []
+    for B_func_non_lin in B_funcs_non_lin:
+        Phi_rhss.append(Phi_rhs_maker(B_func_non_lin))
+
+    functionss = []
+    for sol_rhs, Phi_rhs in zip(sol_rhss, Phi_rhss):
+        functions = [
+            (sol_rhs, [srm.time_symbol.name, x_block_name]),
+            (Phi_rhs, [srm.time_symbol.name, x_block_name, phi_block_name])
         ]
-        ,functions = [
-             (sol_rhs,[srm.time_symbol.name,x_block_name])
-            ,(Phi_rhs,[srm.time_symbol.name,x_block_name,phi_block_name])
-         ]
-    )
+        functionss.append(functions)
 
+    return BlockOde(
+        time_str=srm.time_symbol.name,
+        block_names_and_shapes=[
+            (x_block_name, (nr_pools,)),
+            (phi_block_name, (nr_pools, nr_pools,))
+        ],
+        functionss=functionss,
+        disc_times=disc_times
+    )
 
 
 def integrate_array_func_for_nested_boundaries(
@@ -645,15 +657,15 @@ def array_quad_result(
     
 
 def array_integration_by_ode(
-        f:Callable[[float],np.ndarray]
-        ,a:float
-        ,b:float
-        ,*args
-        ,**kwargs
-    )->np.ndarray:
-    #    another integrator like array_quad_result
-    test=f(a)
-    n=len(test.flatten())
+    f: Callable[[float], np.ndarray],
+    a: float,
+    b: float,
+    *args,
+    **kwargs
+)->np.ndarray:
+    # another integrator like array_quad_result
+    test = f(a)
+    n = len(test.flatten())
     
     def rhs(tau,X):
         # although we do not need X we have to provide a 
@@ -661,15 +673,15 @@ def array_integration_by_ode(
 
         # avoid overshooting if the solver 
         # tries to look where the integrand might not be defined 
-        if tau<a or tau>b: 
+        if tau < a or tau > b: 
             return 0
         else:
             return f(tau).flatten()
     
     ys = solve_ivp_pwc(
-        fun     = rhs
-        ,y0     = np.zeros(n)
-        ,t_span = (a,b)
+        rhss=(rhs,),
+        y0=np.zeros(n),
+        t_span=(a,b)
     ).y
     val = ys[:,-1].reshape(test.shape)
     return val

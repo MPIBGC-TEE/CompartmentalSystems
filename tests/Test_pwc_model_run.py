@@ -127,18 +127,65 @@ class TestPWCModelRun(unittest.TestCase):
             )
         )
 
-    @unittest.skip
     def test_acc_net_external_input_vector(self):
-        raise(Exception('To be implemented'))
+        aneiv_smrs = [smr.acc_net_external_input_vector()
+                      for smr in self.smrs]
+        aneiv_ref = np.concatenate(aneiv_smrs, axis=0)
+        self.assertTrue(
+            np.allclose(
+                aneiv_ref,
+                self.pwc_mr.acc_net_external_input_vector()
+            )
+        )
 
-    @unittest.skip
     def test_acc_net_internal_flux_matrix(self):
-        raise(Exception('To be implemented'))
+        anifm_smrs = [smr.acc_net_internal_flux_matrix()
+                      for smr in self.smrs]
+        anifm_ref = np.concatenate(anifm_smrs, axis=0)
+        self.assertTrue(
+            np.allclose(
+                anifm_ref,
+                self.pwc_mr.acc_net_internal_flux_matrix()
+            )
+        )
 
-    @unittest.skip
     def test_acc_net_external_output_vector(self):
-        raise(Exception('To be implemented'))
+        aneov_smrs = [smr.acc_net_external_output_vector()
+                      for smr in self.smrs]
+        aneov_ref = np.concatenate(aneov_smrs, axis=0)
+        self.assertTrue(
+            np.allclose(
+                aneov_ref,
+                self.pwc_mr.acc_net_external_output_vector()
+            )
+        )
 
+    ###########################################################################
+
+    def test_fake_discretized_Bs(self):
+        Bs_smrs = [smr.fake_discretized_Bs()
+                   for smr in self.smrs]
+        Bs_ref = np.concatenate(Bs_smrs, axis=0)
+        self.assertTrue(
+            np.allclose(
+                Bs_ref,
+                self.pwc_mr.fake_discretized_Bs()
+            )
+        )
+
+        # test with cache
+        self.pwc_mr.initialize_state_transition_operator_cache(
+            100,
+            True,
+            4
+        )
+        self.assertTrue(
+            np.allclose(
+                Bs_ref,
+                self.pwc_mr.fake_discretized_Bs(),
+                rtol=1e-03
+            )
+        )
 
 ###############################################################################
 

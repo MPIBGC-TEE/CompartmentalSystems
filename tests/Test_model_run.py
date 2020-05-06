@@ -139,7 +139,7 @@ class TestModelRun(InDirTest):
            gross_Rs
         )
         meths = [
-            "solve"
+            "solve",
             "acc_gross_external_input_vector",
             "acc_net_external_input_vector",
             "acc_gross_external_output_vector",
@@ -157,7 +157,7 @@ class TestModelRun(InDirTest):
                 )
 
 #    @unittest.skip
-    def test_PWCRunFD(self):
+    def test_PWCModelRunFD(self):
         times = self.smr.times
         xs, gross_Us, gross_Fs, gross_Rs \
             = self.smr.fake_gross_discretized_output(times)

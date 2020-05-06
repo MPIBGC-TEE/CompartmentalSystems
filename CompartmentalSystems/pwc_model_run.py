@@ -1,8 +1,10 @@
 from numbers import Number
 import numpy as np
 from frozendict import frozendict
-from sympy import flatten, lambdify
+from sympy import flatten, lambdify, ImmutableMatrix
 from scipy.integrate import quad
+import hashlib
+import base64
 
 from .model_run import ModelRun
 from .helpers_reservoir import (
@@ -10,8 +12,15 @@ from .helpers_reservoir import (
     check_parameter_dict_complete,
     make_cut_func_set,
     f_of_t_maker,
-    const_of_t_maker
+    const_of_t_maker,
+    x_phi_ode,
+    net_Us_from_discrete_Bs_and_xs,
+    net_Fs_from_discrete_Bs_and_xs,
+    net_Rs_from_discrete_Bs_and_xs,
+    custom_lru_cache_wrapper,
+    phi_tmax
 )
+from .Cache import Cache
 
 
 class Error(Exception):
@@ -109,7 +118,6 @@ class PWCModelRun(ModelRun):
         return res
 
     def acc_gross_internal_flux_matrix(self, data_times=None):
-        pass
         times = self.times if data_times is None else data_times
         nt = len(times) - 1
         nr_pools = self.nr_pools
@@ -148,14 +156,36 @@ class PWCModelRun(ModelRun):
 
         return res
 
-    def acc_net_external_input_vector(self):
-        pass
+    def acc_net_external_input_vector(self, data_times=None):
+        if data_times is None:
+            data_times = self.times
 
-    def acc_net_internal_flux_matrix(self):
-        pass
+        x_func = self.solve_func()
+        xs = x_func(data_times)
+        Bs = self.fake_discretized_Bs(data_times)
 
-    def acc_net_external_output_vector(self):
-        pass
+        return net_Us_from_discrete_Bs_and_xs(Bs, xs)
+
+    def acc_net_internal_flux_matrix(self, data_times=None):
+        if data_times is None:
+            data_times = self.times
+
+        x_func = self.solve_func()
+        xs = x_func(data_times)
+
+        Bs = self.fake_discretized_Bs(data_times)
+
+        return net_Fs_from_discrete_Bs_and_xs(Bs, xs)
+
+    def acc_net_external_output_vector(self, data_times=None):
+        if data_times is None:
+            data_times = self.times
+
+        x_func = self.solve_func()
+        xs = x_func(data_times)
+        Bs = self.fake_discretized_Bs(data_times)
+
+        return net_Rs_from_discrete_Bs_and_xs(Bs, xs)
 
 ###############################################################################
 
@@ -363,3 +393,143 @@ class PWCModelRun(ModelRun):
             L.append(f.get(key, lambda t: 0))
 
         return self.join_functions_rc(L)
+
+    def fake_discretized_Bs(self, data_times=None):
+        if data_times is None:
+            data_times = self.times
+
+        nr_pools = self.nr_pools
+        ldt = len(data_times)-1
+        Bs = np.zeros((ldt, nr_pools, nr_pools))
+
+        for k in range(ldt):
+            Bs[k, :, :] = self.Phi(data_times[k+1], data_times[k])
+
+        return Bs
+
+    def Phi(self, T, S):
+        nr_pools = self.nr_pools
+        start_Phi_2d = np.identity(nr_pools)
+
+        if S > T:
+            raise(Error("Evaluation before S is not possible"))
+        if S == T:
+            return start_Phi_2d
+
+        solve_func = self.solve_func()
+        block_ode, x_block_name, phi_block_name = self._x_phi_block_ode()
+
+        if hasattr(self, '_state_transition_operator_cache'):
+            cache = self._state_transition_operator_cache
+            S_phi_ind = cache.phi_ind(S)
+            T_phi_ind = cache.phi_ind(T)
+            my_phi_tmax = cache._cached_phi_tmax
+
+            def phi(t, s, t_max):
+                x_s = tuple(solve_func(s))
+                return my_phi_tmax(
+                    s,
+                    t_max,
+                    block_ode,
+                    x_s,
+                    x_block_name,
+                    phi_block_name
+                )(t)
+            S_phi_ind = cache.phi_ind(S)
+            T_phi_ind = cache.phi_ind(T)
+
+            # catch the corner cases where the cache is useless.
+            if (T_phi_ind-S_phi_ind) < 1:
+                return phi(T, S, t_max=cache.end_time_from_phi_ind(T_phi_ind))
+            tm1 = cache.end_time_from_phi_ind(S_phi_ind)
+
+            # first integrate to tm1:
+            if tm1 != S:
+                phi_tm1_S = phi(tm1, S, tm1)
+            else:
+                phi_tm1_S = start_Phi_2d
+
+            phi_T_tm1 = phi(T, tm1, self.times[-1])
+            return np.matmul(phi_T_tm1, phi_tm1_S)
+
+        else:
+            def phi(t, s):
+                x_s = solve_func(s)
+                start_Phi_2d = np.identity(nr_pools)
+                start_blocks = [
+                    (x_block_name, x_s),
+                    (phi_block_name, start_Phi_2d)
+                ]
+                blivp = block_ode.blockIvp(start_blocks)
+
+                return blivp.block_solve(
+                    t_span=(s, t)
+                )[phi_block_name][-1, ...]
+
+            return phi(T, S)
+
+    def _x_phi_block_ode(self):
+        x_block_name = 'x'
+        phi_block_name = 'phi'
+        if not(hasattr(self, '_x_phi_block_ode_cache')):
+            block_ode = x_phi_ode(
+                self.model,
+                self.parameter_dicts,
+                self.func_dicts,
+                x_block_name,
+                phi_block_name,
+                disc_times=self.disc_times
+            )
+            self._x_phi_block_ode_cache = block_ode
+        return self._x_phi_block_ode_cache, x_block_name, phi_block_name
+
+    def initialize_state_transition_operator_cache(
+        self,
+        lru_maxsize,
+        lru_stats=False,
+        size=1
+    ):
+        custom_lru_cache = custom_lru_cache_wrapper(
+            maxsize=lru_maxsize,  # variable maxsize now for lru cache
+            typed=False,
+            stats=lru_stats  # use custom statistics feature
+        )
+
+        nr_pools = self.nr_pools
+        times = self.times
+        t_min = times[0]
+        t_max = times[-1]
+        cache_times = np.linspace(t_min, t_max, size+1)
+        ca = np.zeros((size, nr_pools, nr_pools))
+        cache = Cache(cache_times, ca, self.myhash())
+        cache._cached_phi_tmax = custom_lru_cache(phi_tmax)
+
+        self._state_transition_operator_cache = cache
+
+    def myhash(self):
+        """
+        Compute a hash considering SOME but NOT ALL properties of a
+        model run. The function's main use is to detect saved state transition
+        operator cashes that are no longer compatible with the model run object
+        that wants to use them. This check is useful but NOT COMPREHENSIVE.
+        """
+        times = self.times
+
+        def make_hash_sha256(o):
+            hasher = hashlib.sha256()
+#            hasher.update(repr(make_hashable(o)).encode())
+            hasher.update(repr(o).encode())
+            return base64.b64encode(hasher.digest()).decode()
+
+        return make_hash_sha256(
+            (
+                frozendict(self.model.input_fluxes),
+                frozendict(self.model.internal_fluxes),
+                frozendict(self.model.output_fluxes),
+                ImmutableMatrix(self.model.state_vector),
+                self.parameter_dicts,
+                self.start_values,
+                (times[0], times[-1]),
+                tuple(self.disc_times)
+            )
+        )

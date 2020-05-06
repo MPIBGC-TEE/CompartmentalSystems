@@ -3673,8 +3673,8 @@ class SmoothModelRun(ModelRun):
             
             block_ode = x_phi_ode(
                 self.model,
-                self.parameter_dict,
-                self.func_set,
+                (self.parameter_dict,),
+                (self.func_set,),
                 x_block_name,
                 phi_block_name
             )
@@ -4295,8 +4295,8 @@ class SmoothModelRun(ModelRun):
         return lambda T, S: self.Phi(T, S)
 
     def Phi(self, T, S):
-        nr_pools=self.nr_pools
-        start_Phi_2d=np.identity(nr_pools)
+        nr_pools = self.nr_pools
+        start_Phi_2d = np.identity(nr_pools)
         
         if S > T:
             raise(Error("Evaluation before S is not possible"))
@@ -4351,8 +4351,8 @@ class SmoothModelRun(ModelRun):
                     (phi_block_name, start_Phi_2d) 
                 ]
                 blivp = block_ode.blockIvp(start_blocks)
-                
-                return blivp.block_solve(t_span=(s, t))[phi_block_name][-1,...]
+                return blivp.block_solve(t_span=(s, t))[phi_block_name][-1, ...]
+            
             return phi(T, S)
 
     def fake_discretized_Bs(self, data_times=None): 
@@ -4375,8 +4375,6 @@ class SmoothModelRun(ModelRun):
         x_func = self.solve_func()
         xs = x_func(data_times)
 
-        nt = len(data_times)-1
-        nr_pools = self.nr_pools
         Bs = self.fake_discretized_Bs(data_times)
         
         return net_Fs_from_discrete_Bs_and_xs(Bs, xs)
@@ -4388,8 +4386,6 @@ class SmoothModelRun(ModelRun):
         x_func = self.solve_func()
         xs = x_func(data_times)
         
-        nt = len(data_times)-1
-        nr_pools = self.nr_pools
         Bs = self.fake_discretized_Bs(data_times)
         
         return net_Rs_from_discrete_Bs_and_xs(Bs, xs)
@@ -4401,10 +4397,7 @@ class SmoothModelRun(ModelRun):
         x_func = self.solve_func()
         xs = x_func(data_times)
         
-        nt = len(data_times)-1
-        nr_pools = self.nr_pools
         Bs = self.fake_discretized_Bs(data_times)
-        
         return net_Us_from_discrete_Bs_and_xs(Bs, xs)
     
     def fake_net_discretized_output(self, data_times):
