@@ -56,6 +56,7 @@ class PWCModelRun(ModelRun):
                 pd,
                 fd
             )
+
             if free_symbols != set():
                 raise(
                     Error(

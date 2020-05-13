@@ -328,8 +328,9 @@ It gave up for the following expression: ${e}."""
                 internal_fluxes[(pool_from, pool_to)] = flux
         
         # call the standard constructor 
-        srm = cls(state_vector, time_symbol,
+        srm = SmoothReservoirModel(state_vector, time_symbol,
                   input_fluxes, output_fluxes, internal_fluxes)
+        
         return srm
 
     @property
@@ -759,74 +760,78 @@ It gave up for the following expression: ${e}."""
     ##### 14C methods #####
 
 
-    def to_14C_only(self, decay_symbol_name, Fa_expr_name):
-        """Construct and return a :class:`SmoothReservoirModel` instance that
-           models the 14C component of the original model.
-    
-        Args:
-            decay_symbol_name (str): The name of the 14C decay rate symbol.
-            Fa_expr_name(str): The name of the symbol to be used for the
-                atmospheric C14 fraction function.
-        Returns:
-            :class:`SmoothReservoirModel`
-        """
-        state_vector_14C = Matrix(
-            self.nr_pools,
-            1,
-            [Symbol(sv.name+'_14C') for sv in self.state_vector])
-        decay_symbol = Symbol(decay_symbol_name)
-        B_14C = copy(self.compartmental_matrix) - decay_symbol*eye(self.nr_pools)
-        u = self.external_inputs
-        Fa_expr = Function(Fa_expr_name)(self.time_symbol)
-        u_14C = Matrix(self.nr_pools, 1, [expr*Fa_expr for expr in u])
-
-        srm_14C = SmoothReservoirModel.from_B_u(
-            state_vector_14C,
-            self.time_symbol,
-            B_14C,
-            u_14C)
-
-        return srm_14C
-
-    def to_14C_explicit(self, decay_symbol_name, Fa_expr_name):
-        """Construct and return a :class:`SmoothReservoirModel` instance that
-           models the 14C component additional to the original model.
-    
-        Args:
-            decay_symbol_name (str): The name of the 14C decay rate symbol.
-            Fa_expr_name(str): The name of the symbol to be used for the
-                atmospheric C14 fraction function.
-        Returns:
-            :class:`SmoothReservoirModel`
-        """
-        state_vector = self.state_vector
-        B, u = self.compartmental_matrix, self.external_inputs
-        srm_14C = self.to_14C_only(decay_symbol_name, Fa_expr_name)
-        state_vector_14C = srm_14C.state_vector
-        B_C14 = srm_14C.compartmental_matrix
-        u_14C = srm_14C.external_inputs
-
-        nr_pools = self.nr_pools
-
-        state_vector_total = Matrix(nr_pools*2, 1, [1]*(nr_pools*2))
-        state_vector_total[:nr_pools,0] = state_vector
-        state_vector_total[nr_pools:,0] = state_vector_14C
-        
-        B_total = eye(nr_pools*2)
-        B_total[:nr_pools, :nr_pools] = B
-        B_total[nr_pools:, nr_pools:] = B_C14
-
-        u_total = Matrix(nr_pools*2, 1, [1]*(nr_pools*2))
-        u_total[:nr_pools,0] = u
-        u_total[nr_pools:,0] = u_14C
-
-        srm_total = SmoothReservoirModel.from_B_u(
-            state_vector_total,
-            self.time_symbol,
-            B_total,
-            u_total)
-
-        return srm_total
+#    def to_14C_only(self, decay_symbol_name, Fa_expr_name):
+#        """Construct and return a :class:`SmoothReservoirModel` instance that
+#           models the 14C component of the original model.
+#    
+#        Args:
+#            decay_symbol_name (str): The name of the 14C decay rate symbol.
+#            Fa_expr_name(str): The name of the symbol to be used for the
+#                atmospheric C14 fraction function.
+#        Returns:
+#            :class:`SmoothReservoirModel`
+#        """
+##        state_vector_14C = Matrix(
+##            self.nr_pools,
+##            1,
+##            [Symbol(sv.name+'_14C') for sv in self.state_vector]
+##        )
+#        state_vector_14C = self.state_vector
+#
+#        decay_symbol = Symbol(decay_symbol_name)
+#        B_14C = copy(self.compartmental_matrix) - decay_symbol*eye(self.nr_pools)
+#        u = self.external_inputs
+#        Fa_expr = Function(Fa_expr_name)(self.time_symbol)
+#        u_14C = Matrix(self.nr_pools, 1, [expr*Fa_expr for expr in u])
+#
+#        srm_14C = SmoothReservoirModel.from_B_u(
+#            state_vector_14C,
+#            self.time_symbol,
+#            B_14C,
+#            u_14C
+#        )
+#
+#        return srm_14C
+#
+#    def to_14C_explicit(self, decay_symbol_name, Fa_expr_name):
+#        """Construct and return a :class:`SmoothReservoirModel` instance that
+#           models the 14C component additional to the original model.
+#    
+#        Args:
+#            decay_symbol_name (str): The name of the 14C decay rate symbol.
+#            Fa_expr_name(str): The name of the symbol to be used for the
+#                atmospheric C14 fraction function.
+#        Returns:
+#            :class:`SmoothReservoirModel`
+#        """
+#        state_vector = self.state_vector
+#        B, u = self.compartmental_matrix, self.external_inputs
+#        srm_14C = self.to_14C_only(decay_symbol_name, Fa_expr_name)
+#        state_vector_14C = srm_14C.state_vector
+#        B_C14 = srm_14C.compartmental_matrix
+#        u_14C = srm_14C.external_inputs
+#
+#        nr_pools = self.nr_pools
+#
+#        state_vector_total = Matrix(nr_pools*2, 1, [1]*(nr_pools*2))
+#        state_vector_total[:nr_pools,0] = state_vector
+#        state_vector_total[nr_pools:,0] = state_vector_14C
+#        
+#        B_total = eye(nr_pools*2)
+#        B_total[:nr_pools, :nr_pools] = B
+#        B_total[nr_pools:, nr_pools:] = B_C14
+#
+#        u_total = Matrix(nr_pools*2, 1, [1]*(nr_pools*2))
+#        u_total[:nr_pools,0] = u
+#        u_total[nr_pools:,0] = u_14C
+#
+#        srm_total = SmoothReservoirModel.from_B_u(
+#            state_vector_total,
+#            self.time_symbol,
+#            B_total,
+#            u_total)
+#
+#        return srm_total
         
     def steady_states(self, par_set = None):
         if par_set is None:

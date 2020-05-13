@@ -126,7 +126,7 @@ class TimeStepIterator:
 
         obj.external_death_rate_funcs=dict()
         solfs=mr.sol_funcs()
-        for sender,func in mr.output_flux_funcs().items():
+        for sender,func in mr.external_output_flux_funcs().items():
             obj.external_death_rate_funcs[sender]=external_death_rate_maker(sender,func,solfs)
             
         ## produce the internal deathrate functions

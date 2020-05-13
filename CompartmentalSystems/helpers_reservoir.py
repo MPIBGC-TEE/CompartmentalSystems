@@ -866,18 +866,21 @@ def net_Fs_from_discrete_Bs_and_xs(Bs, xs):
         for j in range(nr_pools):
             for i in range(nr_pools):
                 if i != j:
-                    net_Fs[k,i,j] = Bs[k,i,j] * xs[k,j]
+                    net_Fs[k, i, j] = Bs[k, i, j] * xs[k, j]
 
     return net_Fs
 
-def net_Rs_from_discrete_Bs_and_xs(Bs, xs):
+def net_Rs_from_discrete_Bs_and_xs(Bs, xs, decay_corr=None):
     nr_pools = xs.shape[1]
     nt = len(Bs)
+
+    if decay_corr is None:
+        decay_corr = np.ones((nt,))
 
     net_Rs = np.zeros((nt, nr_pools))
     for k in range(nt):
         for j in range(nr_pools):
-             net_Rs[k,j] = (1-sum(Bs[k,:,j])) * xs[k,j]
+            net_Rs[k, j] = (1-sum(Bs[k, :, j])*decay_corr[k]) * xs[k, j]
 
     return net_Rs
 

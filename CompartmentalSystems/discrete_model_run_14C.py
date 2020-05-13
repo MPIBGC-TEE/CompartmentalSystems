@@ -14,6 +14,9 @@ class DiscreteModelRun_14C(DiscreteModelRun):
         Bs = self.Bs
         dts = self.dts
         decay_rate = self.decay_rate
+
+        # this computation seems to be wrong!
+        # see helpers_reservoir.net_Rs_from_discrete_Bs_and_xs
         rho = np.array([(1-Bs[k].sum(0).reshape((n,))) 
                           * np.exp(-decay_rate*dts[k]) for k in range(len(Bs))])
         soln = self.solve()
@@ -22,21 +25,3 @@ class DiscreteModelRun_14C(DiscreteModelRun):
         return r
 
 
-#    def solve(self):
-#        if not hasattr(self, 'soln2'):
-#            dts = self.dts
-#            decay_rate = self.decay_rate
-#            start_values = self.start_values
-#            soln2 = [start_values]
-#            for k in range(len(self.times)-1):
-#                x_new = soln2[k].copy()
-#                #x_new = x_new + self.net_Us[k]
-#                B = self.Bs[k] * np.exp(decay_rate*dts[k])
-#                x_new = B @ x_new + self.net_Us[k]
-#                x_new = x_new * np.exp(-decay_rate*dts[k])
-#                soln2.append(x_new)
-#    
-#            self.soln2 = np.array(soln2)        
-#
-#        return self.soln2
-#        

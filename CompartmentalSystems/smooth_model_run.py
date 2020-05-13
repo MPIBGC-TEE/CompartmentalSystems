@@ -513,7 +513,7 @@ class SmoothModelRun(ModelRun):
         """
         return self._flux_funcs(self.model.internal_fluxes)
 
-    def output_flux_funcs(self):
+    def external_output_flux_funcs(self):
         """Return a dictionary of the external output fluxes.
         
 
@@ -534,7 +534,7 @@ class SmoothModelRun(ModelRun):
         nt = len(times)-1
         res = np.zeros((nt,self.nr_pools))
         for k in range(nt):
-            for pool_nr, func in self.output_flux_funcs().items():
+            for pool_nr, func in self.external_output_flux_funcs().items():
                 res[k,pool_nr] = quad(func,times[k],times[k+1])[0]
         
         return res
@@ -551,7 +551,7 @@ class SmoothModelRun(ModelRun):
             time ``t``.
         """
         res = np.zeros((self.nr_pools,))
-        for key, value in self.output_flux_funcs().items():
+        for key, value in self.external_output_flux_funcs().items():
             res[key] = value(t)
 
         return res
@@ -1993,7 +1993,7 @@ class SmoothModelRun(ModelRun):
             Instead ``fig`` is changed in place.
         """
         times = self.times
-        output_flux_funcs = self.output_flux_funcs()
+        output_flux_funcs = self.external_output_flux_funcs()
         n = len(output_flux_funcs.keys())
         
         i = 1

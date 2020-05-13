@@ -24,16 +24,26 @@ class DMRError(Exception):
 
 
 class DiscreteModelRunWithGrossFluxes(DiscreteModelRun, ModelRun):
-    def __init__(self, times, Bs, xs, gross_Us, gross_Fs, gross_Rs):
+    def __init__(
+        self,
+        times,
+        Bs,
+        xs,
+        gross_Us,
+        gross_Fs,
+        gross_Rs
+    ):
         """
-        Note: The net_Us, net_Fs and net_Rs can be computed from the solution and the Bs but there
-        is no way to guess the gross fluxes (gross_Us, gross_Fs, gross_Rs)  
-        without assumptions about the state transition operator in the         intervals induced by the times argument. 
-        Therefore we have to provide gross fluxes separately if we want to be able to return them later as the other ModelRun sub classes.
+        Note: The net_Us, net_Fs and net_Rs can be computed from the solution
+        and the Bs but there is no way to guess the gross fluxes
+        (gross_Us, gross_Fs, gross_Rs) without assumptions about the state
+        transition operator in the intervals induced by the times argument. 
+        Therefore, we have to provide gross fluxes separately if we want to
+        be able to return them later as the other ModelRun sub classes.
 
-        gross_Us accumulated influxes (flux u integrated over the time step)
-        gross_Fs accumulated internal fluxes (fluxes F_ij integrated over the time step)
-
+        gross_Us accumulated influxes (flux u_i integrated over the time step)
+        gross_Fs accumulated internal fluxes (fluxes F_ij integrated over the
+            time step)
         gross_Rs accumulated outfluxes (flux r integrated over the time step)
         Bs State transition operators for one time step
         """
@@ -44,13 +54,13 @@ class DiscreteModelRunWithGrossFluxes(DiscreteModelRun, ModelRun):
         self.gross_Fs = gross_Fs
         self.gross_Rs = gross_Rs
 
-        # we use the initialization of the superclass 
+        # we use the initialization of the superclass
         # (wich automatically creates an object of the correct sub
         # class, because the sub classes new method is (invisibly)
-        # called before) 
-        #super().__init__(times, Bs, xs)
-        #self.gross_Us = gross_Us
-   
+        # called before)
+        # super().__init__(times, Bs, xs)
+        # self.gross_Us = gross_Us
+
     def acc_gross_external_input_vector(self):
         return self.gross_Us
 
@@ -61,10 +71,10 @@ class DiscreteModelRunWithGrossFluxes(DiscreteModelRun, ModelRun):
         return self.gross_Rs
 
     @classmethod
-    def from_SmoothModelRun(cls, smr, data_times=None): 
+    def from_SmoothModelRun(cls, smr, data_times=None):
         if data_times is None:
             data_times = smr.times
-       
+
         f_solve = smr.solve_func()
         xs = f_solve(data_times)
         return cls(
@@ -77,17 +87,31 @@ class DiscreteModelRunWithGrossFluxes(DiscreteModelRun, ModelRun):
         )
 
     @classmethod
-    def reconstruct_from_fluxes_and_solution(cls, data_times, xs, net_Us, net_Fs, net_Rs, gross_Us, gross_Fs, gross_Rs):
+    def reconstruct_from_fluxes_and_solution(
+        cls,
+        data_times,
+        xs,
+        net_Us,
+        net_Fs,
+        net_Rs,
+        gross_Us,
+        gross_Fs,
+        gross_Rs
+    ):
         Bs = cls.reconstruct_Bs(xs, net_Fs, net_Rs)
         dmr = cls(data_times, Bs, xs, gross_Us, gross_Fs, gross_Rs)
-        
+
         return dmr
 
     def acc_external_input_vector(self):
         return self.gross_Us
 
-
-    def to_14C_only(self, start_values_14C, us_14C, decay_rate=0.0001209681):
+    def to_14C_only(
+        self,
+        start_values_14C,
+        us_14C,
+        decay_rate=0.0001209681
+    ):
         times_14C = self.times
 
         Bs = self.Bs
@@ -97,7 +121,7 @@ class DiscreteModelRunWithGrossFluxes(DiscreteModelRun, ModelRun):
         for k in range(len(Bs)):
             # there seems to be no difference
             Bs_14C[k] = Bs[k] * np.exp(-decay_rate*dts[k])
-            #Bs_14C[k] = Bs[k] * (1.0-decay_rate*dts[k])
+#            Bs_14C[k] = Bs[k] * (1.0-decay_rate*dts[k])
 
         dmr_14C = DiscreteModelRun_14C(
             start_values_14C,
@@ -107,4 +131,3 @@ class DiscreteModelRunWithGrossFluxes(DiscreteModelRun, ModelRun):
             decay_rate)
 
         return dmr_14C
-
