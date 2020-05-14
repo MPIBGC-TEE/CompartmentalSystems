@@ -13,7 +13,6 @@ Counting of compartment/pool/reservoir numbers starts at zero and the
 total number of pools is :math:`d`.
 """
 
-from __future__ import division
 
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt

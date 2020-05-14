@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # vim:set ff=unix expandtab ts=4 sw=4:
 
-import unittest
+# import unittest
 import numpy as np
 from sympy import sin, symbols, Matrix
 

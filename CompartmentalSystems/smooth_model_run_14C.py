@@ -68,6 +68,7 @@ class SmoothModelRun_14C(SmoothModelRun):
             smr.times,
             func_dict_14C,
         )
+        self.Fa_func = Fa_func
         self.decay_rate = decay_rate
 
     def acc_gross_external_output_vector(self, data_times=None):

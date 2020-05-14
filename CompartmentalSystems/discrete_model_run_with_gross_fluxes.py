@@ -1,18 +1,8 @@
-import numpy as np
-
-from numpy.linalg import matrix_power, pinv
-from scipy.linalg import inv
-from scipy.special import factorial, binom
-from sympy import Matrix
-
-from tqdm import tqdm
-
-from . import picklegzip
 from .model_run import ModelRun
 from .discrete_model_run import DiscreteModelRun
 
 
-################################################################################
+###############################################################################
 
 
 class DMRError(Exception):
@@ -20,7 +10,7 @@ class DMRError(Exception):
     pass
 
 
-################################################################################
+###############################################################################
 
 
 class DiscreteModelRunWithGrossFluxes(DiscreteModelRun, ModelRun):
@@ -37,7 +27,7 @@ class DiscreteModelRunWithGrossFluxes(DiscreteModelRun, ModelRun):
         Note: The net_Us, net_Fs and net_Rs can be computed from the solution
         and the Bs but there is no way to guess the gross fluxes
         (gross_Us, gross_Fs, gross_Rs) without assumptions about the state
-        transition operator in the intervals induced by the times argument. 
+        transition operator in the intervals induced by the times argument.
         Therefore, we have to provide gross fluxes separately if we want to
         be able to return them later as the other ModelRun sub classes.
 
@@ -106,28 +96,27 @@ class DiscreteModelRunWithGrossFluxes(DiscreteModelRun, ModelRun):
     def acc_external_input_vector(self):
         return self.gross_Us
 
-    def to_14C_only(
-        self,
-        start_values_14C,
-        us_14C,
-        decay_rate=0.0001209681
-    ):
-        times_14C = self.times
-
-        Bs = self.Bs
-        dts = self.dts
-
-        Bs_14C = np.zeros_like(Bs)
-        for k in range(len(Bs)):
-            # there seems to be no difference
-            Bs_14C[k] = Bs[k] * np.exp(-decay_rate*dts[k])
-#            Bs_14C[k] = Bs[k] * (1.0-decay_rate*dts[k])
-
-        dmr_14C = DiscreteModelRun_14C(
-            start_values_14C,
-            times_14C,
-            Bs_14C,
-            us_14C,
-            decay_rate)
-
-        return dmr_14C
+#    def to_14C_only(
+#        self,
+#        start_values_14C,
+#        us_14C,
+#        decay_rate=0.0001209681
+#    ):
+#        times_14C = self.times
+#
+#        Bs = self.Bs
+#        dts = self.dts
+#
+#        Bs_14C = np.zeros_like(Bs)
+#        for k in range(len(Bs)):
+#            # there seems to be no difference
+#            Bs_14C[k] = Bs[k] * np.exp(-decay_rate*dts[k])
+#
+#        dmr_14C = DiscreteModelRun_14C(
+#            start_values_14C,
+#            times_14C,
+#            Bs_14C,
+#            us_14C,
+#            decay_rate)
+#
+#        return dmr_14C
