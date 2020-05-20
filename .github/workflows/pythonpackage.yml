@@ -39,4 +39,5 @@ jobs:
       run: |
         #pytest
         cd tests
-        python -m unittest discover -t . -p 'Test*'
+        #python -m unittest discover -t . -p 'Test*'
+        python run_tests_serial.py
