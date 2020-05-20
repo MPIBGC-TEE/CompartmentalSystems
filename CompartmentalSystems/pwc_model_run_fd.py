@@ -11,6 +11,7 @@ from .pwc_model_run import PWCModelRun
 from .smooth_reservoir_model import SmoothReservoirModel
 from .myOdeResult import solve_ivp_pwc
 
+
 ###############################################################################
 
 
@@ -39,7 +40,7 @@ class PWCModelRunFD(ModelRun):
 
         print('reconstructing us')
 #        us = cls.reconstruct_us(data_times, gross_Us)
-#       self.dts = np.diff(self.data_times).astype(np.float64)
+#        self.dts = np.diff(self.data_times).astype(np.float64)
         us = gross_Us / self.dts.reshape(-1, 1)
 
         print('reconstructing Bs')
@@ -576,15 +577,3 @@ class PWCModelRunFD(ModelRun):
 ##        B, u = pars_to_B_and_u(y.x)
 ##        return B, u
 #
-
-    ########## 14C methods #########
-
-    def to_14C_only(self, start_values_14C, Fa_func, decay_rate=0.0001209681):
-        pwc_mr_fd_14C = self.pwc_mr.to_14C_only(
-            start_values_14C,
-            Fa_func,
-#            disc_times=self.data_times,
-            decay_rate=decay_rate
-        )
-
-        return pwc_mr_fd_14C
