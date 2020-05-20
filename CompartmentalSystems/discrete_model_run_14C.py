@@ -3,7 +3,8 @@ import numpy as np
 from .discrete_model_run import DiscreteModelRun
 from .helpers_reservoir import (
     net_Rs_from_discrete_Bs_and_xs,
-    F_Delta_14C
+    F_Delta_14C,
+    DECAY_RATE_14C_DAILY
 )
 
 
@@ -31,7 +32,7 @@ class DiscreteModelRun_14C(DiscreteModelRun):
         start_values_14C,
         # Fa_func,
         net_Us_14C,
-        decay_rate=0.0001209681
+        decay_rate=DECAY_RATE_14C_DAILY
     ):
 
         # compute Bs_14C

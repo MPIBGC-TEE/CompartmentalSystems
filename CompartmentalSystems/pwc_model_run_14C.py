@@ -8,7 +8,8 @@ from .smooth_reservoir_model_14C import SmoothReservoirModel_14C
 from .pwc_model_run import PWCModelRun
 from .helpers_reservoir import (
     net_Rs_from_discrete_Bs_and_xs,
-    F_Delta_14C
+    F_Delta_14C,
+    DECAY_RATE_14C_DAILY
 )
 
 
@@ -35,7 +36,7 @@ class PWCModelRun_14C(PWCModelRun):
         pwc_mr,
         start_values_14C,
         Fa_func,
-        decay_rate=0.0001209681
+        decay_rate=DECAY_RATE_14C_DAILY
     ):
         """Construct and return a :class:`PWCModelRun_14C` instance that
            models the 14C component of the original model run.
