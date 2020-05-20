@@ -14,7 +14,7 @@ class BlockIvp:
         cls,
         time_str: str,
         start_blocks: List[Tuple[str, np.ndarray]],
-#        functions: List[Tuple[Callable, List[str]]],
+#        functions: List[Tuple[Callable, List[str]]],  # noqa
         functionss: List[List[Tuple[Callable, List[str]]]]
     ) -> Callable[[np.double, np.ndarray], np.ndarray]:
         """
@@ -87,13 +87,13 @@ class BlockIvp:
         # dimensions of the blocks
 #        indices = np.array([0] + [sum(sizes[:(i+1)]) for i in range(nb)])
         indices = [0] + [sum(sizes[:(i+1)]) for i in range(nb)]
-        
+
         def rhs_wrapper(functions):
             strArgLists = [f[1] for f in functions]
             # make sure that all argument lists are really lists
             assert(all([isinstance(l, list) for l in strArgLists]))
-            # make sure that the function argument lists do not contain block names
-            # that are not mentioned in the Xblocks argument
+            # make sure that the function argument lists do not contain
+            # block names that are not mentioned in the Xblocks argument
             flatArgList = [arg for argList in strArgLists for arg in argList]
             assert(set(flatArgList).issubset(block_names+[time_str]))
 

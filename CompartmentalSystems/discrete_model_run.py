@@ -526,7 +526,7 @@ class DiscreteModelRun():
 #        for k in range(len(Bs)):
 #            # there seems to be no difference
 #            Bs_14C[k] = Bs[k] * np.exp(-decay_rate*dts[k])
-##            Bs_14C[k] = Bs[k] * (1.0-decay_rate*dts[k])
+##            Bs_14C[k] = Bs[k] * (1.0-decay_rate*dts[k])  ## noqa
 #
 #        dmr_14C = DiscreteModelRun_14C(
 #            start_values_14C,
