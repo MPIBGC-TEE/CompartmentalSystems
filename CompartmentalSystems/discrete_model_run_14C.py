@@ -1,7 +1,10 @@
 import numpy as np
 
 from .discrete_model_run import DiscreteModelRun
-from .helpers_reservoir import net_Rs_from_discrete_Bs_and_xs
+from .helpers_reservoir import (
+    net_Rs_from_discrete_Bs_and_xs,
+    F_Delta_14C
+)
 
 
 class Error(Exception):
@@ -54,6 +57,8 @@ class DiscreteModelRun_14C(DiscreteModelRun):
             xs_14C
         )
         # self.Fa_func = Fa_func
+
+        self.dmr = dmr
         self.decay_rate = decay_rate
 
     def acc_net_external_output_vector(self):
@@ -62,6 +67,41 @@ class DiscreteModelRun_14C(DiscreteModelRun):
             self.Bs,
             self.xs,
             decay_corr=decay_corr
+        )
+
+    # Delta 14C methods
+
+    def solve_Delta_14C(self, alpha=None):
+        return F_Delta_14C(self.dmr.solve(), self.solve(), alpha)
+
+    def acc_net_external_input_vector_Delta_14C(
+        self,
+        alpha=None
+    ):
+        return F_Delta_14C(
+            self.dmr.acc_net_external_input_vector(),
+            self.acc_net_external_input_vector(),
+            alpha
+        )
+
+    def acc_net_external_output_vector_Delta_14C(
+        self,
+        alpha=None
+    ):
+        return F_Delta_14C(
+            self.dmr.acc_net_external_output_vector(),
+            self.acc_net_external_output_vector(),
+            alpha
+        )
+
+    def acc_net_internal_flux_matrix_Delta_14C(
+        self,
+        alpha=None
+    ):
+        return F_Delta_14C(
+            self.dmr.acc_net_internal_flux_matrix(),
+            self.acc_net_internal_flux_matrix(),
+            alpha
         )
 
 ###############################################################################

@@ -6,7 +6,10 @@ from scipy.integrate import quad
 
 from .smooth_reservoir_model_14C import SmoothReservoirModel_14C
 from .pwc_model_run import PWCModelRun
-from .helpers_reservoir import net_Rs_from_discrete_Bs_and_xs
+from .helpers_reservoir import (
+    net_Rs_from_discrete_Bs_and_xs,
+    F_Delta_14C
+)
 
 
 def pfile_C14Atm_NH():
@@ -88,6 +91,8 @@ class PWCModelRun_14C(PWCModelRun):
             pwc_mr.disc_times,
             func_dicts_14C,
         )
+
+        self.pwc_mr = pwc_mr
         self.Fa_func = Fa_func
         self.decay_rate = decay_rate
 
@@ -124,6 +129,78 @@ class PWCModelRun_14C(PWCModelRun):
             xs,
             decay_corr=decay_corr
         )
+
+    # Delta 14C methods
+
+    def solve_Delta_14C(self, alpha=None):
+        return F_Delta_14C(self.pwc_mr.solve(), self.solve(), alpha)
+
+    def acc_gross_external_input_vector_Delta_14C(
+        self,
+        data_times=None,
+        alpha=None
+    ):
+        return F_Delta_14C(
+            self.pwc_mr.acc_gross_external_input_vector(data_times),
+            self.acc_gross_external_input_vector(data_times),
+            alpha
+        )
+
+    def acc_net_external_input_vector_Delta_14C(
+        self,
+        data_times=None,
+        alpha=None
+    ):
+        return F_Delta_14C(
+            self.pwc_mr.acc_net_external_input_vector(data_times),
+            self.acc_net_external_input_vector(data_times),
+            alpha
+        )
+
+    def acc_gross_external_output_vector_Delta_14C(
+        self,
+        data_times=None,
+        alpha=None
+    ):
+        return F_Delta_14C(
+            self.pwc_mr.acc_gross_external_output_vector(data_times),
+            self.acc_gross_external_output_vector(data_times),
+            alpha
+        )
+
+    def acc_net_external_output_vector_Delta_14C(
+        self,
+        data_times=None,
+        alpha=None
+    ):
+        return F_Delta_14C(
+            self.pwc_mr.acc_net_external_output_vector(data_times),
+            self.acc_net_external_output_vector(data_times),
+            alpha
+        )
+
+    def acc_gross_internal_flux_matrix_Delta_14C(
+        self,
+        data_times=None,
+        alpha=None
+    ):
+        return F_Delta_14C(
+            self.pwc_mr.acc_gross_internal_flux_matrix(data_times),
+            self.acc_gross_internal_flux_matrix(data_times),
+            alpha
+        )
+
+    def acc_net_internal_flux_matrix_Delta_14C(
+        self,
+        data_times=None,
+        alpha=None
+    ):
+        return F_Delta_14C(
+            self.pwc_mr.acc_net_internal_flux_matrix(data_times),
+            self.acc_net_internal_flux_matrix(data_times),
+            alpha
+        )
+
 
 ###############################################################################
 

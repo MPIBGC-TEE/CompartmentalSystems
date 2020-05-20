@@ -20,6 +20,10 @@ from .BlockOde import BlockOde
 from .myOdeResult import solve_ivp_pwc
 
 
+ALPHA_14C = 1.18e-12
+DECAY_RATE_14C_DAILY = 0.0001209681
+
+
 def warning(txt):
     print('############################################')
     calling_frame = inspect.getouterframes(inspect.currentframe(), 2)
@@ -926,3 +930,12 @@ def check_parameter_dict_complete(model, parameter_dict, func_set):
     free_names = free_names - func_names
 
     return free_names
+
+
+def F_Delta_14C(C12, C14, alpha=None):
+    if alpha is None:
+        alpha = ALPHA_14C
+
+    C12[C12 == 0] = np.nan
+    return (C14/C12/alpha - 1) * 1000
+

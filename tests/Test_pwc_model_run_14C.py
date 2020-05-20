@@ -10,7 +10,7 @@ from CompartmentalSystems.smooth_model_run_14C import SmoothModelRun_14C
 from CompartmentalSystems.pwc_model_run_14C import PWCModelRun_14C
 
 
-class TestPWCModelRun(unittest.TestCase):
+class TestPWCModelRun_14C(unittest.TestCase):
 
     def setUp(self):
         x, y, t, k = symbols("x y t k")
@@ -44,11 +44,11 @@ class TestPWCModelRun(unittest.TestCase):
             func_dicts
         )
 
-        alpha = 1e-12
-        start_values_14C = start_values * alpha
+        self.alpha = 0.5
+        start_values_14C = start_values * self.alpha
 
-        def Fa_func(t): return alpha
-        decay_rate = 0.5
+        def Fa_func(t): return self.alpha
+        decay_rate = 1.0
 
         self.pwc_mr_14C = PWCModelRun_14C(
             pwc_mr,
@@ -63,15 +63,17 @@ class TestPWCModelRun(unittest.TestCase):
         ]
 
         smrs_14C = []
+        tmp_start_values = start_values
         tmp_start_values_14C = start_values_14C
         for i in range(len(disc_times)+1):
             smr = SmoothModelRun(
                 self.srm,
                 parameter_dict=parameter_dicts[i],
-                start_values=tmp_start_values_14C,
+                start_values=tmp_start_values,
                 times=timess[i],
                 func_set=func_dicts[i]
             )
+            tmp_start_values = smr.solve()[-1]
 
             smrs_14C.append(
                 SmoothModelRun_14C(
@@ -84,6 +86,19 @@ class TestPWCModelRun(unittest.TestCase):
             tmp_start_values_14C = smrs_14C[i].solve()[-1]
 
         self.smrs_14C = smrs_14C
+
+    def test_solve(self):
+        soln_smrs_14C = [smr_14C.solve() for smr_14C in self.smrs_14C]
+        L = [soln[:-1] for soln in soln_smrs_14C[:-1]]
+        L += [soln_smrs_14C[-1]]
+        soln_14C_ref = np.concatenate(L, axis=0)
+
+        self.assertTrue(
+            np.allclose(
+                soln_14C_ref,
+                self.pwc_mr_14C.solve()
+            )
+        )
 
     def test_acc_gross_external_output_vector(self):
         ageov_smrs_14C = [smr_14C.acc_gross_external_output_vector()
@@ -106,6 +121,48 @@ class TestPWCModelRun(unittest.TestCase):
                 self.pwc_mr_14C.acc_net_external_output_vector()
             )
         )
+
+    # Delta 14C methods
+
+    def test_solve_Delta_14C(self):
+        soln_smrs_Delta_14C = [
+            smr_14C.solve_Delta_14C(alpha=self.alpha)
+            for smr_14C in self.smrs_14C
+        ]
+        L = [soln[:-1] for soln in soln_smrs_Delta_14C[:-1]]
+        L += [soln_smrs_Delta_14C[-1]]
+        Delta_14C_ref = np.concatenate(L, axis=0)
+
+        self.assertTrue(
+            np.allclose(
+                Delta_14C_ref,
+                self.pwc_mr_14C.solve_Delta_14C(alpha=self.alpha),
+                equal_nan=True
+            )
+        )
+
+    def test_Delta_14C(self):
+        methods = [
+            "acc_gross_external_input_vector_Delta_14C",
+            "acc_net_external_input_vector",
+            "acc_gross_external_output_vector",
+            "acc_net_external_output_vector",
+            "acc_gross_internal_flux_matrix",
+            "acc_net_internal_flux_matrix"
+        ]
+
+        for method in methods:
+            with self.subTest():
+                Delta_14C = [getattr(smr_14C, method)()
+                             for smr_14C in self.smrs_14C]
+                Delta_14C_ref = np.concatenate(Delta_14C, axis=0)
+                self.assertTrue(
+                    np.allclose(
+                        Delta_14C_ref,
+                        getattr(self.pwc_mr_14C, method)(),
+                        equal_nan=True
+                    )
+                )
 
 
 ###############################################################################
