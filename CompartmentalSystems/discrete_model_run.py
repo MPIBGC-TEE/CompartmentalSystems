@@ -145,7 +145,7 @@ class DiscreteModelRun():
         return Bs
 
     @classmethod
-    def reconstruct_B(cls, x, F, r):
+    def reconstruct_B(cls, x, F, R):
         nr_pools = len(x)
 
         B = np.identity(nr_pools)
@@ -164,7 +164,7 @@ class DiscreteModelRun():
         # construct diagonals
         for j in range(nr_pools):
             if x[j] != 0:
-                B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + r[j] / x[j])
+                B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / x[j])
                 if B[j, j] < 0:
                     raise(DMRError('Diag. val < 0: pool %d, ' % j))
             else:
