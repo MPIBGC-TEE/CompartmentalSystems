@@ -28,6 +28,7 @@ import numpy as np
 import multiprocessing
 
 from .helpers_reservoir import factor_out_from_matrix, has_pw, flux_dict_string, jacobian
+from .pool import Pool
 from typing import TypeVar
 
 
@@ -574,13 +575,16 @@ It gave up for the following expression: ${e}."""
 
         pool_alpha = 0.3
         pool_color = 'blue'
-        pipe_colors = {'linear': 'blue', 'nonlinear': 'green', 
-                        'no substrate dependence': 'red'}
-        pipe_alpha=0.5
+        pipe_colors = {
+            'linear': 'blue',
+            'nonlinear': 'green', 
+            'no state dependence': 'red'
+        }
 
         mutation_scale = 50
         #mutation_scale=20
         arrowstyle = "simple"
+        pipe_alpha=0.5
         fontsize = 24
         legend = True
         if thumbnail:
@@ -595,7 +599,7 @@ It gave up for the following expression: ${e}."""
             fontsize = 16
             figure_size = (3,3)     
        
-        fig = plt.figure(figsize=figure_size,dpi=300)
+        fig = plt.figure(figsize=figure_size, dpi=300)
         if legend:
             #ax = fig.add_axes([0,0,1,0.9])
             ax = fig.add_axes([0,0,0.8,0.8])
@@ -605,83 +609,83 @@ It gave up for the following expression: ${e}."""
         
         ax.set_axis_off()
          
-        class PlotPool():
-            def __init__(self, x, y, size, name, 
-                               inputs, outputs, nr, reservoir_model):
-                self.x = x
-                self.y = y
-                self.size = size
-                self.name = name
-                self.inputs = inputs
-                self.outputs = outputs
-                self.nr = nr
-                # fixme mm:
-                # circular dependency
-                # actually a reservoir model can have pools and 
-                # pipelines (and should initialize them)
-                # the pipelines are not properties of a pool
-                # but of the model
-                # suggestion:
-                # new class for Pipe (or PlotPipe) that can plot itself
-                # with a color property set on initialization by the 
-                # model depending on the linearity
-                self.reservoir_model = reservoir_model
-
-            def plot(self, ax):
-                # plot the pool itself
-                ax.add_patch(mpatches.Circle((self.x, self.y), 
-                                              self.size, 
-                                              alpha=pool_alpha,
-                                              color=pool_color))
-                if not thumbnail:
-                    ax.text(self.x, self.y, "$"+latex(self.name)+"$", 
-                            fontsize = fontsize, 
-                            horizontalalignment='center', 
-                            verticalalignment='center')
-                
-                # plot input flux if there is one
-                if self.inputs:
-                    x1 = self.x
-                    y1 = self.y
-                    z1 = self.x-0.5 + (self.y-0.5)*1j
-                    arg1 = np.angle(z1) - np.pi/6
-    
-                    z1 = z1 + np.exp(1j*arg1) * self.size
-                    x1 = 0.5+z1.real
-                    y1 = 0.5+z1.imag
-                    
-                    z2 = z1 + np.exp(1j * arg1) * self.size * 1.0
-                    
-                    x2 = 0.5+z2.real
-                    y2 = 0.5+z2.imag
-        
-                    col = pipe_colors['linear']
-                    ax.add_patch(mpatches.FancyArrowPatch((x2,y2), (x1,y1), 
-                        connectionstyle='arc3, rad=0.1', arrowstyle=arrowstyle, 
-                        mutation_scale=mutation_scale, alpha=pipe_alpha, 
-                        color=col))
-
-                if self.outputs:
-                    x1 = self.x
-                    y1 = self.y
-                    z1 = self.x-0.5 + (self.y-0.5)*1j
-                    arg1 = np.angle(z1) + np.pi/6
-    
-                    z1 = z1 + np.exp(1j*arg1) * self.size
-                    x1 = 0.5+z1.real
-                    y1 = 0.5+z1.imag
-                    
-                    z2 = z1 + np.exp(1j * arg1) * self.size *1.0
-                    
-                    x2 = 0.5+z2.real
-                    y2 = 0.5+z2.imag
-    
-                    col = pipe_colors[
-                        self.reservoir_model._output_flux_type(self.nr)]
-                    ax.add_patch(mpatches.FancyArrowPatch((x1,y1), (x2,y2), 
-                        arrowstyle=arrowstyle, connectionstyle='arc3, rad=0.1', 
-                        mutation_scale=mutation_scale, alpha=pipe_alpha, 
-                        color=col))
+#        class PlotPool():
+#            def __init__(self, x, y, size, name, 
+#                               inputs, outputs, nr, reservoir_model):
+#                self.x = x
+#                self.y = y
+#                self.size = size
+#                self.name = name
+#                self.inputs = inputs
+#                self.outputs = outputs
+#                self.nr = nr
+#                # fixme mm:
+#                # circular dependency
+#                # actually a reservoir model can have pools and 
+#                # pipelines (and should initialize them)
+#                # the pipelines are not properties of a pool
+#                # but of the model
+#                # suggestion:
+#                # new class for Pipe (or PlotPipe) that can plot itself
+#                # with a color property set on initialization by the 
+#                # model depending on the linearity
+#                self.reservoir_model = reservoir_model
+#
+#            def plot(self, ax):
+#                # plot the pool itself
+#                ax.add_patch(mpatches.Circle((self.x, self.y), 
+#                                              self.size, 
+#                                              alpha=pool_alpha,
+#                                              color=pool_color))
+#                if not thumbnail:
+#                    ax.text(self.x, self.y, "$"+latex(self.name)+"$", 
+#                            fontsize = fontsize, 
+#                            horizontalalignment='center', 
+#                            verticalalignment='center')
+#                
+#                # plot input flux if there is one
+#                if self.inputs:
+#                    x1 = self.x
+#                    y1 = self.y
+#                    z1 = self.x-0.5 + (self.y-0.5)*1j
+#                    arg1 = np.angle(z1) - np.pi/6
+#    
+#                    z1 = z1 + np.exp(1j*arg1) * self.size
+#                    x1 = 0.5+z1.real
+#                    y1 = 0.5+z1.imag
+#                    
+#                    z2 = z1 + np.exp(1j * arg1) * self.size * 1.0
+#                    
+#                    x2 = 0.5+z2.real
+#                    y2 = 0.5+z2.imag
+#        
+#                    col = pipe_colors['linear']
+#                    ax.add_patch(mpatches.FancyArrowPatch((x2,y2), (x1,y1), 
+#                        connectionstyle='arc3, rad=0.1', arrowstyle=arrowstyle, 
+#                        mutation_scale=mutation_scale, alpha=pipe_alpha, 
+#                        color=col))
+#
+#                if self.outputs:
+#                    x1 = self.x
+#                    y1 = self.y
+#                    z1 = self.x-0.5 + (self.y-0.5)*1j
+#                    arg1 = np.angle(z1) + np.pi/6
+#    
+#                    z1 = z1 + np.exp(1j*arg1) * self.size
+#                    x1 = 0.5+z1.real
+#                    y1 = 0.5+z1.imag
+#                    
+#                    z2 = z1 + np.exp(1j * arg1) * self.size *1.0
+#                    
+#                    x2 = 0.5+z2.real
+#                    y2 = 0.5+z2.imag
+#    
+#                    col = pipe_colors[
+#                        self.reservoir_model._output_flux_type(self.nr)]
+#                    ax.add_patch(mpatches.FancyArrowPatch((x1,y1), (x2,y2), 
+#                        arrowstyle=arrowstyle, connectionstyle='arc3, rad=0.1', 
+#                        mutation_scale=mutation_scale, alpha=pipe_alpha, 
+#                        color=col))
 
         nr_pools = self.nr_pools
 
@@ -699,25 +703,58 @@ It gave up for the following expression: ${e}."""
             r = r * 0.7
     
         #patches.append(mpatches.Circle((0.5, 0.5), base_r))
+#        pools = []
+#        for i in range(nr_pools):
+#            z = base_r * np.exp(i*2*np.pi/nr_pools*1j)
+#            x = 0.5 - z.real
+#            y = 0.5 + z.imag
+#            if i in inputs.keys():
+#                inp = inputs[i]
+#            else:
+#                inp = None
+#            if i in outputs.keys():
+#                outp = outputs[i]
+#            else:
+#                outp = None
+#            pools.append(PlotPool(
+#                x, y, r, self.state_vector[i], inp, outp, i, self))
+#
+#        for pool in pools:
+#            pool.plot(ax)
+#        pipe_alpha=0.5
+
         pools = []
         for i in range(nr_pools):
             z = base_r * np.exp(i*2*np.pi/nr_pools*1j)
             x = 0.5 - z.real
             y = 0.5 + z.imag
-            if i in inputs.keys():
-                inp = inputs[i]
-            else:
-                inp = None
-            if i in outputs.keys():
-                outp = outputs[i]
-            else:
-                outp = None
-            pools.append(PlotPool(
-                x, y, r, self.state_vector[i], inp, outp, i, self))
 
-        for pool in pools:
-            pool.plot(ax)
-        pipe_alpha=0.5
+            pool = Pool(x, y, r)
+            pool.plot(ax, pool_color, pool_alpha)
+
+            if not thumbnail:
+                pool_name = self.state_vector[i]
+                pool.plot_name(ax, "$"+latex(pool_name)+"$", fontsize)
+
+            if i in inputs.keys():
+                pool.plot_input_flux(
+                    ax,
+                    pipe_colors[self._input_flux_type(i)],
+                    pipe_alpha,
+                    arrowstyle,
+                    mutation_scale
+                )
+
+            if i in outputs.keys():
+                pool.plot_output_flux(
+                    ax,
+                    pipe_colors[self._output_flux_type(i)],
+                    pipe_alpha,
+                    arrowstyle,
+                    mutation_scale
+                )
+
+            pools.append(pool)
 
         for (i,j) in internal_fluxes.keys():
             z1 = (pools[i].x-0.5) + (pools[i].y-0.5) * 1j
@@ -910,7 +947,7 @@ It gave up for the following expression: ${e}."""
             pool_to (int): The number of the pool to which the flux goes.
 
         Returns:
-            str: 'linear', 'nonlinear', 'no substrate dependence'
+            str: 'linear', 'nonlinear', 'no state dependence'
 
         Raises:
             Error: If unknown flux type is encountered.
@@ -924,7 +961,7 @@ It gave up for the following expression: ${e}."""
             return "nonlinear"
             
         if gcd(sv, flux) == 1:
-            return 'no substrate dependence'
+            return 'no state dependence'
 
         # now test for dependence on further state variables, 
         # which would lead to nonlinearity
@@ -983,7 +1020,7 @@ It gave up for the following expression: ${e}."""
             pool_from (int): The number of the pool from which the flux starts.
 
         Returns:
-            str: 'linear', 'nonlinear', 'no substrate dependence'
+            str: 'linear', 'nonlinear', 'no state dependence'
 
         Raises:
             Error: If unknown flux type is encountered.
@@ -991,7 +1028,7 @@ It gave up for the following expression: ${e}."""
         sv = self.state_vector[pool_from]
         flux = self.output_fluxes[pool_from]
         if gcd(sv, flux) == 1:
-            return 'no substrate dependence'
+            return 'no state dependence'
 
         # now test for dependence on further state variables, 
         # which would lead to nonlinearity

@@ -178,7 +178,7 @@ class TestSmoothReservoirModel(InDirTest):
 
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
 
-        self.assertEqual(rm._internal_flux_type(0,1), 'no substrate dependence')
+        self.assertEqual(rm._internal_flux_type(0,1), 'no state dependence')
         self.assertEqual(rm._internal_flux_type(1,0), 'nonlinear')
 
     def test_output_flux_type(self):
@@ -200,7 +200,7 @@ class TestSmoothReservoirModel(InDirTest):
 
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
 
-        self.assertEqual(rm._output_flux_type(0), 'no substrate dependence')
+        self.assertEqual(rm._output_flux_type(0), 'no state dependence')
         self.assertEqual(rm._output_flux_type(1), 'nonlinear')
 
     def test_port_controlled_Hamiltonian_representation(self):
@@ -329,8 +329,8 @@ class TestSmoothReservoirModel(InDirTest):
         C_0, C_1  = symbols('C_0 C_1')
         state_vector = [C_0, C_1]
         time_symbol = Symbol('t')
-        input_fluxes = {}
-        output_fluxes = {}
+        input_fluxes = {0: 3*C_0}
+        output_fluxes = {1: 2*C_0}
         internal_fluxes = {(0,1): 5*C_0*C_1, (1,0): 4*C_0}
 
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
