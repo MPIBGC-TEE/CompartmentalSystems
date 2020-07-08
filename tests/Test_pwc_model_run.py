@@ -94,6 +94,15 @@ class TestPWCModelRun(unittest.TestCase):
         soln_ref = np.concatenate(L, axis=0)
         self.assertTrue(np.allclose(soln_ref, self.pwc_mr.solve()))
 
+    def test_B_func(self):
+        B_func_smrs = [smr.B_func() for smr in self.smrs]
+        for k, B_func in enumerate(B_func_smrs):
+            with self.subTest():
+                t = self.smrs[k].times[0]
+                self.assertTrue(
+                    np.all(B_func(t) == self.pwc_mr.B_func()(t))
+                )
+
     def test_acc_gross_external_input_vector(self):
         ageiv_smrs = [smr.acc_gross_external_input_vector()
                       for smr in self.smrs]

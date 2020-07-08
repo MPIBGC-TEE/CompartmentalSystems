@@ -81,7 +81,6 @@ class DiscreteModelRunWithGrossFluxes(DiscreteModelRun, ModelRun):
         cls,
         data_times,
         xs,
-        net_Us,
         net_Fs,
         net_Rs,
         gross_Us,

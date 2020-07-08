@@ -111,8 +111,8 @@ class DiscreteModelRun():
         )
 
     @classmethod
-    def reconstruct_from_fluxes_and_solution(cls, data_times, xs, Fs, rs):
-        Bs = cls.reconstruct_Bs(xs, Fs, rs)
+    def reconstruct_from_fluxes_and_solution(cls, data_times, xs, Fs, Rs):
+        Bs = cls.reconstruct_Bs(xs, Fs, Rs)
         dmr = cls(data_times, Bs, xs)
         return dmr
 

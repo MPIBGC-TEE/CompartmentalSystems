@@ -188,7 +188,7 @@ class SmoothModelRun(ModelRun):
         if vec_sol_func == None:
             vec_sol_func = self.solve_func()
         
-        # we inject the soltution into B to get the linearized version
+        # we inject the solution into B to get the linearized version
         srm = self.model
         tup = (srm.time_symbol,) + tuple(srm.state_vector)
         numfun = numerical_function_from_expression(

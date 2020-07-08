@@ -100,7 +100,7 @@ class TestModelRun(InDirTest):
         dmr_wrong_fine = DMRWGF.reconstruct_from_fluxes_and_solution(
            times_fine,
            xs_fine,
-           net_Us=gross_Us_fine,
+#           net_Us=gross_Us_fine,
            net_Fs=gross_Fs_fine,
            net_Rs=gross_Rs_fine,
            gross_Us=gross_Us_fine,
@@ -131,7 +131,7 @@ class TestModelRun(InDirTest):
         dmr = DMRWGF.reconstruct_from_fluxes_and_solution(
            times,
            xs,
-           net_Us,
+#           net_Us,
            net_Fs,
            net_Rs,
            gross_Us,

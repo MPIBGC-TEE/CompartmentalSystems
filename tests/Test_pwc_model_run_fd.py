@@ -203,7 +203,9 @@ class TestPWCModelRunFD(unittest.TestCase):
 
         print('fake_Bs')
         print(pwc_mr_fd.fake_discretized_Bs(data_times)[0])
- 
+
+#       consequently, the approach with logm fails, because u does
+#       not come in as a net but as a gross flux 
 
 ###############################################################################
 

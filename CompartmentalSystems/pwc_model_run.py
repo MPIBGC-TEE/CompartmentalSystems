@@ -18,7 +18,8 @@ from .helpers_reservoir import (
     net_Fs_from_discrete_Bs_and_xs,
     net_Rs_from_discrete_Bs_and_xs,
     custom_lru_cache_wrapper,
-    phi_tmax
+    phi_tmax,
+    numerical_function_from_expression
 )
 from .Cache import Cache
 
@@ -99,6 +100,35 @@ class PWCModelRun(ModelRun):
             alternative_start_values
         )
         return soln
+
+    def B_func(self, vec_sol_func=None):
+        if vec_sol_func is None:
+            vec_sol_func = self.solve_func()
+
+        srm = self.model
+        tup = (srm.time_symbol,) + tuple(srm.state_vector)
+
+        def func_maker(pd, fd):
+            # we inject the solution into B to get the linearized version
+            numfun = numerical_function_from_expression(
+                srm.compartmental_matrix,
+                tup,
+                pd,
+                fd
+            )
+
+            # we want a function  that accepts a vector argument for x
+            def B_func_k(t):
+                x = vec_sol_func(t)
+                return numfun(t, *x)
+
+            return B_func_k
+
+        L = []
+        for pd, fd in zip(self.parameter_dicts, self.func_dicts):
+            L.append(func_maker(pd, fd))
+
+        return self.join_functions_rc(L)
 
     def acc_gross_external_input_vector(self, data_times=None):
         times = self.times if data_times is None else data_times
@@ -381,8 +411,8 @@ class PWCModelRun(ModelRun):
 
     def join_functions_rc(self, funcs):
         def func(t):
-            index = np.where(self.boundaries >= t)[0][0] - 1
-            index = max(0, index)
+            index = np.where(self.boundaries[1:] > t)[0][0]
+            index = min(index, len(self.boundaries)-2)
             res = funcs[index](t)
             return res
 
