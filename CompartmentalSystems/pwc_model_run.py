@@ -130,6 +130,43 @@ class PWCModelRun(ModelRun):
 
         return self.join_functions_rc(L)
 
+    def external_input_vector_func(self, cut_off=True):
+        if not hasattr(self, '_external_input_vector_func'):
+            t0 = self.times[0]
+            # cut off inputs until t0 (exclusive)
+            if cut_off:
+                t_valid = lambda t: True if ((t0<=t) and 
+                                (t<=self.times[-1])) else False
+            else:
+                t_valid = lambda t: True
+
+            L = []
+            def func_maker(external_input_flux_funcs):
+                input_fluxes = []
+                for i in range(self.nr_pools):
+                    if i in external_input_flux_funcs.keys():
+                        input_fluxes.append(
+                            external_input_flux_funcs[i]
+                        )
+                    else:
+                        input_fluxes.append(lambda t: 0)
+        
+                u = lambda t: (
+                    np.array(
+                        [f(t) for f in input_fluxes], 
+                        dtype=np.float
+                    ) 
+                    if t_valid(t) else np.zeros((self.nr_pools,))
+                )
+                return u
+
+            for external_input_flux_funcs in self.external_input_flux_funcss():
+                L.append(func_maker(external_input_flux_funcs))
+
+            self._external_input_vector_func = self.join_functions_rc(L)
+     
+        return self._external_input_vector_func
+
     def acc_gross_external_input_vector(self, data_times=None):
         times = self.times if data_times is None else data_times
         nt = len(times) - 1

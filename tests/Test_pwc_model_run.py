@@ -103,6 +103,15 @@ class TestPWCModelRun(unittest.TestCase):
                     np.all(B_func(t) == self.pwc_mr.B_func()(t))
                 )
 
+    def test_external_input_vector_func(self):
+        u_func_smrs = [smr.external_input_vector_func() for smr in self.smrs]
+
+        u_func_pwc = self.pwc_mr.external_input_vector_func()
+        for k, u_func_k in enumerate(u_func_smrs):
+            with self.subTest():
+                t = self.smrs[k].times[0]
+                self.assertTrue(np.all(u_func_k(t) == u_func_pwc(t)))
+
     def test_acc_gross_external_input_vector(self):
         ageiv_smrs = [smr.acc_gross_external_input_vector()
                       for smr in self.smrs]

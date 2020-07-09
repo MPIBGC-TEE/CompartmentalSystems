@@ -112,8 +112,8 @@ class PWCModelRunFD(ModelRun):
     def B_func(self, vec_sol_func=None):
         return self.pwc_mr.B_func(vec_sol_func)
 
-#    def external_input_vector_func(self, cut_off=True):
-#        return self.pwc_mr.external_input_vector_func(cut_off)
+    def external_input_vector_func(self, cut_off=True):
+        return self.pwc_mr.external_input_vector_func(cut_off)
 
     @property
     def times(self):
