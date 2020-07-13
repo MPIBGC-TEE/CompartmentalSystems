@@ -6,7 +6,6 @@ import unittest
 import numpy as np
 from sympy import Symbol, Matrix, symbols, diag, zeros, simplify, Function
 
-from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from testinfrastructure.InDirTest import InDirTest
 #from testinfrastructure.helpers import  pe,pp
@@ -179,7 +178,7 @@ class TestSmoothReservoirModel(InDirTest):
 
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
 
-        self.assertEqual(rm._internal_flux_type(0,1), 'no substrate dependence')
+        self.assertEqual(rm._internal_flux_type(0,1), 'no state dependence')
         self.assertEqual(rm._internal_flux_type(1,0), 'nonlinear')
 
     def test_output_flux_type(self):
@@ -201,7 +200,7 @@ class TestSmoothReservoirModel(InDirTest):
 
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
 
-        self.assertEqual(rm._output_flux_type(0), 'no substrate dependence')
+        self.assertEqual(rm._output_flux_type(0), 'no state dependence')
         self.assertEqual(rm._output_flux_type(1), 'nonlinear')
 
     def test_port_controlled_Hamiltonian_representation(self):
@@ -330,8 +329,8 @@ class TestSmoothReservoirModel(InDirTest):
         C_0, C_1  = symbols('C_0 C_1')
         state_vector = [C_0, C_1]
         time_symbol = Symbol('t')
-        input_fluxes = {}
-        output_fluxes = {}
+        input_fluxes = {0: 3*C_0}
+        output_fluxes = {1: 2*C_0}
         internal_fluxes = {(0,1): 5*C_0*C_1, (1,0): 4*C_0}
 
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
@@ -366,62 +365,62 @@ class TestSmoothReservoirModel(InDirTest):
                                                [2*x_moment_1 - 9*x_moment_2/x], [2*y_moment_1 - y_moment_2/y]]))
     
 
-    def test_to_14C_only(self):
-        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
-        B = Matrix([[-lamda_1,        0],
-                    [       0, -lamda_2]])
-        u = Matrix(2, 1, [1, 2])
-        state_vector = Matrix(2, 1, [C_1, C_2])
-        time_symbol = Symbol('t')
-
-        srm = SmoothReservoirModel.from_B_u(state_vector,
-                                            time_symbol,
-                                            B,
-                                            u)
-    
-        srm_14C = srm.to_14C_only('lamda_14C', 'Fa_14C')
-        C_1_14C, C_2_14C = symbols('C_1_14C, C_2_14C')
-        ref_state_vector = Matrix(2, 1, [C_1_14C, C_2_14C])
-        self.assertEqual(srm_14C.state_vector, ref_state_vector)
-
-        decay_symbol = symbols('lamda_14C')
-        ref_B = Matrix([[-lamda_1-decay_symbol,                     0],
-                        [                    0, -lamda_2-decay_symbol]])
-        self.assertEqual(srm_14C.compartmental_matrix, ref_B)
-
-        Fa_expr = Function('Fa_14C')(time_symbol)
-        ref_u = Matrix(2, 1, [Fa_expr, 2*Fa_expr])
-        self.assertEqual(srm_14C.external_inputs, ref_u)
-
-
-    def test_to_14C_explicit(self):
-        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
-        B = Matrix([[-lamda_1,        0],
-                    [       0, -lamda_2]])
-        u = Matrix(2, 1, [1, 2])
-        state_vector = Matrix(2, 1, [C_1, C_2])
-        time_symbol = Symbol('t')
-
-        srm = SmoothReservoirModel.from_B_u(state_vector,
-                                            time_symbol,
-                                            B,
-                                            u)
-    
-        srm_total = srm.to_14C_explicit('lamda_14C', 'Fa_14C')
-        C_1_14C, C_2_14C = symbols('C_1_14C, C_2_14C')
-        ref_state_vector = Matrix(4, 1, [C_1, C_2, C_1_14C, C_2_14C])
-        self.assertEqual(srm_total.state_vector, ref_state_vector)
-
-        decay_symbol = symbols('lamda_14C')
-        ref_B = Matrix([[-lamda_1,0,0,0],
-                        [0,-lamda_2,0,0],
-                        [0,0,-lamda_1-decay_symbol,                     0],
-                        [0,0,                    0, -lamda_2-decay_symbol]])
-        self.assertEqual(srm_total.compartmental_matrix, ref_B)
-
-        Fa_expr = Function('Fa_14C')(time_symbol)
-        ref_u = Matrix(4, 1, [1, 2, Fa_expr, 2*Fa_expr])
-        self.assertEqual(srm_total.external_inputs, ref_u)
+#    def test_to_14C_only(self):
+#        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
+#        B = Matrix([[-lamda_1,        0],
+#                    [       0, -lamda_2]])
+#        u = Matrix(2, 1, [1, 2])
+#        state_vector = Matrix(2, 1, [C_1, C_2])
+#        time_symbol = Symbol('t')
+#
+#        srm = SmoothReservoirModel.from_B_u(state_vector,
+#                                            time_symbol,
+#                                            B,
+#                                            u)
+#    
+#        srm_14C = srm.to_14C_only('lamda_14C', 'Fa_14C')
+#        C_1_14C, C_2_14C = symbols('C_1_14C, C_2_14C')
+#        ref_state_vector = Matrix(2, 1, [C_1_14C, C_2_14C])
+#        self.assertEqual(srm_14C.state_vector, ref_state_vector)
+#
+#        decay_symbol = symbols('lamda_14C')
+#        ref_B = Matrix([[-lamda_1-decay_symbol,                     0],
+#                        [                    0, -lamda_2-decay_symbol]])
+#        self.assertEqual(srm_14C.compartmental_matrix, ref_B)
+#
+#        Fa_expr = Function('Fa_14C')(time_symbol)
+#        ref_u = Matrix(2, 1, [Fa_expr, 2*Fa_expr])
+#        self.assertEqual(srm_14C.external_inputs, ref_u)
+#
+#
+#    def test_to_14C_explicit(self):
+#        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
+#        B = Matrix([[-lamda_1,        0],
+#                    [       0, -lamda_2]])
+#        u = Matrix(2, 1, [1, 2])
+#        state_vector = Matrix(2, 1, [C_1, C_2])
+#        time_symbol = Symbol('t')
+#
+#        srm = SmoothReservoirModel.from_B_u(state_vector,
+#                                            time_symbol,
+#                                            B,
+#                                            u)
+#    
+#        srm_total = srm.to_14C_explicit('lamda_14C', 'Fa_14C')
+#        C_1_14C, C_2_14C = symbols('C_1_14C, C_2_14C')
+#        ref_state_vector = Matrix(4, 1, [C_1, C_2, C_1_14C, C_2_14C])
+#        self.assertEqual(srm_total.state_vector, ref_state_vector)
+#
+#        decay_symbol = symbols('lamda_14C')
+#        ref_B = Matrix([[-lamda_1,0,0,0],
+#                        [0,-lamda_2,0,0],
+#                        [0,0,-lamda_1-decay_symbol,                     0],
+#                        [0,0,                    0, -lamda_2-decay_symbol]])
+#        self.assertEqual(srm_total.compartmental_matrix, ref_B)
+#
+#        Fa_expr = Function('Fa_14C')(time_symbol)
+#        ref_u = Matrix(4, 1, [1, 2, Fa_expr, 2*Fa_expr])
+#        self.assertEqual(srm_total.external_inputs, ref_u)
 
 
 ####################################################################################################

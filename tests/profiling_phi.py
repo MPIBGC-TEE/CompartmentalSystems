@@ -5,7 +5,7 @@ import cProfile
 import pstats
 import numpy as np
 from sympy import sin, symbols, Matrix, Symbol, exp, solve, Eq, pi, Piecewise, Function, ones
-from CompartmentalSystems.smooth_model_run import SmoothModelRun
+from CompartmentalSystems.moothmodel_run import SmoothModelRun
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 def smr_1d(nc):

@@ -13,7 +13,6 @@ Counting of compartment/pool/reservoir numbers starts at zero and the
 total number of pools is :math:`d`.
 """
 
-from __future__ import division
 
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -29,6 +28,7 @@ import numpy as np
 import multiprocessing
 
 from .helpers_reservoir import factor_out_from_matrix, has_pw, flux_dict_string, jacobian
+from .pool import Pool
 from typing import TypeVar
 
 
@@ -328,8 +328,9 @@ It gave up for the following expression: ${e}."""
                 internal_fluxes[(pool_from, pool_to)] = flux
         
         # call the standard constructor 
-        srm = cls(state_vector, time_symbol,
+        srm = SmoothReservoirModel(state_vector, time_symbol,
                   input_fluxes, output_fluxes, internal_fluxes)
+        
         return srm
 
     @property
@@ -574,13 +575,17 @@ It gave up for the following expression: ${e}."""
 
         pool_alpha = 0.3
         pool_color = 'blue'
-        pipe_colors = {'linear': 'blue', 'nonlinear': 'green', 
-                        'no substrate dependence': 'red'}
-        pipe_alpha=0.5
+        pipe_colors = {
+            'linear': 'blue',
+            'nonlinear': 'green', 
+            'no state dependence': 'red'
+        }
 
         mutation_scale = 50
         #mutation_scale=20
         arrowstyle = "simple"
+        pipe_alpha=0.5
+        connectionstyle='arc3, rad=0.1'
         fontsize = 24
         legend = True
         if thumbnail:
@@ -595,7 +600,7 @@ It gave up for the following expression: ${e}."""
             fontsize = 16
             figure_size = (3,3)     
        
-        fig = plt.figure(figsize=figure_size,dpi=300)
+        fig = plt.figure(figsize=figure_size, dpi=300)
         if legend:
             #ax = fig.add_axes([0,0,1,0.9])
             ax = fig.add_axes([0,0,0.8,0.8])
@@ -605,84 +610,6 @@ It gave up for the following expression: ${e}."""
         
         ax.set_axis_off()
          
-        class PlotPool():
-            def __init__(self, x, y, size, name, 
-                               inputs, outputs, nr, reservoir_model):
-                self.x = x
-                self.y = y
-                self.size = size
-                self.name = name
-                self.inputs = inputs
-                self.outputs = outputs
-                self.nr = nr
-                # fixme mm:
-                # circular dependency
-                # actually a reservoir model can have pools and 
-                # pipelines (and should initialize them)
-                # the pipelines are not properties of a pool
-                # but of the model
-                # suggestion:
-                # new class for Pipe (or PlotPipe) that can plot itself
-                # with a color property set on initialization by the 
-                # model depending on the linearity
-                self.reservoir_model = reservoir_model
-
-            def plot(self, ax):
-                # plot the pool itself
-                ax.add_patch(mpatches.Circle((self.x, self.y), 
-                                              self.size, 
-                                              alpha=pool_alpha,
-                                              color=pool_color))
-                if not thumbnail:
-                    ax.text(self.x, self.y, "$"+latex(self.name)+"$", 
-                            fontsize = fontsize, 
-                            horizontalalignment='center', 
-                            verticalalignment='center')
-                
-                # plot input flux if there is one
-                if self.inputs:
-                    x1 = self.x
-                    y1 = self.y
-                    z1 = self.x-0.5 + (self.y-0.5)*1j
-                    arg1 = np.angle(z1) - np.pi/6
-    
-                    z1 = z1 + np.exp(1j*arg1) * self.size
-                    x1 = 0.5+z1.real
-                    y1 = 0.5+z1.imag
-                    
-                    z2 = z1 + np.exp(1j * arg1) * self.size * 1.0
-                    
-                    x2 = 0.5+z2.real
-                    y2 = 0.5+z2.imag
-        
-                    col = pipe_colors['linear']
-                    ax.add_patch(mpatches.FancyArrowPatch((x2,y2), (x1,y1), 
-                        connectionstyle='arc3, rad=0.1', arrowstyle=arrowstyle, 
-                        mutation_scale=mutation_scale, alpha=pipe_alpha, 
-                        color=col))
-
-                if self.outputs:
-                    x1 = self.x
-                    y1 = self.y
-                    z1 = self.x-0.5 + (self.y-0.5)*1j
-                    arg1 = np.angle(z1) + np.pi/6
-    
-                    z1 = z1 + np.exp(1j*arg1) * self.size
-                    x1 = 0.5+z1.real
-                    y1 = 0.5+z1.imag
-                    
-                    z2 = z1 + np.exp(1j * arg1) * self.size *1.0
-                    
-                    x2 = 0.5+z2.real
-                    y2 = 0.5+z2.imag
-    
-                    col = pipe_colors[
-                        self.reservoir_model._output_flux_type(self.nr)]
-                    ax.add_patch(mpatches.FancyArrowPatch((x1,y1), (x2,y2), 
-                        arrowstyle=arrowstyle, connectionstyle='arc3, rad=0.1', 
-                        mutation_scale=mutation_scale, alpha=pipe_alpha, 
-                        color=col))
-
         nr_pools = self.nr_pools
 
         base_r = 0.1 + (0.5-0.1)/10*nr_pools
@@ -698,57 +625,70 @@ It gave up for the following expression: ${e}."""
         if thumbnail:
             r = r * 0.7
     
-        #patches.append(mpatches.Circle((0.5, 0.5), base_r))
+
+        # plot pools and external fluxes
         pools = []
         for i in range(nr_pools):
             z = base_r * np.exp(i*2*np.pi/nr_pools*1j)
             x = 0.5 - z.real
             y = 0.5 + z.imag
-            if i in inputs.keys():
-                inp = inputs[i]
-            else:
-                inp = None
-            if i in outputs.keys():
-                outp = outputs[i]
-            else:
-                outp = None
-            pools.append(PlotPool(
-                x, y, r, self.state_vector[i], inp, outp, i, self))
 
-        for pool in pools:
+            pool = Pool(
+                x, 
+                y, 
+                r, 
+                pool_color, 
+                pool_alpha, 
+                pipe_alpha, 
+                connectionstyle, 
+                arrowstyle,
+                mutation_scale
+            )
             pool.plot(ax)
-        pipe_alpha=0.5
 
+            if not thumbnail:
+                pool_name = self.state_vector[i]
+                pool.plot_name(ax, "$"+latex(pool_name)+"$", fontsize)
+
+            if i in inputs.keys():
+                pool.plot_input_flux(
+                    ax,
+                    pipe_colors[self._input_flux_type(i)]
+                )
+
+            if i in outputs.keys():
+                pool.plot_output_flux(
+                    ax,
+                    pipe_colors[self._output_flux_type(i)]
+                )
+
+            pools.append(pool)
+
+        # plot internal fluxes
         for (i,j) in internal_fluxes.keys():
-            z1 = (pools[i].x-0.5) + (pools[i].y-0.5) * 1j
-            z2 = (pools[j].x-0.5) + (pools[j].y-0.5) * 1j
+            pools[i].plot_internal_flux_to(
+                ax,
+                pools[j],
+                pipe_colors[self._internal_flux_type(i,j)]
+            )
 
-            arg1 = np.angle(z2-z1) - np.pi/20
-            z1 = z1+np.exp(1j*arg1)*r
-           
-            arg2 = np.angle(z1-z2)  + np.pi/20
-            z2 = z2+np.exp(1j*arg2)*r
-
-            x1 = 0.5+z1.real
-            y1 = 0.5+z1.imag
-
-            x2 = 0.5+z2.real
-            y2 = 0.5+z2.imag
-
-            col = pipe_colors[self._internal_flux_type(i,j)]
-
-            ax.add_patch(mpatches.FancyArrowPatch((x1,y1),(x2,y2), 
-                connectionstyle='arc3, rad=0.1', arrowstyle=arrowstyle, 
-                mutation_scale=mutation_scale, alpha=pipe_alpha, color=col))
 
         if legend:
             legend_descs = []
             legend_colors = []
             for desc, col in pipe_colors.items():
                 legend_descs.append(desc)
-                legend_colors.append(mpatches.FancyArrowPatch((0,0),(1,1), 
-                    connectionstyle='arc3, rad=0.1', arrowstyle=arrowstyle, 
-                    mutation_scale=mutation_scale, alpha=pipe_alpha, color=col))
+                legend_colors.append(
+                    mpatches.FancyArrowPatch(
+                        (0,0),
+                        (1,1), 
+                        connectionstyle=connectionstyle,
+                        arrowstyle=arrowstyle, 
+                        mutation_scale=mutation_scale, 
+                        alpha=pipe_alpha, 
+                        color=col
+                    )
+                )
             
             ax.legend(legend_colors, legend_descs, loc='upper center', 
                         bbox_to_anchor=(0.5, 1.1), ncol = 3)
@@ -759,74 +699,78 @@ It gave up for the following expression: ${e}."""
     ##### 14C methods #####
 
 
-    def to_14C_only(self, decay_symbol_name, Fa_expr_name):
-        """Construct and return a :class:`SmoothReservoirModel` instance that
-           models the 14C component of the original model.
-    
-        Args:
-            decay_symbol_name (str): The name of the 14C decay rate symbol.
-            Fa_expr_name(str): The name of the symbol to be used for the
-                atmospheric C14 fraction function.
-        Returns:
-            :class:`SmoothReservoirModel`
-        """
-        state_vector_14C = Matrix(
-            self.nr_pools,
-            1,
-            [Symbol(sv.name+'_14C') for sv in self.state_vector])
-        decay_symbol = Symbol(decay_symbol_name)
-        B_14C = copy(self.compartmental_matrix) - decay_symbol*eye(self.nr_pools)
-        u = self.external_inputs
-        Fa_expr = Function(Fa_expr_name)(self.time_symbol)
-        u_14C = Matrix(self.nr_pools, 1, [expr*Fa_expr for expr in u])
-
-        srm_14C = SmoothReservoirModel.from_B_u(
-            state_vector_14C,
-            self.time_symbol,
-            B_14C,
-            u_14C)
-
-        return srm_14C
-
-    def to_14C_explicit(self, decay_symbol_name, Fa_expr_name):
-        """Construct and return a :class:`SmoothReservoirModel` instance that
-           models the 14C component additional to the original model.
-    
-        Args:
-            decay_symbol_name (str): The name of the 14C decay rate symbol.
-            Fa_expr_name(str): The name of the symbol to be used for the
-                atmospheric C14 fraction function.
-        Returns:
-            :class:`SmoothReservoirModel`
-        """
-        state_vector = self.state_vector
-        B, u = self.compartmental_matrix, self.external_inputs
-        srm_14C = self.to_14C_only(decay_symbol_name, Fa_expr_name)
-        state_vector_14C = srm_14C.state_vector
-        B_C14 = srm_14C.compartmental_matrix
-        u_14C = srm_14C.external_inputs
-
-        nr_pools = self.nr_pools
-
-        state_vector_total = Matrix(nr_pools*2, 1, [1]*(nr_pools*2))
-        state_vector_total[:nr_pools,0] = state_vector
-        state_vector_total[nr_pools:,0] = state_vector_14C
-        
-        B_total = eye(nr_pools*2)
-        B_total[:nr_pools, :nr_pools] = B
-        B_total[nr_pools:, nr_pools:] = B_C14
-
-        u_total = Matrix(nr_pools*2, 1, [1]*(nr_pools*2))
-        u_total[:nr_pools,0] = u
-        u_total[nr_pools:,0] = u_14C
-
-        srm_total = SmoothReservoirModel.from_B_u(
-            state_vector_total,
-            self.time_symbol,
-            B_total,
-            u_total)
-
-        return srm_total
+#    def to_14C_only(self, decay_symbol_name, Fa_expr_name):
+#        """Construct and return a :class:`SmoothReservoirModel` instance that
+#           models the 14C component of the original model.
+#    
+#        Args:
+#            decay_symbol_name (str): The name of the 14C decay rate symbol.
+#            Fa_expr_name(str): The name of the symbol to be used for the
+#                atmospheric C14 fraction function.
+#        Returns:
+#            :class:`SmoothReservoirModel`
+#        """
+##        state_vector_14C = Matrix(
+##            self.nr_pools,
+##            1,
+##            [Symbol(sv.name+'_14C') for sv in self.state_vector]
+##        )
+#        state_vector_14C = self.state_vector
+#
+#        decay_symbol = Symbol(decay_symbol_name)
+#        B_14C = copy(self.compartmental_matrix) - decay_symbol*eye(self.nr_pools)
+#        u = self.external_inputs
+#        Fa_expr = Function(Fa_expr_name)(self.time_symbol)
+#        u_14C = Matrix(self.nr_pools, 1, [expr*Fa_expr for expr in u])
+#
+#        srm_14C = SmoothReservoirModel.from_B_u(
+#            state_vector_14C,
+#            self.time_symbol,
+#            B_14C,
+#            u_14C
+#        )
+#
+#        return srm_14C
+#
+#    def to_14C_explicit(self, decay_symbol_name, Fa_expr_name):
+#        """Construct and return a :class:`SmoothReservoirModel` instance that
+#           models the 14C component additional to the original model.
+#    
+#        Args:
+#            decay_symbol_name (str): The name of the 14C decay rate symbol.
+#            Fa_expr_name(str): The name of the symbol to be used for the
+#                atmospheric C14 fraction function.
+#        Returns:
+#            :class:`SmoothReservoirModel`
+#        """
+#        state_vector = self.state_vector
+#        B, u = self.compartmental_matrix, self.external_inputs
+#        srm_14C = self.to_14C_only(decay_symbol_name, Fa_expr_name)
+#        state_vector_14C = srm_14C.state_vector
+#        B_C14 = srm_14C.compartmental_matrix
+#        u_14C = srm_14C.external_inputs
+#
+#        nr_pools = self.nr_pools
+#
+#        state_vector_total = Matrix(nr_pools*2, 1, [1]*(nr_pools*2))
+#        state_vector_total[:nr_pools,0] = state_vector
+#        state_vector_total[nr_pools:,0] = state_vector_14C
+#        
+#        B_total = eye(nr_pools*2)
+#        B_total[:nr_pools, :nr_pools] = B
+#        B_total[nr_pools:, nr_pools:] = B_C14
+#
+#        u_total = Matrix(nr_pools*2, 1, [1]*(nr_pools*2))
+#        u_total[:nr_pools,0] = u
+#        u_total[nr_pools:,0] = u_14C
+#
+#        srm_total = SmoothReservoirModel.from_B_u(
+#            state_vector_total,
+#            self.time_symbol,
+#            B_total,
+#            u_total)
+#
+#        return srm_total
         
     def steady_states(self, par_set = None):
         if par_set is None:
@@ -906,7 +850,7 @@ It gave up for the following expression: ${e}."""
             pool_to (int): The number of the pool to which the flux goes.
 
         Returns:
-            str: 'linear', 'nonlinear', 'no substrate dependence'
+            str: 'linear', 'nonlinear', 'no state dependence'
 
         Raises:
             Error: If unknown flux type is encountered.
@@ -920,7 +864,7 @@ It gave up for the following expression: ${e}."""
             return "nonlinear"
             
         if gcd(sv, flux) == 1:
-            return 'no substrate dependence'
+            return 'no state dependence'
 
         # now test for dependence on further state variables, 
         # which would lead to nonlinearity
@@ -979,7 +923,7 @@ It gave up for the following expression: ${e}."""
             pool_from (int): The number of the pool from which the flux starts.
 
         Returns:
-            str: 'linear', 'nonlinear', 'no substrate dependence'
+            str: 'linear', 'nonlinear', 'no state dependence'
 
         Raises:
             Error: If unknown flux type is encountered.
@@ -987,7 +931,7 @@ It gave up for the following expression: ${e}."""
         sv = self.state_vector[pool_from]
         flux = self.output_fluxes[pool_from]
         if gcd(sv, flux) == 1:
-            return 'no substrate dependence'
+            return 'no state dependence'
 
         # now test for dependence on further state variables, 
         # which would lead to nonlinearity

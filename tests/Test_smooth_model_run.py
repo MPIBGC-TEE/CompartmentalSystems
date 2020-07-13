@@ -24,11 +24,7 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun 
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel 
 
-def pfile_C14Atm_NH():
-    p=Path(deepcopy(__file__))
-    pfile = p.parents[1].joinpath('CompartmentalSystems','Data','C14Atm_NH.csv')
-    return pfile
-
+#from CompartmentalSystems.smooth_model_run_14C import  pfile_C14Atm_NH
 
 class TestSmoothModelRun(InDirTest):
 #class TestSmoothModelRun(unittest.TestCase):
@@ -142,8 +138,8 @@ class TestSmoothModelRun(InDirTest):
         nonlinear_smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         linearized_smr = nonlinear_smr.linearize()
         linearized_smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        nonlin_soln,_ = nonlinear_smr.solve()
-        lin_soln,_ = linearized_smr.solve()
+        nonlin_soln = nonlinear_smr.solve()
+        lin_soln = linearized_smr.solve()
         self.assertTrue(
             np.allclose(
                 nonlin_soln,
@@ -290,7 +286,7 @@ class TestSmoothModelRun(InDirTest):
         )
 
         ref = np.ndarray((10,2), np.float, a_ref)
-        soln,_ = smr.solve()
+        soln = smr.solve()
         self.assertTrue(np.allclose(soln, ref))
 
 
@@ -334,7 +330,7 @@ class TestSmoothModelRun(InDirTest):
         smr = SmoothModelRun(srm, parameter_dict={}, start_values=start_values, times=times,func_set=func_set)
         smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         
-        soln,_ = smr.solve()
+        soln = smr.solve()
 
 
     ##### fluxes as functions #####
@@ -358,7 +354,7 @@ class TestSmoothModelRun(InDirTest):
         smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         
         u = smr.external_input_flux_funcs()
-        o = smr.output_flux_funcs()
+        o = smr.external_output_flux_funcs()
         # check the scalar versions
         self.assertTrue(np.allclose(u[0](0.5), 0.5))
         self.assertTrue(np.allclose(u[1](0.5), 1))
@@ -427,19 +423,23 @@ class TestSmoothModelRun(InDirTest):
         smr = SmoothModelRun(srm, {}, start_values, times)
         smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
-        ref_a = np.array([[ 0.,          0.        ], # input starts right after t0
-                          [ 1.,          1.42684416],
-                          [ 1.,          1.35725616],
-                          [ 1.,          1.29106198],
-                          [ 1.,          1.22809615],
-                          [ 1.,          1.16820118],
-                          [ 1.,          1.11122731],
-                          [ 1.,          1.05703214],
-                          [ 1.,          1.00548009],
-                          [ 1.,          0.95644224],
-                          [ 1.,          0.90979601]])
-        ref = np.ndarray((11, 2), np.float, ref_a)
-        self.assertTrue(np.allclose(smr.external_input_vector, ref))
+        ref_a = np.array(
+            [[ 1.,          1.42684416],
+             [ 1.,          1.35725616],
+             [ 1.,          1.29106198],
+             [ 1.,          1.22809615],
+             [ 1.,          1.16820118],
+             [ 1.,          1.11122731],
+             [ 1.,          1.05703214],
+             [ 1.,          1.00548009],
+             [ 1.,          0.95644224],
+             [ 1.,          0.90979601]]
+        )
+        ref = np.ndarray((10, 2), np.float, ref_a)
+        self.assertTrue(np.allclose(
+            smr.external_input_vector[1:],
+            ref
+        ))
 
 
     def test_external_output_vector(self):
@@ -2032,7 +2032,7 @@ class TestSmoothModelRun(InDirTest):
         self.assertTrue(
             np.allclose(
                 soln,
-                smr.solve()[0],
+                smr.solve(),
                 rtol=1e-03
             )
         )
@@ -2057,7 +2057,7 @@ class TestSmoothModelRun(InDirTest):
         self.assertTrue(
             np.allclose(
                 soln,
-                smr.solve()[0],
+                smr.solve(),
                 rtol=1e-03
             )
         )
@@ -2096,7 +2096,7 @@ class TestSmoothModelRun(InDirTest):
         ams,_ = smr._solve_age_moment_system(1, start_age_moments)
         soln = ams[:,:nr_pools]
         self.assertTrue(
-                np.allclose(soln, smr.solve()[0], rtol=1e-03)
+                np.allclose(soln, smr.solve(), rtol=1e-03)
         )
         ma = ams[:,nr_pools:]
 
@@ -2129,7 +2129,7 @@ class TestSmoothModelRun(InDirTest):
         # test missing start_age_moments
         ams,_ = smr._solve_age_moment_system(1)
         soln = ams[:,:nr_pools]
-        self.assertTrue(np.allclose(soln, smr.solve()[0], rtol=1e-03))
+        self.assertTrue(np.allclose(soln, smr.solve(), rtol=1e-03))
         ma = ams[:,nr_pools:]
         ref_ams,_ = smr._solve_age_moment_system(1, np.zeros((1,nr_pools))) # 1 moment, nr_pools pools
         ref_ma = ref_ams[:,nr_pools:]
@@ -2699,61 +2699,49 @@ class TestSmoothModelRun(InDirTest):
 
     ##### 14C methods #####
 
-    
-    def test_to_14C_only(self):
-        # we test only that the construction works and can be solved,
-        # not the actual solution values
-        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
-        B = Matrix([[-lamda_1,        0],
-                    [       0, -lamda_2]])
-        u = Matrix(2, 1, [1, 1])
-        state_vector = Matrix(2, 1, [C_1, C_2])
-        time_symbol = Symbol('t')
 
-        srm = SmoothReservoirModel.from_B_u(state_vector,
-                                            time_symbol,
-                                            B,
-                                            u)
-
-        par_set = {lamda_1: 0.5, lamda_2: 0.2}
-        start_values = np.array([7,4])
-        start, end, ts = 1950, 2000, 0.5
-        times = np.linspace(start, end, int((end+ts-start)/ts))
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        soln,_ = smr.solve()
-        atm_delta_14C = np.loadtxt(pfile_C14Atm_NH(), skiprows=1, delimiter=',')
-        smr_14C = smr.to_14C_only(atm_delta_14C, 1)
-
-        soln_14C,_ = smr_14C.solve()
-
-
-    def test_to_14C_explicit(self):
-        # we test only that the construction works and can be solved,
-        # not the actual solution values
-        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
-        B = Matrix([[-lamda_1,        0],
-                    [       0, -lamda_2]])
-        u = Matrix(2, 1, [1, 1])
-        state_vector = Matrix(2, 1, [C_1, C_2])
-        time_symbol = Symbol('t')
-
-        srm = SmoothReservoirModel.from_B_u(state_vector,
-                                            time_symbol,
-                                            B,
-                                            u)
-
-        par_set = {lamda_1: 0.5, lamda_2: 0.2}
-        start_values = np.array([7,4])
-        start, end, ts = 1950, 2000, 0.5
-        times = np.linspace(start, end, int((end+ts-start)/ts))
-        smr = SmoothModelRun(srm, par_set, start_values, times)
-        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
-        soln,_ = smr.solve()
-        atm_delta_14C = np.loadtxt(pfile_C14Atm_NH(), skiprows=1, delimiter=',')
-        smr_14C = smr.to_14C_explicit(atm_delta_14C, 1)
-
-        soln_14C,_ = smr_14C.solve()
+#    def test_to_14C_explicit(self):
+#        # we test only that the construction works and can be solved,
+#        # not the actual solution values
+#        lamda_1, lamda_2, C_1, C_2 = symbols('lamda_1 lamda_2 C_1 C_2')
+#        B = Matrix([[-lamda_1,        0],
+#                    [       0, -lamda_2]])
+#        u = Matrix(2, 1, [1, 1])
+#        state_vector = Matrix(2, 1, [C_1, C_2])
+#        time_symbol = Symbol('t')
+#
+#        srm = SmoothReservoirModel.from_B_u(
+#            state_vector,
+#            time_symbol,
+#            B,
+#            u
+#        )
+#
+#        par_set = {lamda_1: 0.5, lamda_2: 0.2}
+#        start_values = np.array([7,4])
+#        start, end, ts = 1950, 2000, 0.5
+#        times = np.linspace(start, end, int((end+ts-start)/ts))
+#        smr = SmoothModelRun(srm, par_set, start_values, times)
+#        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+#        soln = smr.solve()
+#
+#        atm_delta_14C = np.loadtxt(pfile_C14Atm_NH(), skiprows=1, delimiter=',')
+#        F_atm_delta_14C = interp1d(
+#            atm_delta_14C[:,0],
+#            atm_delta_14C[:,1],
+#            fill_value = 'extrapolate'
+#        )
+#
+#        alpha = 1.18e-12
+#        start_values_14C = smr.start_values * alpha
+#        Fa_func = lambda t: alpha * (F_atm_delta_14C(t)/1000+1)
+#        smr_14C = smr.to_14C_explicit(
+#            start_values_14C,
+#            Fa_func,
+#            0.0001
+#        )
+#
+#        soln_14C = smr_14C.solve()
 
 
     ##### temporary #####
