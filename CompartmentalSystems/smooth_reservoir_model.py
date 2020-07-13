@@ -313,7 +313,7 @@ It gave up for the following expression: ${e}."""
         # calculate outputs
         for pool in range(state_vector.rows):
             outp = -sum(B[:, pool]) * state_vector[pool]
-            outp = simplify(outp)
+            #outp = simplify(outp)
             if outp:
                 output_fluxes[pool] = outp
         
@@ -323,7 +323,7 @@ It gave up for the following expression: ${e}."""
                         for j in range(state_vector.rows) if i != j]
         for pool_from, pool_to in pipes:
             flux = B[pool_to, pool_from] * state_vector[pool_from]
-            flux = simplify(flux)
+            #flux = simplify(flux)
             if flux:
                 internal_fluxes[(pool_from, pool_to)] = flux
         
