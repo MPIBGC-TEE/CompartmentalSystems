@@ -15,7 +15,7 @@ class TestPWCModelRun(unittest.TestCase):
         u_1 = Function('u_1')(x, t)
         state_vector = Matrix([x, y])
         B = Matrix([[-1,  1.5],
-                    [k, -2]])
+                    [k/(t+1), -2]])
         u = Matrix(2, 1, [u_1, 1])
         self.srm = SmoothReservoirModel.from_B_u(
             state_vector,
@@ -30,8 +30,8 @@ class TestPWCModelRun(unittest.TestCase):
         times = np.linspace(t_0, t_max, 11)
         disc_times = [5]
 
-        parameter_dicts = [{k: 1}, {k: 0.5}]
-        func_dicts = [{u_1: lambda x, t: 9}, {u_1: lambda x, t: 3}]
+        parameter_dicts = [{k: 1}, {k: 0.5*t}]
+        func_dicts = [{u_1: lambda x, t: 9}, {u_1: lambda x, t: 3*t}]
 
         self.pwc_mr = PWCModelRun(
             self.srm,

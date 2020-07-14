@@ -94,9 +94,6 @@ class PWCModelRunFD(ModelRun):
         self.us = us
         self.Bs = Bs
 
-#        print(self.pwc_mr.acc_gross_external_output_vector())
-#        input()
-
     @property
     def model(self):
         return self.pwc_mr.model

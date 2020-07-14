@@ -83,7 +83,9 @@ class PWCModelRun(ModelRun):
     @property
     def boundaries(self):
         times = self.times
-        return np.array([times[0]] + self.disc_times + [times[-1]])
+        dt_list = [t for t in self.disc_times]
+        res = np.array([times[0]] + dt_list + [times[-1]])
+        return res
 
     @property
     def nr_pools(self):
@@ -126,7 +128,8 @@ class PWCModelRun(ModelRun):
 
         L = []
         for pd, fd in zip(self.parameter_dicts, self.func_dicts):
-            L.append(func_maker(pd, fd))
+            B_k = func_maker(pd, fd)
+            L.append(B_k)
 
         return self.join_functions_rc(L)
 

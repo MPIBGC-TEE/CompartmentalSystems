@@ -285,14 +285,14 @@ class TestSmoothReservoirModel(InDirTest):
             ])
         rm = SmoothReservoirModel.from_B_u(C,t,B,u)
         self.assertEqual(rm.input_fluxes, {0: u_1, 1: u_2, 2: u_3})
-        self.assertEqual(
-            rm.output_fluxes,
-            {
-                0: C_1*(-a_21*gamma-a_31*gamma+k_1*gamma),
-                1: C_2*(-a_12*gamma-a_32*gamma+k_2*gamma),
-                2: C_3*(-a_13*gamma-a_23*gamma+k_3*gamma)
-            }
-        )
+        for key, val in rm.output_fluxes.items():
+            with self.subTest():
+                ref_val = {
+                    0: C_1*(-a_21*gamma-a_31*gamma+k_1*gamma),
+                    1: C_2*(-a_12*gamma-a_32*gamma+k_2*gamma),
+                    2: C_3*(-a_13*gamma-a_23*gamma+k_3*gamma)
+                }[key]
+                self.assertEqual(simplify(val-ref_val) ,0)
         
         self.assertEqual(rm.internal_fluxes, {
             (0,1): gamma*a_21*C_1, (0,2): gamma*a_31*C_1,
