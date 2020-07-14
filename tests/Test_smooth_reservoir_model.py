@@ -267,10 +267,10 @@ class TestSmoothReservoirModel(InDirTest):
 
         # test backward conversion to matrices
         xi2, T2, N2, C2, u2 = rm.xi_T_N_u_representation()
-        self.assertEqual(xi,xi2)
-        self.assertEqual(u,u2)
-        self.assertEqual(T,T2)
-        self.assertEqual(N,N2)
+        self.assertEqual(simplify(xi-xi2), 0)
+        self.assertEqual(simplify(u-u2), zeros(*u.shape))
+        self.assertEqual(simplify(T-T2), zeros(*T.shape))
+        self.assertEqual(simplify(N-N2), zeros(*N.shape))
 
     def test_Bu_matrices_to_fluxes_and_back(self):
         # f = u + xi*B*C
@@ -302,8 +302,8 @@ class TestSmoothReservoirModel(InDirTest):
         ## test backward conversion to compartmental matrix 
         B2 = rm.compartmental_matrix
         u2 = rm.external_inputs
-        self.assertEqual(u,u2)
-        self.assertEqual(B,B2)
+        self.assertEqual(simplify(u-u2), zeros(*u.shape))
+        self.assertEqual(simplify(B-B2), zeros(*B.shape))
 
     def test_matrix_to_flux_and_back_nonlinear(self):
         # f = u + xi*T*N*C
@@ -336,10 +336,10 @@ class TestSmoothReservoirModel(InDirTest):
         # test backward conversion to matrices
         
         xi2, T2, N2, C2, u2 = rm.xi_T_N_u_representation()
-        self.assertEqual(xi,xi2)
-        self.assertEqual(u,u2)
-        self.assertEqual(T,T2)
-        self.assertEqual(N,N2)
+        self.assertEqual(simplify(xi-xi2),0)
+        self.assertEqual(simplify(u-u2),zeros(*u.shape))
+        self.assertEqual(simplify(T-T2),zeros(*T.shape))
+        self.assertEqual(simplify(N-N2),zeros(*N.shape))
 
     def test_figure(self):
         C_0, C_1  = symbols('C_0 C_1')

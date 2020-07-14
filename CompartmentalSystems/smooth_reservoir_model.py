@@ -313,9 +313,9 @@ It gave up for the following expression: ${e}."""
         # calculate outputs
         for pool in range(state_vector.rows):
             outp = -sum(B[:, pool]) * state_vector[pool]
-            #outp = simplify(outp)
-            if outp:
-                output_fluxes[pool] = outp
+            s_outp = simplify(outp)
+            if s_outp:
+                output_fluxes[pool] = s_outp
         
         # calculate internal fluxes
         internal_fluxes = dict()
@@ -323,9 +323,9 @@ It gave up for the following expression: ${e}."""
                         for j in range(state_vector.rows) if i != j]
         for pool_from, pool_to in pipes:
             flux = B[pool_to, pool_from] * state_vector[pool_from]
-            #flux = simplify(flux)
-            if flux:
-                internal_fluxes[(pool_from, pool_to)] = flux
+            s_flux = simplify(flux)
+            if s_flux:
+                internal_fluxes[(pool_from, pool_to)] = s_flux
         
         # call the standard constructor 
         srm = SmoothReservoirModel(state_vector, time_symbol,
