@@ -94,6 +94,9 @@ class PWCModelRunFD(ModelRun):
         self.us = us
         self.Bs = Bs
 
+#        print(self.pwc_mr.acc_gross_external_output_vector())
+#        input()
+
     @property
     def model(self):
         return self.pwc_mr.model
@@ -258,6 +261,7 @@ class PWCModelRunFD(ModelRun):
                         fBorder + np.where(fBorder > 0, minIncr, -minIncr)
                     ) * distFromBorder
                     )
+
         lbounds = [0]*(nr_pools**2 + nr_pools)
         for i in range(nr_pools):
             lbounds[i*nr_pools+i] = -10
@@ -297,6 +301,9 @@ class PWCModelRunFD(ModelRun):
 ##            xtol    = 1e-03,
 #            bounds  = (lbounds, ubounds)
 #        )
+
+        if not y.success:
+            raise(Error(y.message))
 
         B = pars_to_matrix(y.x)
 

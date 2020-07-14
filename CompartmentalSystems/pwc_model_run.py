@@ -135,12 +135,13 @@ class PWCModelRun(ModelRun):
             t0 = self.times[0]
             # cut off inputs until t0 (exclusive)
             if cut_off:
-                t_valid = lambda t: True if ((t0<=t) and 
-                                (t<=self.times[-1])) else False
+                t_valid = lambda t: True if ((t0 <= t) and  # noqa: E731
+                                (t <= self.times[-1])) else False
             else:
-                t_valid = lambda t: True
+                t_valid = lambda t: True  # noqa: E731
 
             L = []
+
             def func_maker(external_input_flux_funcs):
                 input_fluxes = []
                 for i in range(self.nr_pools):
@@ -150,12 +151,12 @@ class PWCModelRun(ModelRun):
                         )
                     else:
                         input_fluxes.append(lambda t: 0)
-        
-                u = lambda t: (
+
+                u = lambda t: (  # noqa: #731
                     np.array(
-                        [f(t) for f in input_fluxes], 
+                        [f(t) for f in input_fluxes],
                         dtype=np.float
-                    ) 
+                    )
                     if t_valid(t) else np.zeros((self.nr_pools,))
                 )
                 return u
@@ -164,7 +165,7 @@ class PWCModelRun(ModelRun):
                 L.append(func_maker(external_input_flux_funcs))
 
             self._external_input_vector_func = self.join_functions_rc(L)
-     
+
         return self._external_input_vector_func
 
     def acc_gross_external_input_vector(self, data_times=None):
@@ -216,11 +217,10 @@ class PWCModelRun(ModelRun):
             flux_func = self.join_flux_funcss_rc(flux_funcss, pool_nr)
 
             for k in range(nt):
-                res[k, pool_nr] = quad(
-                    flux_func,
-                    times[k],
-                    times[k+1]
-                )[0]
+                tmp = quad(flux_func, times[k], times[k+1])
+#                print(times[k], times[k+1], tmp)
+#                input()
+                res[k, pool_nr] = tmp[0]
 
         return res
 

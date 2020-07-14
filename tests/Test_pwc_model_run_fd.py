@@ -91,6 +91,7 @@ class TestPWCModelRunFD(unittest.TestCase):
 #        )
 
 
+    @unittest.skip('Approach does not work')
     def test_pwc_with_logm(self):
         x, y, t, k = symbols("x y t k")
         u_1 = Function('u_1')(x, t)

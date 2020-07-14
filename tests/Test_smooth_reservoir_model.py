@@ -252,9 +252,14 @@ class TestSmoothReservoirModel(InDirTest):
         rm=SmoothReservoirModel.from_B_u(C,t,B,u)
 
         self.assertEqual(rm.input_fluxes, {0: u_1, 1: u_2, 2: u_3})
-        self.assertEqual(rm.output_fluxes, {0: gamma*k_1*(1-t_21-t_31)*C_1,
-                                   1: gamma*k_2*(1-t_12-t_32)*C_2,
-                                   2: gamma*k_3*(1-t_13-t_23)*C_3})
+        for key, val in rm.output_fluxes.items():
+            with self.subTest():
+                ref_val = {
+                    0: gamma*k_1*(1-t_21-t_31)*C_1,
+                    1: gamma*k_2*(1-t_12-t_32)*C_2,
+                    2: gamma*k_3*(1-t_13-t_23)*C_3
+                }[key]
+                self.assertEqual(simplify(val-ref_val), 0)
         self.assertEqual(rm.internal_fluxes, {
             (0,1): gamma*t_21*k_1*C_1, (0,2): gamma*t_31*k_1*C_1,
             (1,0): gamma*t_12*k_2*C_2, (1,2): gamma*t_32*k_2*C_2,
@@ -280,10 +285,15 @@ class TestSmoothReservoirModel(InDirTest):
             ])
         rm = SmoothReservoirModel.from_B_u(C,t,B,u)
         self.assertEqual(rm.input_fluxes, {0: u_1, 1: u_2, 2: u_3})
-        self.assertEqual(rm.output_fluxes, {0: gamma*(k_1-a_21-a_31)*C_1,
-                                   1: gamma*(k_2-a_12-a_32)*C_2,
-                                   2: gamma*(k_3-a_13-a_23)*C_3})
-
+        self.assertEqual(
+            rm.output_fluxes,
+            {
+                0: C_1*(-a_21*gamma-a_31*gamma+k_1*gamma),
+                1: C_2*(-a_12*gamma-a_32*gamma+k_2*gamma),
+                2: C_3*(-a_13*gamma-a_23*gamma+k_3*gamma)
+            }
+        )
+        
         self.assertEqual(rm.internal_fluxes, {
             (0,1): gamma*a_21*C_1, (0,2): gamma*a_31*C_1,
             (1,0): gamma*a_12*C_2, (1,2): gamma*a_32*C_2,
@@ -309,9 +319,15 @@ class TestSmoothReservoirModel(InDirTest):
         rm = SmoothReservoirModel.from_B_u(C,t,xi*T*N,u)
          
         self.assertEqual(rm.input_fluxes, {0: u_1, 1: u_2, 2: u_3})
-        self.assertEqual(rm.output_fluxes, {0: 2*gamma*k_1*(1-t_21-t_31*k_1)*C_1*C_2,
-                                   1: -2*gamma*k_2*(-1+t_12*C_2+t_32)*C_2/C_3,
-                                   2: 2*gamma*k_3*(1-t_13-t_23)*C_3})
+        for key, val in rm.output_fluxes.items():
+            with self.subTest():
+                ref_val = {
+                    0: 2*gamma*k_1*(1-t_21-t_31*k_1)*C_1*C_2,
+                    1: -2*gamma*k_2*(-1+t_12*C_2+t_32)*C_2/C_3,
+                    2: 2*gamma*k_3*(1-t_13-t_23)*C_3
+                }[key]
+                self.assertEqual(simplify(val-ref_val), 0)
+
         self.assertEqual(rm.internal_fluxes, {
             (0,1): 2*gamma*t_21*k_1*C_1*C_2, (0,2): 2*gamma*t_31*k_1**2*C_1*C_2,
             (1,0): 2*gamma*t_12*k_2*C_2**2/C_3, (1,2): 2*gamma*t_32*k_2*C_2/C_3,
