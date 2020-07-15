@@ -10,7 +10,7 @@ from .model_run import ModelRun
 from .pwc_model_run import PWCModelRun
 from .smooth_reservoir_model import SmoothReservoirModel
 from .myOdeResult import solve_ivp_pwc
-
+from bgc_md2.Variable import Variable
 
 ###############################################################################
 
@@ -139,6 +139,85 @@ class PWCModelRunFD(ModelRun):
 
     def fake_discretized_Bs(self, data_times=None):
         return self.pwc_mr.fake_discretized_Bs(data_times)
+
+    def get_stock(self, mdo, pool_name, nr_layer=0, name=''):
+        ms = mdo.model_structure
+        pool_nr = ms.get_pool_nr(pool_name, nr_layer)
+        soln = self.solve()
+        
+        if name == '':
+            name = ms.get_stock_var(pool_name)
+            
+        return Variable(
+            name=name,
+            data=soln[:, pool_nr],
+            unit=mdo.stock_unit
+        )
+
+    def get_acc_gross_external_input_flux(self, mdo, pool_name, nr_layer=0, name=''):
+        ms = mdo.model_structure
+        pool_nr = ms.get_pool_nr(pool_name, nr_layer)
+        
+        if name == '':
+            name = ms.get_external_input_flux_var(pool_name)
+
+        return Variable(
+            name=name,
+            data=self.acc_gross_external_input_vector()[:, pool_nr],
+            unit=mdo.stock_unit
+        )
+    
+    def get_acc_gross_external_output_flux(self, mdo, pool_name, nr_layer=0, name=''):
+        ms = mdo.model_structure
+        pool_nr = ms.get_pool_nr(pool_name, nr_layer)
+        
+        if name == '':
+            name = ms.get_external_output_flux_var(pool_name)
+
+        return Variable(
+            name=name,
+            data=self.acc_gross_external_output_vector()[:, pool_nr],
+            unit=mdo.stock_unit
+        )
+    
+    def get_acc_gross_internal_flux(
+        self,
+        mdo,
+        pool_name_from,
+        pool_name_to,
+        nr_layer_from=0,
+        nr_layer_to=0,
+        name=''
+    ):
+        ms = mdo.model_structure
+        pool_nr_from = ms.get_pool_nr(
+            pool_name_from,
+            nr_layer_from
+        )
+        pool_nr_to = ms.get_pool_nr(
+            pool_name_to,
+            nr_layer_to
+        )
+        Fs = self.acc_gross_internal_flux_matrix()
+
+        if name == '':
+            name = ms.get_horizontal_flux_var(pool_name_from, pool_name_to)
+
+        return Variable(
+            name=name,
+            data=Fs[:, pool_nr_to, pool_nr_from],
+            unit=mdo.stock_unit
+        )
+
+#    def to_netcdf(self, mdo, file_path):
+#        data_vars = {}
+#        model_ds = xr.Dataset(
+#            data_vars=data_vars,
+#            coords=coords,
+#            attr=attrs
+#        }
+#        model_ds.to_netcdf(file_path)
+#        model_ds.close()
 
 #    @classmethod
 #    def load_from_file(cls, filename):
