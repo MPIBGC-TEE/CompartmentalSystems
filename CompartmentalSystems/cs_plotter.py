@@ -1,6 +1,6 @@
 import matplotlib.patches as mpatches
 import numpy as np
-from sympy import latex
+from sympy import Symbol, latex
 
 
 class Pool():
@@ -198,7 +198,7 @@ class CSPlotter():
             pool.plot(ax)
 
             if self.visible_pool_names:
-                pool_name = self.state_vector[i]
+                pool_name = Symbol(str(self.state_vector[i]))
                 pool.plot_name(ax, "$"+latex(pool_name)+"$", self.fontsize)
 
             # plot influx
