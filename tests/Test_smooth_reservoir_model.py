@@ -2,7 +2,6 @@
 from concurrencytest import ConcurrentTestSuite, fork_for_tests
 import sys
 import unittest
-
 import numpy as np
 from sympy import Symbol, Matrix, symbols, diag, zeros, simplify, Function
 
@@ -351,7 +350,11 @@ class TestSmoothReservoirModel(InDirTest):
 
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
         fig = rm.figure()
-        fig.savefig("reservoir_model_plot.pdf")
+        fig.savefig("normal_reservoir_model_plot.pdf")
+        fig = rm.figure(thumbnail = True)
+        fig.savefig("thumbnail_reservoir_model_plot.pdf")
+        fig = rm.figure(logo = True)
+        fig.savefig("logo_reservoir_model_plot.pdf")
 
     def test_age_moment_system(self):
         x, y, t = symbols("x y t")

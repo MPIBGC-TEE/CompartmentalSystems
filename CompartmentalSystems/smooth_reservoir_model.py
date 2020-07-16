@@ -28,7 +28,7 @@ import numpy as np
 import multiprocessing
 
 from .helpers_reservoir import factor_out_from_matrix, has_pw, flux_dict_string, jacobian
-from .pool import Pool
+from .cs_plotter import CSPlotter
 from typing import TypeVar
 
 
@@ -62,7 +62,7 @@ class SmoothReservoirModel(object):
     def from_state_variable_indexed_fluxes(cls,state_vector, time_symbol, 
             input_fluxes, output_fluxes, internal_fluxes)->"SmoothReservoirModel":
         """Return an instance of SmoothReservoirModel.
-    
+
         Args:
             state_vector (SymPy dx1-matrix): The model's state vector 
                 :math:`x`.
@@ -78,7 +78,7 @@ class SmoothReservoirModel(object):
                 ``{key1: flux1, key2: flux2}`` with 
                 ``key = (source pool symbol, target pool symbol)`` and ``flux`` a SymPy expression 
                 for the flux.
-    
+
         Returns:
             :class:`SmoothReservoirModel`
         """
@@ -515,7 +515,7 @@ It gave up for the following expression: ${e}."""
         # we can use it
         xi, T, N, C, u = self.xi_T_N_u_representation(factor_out_xi=False)
         return(xi*T*N)
-    
+
     def age_moment_system(self, max_order):
         """Return the age moment system of the model.
 
@@ -555,6 +555,40 @@ It gave up for the following expression: ${e}."""
 
         return (extended_state, extended_rhs)
 
+
+
+
+    def plot_pools_and_fluxes(self, ax, mutation_scale = 50, fontsize = 24, thumbnail = False, legend=True):
+        ax.set_axis_off()
+        arrowstyle = "simple"
+        visible_pool_names = True
+
+        pipe_colors = {
+             'linear': 'blue',
+             'nonlinear': 'green',
+             'no state dependence': 'red'}
+
+        if thumbnail:
+            arrowstyle = "-"
+            visible_pool_names = False
+
+
+        csp = CSPlotter(
+            self.state_vector,
+            {k:self._input_flux_type(k) for k in self.input_fluxes.keys()},
+            {k:self._output_flux_type(k) for k in self.output_fluxes.keys()},
+            {k:self._internal_flux_type(*k) for k in self.internal_fluxes.keys()},
+            pipe_colors, 
+            visible_pool_names = visible_pool_names, 
+            arrowstyle = arrowstyle, 
+            fontsize = fontsize
+        )
+        csp.plot_pools_and_fluxes(ax)
+
+        if legend:
+            csp.legend(ax)
+
+
     def figure(self, figure_size = (7,7), logo = False, thumbnail = False):
         """Return a figure representing the reservoir model.
 
@@ -569,132 +603,39 @@ It gave up for the following expression: ${e}."""
         Returns:
             Matplotlib figure: Figure representing the reservoir model.
         """
-        inputs = self.input_fluxes
-        outputs =  self.output_fluxes
-        internal_fluxes = self.internal_fluxes
-
-        pool_alpha = 0.3
-        pool_color = 'blue'
-        pipe_colors = {
-            'linear': 'blue',
-            'nonlinear': 'green', 
-            'no state dependence': 'red'
-        }
-
+        fontsize = 24
         mutation_scale = 50
         #mutation_scale=20
         arrowstyle = "simple"
-        pipe_alpha=0.5
-        connectionstyle='arc3, rad=0.1'
         fontsize = 24
         legend = True
+
+
         if thumbnail:
             mutation_scale = 10
             legend = False
             arrowstyle = "-"
-            figure_size = (0.7,0.7)    
+            figure_size = (0.7,0.7)
 
         if logo:
             mutation_scale = 15
             legend = False
             fontsize = 16
-            figure_size = (3,3)     
-       
+            figure_size = (3,3)
+
         fig = plt.figure(figsize=figure_size, dpi=300)
+
         if legend:
             #ax = fig.add_axes([0,0,1,0.9])
             ax = fig.add_axes([0,0,0.8,0.8])
         else:
             #ax = fig.add_axes([0,0,1,1])
             ax = fig.add_subplot(1,1,1)
-        
-        ax.set_axis_off()
-         
-        nr_pools = self.nr_pools
 
-        base_r = 0.1 + (0.5-0.1)/10*nr_pools
-        if nr_pools > 1:
-            r = base_r * (1-np.exp(1j*2*np.pi/nr_pools))
-            r = abs(r) / 2 * 0.6
-            r = min(r, (0.5-base_r)*0.5)
-        else:
-            r = base_r * 0.5
-        
-        r = abs(r)
+        self.plot_pools_and_fluxes(ax,  mutation_scale = mutation_scale, fontsize = fontsize, thumbnail = thumbnail, legend = legend)
 
-        if thumbnail:
-            r = r * 0.7
-    
-
-        # plot pools and external fluxes
-        pools = []
-        for i in range(nr_pools):
-            z = base_r * np.exp(i*2*np.pi/nr_pools*1j)
-            x = 0.5 - z.real
-            y = 0.5 + z.imag
-
-            pool = Pool(
-                x, 
-                y, 
-                r, 
-                pool_color, 
-                pool_alpha, 
-                pipe_alpha, 
-                connectionstyle, 
-                arrowstyle,
-                mutation_scale
-            )
-            pool.plot(ax)
-
-            if not thumbnail:
-                pool_name = self.state_vector[i]
-                pool.plot_name(ax, "$"+latex(pool_name)+"$", fontsize)
-
-            if i in inputs.keys():
-                pool.plot_input_flux(
-                    ax,
-                    pipe_colors[self._input_flux_type(i)]
-                )
-
-            if i in outputs.keys():
-                pool.plot_output_flux(
-                    ax,
-                    pipe_colors[self._output_flux_type(i)]
-                )
-
-            pools.append(pool)
-
-        # plot internal fluxes
-        for (i,j) in internal_fluxes.keys():
-            pools[i].plot_internal_flux_to(
-                ax,
-                pools[j],
-                pipe_colors[self._internal_flux_type(i,j)]
-            )
-
-
-        if legend:
-            legend_descs = []
-            legend_colors = []
-            for desc, col in pipe_colors.items():
-                legend_descs.append(desc)
-                legend_colors.append(
-                    mpatches.FancyArrowPatch(
-                        (0,0),
-                        (1,1), 
-                        connectionstyle=connectionstyle,
-                        arrowstyle=arrowstyle, 
-                        mutation_scale=mutation_scale, 
-                        alpha=pipe_alpha, 
-                        color=col
-                    )
-                )
-            
-            ax.legend(legend_colors, legend_descs, loc='upper center', 
-                        bbox_to_anchor=(0.5, 1.1), ncol = 3)
-        
         return fig
-    
+
 
     ##### 14C methods #####
 
