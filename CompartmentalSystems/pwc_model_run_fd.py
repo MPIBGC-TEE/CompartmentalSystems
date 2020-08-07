@@ -15,7 +15,7 @@ from .myOdeResult import solve_ivp_pwc
 ###############################################################################
 
 
-class Error(Exception):
+class PWCModelRunFDError(Exception):
     """Generic error occurring in this module."""
     pass
 
@@ -24,38 +24,94 @@ class Error(Exception):
 
 
 class PWCModelRunFD(ModelRun):
-    def __init__(
-        self,
-        time_symbol,
-        data_times,
-        start_values,
-        gross_Us,
-        gross_Fs,
-        gross_Rs
-    ):
+#    def __init__(
+#        self,
+#        time_symbol,
+#        data_times,
+#        start_values,
+#        gross_Us,
+#        gross_Fs,
+#        gross_Rs
+#    ):
+#
+#        self.data_times = data_times
+#        cls = self.__class__
+#        disc_times = data_times[1:-1]
+#
+#        print('reconstructing us')
+##        us = cls.reconstruct_us(data_times, gross_Us)
+##        self.dts = np.diff(self.data_times).astype(np.float64)
+#        us = gross_Us / self.dts.reshape(-1, 1)
+#
+#        print('reconstructing Bs')
+#        Bs = cls.reconstruct_Bs(
+#            data_times,
+#            start_values,
+#            gross_Us,
+#            gross_Fs,
+#            gross_Rs
+#        )
+#
+#        
+#
+#        nr_pools = len(start_values)
+#        strlen = len(str(nr_pools))
+#
+#        def pool_str(i): return ("{:0"+str(strlen)+"d}").format(i)
+#        par_dicts = [dict()] * len(us)
+#
+#        srm_generic = cls.create_srm_generic(
+#            time_symbol,
+#            Bs,
+#            us
+#        )
+#        time_symbol = srm_generic.time_symbol
+#
+#        par_dicts = []
+#        for k in range(len(us)):
+#            par_dict = dict()
+#            for j in range(nr_pools):
+#                for i in range(nr_pools):
+#                    sym = Symbol('b_'+pool_str(i)+pool_str(j))
+#                    if sym in srm_generic.F.free_symbols:
+#                        par_dict[sym] = Bs[k, i, j]
+#
+#            for i in range(nr_pools):
+#                sym = Symbol('u_'+pool_str(i))
+#                if sym in srm_generic.F.free_symbols:
+#                    par_dict[sym] = us[k, i]
+#
+#            par_dicts.append(par_dict)
+#
+#        func_dicts = [dict()] * len(us)
+#
+#        self.pwc_mr = PWCModelRun(
+#            srm_generic,
+#            par_dicts,
+#            start_values,
+#            data_times,
+#            func_dicts=func_dicts,
+#            disc_times=disc_times
+#        )
+#        self.us = us
+#        self.Bs = Bs
 
-        self.data_times = data_times
-        cls = self.__class__
+    def __init__(self, Bs, us, pwc_mr):
+        self.data_times = pwc_mr.times
+        self.pwc_mr = pwc_mr
+        self.Bs = Bs
+        self.us = us
+
+    @classmethod
+    def from_Bs_and_us(cls, time_symbol, data_times, start_values, Bs, us):
         disc_times = data_times[1:-1]
-
-        print('reconstructing us')
-#        us = cls.reconstruct_us(data_times, gross_Us)
-#        self.dts = np.diff(self.data_times).astype(np.float64)
-        us = gross_Us / self.dts.reshape(-1, 1)
-
-        print('reconstructing Bs')
-        Bs = cls.reconstruct_Bs(
-            data_times,
-            start_values,
-            gross_Us,
-            gross_Fs,
-            gross_Rs
-        )
 
         nr_pools = len(start_values)
         strlen = len(str(nr_pools))
 
-        def pool_str(i): return ("{:0"+str(strlen)+"d}").format(i)
+        def pool_str(i): 
+            return ("{:0"+str(strlen)+"d}").format(i)
+
         par_dicts = [dict()] * len(us)
 
         srm_generic = cls.create_srm_generic(
@@ -63,7 +119,6 @@ class PWCModelRunFD(ModelRun):
             Bs,
             us
         )
-        time_symbol = srm_generic.time_symbol
 
         par_dicts = []
         for k in range(len(us)):
@@ -83,7 +138,7 @@ class PWCModelRunFD(ModelRun):
 
         func_dicts = [dict()] * len(us)
 
-        self.pwc_mr = PWCModelRun(
+        pwc_mr = PWCModelRun(
             srm_generic,
             par_dicts,
             start_values,
@@ -91,8 +146,40 @@ class PWCModelRunFD(ModelRun):
             func_dicts=func_dicts,
             disc_times=disc_times
         )
-        self.us = us
-        self.Bs = Bs
+        
+        return cls(Bs, us, pwc_mr)
+
+    @classmethod
+    def from_gross_data(
+        cls,
+        time_symbol,
+        data_times,
+        start_values,
+        gross_Us,
+        gross_Fs,
+        gross_Rs
+    ):
+
+        print('reconstructing us')
+        dts = np.diff(data_times).astype(np.float64)
+        us = gross_Us / dts.reshape(-1, 1)
+
+        print('reconstructing Bs')
+        Bs = cls.reconstruct_Bs(
+            data_times,
+            start_values,
+            gross_Us,
+            gross_Fs,
+            gross_Rs
+        )
+
+        return cls.from_Bs_and_us(
+            time_symbol,
+            data_times,
+            start_values,
+            Bs,
+            us
+        )
 
     @property
     def model(self):
@@ -105,6 +192,10 @@ class PWCModelRunFD(ModelRun):
     @property
     def dts(self):
         return np.diff(self.data_times).astype(np.float64)
+
+    @property
+    def start_values(self):
+        return self.pwc_mr.start_values
 
     def solve(self, alternative_start_values=None):
         return self.pwc_mr.solve(alternative_start_values)
@@ -141,6 +232,8 @@ class PWCModelRunFD(ModelRun):
         return self.pwc_mr.fake_discretized_Bs(data_times)
 
 #    def to_netcdf(self, mdo, file_path):
+#        """Return a netCDF dataset that contains stocks and fluxes."""
+#
 #        data_vars = {}
 #        model_ds = xr.Dataset(
 #            data_vars=data_vars,
@@ -149,7 +242,7 @@ class PWCModelRunFD(ModelRun):
 #        }
 #        model_ds.to_netcdf(file_path)
 #        model_ds.close()
-
+#
 #    @classmethod
 #    def load_from_file(cls, filename):
 #        pwc_mr_fd_dict = picklegzip.load(filename)
@@ -310,7 +403,7 @@ class PWCModelRunFD(ModelRun):
 #        )
 
         if not y.success:
-            raise(Error(y.message))
+            raise(PWCModelRunFDError(y.message))
 
         B = pars_to_matrix(y.x)
 

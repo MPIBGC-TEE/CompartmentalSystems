@@ -48,7 +48,7 @@ class TestPWCModelRunFD(unittest.TestCase):
         xs, gross_Us, gross_Fs, gross_Rs =\
             smr.fake_gross_discretized_output(smr.times)
 
-        pwc_mr_fd = PWCModelRunFD(
+        pwc_mr_fd = PWCModelRunFD.from_gross_data(
             smr.model.time_symbol,
             smr.times,
             xs[0, :],
