@@ -150,7 +150,7 @@ class PWCModelRunFD(ModelRun):
         return cls(Bs, us, pwc_mr)
 
     @classmethod
-    def from_gross_data(
+    def from_gross_fluxes(
         cls,
         time_symbol,
         data_times,

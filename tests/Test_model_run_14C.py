@@ -78,7 +78,7 @@ class TestModelRun_14C(InDirTest):
         xs, gross_Us, gross_Fs, gross_Rs \
             = self.smr.fake_gross_discretized_output(times)
 
-        pwc_mr_fd = PWCModelRunFD(
+        pwc_mr_fd = PWCModelRunFD.from_gross_fluxes(
             self.smr.model.time_symbol,
             times,
             self.smr.start_values,
