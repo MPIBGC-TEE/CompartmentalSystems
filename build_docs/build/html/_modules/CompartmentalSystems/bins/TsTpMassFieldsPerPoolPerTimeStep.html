@@ -1,0 +1,230 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompartmentalSystems.bins.TsTpMassFieldsPerPoolPerTimeStep &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for CompartmentalSystems.bins.TsTpMassFieldsPerPoolPerTimeStep</h1><div class="highlight"><pre>
+<span></span><span class="c1"># vim: set ff=unix expandtab ts=4 sw=4:</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="n">latex</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span>
+<span class="c1">#matplotlib.use(&quot;Agg&quot;)</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">matplotlib.animation</span> <span class="k">as</span> <span class="nn">manimation</span>
+<span class="kn">from</span> <span class="nn">.density_algorithm</span> <span class="kn">import</span> <span class="n">losses</span><span class="p">,</span><span class="n">gains</span>
+<span class="kn">from</span> <span class="nn">.TsTpMassField</span> <span class="kn">import</span> <span class="n">TsTpMassField</span>
+<span class="kn">from</span> <span class="nn">.TsTpMassFieldsPerTimeStep</span> <span class="kn">import</span> <span class="n">TsTpMassFieldsPerTimeStep</span>
+
+<div class="viewcode-block" id="TsTpMassFieldsPerPoolPerTimeStep"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFieldsPerPoolPerTimeStep.TsTpMassFieldsPerPoolPerTimeStep">[docs]</a><span class="k">class</span> <span class="nc">TsTpMassFieldsPerPoolPerTimeStep</span><span class="p">:</span>
+    <span class="c1"># this class represents the results of the simulations for a multipool reservoir model</span>
+    <span class="c1"># for each system_age</span>
+    <span class="c1">#     for each pool_age</span>
+    <span class="c1">#        for each pool</span>
+    <span class="c1">#            for each timestep</span>
+    <span class="c1">#                the amount of mass is stored</span>
+        
+<div class="viewcode-block" id="TsTpMassFieldsPerPoolPerTimeStep.from_time_step_iterator"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFieldsPerPoolPerTimeStep.TsTpMassFieldsPerPoolPerTimeStep.from_time_step_iterator">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_time_step_iterator</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span><span class="n">iterator</span><span class="p">):</span>
+        <span class="n">l</span><span class="o">=</span><span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">rectangles</span> <span class="k">for</span> <span class="n">ts</span> <span class="ow">in</span> <span class="n">iterator</span><span class="p">]</span>
+        <span class="n">start</span><span class="o">=</span><span class="n">iterator</span><span class="o">.</span><span class="n">t0</span>
+        <span class="n">obj</span><span class="o">=</span><span class="bp">cls</span><span class="p">(</span><span class="n">l</span><span class="p">,</span><span class="n">start</span><span class="p">)</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span></div>
+        
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">tss</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tss</span><span class="p">)</span>
+    
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">multi_pool_pyramid</span><span class="p">,</span><span class="n">start</span><span class="p">):</span>
+        <span class="c1"># can be replaced later by something smarter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">multi_pool_pyramid</span><span class="o">=</span><span class="n">multi_pool_pyramid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="o">=</span><span class="n">start</span>
+
+
+<span class="c1">#    def movie(self,tss,pool_number,trunk): </span>
+<span class="c1">#        movie_file=trunk+&quot;.mp4&quot;</span>
+<span class="c1">#        pyr=self.multi_pool_pyramid</span>
+<span class="c1">#        max_shape=pyr[-1][pool_number].shape</span>
+<span class="c1">#    </span>
+<span class="c1">#        FFMpegWriter = manimation.writers[&#39;ffmpeg&#39;]</span>
+<span class="c1">#        metadata = dict(title=&#39;&#39;, artist=&#39;The TEE Group&#39;,</span>
+<span class="c1">#                        comment=&#39;&#39;)</span>
+<span class="c1">#        writer = FFMpegWriter(fps=1, metadata=metadata)</span>
+<span class="c1">#        </span>
+<span class="c1">#        fig = plt.figure()</span>
+<span class="c1">#        #ax=fig.add_subplot(1,1,1,projection=&quot;3d&quot;)</span>
+<span class="c1">#        nots=len(pyr)</span>
+<span class="c1">#        with writer.saving(fig, movie_file,100, nots):</span>
+<span class="c1">#            for i in range(nots):</span>
+<span class="c1">#                fig.clf()</span>
+<span class="c1">#                ax=fig.add_subplot(1,1,1,projection=&quot;3d&quot;)</span>
+<span class="c1">#                ss=TsTpMassField(pyr[i][pool_number],self.tss)</span>
+<span class="c1">#                ss.plot(ax,max_shape)</span>
+<span class="c1">#                writer.grab_frame()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">number_of_pools</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">multi_pool_pyramid</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">number_of_pools</span><span class="p">)</span>
+
+<div class="viewcode-block" id="TsTpMassFieldsPerPoolPerTimeStep.singlePoolPyramid"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFieldsPerPoolPerTimeStep.TsTpMassFieldsPerPoolPerTimeStep.singlePoolPyramid">[docs]</a>    <span class="k">def</span> <span class="nf">singlePoolPyramid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">pool_nr</span><span class="p">):</span>
+        <span class="n">sppyr</span><span class="o">=</span><span class="p">[</span><span class="n">fields</span><span class="p">[</span><span class="n">pool_nr</span><span class="p">]</span> <span class="k">for</span> <span class="n">fields</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">multi_pool_pyramid</span><span class="p">]</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">TsTpMassFieldsPerTimeStep</span><span class="p">(</span><span class="n">sppyr</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="TsTpMassFieldsPerPoolPerTimeStep.matrix_plot"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFieldsPerPoolPerTimeStep.TsTpMassFieldsPerPoolPerTimeStep.matrix_plot">[docs]</a>    <span class="k">def</span> <span class="nf">matrix_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sub_func_name</span><span class="p">,</span><span class="n">fig</span><span class="p">):</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">fig</span><span class="o">.</span><span class="n">number</span><span class="p">)</span><span class="c1">#activate the figure</span>
+        <span class="c1">#creates a matrix plot with the plot for the pools on the diagonal</span>
+        <span class="c1">#and the plots for the pipelines in the off diagonal parts as functions of time</span>
+        <span class="c1"># and add them </span>
+        <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_pools</span>
+        <span class="c1"># diagonal entries</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+            <span class="n">ax</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">subplot2grid</span><span class="p">((</span><span class="n">n</span><span class="p">,</span><span class="n">n</span><span class="p">),(</span><span class="n">i</span><span class="p">,</span><span class="n">i</span><span class="p">))</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">sub_func_name</span><span class="o">+</span><span class="s2">&quot; pool &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+            <span class="n">pool_pyr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">singlePoolPyramid</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="n">pool_pyr</span><span class="p">,</span><span class="n">sub_func_name</span><span class="p">)(</span><span class="n">ax</span><span class="p">)</span></div>
+            
+        <span class="c1">#nondiagonal entries</span>
+        <span class="c1"># not implemented yet </span>
+        <span class="c1"># get the fluxes</span>
+    
+    <span class="c1">#fixme: treatment of title, state_variables,time_symbol</span>
+    <span class="c1"># since mr specific knowledge does not want to live here at all</span>
+<div class="viewcode-block" id="TsTpMassFieldsPerPoolPerTimeStep.matrix_plot3d"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFieldsPerPoolPerTimeStep.TsTpMassFieldsPerPoolPerTimeStep.matrix_plot3d">[docs]</a>    <span class="k">def</span> <span class="nf">matrix_plot3d</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sub_func_name</span><span class="p">,</span><span class="n">fig</span><span class="p">,</span><span class="n">title</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">mr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1">#creates a matrix plot with for each pool</span>
+        <span class="c1"># and adds them </span>
+        <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_pools</span>
+        <span class="c1">#holger: here you can change which pools are plotted</span>
+        <span class="c1">#n=1</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">set_figheight</span><span class="p">(</span><span class="n">n</span><span class="o">*</span><span class="n">fig</span><span class="o">.</span><span class="n">get_figwidth</span><span class="p">())</span>
+        <span class="c1"># diagonal entries</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+            <span class="n">ax</span><span class="o">=</span><span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">projection</span><span class="o">=</span><span class="s2">&quot;3d&quot;</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">view_init</span><span class="p">(</span><span class="n">elev</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span><span class="n">azim</span><span class="o">=</span><span class="mi">72</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">title</span><span class="p">:</span>
+                <span class="n">sv_str</span> <span class="o">=</span> <span class="s2">&quot;$&quot;</span> <span class="o">+</span> <span class="n">latex</span><span class="p">(</span><span class="n">mr</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">state_variables</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;$&quot;</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">title</span> <span class="o">+</span> <span class="s2">&quot; of &quot;</span> <span class="o">+</span> <span class="n">sv_str</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">sub_func_name</span><span class="o">+</span><span class="s2">&quot; pool &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+
+            <span class="n">pool_pyr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">singlePoolPyramid</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="c1">#fixme: reservoir model to next plot method</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="n">pool_pyr</span><span class="p">,</span><span class="n">sub_func_name</span><span class="p">)(</span><span class="n">ax</span><span class="p">,</span><span class="n">mr</span><span class="p">,</span><span class="n">i</span><span class="p">)</span></div>
+
+        <span class="c1">#nondiagonal entries</span>
+        <span class="c1"># not implemented yet </span>
+        <span class="c1"># get the fluxes</span>
+        
+        
+
+<div class="viewcode-block" id="TsTpMassFieldsPerPoolPerTimeStep.single_pool_cartoon"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFieldsPerPoolPerTimeStep.TsTpMassFieldsPerPoolPerTimeStep.single_pool_cartoon">[docs]</a>    <span class="k">def</span> <span class="nf">single_pool_cartoon</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">pool_number</span><span class="p">,</span><span class="n">trunk</span><span class="p">):</span> 
+        <span class="n">pyr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">multi_pool_pyramid</span>
+        <span class="n">max_shape</span><span class="o">=</span><span class="n">pyr</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">pool_number</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
+        <span class="c1">#print(&quot;max_shape&quot;,max_shape)</span>
+        <span class="n">tss</span><span class="o">=</span> <span class="n">pyr</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tss</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="c1">#ax=fig.add_subplot(1,1,1,projection=&quot;3d&quot;)</span>
+        <span class="n">nots</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">pyr</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;nots=&quot;</span><span class="p">,</span><span class="n">nots</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nots</span><span class="p">):</span>
+            <span class="n">rectangles</span><span class="o">=</span><span class="n">pyr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">rect</span><span class="o">=</span><span class="n">rectangles</span><span class="p">[</span><span class="n">pool_number</span><span class="p">]</span>
+            <span class="n">fig</span><span class="o">.</span><span class="n">clf</span><span class="p">()</span>
+            <span class="n">ax</span><span class="o">=</span><span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">projection</span><span class="o">=</span><span class="s2">&quot;3d&quot;</span><span class="p">)</span>
+            <span class="n">rect</span><span class="o">.</span><span class="n">plot_bins</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span><span class="n">max_shape</span><span class="p">)</span>
+            <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">trunk</span><span class="o">+</span><span class="s1">&#39;</span><span class="si">{first_arg:04d}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">first_arg</span><span class="o">=</span><span class="n">i</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;.pdf&quot;</span><span class="p">)</span></div></div>
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,1079 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompartmentalSystems.helpers_reservoir &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for CompartmentalSystems.helpers_reservoir</h1><div class="highlight"><pre>
+<span></span><span class="c1"># vim:set ff=unix expandtab ts=4 sw=4:</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">lru_cache</span><span class="p">,</span> <span class="n">_CacheInfo</span><span class="p">,</span> <span class="n">_lru_cache_wrapper</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">numbers</span> <span class="kn">import</span> <span class="n">Number</span>
+<span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="kn">import</span> <span class="n">odeint</span><span class="p">,</span> <span class="n">quad</span>
+<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="kn">import</span> <span class="n">lagrange</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">brentq</span>
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">norm</span>
+<span class="kn">from</span> <span class="nn">string</span> <span class="kn">import</span> <span class="n">Template</span>
+<span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="n">gcd</span><span class="p">,</span> <span class="n">lambdify</span><span class="p">,</span> <span class="n">DiracDelta</span><span class="p">,</span> <span class="n">solve</span><span class="p">,</span> <span class="n">Matrix</span><span class="p">,</span> <span class="n">diff</span>
+<span class="kn">from</span> <span class="nn">sympy.polys.polyerrors</span> <span class="kn">import</span> <span class="n">PolynomialError</span>
+<span class="kn">from</span> <span class="nn">sympy.core.function</span> <span class="kn">import</span> <span class="n">UndefinedFunction</span><span class="p">,</span> <span class="n">Function</span><span class="p">,</span> <span class="n">sympify</span>
+<span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="n">Symbol</span>
+<span class="kn">from</span> <span class="nn">.BlockOde</span> <span class="kn">import</span> <span class="n">BlockOde</span>
+<span class="kn">from</span> <span class="nn">.myOdeResult</span> <span class="kn">import</span> <span class="n">solve_ivp_pwc</span>
+
+
+<span class="n">ALPHA_14C</span> <span class="o">=</span> <span class="mf">1.18e-12</span>
+<span class="n">DECAY_RATE_14C_DAILY</span> <span class="o">=</span> <span class="mf">0.0001209681</span>
+
+
+<div class="viewcode-block" id="warning"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.warning">[docs]</a><span class="k">def</span> <span class="nf">warning</span><span class="p">(</span><span class="n">txt</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;############################################&#39;</span><span class="p">)</span>
+    <span class="n">calling_frame</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getouterframes</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">currentframe</span><span class="p">(),</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">func_name</span> <span class="o">=</span> <span class="n">calling_frame</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning in function </span><span class="si">{0}</span><span class="s2">:&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">func_name</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">txt</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="deprecation_warning"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.deprecation_warning">[docs]</a><span class="k">def</span> <span class="nf">deprecation_warning</span><span class="p">(</span><span class="n">txt</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;############################################&#39;</span><span class="p">)</span>
+    <span class="n">calling_frame</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getouterframes</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">currentframe</span><span class="p">(),</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">func_name</span> <span class="o">=</span> <span class="n">calling_frame</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The function </span><span class="si">{0}</span><span class="s2"> is deprecated&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">func_name</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">txt</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="flux_dict_string"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.flux_dict_string">[docs]</a><span class="k">def</span> <span class="nf">flux_dict_string</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39; &#39;</span><span class="o">*</span><span class="n">indent</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+    <span class="k">return</span> <span class="n">s</span></div>
+
+
+<div class="viewcode-block" id="func_subs"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.func_subs">[docs]</a><span class="k">def</span> <span class="nf">func_subs</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">Func_expr</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">t0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    returns the function part_func</span>
+<span class="sd">    where part_func(_,_,...) =func(_,t=t0,_..) (func partially applied to t0)</span>
+<span class="sd">    The position of argument t in the argument list is found</span>
+<span class="sd">    by examining the Func_expression argument.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        t (sympy.symbol): the symbol to be replaced by t0</span>
+<span class="sd">        t0 (value)      : the value to which the function will be applied</span>
+<span class="sd">        func (function) : a python function</span>
+<span class="sd">        Func_exprs (sympy.Function) : An expression for an undefined Function</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">Func_expr</span><span class="p">),</span> <span class="n">UndefinedFunction</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="n">Func_expr</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">frozen</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="c1"># tuples are immutable</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+        <span class="n">L</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">t0</span><span class="p">)</span>
+        <span class="n">new_args</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">new_args</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">frozen</span></div>
+
+
+<div class="viewcode-block" id="jacobian"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.jacobian">[docs]</a><span class="k">def</span> <span class="nf">jacobian</span><span class="p">(</span><span class="n">vec</span><span class="p">,</span> <span class="n">state_vec</span><span class="p">):</span>
+    <span class="n">dim1</span> <span class="o">=</span> <span class="n">vec</span><span class="o">.</span><span class="n">rows</span>
+    <span class="n">dim2</span> <span class="o">=</span> <span class="n">state_vec</span><span class="o">.</span><span class="n">rows</span>
+    <span class="k">return</span> <span class="n">Matrix</span><span class="p">(</span><span class="n">dim1</span><span class="p">,</span> <span class="n">dim2</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">:</span> <span class="n">diff</span><span class="p">(</span><span class="n">vec</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">state_vec</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span></div>
+
+
+<span class="c1"># fixme: test</span>
+<div class="viewcode-block" id="has_pw"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.has_pw">[docs]</a><span class="k">def</span> <span class="nf">has_pw</span><span class="p">(</span><span class="n">expr</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">expr</span><span class="o">.</span><span class="n">is_Matrix</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">expr</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">has_pw</span><span class="p">(</span><span class="n">c</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="n">expr</span><span class="o">.</span><span class="n">is_Piecewise</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">expr</span><span class="o">.</span><span class="n">args</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">has_pw</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="is_DiracDelta"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.is_DiracDelta">[docs]</a><span class="k">def</span> <span class="nf">is_DiracDelta</span><span class="p">(</span><span class="n">expr</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Check if expr is a Dirac delta function.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">expr</span><span class="o">.</span><span class="n">args</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="n">arg</span> <span class="o">=</span> <span class="n">expr</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">DiracDelta</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span> <span class="o">==</span> <span class="n">expr</span></div>
+
+
+<div class="viewcode-block" id="parse_input_function"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.parse_input_function">[docs]</a><span class="k">def</span> <span class="nf">parse_input_function</span><span class="p">(</span><span class="n">u_i</span><span class="p">,</span> <span class="n">time_symbol</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return an ordered list of jumps in the input function u.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        u (SymPy expression): input function in :math:`\\dot{x} = B\\,x + u`</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ascending list of jumps in u</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">impulse_times</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">pieces</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">rek</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">imp_t</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="s1">&#39;args&#39;</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">expr</span><span class="o">.</span><span class="n">args</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">is_DiracDelta</span><span class="p">(</span><span class="n">arg</span><span class="p">):</span>
+                    <span class="n">dirac_arg</span> <span class="o">=</span> <span class="n">arg</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">zeros</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">dirac_arg</span><span class="p">)</span>
+                    <span class="n">imp_t</span> <span class="o">+=</span> <span class="n">zeros</span>
+
+                <span class="k">if</span> <span class="n">arg</span><span class="o">.</span><span class="n">is_Piecewise</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">pw_arg</span> <span class="ow">in</span> <span class="n">arg</span><span class="o">.</span><span class="n">args</span><span class="p">:</span>
+                        <span class="n">cond</span> <span class="o">=</span> <span class="n">pw_arg</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="c1"># &#39;if not cond&#39; led to strange behavior</span>
+                        <span class="k">if</span> <span class="n">cond</span> <span class="o">!=</span> <span class="kc">True</span><span class="p">:</span>  <span class="c1"># noqa: E712</span>
+                            <span class="n">atoms</span> <span class="o">=</span> <span class="n">cond</span><span class="o">.</span><span class="n">args</span>
+                            <span class="n">zeros</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">atoms</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">atoms</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                            <span class="n">p</span> <span class="o">+=</span> <span class="n">zeros</span>
+
+                <span class="n">rek</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">imp_t</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+
+    <span class="n">rek</span><span class="p">(</span><span class="n">u_i</span><span class="p">,</span> <span class="n">impulse_times</span><span class="p">,</span> <span class="n">pieces</span><span class="p">)</span>
+
+    <span class="n">impulses</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">impulse_times</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">impulse_times</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">impulse_time</span> <span class="ow">in</span> <span class="n">impulse_times</span><span class="p">:</span>
+        <span class="n">intensity</span> <span class="o">=</span> <span class="n">u_i</span><span class="o">.</span><span class="n">coeff</span><span class="p">(</span><span class="n">DiracDelta</span><span class="p">(</span><span class="n">impulse_time</span><span class="o">-</span><span class="n">time_symbol</span><span class="p">))</span>
+        <span class="n">impulses</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">impulse_time</span><span class="p">,</span> <span class="s1">&#39;intensity&#39;</span><span class="p">:</span> <span class="n">intensity</span><span class="p">})</span>
+
+    <span class="n">jump_times</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">pieces</span> <span class="o">+</span> <span class="n">impulse_times</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">impulses</span><span class="p">,</span> <span class="n">jump_times</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="factor_out_from_matrix"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.factor_out_from_matrix">[docs]</a><span class="k">def</span> <span class="nf">factor_out_from_matrix</span><span class="p">(</span><span class="n">M</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">has_pw</span><span class="p">(</span><span class="n">M</span><span class="p">):</span>
+        <span class="k">return</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">gcd</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">M</span><span class="p">))</span>
+    <span class="k">except</span><span class="p">(</span><span class="n">PolynomialError</span><span class="p">):</span>
+        <span class="c1"># print(&#39;no factoring out possible&#39;)</span>
+        <span class="c1"># fixme: does not work if a function of X, t is in the expressios,</span>
+        <span class="c1"># we could make it work...if we really wanted to</span>
+        <span class="k">return</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="numerical_function_from_expression"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.numerical_function_from_expression">[docs]</a><span class="k">def</span> <span class="nf">numerical_function_from_expression</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">tup</span><span class="p">,</span> <span class="n">parameter_dict</span><span class="p">,</span> <span class="n">func_set</span><span class="p">):</span>
+    <span class="c1"># the function returns a function that given numeric arguments</span>
+    <span class="c1"># returns a numeric result.</span>
+    <span class="c1"># This is a more specific requirement than a function returned by lambdify</span>
+    <span class="c1"># which can still return symbolic</span>
+    <span class="c1"># results if the tuple argument to lambdify does not contain all free</span>
+    <span class="c1"># symbols of the lambdified expression.</span>
+    <span class="c1"># To avoid this case here we check this.</span>
+    <span class="n">expr_par</span> <span class="o">=</span> <span class="n">expr</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">parameter_dict</span><span class="p">)</span>
+    <span class="n">ss_expr</span> <span class="o">=</span> <span class="n">expr_par</span><span class="o">.</span><span class="n">free_symbols</span>
+    <span class="n">ss_tup</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">tup</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">ss_expr</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">ss_tup</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+            <span class="sd">&quot;&quot;&quot;The free symbols of the expression: ${0} are not a subset of</span>
+<span class="sd">               the symbols in the tuple argument:${1}</span>
+<span class="sd">            &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ss_expr</span><span class="p">,</span> <span class="n">ss_tup</span><span class="p">))</span>
+
+    <span class="n">cut_func_set</span> <span class="o">=</span> <span class="n">make_cut_func_set</span><span class="p">(</span><span class="n">func_set</span><span class="p">)</span>
+<span class="c1">#    expr_par=expr.subs(parameter_dict)</span>
+    <span class="n">expr_func</span> <span class="o">=</span> <span class="n">lambdify</span><span class="p">(</span><span class="n">tup</span><span class="p">,</span> <span class="n">expr_par</span><span class="p">,</span> <span class="n">modules</span><span class="o">=</span><span class="p">[</span><span class="n">cut_func_set</span><span class="p">,</span> <span class="s1">&#39;numpy&#39;</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">expr_func_safe_0_over_0</span><span class="p">(</span><span class="o">*</span><span class="n">val</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">invalid</span><span class="o">=</span><span class="s1">&#39;raise&#39;</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">expr_func</span><span class="p">(</span><span class="o">*</span><span class="n">val</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">FloatingPointError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;invalid value encountered in double_scalars&#39;</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">invalid</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span>
+                        <span class="n">res</span> <span class="o">=</span> <span class="n">expr_func</span><span class="p">(</span><span class="o">*</span><span class="n">val</span><span class="p">)</span>
+                        <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="k">return</span> <span class="n">expr_func_safe_0_over_0</span></div>
+
+
+<div class="viewcode-block" id="numerical_rhs"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.numerical_rhs">[docs]</a><span class="k">def</span> <span class="nf">numerical_rhs</span><span class="p">(</span>
+    <span class="n">state_vector</span><span class="p">,</span>
+    <span class="n">time_symbol</span><span class="p">,</span>
+    <span class="n">rhs</span><span class="p">,</span>
+    <span class="n">parameter_dict</span><span class="p">,</span>
+    <span class="n">func_dict</span>
+<span class="p">):</span>
+
+    <span class="n">FL</span> <span class="o">=</span> <span class="n">numerical_function_from_expression</span><span class="p">(</span>
+        <span class="n">rhs</span><span class="p">,</span>
+        <span class="p">(</span><span class="n">time_symbol</span><span class="p">,)</span><span class="o">+</span><span class="nb">tuple</span><span class="p">(</span><span class="n">state_vector</span><span class="p">),</span>
+        <span class="n">parameter_dict</span><span class="p">,</span>
+        <span class="n">func_dict</span>
+    <span class="p">)</span>
+
+    <span class="c1"># 2.) Write a wrapper that transformes Matrices to numpy.ndarrays and</span>
+    <span class="c1"># accepts array instead of the separate arguments for the states)</span>
+    <span class="k">def</span> <span class="nf">num_rhs</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="c1"># we need the arguments to be numpy arrays to be able to catch 0/0</span>
+        <span class="n">Y</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">X</span><span class="p">)</span>
+        <span class="n">Fval</span> <span class="o">=</span> <span class="n">FL</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="o">*</span><span class="n">Y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Fval</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">,)</span>
+
+    <span class="k">return</span> <span class="n">num_rhs</span></div>
+
+
+<div class="viewcode-block" id="numerical_rhs_old"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.numerical_rhs_old">[docs]</a><span class="k">def</span> <span class="nf">numerical_rhs_old</span><span class="p">(</span>
+    <span class="n">state_vector</span><span class="p">,</span>
+    <span class="n">time_symbol</span><span class="p">,</span>
+    <span class="n">rhs</span><span class="p">,</span>
+    <span class="n">parameter_dict</span><span class="p">,</span>
+    <span class="n">func_set</span><span class="p">,</span>
+    <span class="n">times</span>
+<span class="p">):</span>
+
+    <span class="n">FL</span> <span class="o">=</span> <span class="n">numerical_function_from_expression</span><span class="p">(</span>
+        <span class="n">rhs</span><span class="p">,</span>
+        <span class="nb">tuple</span><span class="p">(</span><span class="n">state_vector</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">time_symbol</span><span class="p">,),</span>
+        <span class="n">parameter_dict</span><span class="p">,</span>
+        <span class="n">func_set</span>
+    <span class="p">)</span>
+
+    <span class="c1"># 2.) Write a wrapper that transformes Matrices numpy.ndarrays and accepts</span>
+    <span class="c1"># array instead of the separate arguments for the states)</span>
+    <span class="k">def</span> <span class="nf">num_rhs</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="n">Fval</span> <span class="o">=</span> <span class="n">FL</span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Fval</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">,)</span>
+
+    <span class="k">def</span> <span class="nf">bounded_num_rhs</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="c1"># fixme 1:</span>
+        <span class="c1"># maybe odeint (or another integrator)</span>
+        <span class="c1"># can be told &gt;&gt;not&lt;&lt; to look outside</span>
+        <span class="c1"># the interval</span>
+
+        <span class="c1"># fixme 2:</span>
+        <span class="c1"># actually the times vector is not the smallest</span>
+        <span class="c1"># possible allowed set but the intersection of</span>
+        <span class="c1"># all the intervals where the</span>
+        <span class="c1"># time dependent functions are defined</span>
+        <span class="c1"># this should be tested in init</span>
+        <span class="n">t_max</span> <span class="o">=</span> <span class="n">times</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># fixme: we should die hard here, because now we think we can compute</span>
+        <span class="c1"># the state transition operator till any time in the future,</span>
+        <span class="c1"># but it is actually biased by the fact, that we use the last value</span>
+        <span class="c1"># over and over again</span>
+        <span class="c1"># and hence assume some &quot;constant&quot; future</span>
+        <span class="k">if</span> <span class="n">t</span> <span class="o">&gt;</span> <span class="n">t_max</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">num_rhs</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">t_max</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">num_rhs</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+
+<span class="c1">#        print(&#39;brhs&#39;, &#39;t&#39;, t, &#39;X&#39;, X, &#39;res&#39;, res)</span>
+<span class="c1">#        print(&#39;t&#39;, t)</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="k">return</span> <span class="n">bounded_num_rhs</span></div>
+
+
+<div class="viewcode-block" id="numsol_symbolic_system_old"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.numsol_symbolic_system_old">[docs]</a><span class="k">def</span> <span class="nf">numsol_symbolic_system_old</span><span class="p">(</span>
+    <span class="n">state_vector</span><span class="p">,</span>
+    <span class="n">time_symbol</span><span class="p">,</span>
+    <span class="n">rhs</span><span class="p">,</span>
+    <span class="n">parameter_dict</span><span class="p">,</span>
+    <span class="n">func_set</span><span class="p">,</span>
+    <span class="n">start_values</span><span class="p">,</span>
+    <span class="n">times</span>
+<span class="p">):</span>
+
+    <span class="n">nr_pools</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">state_vector</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">times</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">times</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">start_values</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">nr_pools</span><span class="p">))</span>
+
+    <span class="n">num_rhs</span> <span class="o">=</span> <span class="n">numerical_rhs_old</span><span class="p">(</span>
+        <span class="n">state_vector</span><span class="p">,</span>
+        <span class="n">time_symbol</span><span class="p">,</span>
+        <span class="n">rhs</span><span class="p">,</span>
+        <span class="n">parameter_dict</span><span class="p">,</span>
+        <span class="n">func_set</span><span class="p">,</span>
+        <span class="n">times</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">odeint</span><span class="p">(</span><span class="n">num_rhs</span><span class="p">,</span> <span class="n">start_values</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">mxstep</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="numsol_symbolical_system"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.numsol_symbolical_system">[docs]</a><span class="k">def</span> <span class="nf">numsol_symbolical_system</span><span class="p">(</span>
+    <span class="n">state_vector</span><span class="p">,</span>
+    <span class="n">time_symbol</span><span class="p">,</span>
+    <span class="n">rhs</span><span class="p">,</span>
+    <span class="n">parameter_dicts</span><span class="p">,</span>
+    <span class="n">func_dicts</span><span class="p">,</span>
+    <span class="n">start_values</span><span class="p">,</span>
+    <span class="n">times</span><span class="p">,</span>
+    <span class="n">disc_times</span><span class="o">=</span><span class="p">()</span>
+<span class="p">):</span>
+    <span class="n">nr_pools</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">state_vector</span><span class="p">)</span>
+    <span class="n">t_min</span> <span class="o">=</span> <span class="n">times</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">t_max</span> <span class="o">=</span> <span class="n">times</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">times</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">times</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">start_values</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">nr_pools</span><span class="p">))</span>
+
+    <span class="n">num_rhss</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+        <span class="n">numerical_rhs</span><span class="p">(</span>
+            <span class="n">state_vector</span><span class="p">,</span>
+            <span class="n">time_symbol</span><span class="p">,</span>
+            <span class="n">rhs</span><span class="p">,</span>
+            <span class="n">parameter_dict</span><span class="p">,</span>
+            <span class="n">func_dict</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">parameter_dict</span><span class="p">,</span> <span class="n">func_dict</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">parameter_dicts</span><span class="p">,</span> <span class="n">func_dicts</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">res</span> <span class="o">=</span> <span class="n">solve_ivp_pwc</span><span class="p">(</span>
+        <span class="n">rhss</span><span class="o">=</span><span class="n">num_rhss</span><span class="p">,</span>
+        <span class="n">t_span</span><span class="o">=</span><span class="p">(</span><span class="n">t_min</span><span class="p">,</span> <span class="n">t_max</span><span class="p">),</span>
+        <span class="n">y0</span><span class="o">=</span><span class="n">start_values</span><span class="p">,</span>
+        <span class="n">t_eval</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">times</span><span class="p">),</span>
+        <span class="n">disc_times</span><span class="o">=</span><span class="n">disc_times</span>
+    <span class="p">)</span>
+
+    <span class="c1"># adapt to the old ode_int interface</span>
+    <span class="c1"># since our code at the moment expects it</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rollaxis</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">sol</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="arrange_subplots"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.arrange_subplots">[docs]</a><span class="k">def</span> <span class="nf">arrange_subplots</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">cols</span> <span class="o">=</span> <span class="n">n</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="n">cols</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">n</span> <span class="o">//</span> <span class="mi">3</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="o">%</span> <span class="mi">3</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">rows</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">cols</span> <span class="o">=</span> <span class="mi">3</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="melt"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.melt">[docs]</a><span class="k">def</span> <span class="nf">melt</span><span class="p">(</span><span class="n">ndarr</span><span class="p">,</span> <span class="n">identifiers</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="n">ndarr</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="k">if</span> <span class="n">identifiers</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">identifiers</span> <span class="o">=</span> <span class="p">[</span><span class="nb">range</span><span class="p">(</span><span class="n">shape</span><span class="p">[</span><span class="n">dim</span><span class="p">])</span> <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">))]</span>
+
+    <span class="k">def</span> <span class="nf">rek</span><span class="p">(</span><span class="n">struct</span><span class="p">,</span> <span class="n">ids</span><span class="p">,</span> <span class="n">melted_list</span><span class="p">,</span> <span class="n">dim</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">struct</span><span class="p">)</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="n">melted_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ids</span> <span class="o">+</span> <span class="p">[</span><span class="n">struct</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">shape</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">shape</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="n">rek</span><span class="p">(</span><span class="n">struct</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">ids</span> <span class="o">+</span> <span class="p">[</span><span class="n">identifiers</span><span class="p">[</span><span class="n">dim</span><span class="p">][</span><span class="n">k</span><span class="p">]],</span> <span class="n">melted_list</span><span class="p">,</span> <span class="n">dim</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">melted_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">rek</span><span class="p">(</span><span class="n">ndarr</span><span class="p">,</span> <span class="p">[],</span> <span class="n">melted_list</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">melted_list</span><span class="p">)</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">melted_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">melted</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">melted_list</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">melted</span></div>
+
+
+<span class="c1"># fixme: test</span>
+<span class="c1"># compute inverse of CDF at u for quantiles or generation of random variables</span>
+<div class="viewcode-block" id="generalized_inverse_CDF"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.generalized_inverse_CDF">[docs]</a><span class="k">def</span> <span class="nf">generalized_inverse_CDF</span><span class="p">(</span><span class="n">CDF</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">start_dist</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">u</span><span class="o">-</span><span class="n">CDF</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+
+    <span class="n">x1</span> <span class="o">=</span> <span class="n">start_dist</span>
+
+    <span class="c1"># go so far to the right such that CDF(x1) &gt; u, the bisect in</span>
+    <span class="c1"># interval [0, x1]</span>
+    <span class="n">y1</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">x1</span><span class="p">)</span>
+    <span class="k">while</span> <span class="n">y1</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">x1</span> <span class="o">=</span> <span class="n">x1</span><span class="o">*</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">0.1</span>
+        <span class="n">y1</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">x1</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">y1</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">brentq</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">xtol</span><span class="o">=</span><span class="n">tol</span><span class="p">)</span>
+<span class="c1">#    if f(res) &gt; tol: res = np.nan</span>
+<span class="c1">#    print(&#39;gi_res&#39;, res)</span>
+<span class="c1">#    print(&#39;finished&#39;, method_f.__name__, &#39;on [0,&#39;, x1, &#39;]&#39;)</span>
+    <span class="k">return</span> <span class="n">res</span></div>
+
+
+<span class="c1"># draw a random variable with given CDF</span>
+<div class="viewcode-block" id="draw_rv"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.draw_rv">[docs]</a><span class="k">def</span> <span class="nf">draw_rv</span><span class="p">(</span><span class="n">CDF</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">generalized_inverse_CDF</span><span class="p">(</span><span class="n">CDF</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">())</span></div>
+
+
+<span class="c1"># return function g, such that g(normally distributed sv) is distributed</span>
+<span class="c1"># according to CDF</span>
+<div class="viewcode-block" id="stochastic_collocation_transform"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.stochastic_collocation_transform">[docs]</a><span class="k">def</span> <span class="nf">stochastic_collocation_transform</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">CDF</span><span class="p">):</span>
+    <span class="c1"># collocation points for normal distribution,</span>
+    <span class="c1"># taken from Table 10 in Appendix 3 of Grzelak2015SSRN</span>
+    <span class="n">cc_data</span> <span class="o">=</span> <span class="p">{</span>
+         <span class="mi">2</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+         <span class="mi">3</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.7321</span><span class="p">],</span>
+         <span class="mi">4</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.7420</span><span class="p">,</span> <span class="mf">2.3344</span><span class="p">],</span>
+         <span class="mi">5</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.3556</span><span class="p">,</span> <span class="mf">2.8570</span><span class="p">],</span>
+         <span class="mi">6</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.6167</span><span class="p">,</span> <span class="mf">1.8892</span><span class="p">,</span> <span class="mf">3.3243</span><span class="p">],</span>
+         <span class="mi">7</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.1544</span><span class="p">,</span> <span class="mf">2.3668</span><span class="p">,</span> <span class="mf">3.7504</span><span class="p">],</span>
+         <span class="mi">8</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.5391</span><span class="p">,</span> <span class="mf">1.6365</span><span class="p">,</span> <span class="mf">2.8025</span><span class="p">,</span> <span class="mf">4.1445</span><span class="p">],</span>
+         <span class="mi">9</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0233</span><span class="p">,</span> <span class="mf">2.0768</span><span class="p">,</span> <span class="mf">3.2054</span><span class="p">,</span> <span class="mf">4.5127</span><span class="p">],</span>
+        <span class="mi">10</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.4849</span><span class="p">,</span> <span class="mf">1.4660</span><span class="p">,</span> <span class="mf">2.8463</span><span class="p">,</span> <span class="mf">3.5818</span><span class="p">,</span> <span class="mf">4.8595</span><span class="p">],</span>  <span class="c1"># noqa: E131</span>
+        <span class="mi">11</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.9289</span><span class="p">,</span> <span class="mf">1.8760</span><span class="p">,</span> <span class="mf">2.8651</span><span class="p">,</span> <span class="mf">3.9362</span><span class="p">,</span> <span class="mf">5.1880</span><span class="p">]</span>  <span class="c1"># noqa: E131</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">M</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cc_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">cc_points</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">cc_data</span><span class="p">[</span><span class="n">M</span><span class="p">])</span> <span class="k">if</span> <span class="n">x</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">]</span> <span class="o">+</span> <span class="n">cc_data</span><span class="p">[</span><span class="n">M</span><span class="p">]</span>
+    <span class="n">cc_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cc_points</span><span class="p">)</span>
+<span class="c1">#    print(&#39;start computing collocation transform&#39;)</span>
+    <span class="n">ys</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">generalized_inverse_CDF</span><span class="p">(</span><span class="n">CDF</span><span class="p">,</span> <span class="n">norm</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">cc_points</span><span class="p">]</span>
+    <span class="p">)</span>
+<span class="c1">#    print(&#39;ys&#39;, ys)</span>
+<span class="c1">#    print(&#39;finished computing collocation transform&#39;)</span>
+
+    <span class="k">return</span> <span class="n">lagrange</span><span class="p">(</span><span class="n">cc_points</span><span class="p">,</span> <span class="n">ys</span><span class="p">)</span></div>
+
+
+<span class="c1"># Metropolis-Hastings sampling for PDFs with nonnegative support</span>
+<span class="c1"># no thinning, no burn-in period</span>
+<div class="viewcode-block" id="MH_sampling"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.MH_sampling">[docs]</a><span class="k">def</span> <span class="nf">MH_sampling</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">PDF</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+    <span class="n">xvec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">((</span><span class="n">N</span><span class="p">,))</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">start</span>
+    <span class="n">PDF_x</span> <span class="o">=</span> <span class="n">PDF</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">norm_cdf_x</span> <span class="o">=</span> <span class="n">norm</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+        <span class="k">while</span> <span class="n">xs</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">xs</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">()</span>
+
+        <span class="n">PDF_xs</span> <span class="o">=</span> <span class="n">PDF</span><span class="p">(</span><span class="n">xs</span><span class="p">)</span>
+        <span class="n">A1</span> <span class="o">=</span> <span class="n">PDF_xs</span><span class="o">/</span><span class="n">PDF_x</span>
+        <span class="n">norm_cdf_xs</span> <span class="o">=</span> <span class="n">norm</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">xs</span><span class="p">)</span>
+        <span class="n">A2</span> <span class="o">=</span> <span class="n">norm_cdf_x</span><span class="o">/</span><span class="n">norm_cdf_xs</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">A1</span> <span class="o">*</span> <span class="n">A2</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">A</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">xs</span>
+            <span class="n">PDF_x</span> <span class="o">=</span> <span class="n">PDF_xs</span>
+            <span class="n">norm_cdf_x</span> <span class="o">=</span> <span class="n">norm_cdf_xs</span>
+
+        <span class="n">xvec</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
+
+    <span class="k">return</span> <span class="n">xvec</span></div>
+
+
+<div class="viewcode-block" id="save_csv"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.save_csv">[docs]</a><span class="k">def</span> <span class="nf">save_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">melted</span><span class="p">,</span> <span class="n">header</span><span class="p">):</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span>
+        <span class="n">filename</span><span class="p">,</span>
+        <span class="n">melted</span><span class="p">,</span>
+        <span class="n">header</span><span class="o">=</span><span class="n">header</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span>
+        <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%10.8f</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">comments</span><span class="o">=</span><span class="s1">&#39;&#39;</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="load_csv"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.load_csv">[docs]</a><span class="k">def</span> <span class="nf">load_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="tup2str"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.tup2str">[docs]</a><span class="k">def</span> <span class="nf">tup2str</span><span class="p">(</span><span class="n">tup</span><span class="p">):</span>
+    <span class="c1"># uses for stoichiometric models</span>
+    <span class="n">string</span> <span class="o">=</span> <span class="n">Template</span><span class="p">(</span><span class="s2">&quot;$</span><span class="si">{f}</span><span class="s2">_$</span><span class="si">{s}</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">substitute</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="n">tup</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">s</span><span class="o">=</span><span class="n">tup</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">string</span><span class="p">)</span></div>
+
+
+<span class="c1"># use only every (k_1,k_2,...,k_n)th element of the n-dimensional numpy array</span>
+<span class="c1"># data,</span>
+<span class="c1"># strides is a list of k_j of length n</span>
+<span class="c1"># always inlcude first and last elements</span>
+<div class="viewcode-block" id="stride"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.stride">[docs]</a><span class="k">def</span> <span class="nf">stride</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">strides</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">strides</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="n">strides</span> <span class="o">=</span> <span class="p">[</span><span class="n">strides</span><span class="p">]</span>
+
+    <span class="n">index_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">ndim</span><span class="p">):</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span>
+        <span class="n">stride</span> <span class="o">=</span> <span class="n">strides</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span>
+        <span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">stride</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">stride</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">ind</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">index_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ix_</span><span class="p">(</span><span class="o">*</span><span class="n">index_list</span><span class="p">)]</span></div>
+
+
+<div class="viewcode-block" id="is_compartmental"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.is_compartmental">[docs]</a><span class="k">def</span> <span class="nf">is_compartmental</span><span class="p">(</span><span class="n">M</span><span class="p">):</span>
+    <span class="n">gen</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">M</span><span class="o">.</span><span class="n">is_square</span><span class="p">,</span>
+            <span class="nb">all</span><span class="p">([</span><span class="n">M</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">gen</span><span class="p">]),</span>
+            <span class="nb">all</span><span class="p">([</span><span class="nb">sum</span><span class="p">(</span><span class="n">M</span><span class="p">[:,</span> <span class="n">j</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">gen</span><span class="p">])</span>
+        <span class="p">]</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="make_cut_func_set"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.make_cut_func_set">[docs]</a><span class="k">def</span> <span class="nf">make_cut_func_set</span><span class="p">(</span><span class="n">func_set</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">unify_index</span><span class="p">(</span><span class="n">expr</span><span class="p">):</span>
+        <span class="c1"># for the case Function(&#39;f&#39;):f_numeric</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">UndefinedFunction</span><span class="p">):</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span>
+        <span class="c1"># for the case {f(x, y): f_numeric} f(x, y)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">):</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">Function</span><span class="p">):</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">expr</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">expr</span> <span class="o">=</span> <span class="n">sympify</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">unify_index</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">expr</span><span class="p">))</span>
+            <span class="k">raise</span><span class="p">(</span><span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                funcset indices should be indexed by instances of</span>
+<span class="sd">                sympy.core.functions.UndefinedFunction</span>
+<span class="sd">                &quot;&quot;&quot;</span>
+            <span class="p">))</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="n">cut_func_set</span> <span class="o">=</span> <span class="p">{</span><span class="n">unify_index</span><span class="p">(</span><span class="n">key</span><span class="p">):</span> <span class="n">val</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">func_set</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">return</span> <span class="n">cut_func_set</span></div>
+
+
+<div class="viewcode-block" id="f_of_t_maker"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.f_of_t_maker">[docs]</a><span class="k">def</span> <span class="nf">f_of_t_maker</span><span class="p">(</span><span class="n">sol_funcs</span><span class="p">,</span> <span class="n">ol</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">ot</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+        <span class="n">sv</span> <span class="o">=</span> <span class="p">[</span><span class="n">sol_funcs</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sol_funcs</span><span class="p">))]</span>
+        <span class="n">tup</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">sv</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">t</span><span class="p">,)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">ol</span><span class="p">(</span><span class="o">*</span><span class="n">tup</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span>
+    <span class="k">return</span> <span class="n">ot</span></div>
+
+
+<div class="viewcode-block" id="const_of_t_maker"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.const_of_t_maker">[docs]</a><span class="k">def</span> <span class="nf">const_of_t_maker</span><span class="p">(</span><span class="n">const</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">const_arr_fun</span><span class="p">(</span><span class="n">possible_vec_arg</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">possible_vec_arg</span><span class="p">,</span> <span class="n">Number</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">const</span>  <span class="c1"># also a number</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">const</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">possible_vec_arg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">const_arr_fun</span></div>
+
+
+<div class="viewcode-block" id="x_phi_ode"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.x_phi_ode">[docs]</a><span class="k">def</span> <span class="nf">x_phi_ode</span><span class="p">(</span>
+    <span class="n">srm</span><span class="p">,</span>
+    <span class="n">parameter_dicts</span><span class="p">,</span>
+    <span class="n">func_dicts</span><span class="p">,</span>
+    <span class="n">x_block_name</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span>
+    <span class="n">phi_block_name</span><span class="o">=</span><span class="s1">&#39;phi&#39;</span><span class="p">,</span>
+    <span class="n">disc_times</span><span class="o">=</span><span class="p">()</span>
+<span class="p">):</span>
+    <span class="n">nr_pools</span> <span class="o">=</span> <span class="n">srm</span><span class="o">.</span><span class="n">nr_pools</span>
+
+    <span class="n">sol_rhss</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">pd</span><span class="p">,</span> <span class="n">fd</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">parameter_dicts</span><span class="p">,</span> <span class="n">func_dicts</span><span class="p">):</span>
+        <span class="n">sol_rhs</span> <span class="o">=</span> <span class="n">numerical_rhs</span><span class="p">(</span>
+            <span class="n">srm</span><span class="o">.</span><span class="n">state_vector</span><span class="p">,</span>
+            <span class="n">srm</span><span class="o">.</span><span class="n">time_symbol</span><span class="p">,</span>
+            <span class="n">srm</span><span class="o">.</span><span class="n">F</span><span class="p">,</span>
+            <span class="n">pd</span><span class="p">,</span>
+            <span class="n">fd</span>
+        <span class="p">)</span>
+        <span class="n">sol_rhss</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sol_rhs</span><span class="p">)</span>
+
+    <span class="n">B_sym</span> <span class="o">=</span> <span class="n">srm</span><span class="o">.</span><span class="n">compartmental_matrix</span>
+    <span class="n">tup</span> <span class="o">=</span> <span class="p">(</span><span class="n">srm</span><span class="o">.</span><span class="n">time_symbol</span><span class="p">,)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">srm</span><span class="o">.</span><span class="n">state_vector</span><span class="p">)</span>
+
+    <span class="n">B_funcs_non_lin</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">pd</span><span class="p">,</span> <span class="n">fd</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">parameter_dicts</span><span class="p">,</span> <span class="n">func_dicts</span><span class="p">):</span>
+        <span class="n">B_func_non_lin</span> <span class="o">=</span> <span class="n">numerical_function_from_expression</span><span class="p">(</span>
+            <span class="n">B_sym</span><span class="p">,</span>
+            <span class="n">tup</span><span class="p">,</span>
+            <span class="n">pd</span><span class="p">,</span>
+            <span class="n">fd</span>
+        <span class="p">)</span>
+        <span class="n">B_funcs_non_lin</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">B_func_non_lin</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">Phi_rhs_maker</span><span class="p">(</span><span class="n">B_func_non_lin</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">Phi_rhs</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">Phi_2d</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">B_func_non_lin</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="o">*</span><span class="n">x</span><span class="p">),</span> <span class="n">Phi_2d</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Phi_rhs</span>
+
+    <span class="n">Phi_rhss</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">B_func_non_lin</span> <span class="ow">in</span> <span class="n">B_funcs_non_lin</span><span class="p">:</span>
+        <span class="n">Phi_rhss</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Phi_rhs_maker</span><span class="p">(</span><span class="n">B_func_non_lin</span><span class="p">))</span>
+
+    <span class="n">functionss</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">sol_rhs</span><span class="p">,</span> <span class="n">Phi_rhs</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sol_rhss</span><span class="p">,</span> <span class="n">Phi_rhss</span><span class="p">):</span>
+        <span class="n">functions</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="n">sol_rhs</span><span class="p">,</span> <span class="p">[</span><span class="n">srm</span><span class="o">.</span><span class="n">time_symbol</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">x_block_name</span><span class="p">]),</span>
+            <span class="p">(</span><span class="n">Phi_rhs</span><span class="p">,</span> <span class="p">[</span><span class="n">srm</span><span class="o">.</span><span class="n">time_symbol</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">x_block_name</span><span class="p">,</span> <span class="n">phi_block_name</span><span class="p">])</span>
+        <span class="p">]</span>
+        <span class="n">functionss</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">functions</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">BlockOde</span><span class="p">(</span>
+        <span class="n">time_str</span><span class="o">=</span><span class="n">srm</span><span class="o">.</span><span class="n">time_symbol</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">block_names_and_shapes</span><span class="o">=</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">x_block_name</span><span class="p">,</span> <span class="p">(</span><span class="n">nr_pools</span><span class="p">,)),</span>
+            <span class="p">(</span><span class="n">phi_block_name</span><span class="p">,</span> <span class="p">(</span><span class="n">nr_pools</span><span class="p">,</span> <span class="n">nr_pools</span><span class="p">,))</span>
+        <span class="p">],</span>
+        <span class="n">functionss</span><span class="o">=</span><span class="n">functionss</span><span class="p">,</span>
+        <span class="n">disc_times</span><span class="o">=</span><span class="n">disc_times</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="integrate_array_func_for_nested_boundaries"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.integrate_array_func_for_nested_boundaries">[docs]</a><span class="k">def</span> <span class="nf">integrate_array_func_for_nested_boundaries</span><span class="p">(</span>
+    <span class="n">f</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="n">integrator</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span>
+        <span class="p">[</span>
+            <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+            <span class="nb">float</span><span class="p">,</span>
+            <span class="nb">float</span>
+        <span class="p">],</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="p">],</span>  <span class="c1"># e.g. array_quad_result</span>
+    <span class="n">tuples</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+    <span class="c1"># we assume that the first (a,b) tuple contains the second,</span>
+    <span class="c1"># the second the third and so on from outside to inside</span>
+    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">tuples</span><span class="p">,</span> <span class="n">results</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]):</span>
+        <span class="p">(</span><span class="n">a_out</span><span class="p">,</span> <span class="n">b_out</span><span class="p">),</span> <span class="o">*</span><span class="n">tail</span> <span class="o">=</span> <span class="n">tuples</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tail</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># number=quad(f, a_out, b_out)[0]</span>
+            <span class="n">arr</span> <span class="o">=</span> <span class="n">integrator</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">a_out</span><span class="p">,</span> <span class="n">b_out</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">a_in</span><span class="p">,</span> <span class="n">b_in</span><span class="p">)</span> <span class="o">=</span> <span class="n">tail</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">compute</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">tail</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span>
+            <span class="n">arr</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">integrator</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">a_out</span><span class="p">,</span> <span class="n">a_in</span><span class="p">)</span>
+                <span class="o">+</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="o">+</span> <span class="n">integrator</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">b_in</span><span class="p">,</span> <span class="n">b_out</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">arr</span><span class="p">]</span> <span class="o">+</span> <span class="n">results</span>
+        <span class="k">return</span> <span class="n">results</span>
+
+    <span class="k">return</span> <span class="n">compute</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">tuples</span><span class="p">,</span> <span class="p">[])</span></div>
+
+
+<div class="viewcode-block" id="array_quad_result"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.array_quad_result">[docs]</a><span class="k">def</span> <span class="nf">array_quad_result</span><span class="p">(</span>
+    <span class="n">f</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">b</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">epsrel</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>  <span class="c1"># epsabs would be a dangerous default</span>
+    <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="c1"># integrates a vectorvalued function of a single argument</span>
+    <span class="c1"># we transform the result array of the function into a one dimensional</span>
+    <span class="c1"># vector compute the result for every component</span>
+    <span class="c1"># and reshape the result to the form of the integrand</span>
+    <span class="n">test</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">test</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+    <span class="n">vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">quad</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span><span class="n">f</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n</span><span class="p">,)[</span><span class="n">i</span><span class="p">],</span>
+            <span class="n">a</span><span class="p">,</span>
+            <span class="n">b</span><span class="p">,</span>
+            <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+            <span class="n">epsrel</span><span class="o">=</span><span class="n">epsrel</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)]</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">vec</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">test</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="array_integration_by_ode"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.array_integration_by_ode">[docs]</a><span class="k">def</span> <span class="nf">array_integration_by_ode</span><span class="p">(</span>
+    <span class="n">f</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">b</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="c1"># another integrator like array_quad_result</span>
+    <span class="n">test</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">test</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">rhs</span><span class="p">(</span><span class="n">tau</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="c1"># although we do not need X we have to provide a</span>
+        <span class="c1"># righthandside s uitable for solve_ivp</span>
+
+        <span class="c1"># avoid overshooting if the solver</span>
+        <span class="c1"># tries to look where the integrand might not be defined</span>
+        <span class="k">if</span> <span class="n">tau</span> <span class="o">&lt;</span> <span class="n">a</span> <span class="ow">or</span> <span class="n">tau</span> <span class="o">&gt;</span> <span class="n">b</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">f</span><span class="p">(</span><span class="n">tau</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+    <span class="n">ys</span> <span class="o">=</span> <span class="n">solve_ivp_pwc</span><span class="p">(</span>
+        <span class="n">rhss</span><span class="o">=</span><span class="p">(</span><span class="n">rhs</span><span class="p">,),</span>
+        <span class="n">y0</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">),</span>
+        <span class="n">t_span</span><span class="o">=</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">y</span>
+    <span class="n">val</span> <span class="o">=</span> <span class="n">ys</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">test</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">val</span></div>
+
+
+<div class="viewcode-block" id="array_integration_by_values"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.array_integration_by_values">[docs]</a><span class="k">def</span> <span class="nf">array_integration_by_values</span><span class="p">(</span>
+    <span class="n">f</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="n">taus</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="c1"># only allow taus as vector</span>
+    <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">taus</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">taus</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">test</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">taus</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="c1"># create a big 2 dimensional array suitable for trapz</span>
+    <span class="n">integrand_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">f</span><span class="p">(</span><span class="n">tau</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="k">for</span> <span class="n">tau</span> <span class="ow">in</span> <span class="n">taus</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="n">integrand_vals</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">taus</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">vec</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">test</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="x_phi_tmax"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.x_phi_tmax">[docs]</a><span class="k">def</span> <span class="nf">x_phi_tmax</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t_max</span><span class="p">,</span> <span class="n">block_ode</span><span class="p">,</span> <span class="n">x_s</span><span class="p">,</span> <span class="n">x_block_name</span><span class="p">,</span> <span class="n">phi_block_name</span><span class="p">):</span>
+    <span class="n">x_s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x_s</span><span class="p">)</span>
+    <span class="n">nr_pools</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_s</span><span class="p">)</span>
+
+    <span class="n">start_Phi_2d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">)</span>
+    <span class="n">start_blocks</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">x_block_name</span><span class="p">,</span> <span class="n">x_s</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">phi_block_name</span><span class="p">,</span> <span class="n">start_Phi_2d</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">blivp</span> <span class="o">=</span> <span class="n">block_ode</span><span class="o">.</span><span class="n">blockIvp</span><span class="p">(</span><span class="n">start_blocks</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">blivp</span></div>
+
+
+<div class="viewcode-block" id="phi_tmax"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.phi_tmax">[docs]</a><span class="k">def</span> <span class="nf">phi_tmax</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t_max</span><span class="p">,</span> <span class="n">block_ode</span><span class="p">,</span> <span class="n">x_s</span><span class="p">,</span> <span class="n">x_block_name</span><span class="p">,</span> <span class="n">phi_block_name</span><span class="p">):</span>
+    <span class="n">blivp</span> <span class="o">=</span> <span class="n">x_phi_tmax</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t_max</span><span class="p">,</span> <span class="n">block_ode</span><span class="p">,</span> <span class="n">x_s</span><span class="p">,</span> <span class="n">x_block_name</span><span class="p">,</span> <span class="n">phi_block_name</span><span class="p">)</span>
+    <span class="n">phi_func</span> <span class="o">=</span> <span class="n">blivp</span><span class="o">.</span><span class="n">block_solve_functions</span><span class="p">(</span><span class="n">t_span</span><span class="o">=</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t_max</span><span class="p">))[</span><span class="n">phi_block_name</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">phi_func</span></div>
+
+
+<div class="viewcode-block" id="x_tmax"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.x_tmax">[docs]</a><span class="nd">@lru_cache</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">x_tmax</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t_max</span><span class="p">,</span> <span class="n">block_ode</span><span class="p">,</span> <span class="n">x_s</span><span class="p">,</span> <span class="n">x_block_name</span><span class="p">,</span> <span class="n">phi_block_name</span><span class="p">):</span>
+    <span class="n">blivp</span> <span class="o">=</span> <span class="n">x_phi_tmax</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t_max</span><span class="p">,</span> <span class="n">block_ode</span><span class="p">,</span> <span class="n">x_s</span><span class="p">,</span> <span class="n">x_block_name</span><span class="p">,</span> <span class="n">phi_block_name</span><span class="p">)</span>
+    <span class="n">x_func</span> <span class="o">=</span> <span class="n">blivp</span><span class="o">.</span><span class="n">block_solve_functions</span><span class="p">(</span><span class="n">t_span</span><span class="o">=</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t_max</span><span class="p">))[</span><span class="n">x_block_name</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">x_func</span></div>
+
+
+<span class="n">_CacheStats</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span>
+    <span class="s1">&#39;CacheStats&#39;</span><span class="p">,</span>
+    <span class="p">[</span><span class="s1">&#39;hitss&#39;</span><span class="p">,</span> <span class="s1">&#39;missess&#39;</span><span class="p">,</span> <span class="s1">&#39;currsizes&#39;</span><span class="p">,</span> <span class="s1">&#39;hitting_ratios&#39;</span><span class="p">]</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="custom_lru_cache_wrapper"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.custom_lru_cache_wrapper">[docs]</a><span class="k">def</span> <span class="nf">custom_lru_cache_wrapper</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">typed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">stats</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">stats</span><span class="p">:</span>
+        <span class="n">hitss</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">missess</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">currsizes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">hitting_ratios</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">decorating_function</span><span class="p">(</span><span class="n">user_function</span><span class="p">):</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">_lru_cache_wrapper</span><span class="p">(</span><span class="n">user_function</span><span class="p">,</span> <span class="n">maxsize</span><span class="p">,</span> <span class="n">typed</span><span class="p">,</span> <span class="n">_CacheInfo</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="k">nonlocal</span> <span class="n">stats</span><span class="p">,</span> <span class="n">hitss</span><span class="p">,</span> <span class="n">missess</span><span class="p">,</span> <span class="n">currsizes</span><span class="p">,</span> <span class="n">hitting_ratios</span>
+
+            <span class="n">result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">stats</span><span class="p">:</span>
+                <span class="n">hitss</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">func</span><span class="o">.</span><span class="n">cache_info</span><span class="p">()</span><span class="o">.</span><span class="n">hits</span><span class="p">)</span>
+                <span class="n">missess</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">func</span><span class="o">.</span><span class="n">cache_info</span><span class="p">()</span><span class="o">.</span><span class="n">misses</span><span class="p">)</span>
+                <span class="n">currsizes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">func</span><span class="o">.</span><span class="n">cache_info</span><span class="p">()</span><span class="o">.</span><span class="n">currsize</span><span class="p">)</span>
+                <span class="n">hitting_ratios</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="nb">round</span><span class="p">(</span><span class="n">hitss</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">hitss</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">missess</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">*</span><span class="mf">100.0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+
+        <span class="n">wrapper</span><span class="o">.</span><span class="n">cache_info</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">cache_info</span>
+        <span class="k">if</span> <span class="n">stats</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">cache_stats</span><span class="p">():</span>
+                <span class="k">nonlocal</span> <span class="n">hitss</span><span class="p">,</span> <span class="n">missess</span><span class="p">,</span> <span class="n">currsizes</span>
+                <span class="k">return</span> <span class="n">_CacheStats</span><span class="p">(</span><span class="n">hitss</span><span class="p">,</span> <span class="n">missess</span><span class="p">,</span> <span class="n">currsizes</span><span class="p">,</span> <span class="n">hitting_ratios</span><span class="p">)</span>
+
+            <span class="n">wrapper</span><span class="o">.</span><span class="n">cache_stats</span> <span class="o">=</span> <span class="n">cache_stats</span>
+
+            <span class="k">def</span> <span class="nf">plot_hitss</span><span class="p">():</span>
+                <span class="k">nonlocal</span> <span class="n">hitss</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hitss</span><span class="p">)),</span> <span class="n">hitss</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Hitss&#39;</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+            <span class="n">wrapper</span><span class="o">.</span><span class="n">plot_hitss</span> <span class="o">=</span> <span class="n">plot_hitss</span>
+
+            <span class="k">def</span> <span class="nf">plot_hit_history</span><span class="p">():</span>
+                <span class="k">nonlocal</span> <span class="n">hitss</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
+                    <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hitss</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">hitss</span><span class="p">),</span>
+                    <span class="n">s</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span>
+                <span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Hit history&#39;</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+            <span class="n">wrapper</span><span class="o">.</span><span class="n">plot_hit_history</span> <span class="o">=</span> <span class="n">plot_hit_history</span>
+
+            <span class="k">def</span> <span class="nf">plot_hitting_ratios</span><span class="p">():</span>
+                <span class="k">nonlocal</span> <span class="n">hitss</span><span class="p">,</span> <span class="n">hitting_ratios</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+                    <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hitss</span><span class="p">)),</span>
+                    <span class="n">hitting_ratios</span>
+                <span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Hitting ratios&#39;</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+            <span class="n">wrapper</span><span class="o">.</span><span class="n">plot_hitting_ratios</span> <span class="o">=</span> <span class="n">plot_hitting_ratios</span>
+
+            <span class="k">def</span> <span class="nf">plot_currsizes</span><span class="p">():</span>
+                <span class="k">nonlocal</span> <span class="n">currsizes</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+                    <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">currsizes</span><span class="p">)),</span>
+                    <span class="n">currsizes</span>
+                <span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Currsizes&#39;</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+            <span class="n">wrapper</span><span class="o">.</span><span class="n">plot_currsizes</span> <span class="o">=</span> <span class="n">plot_currsizes</span>
+
+            <span class="k">def</span> <span class="nf">plot_hitting_ratios_over_currsizes</span><span class="p">():</span>
+                <span class="k">nonlocal</span> <span class="n">hitting_ratios</span><span class="p">,</span> <span class="n">currsizes</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+                    <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hitting_ratios</span><span class="p">)),</span>
+                    <span class="p">[</span><span class="n">hitting_ratios</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">/</span><span class="n">currsizes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hitting_ratios</span><span class="p">))]</span>
+                <span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Hitting ratios over currsizes&#39;</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+            <span class="n">wrapper</span><span class="o">.</span><span class="n">plot_hitting_ratios_over_currsizes</span> <span class="o">=</span>\
+                <span class="n">plot_hitting_ratios_over_currsizes</span>
+
+            <span class="k">def</span> <span class="nf">plot_hitting_ratios_vs_currsizes</span><span class="p">():</span>
+                <span class="k">nonlocal</span> <span class="n">hitting_ratios</span><span class="p">,</span> <span class="n">currsizes</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+                    <span class="n">currsizes</span><span class="p">,</span>
+                    <span class="n">hitting_ratios</span>
+                <span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Hitting ratios vs currsizes&#39;</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+            <span class="n">wrapper</span><span class="o">.</span><span class="n">plot_hitting_ratios_vs_currsizes</span> <span class="o">=</span>\
+                <span class="n">plot_hitting_ratios_vs_currsizes</span>
+
+        <span class="k">def</span> <span class="nf">cache_clear</span><span class="p">():</span>
+            <span class="k">nonlocal</span> <span class="n">hitss</span><span class="p">,</span> <span class="n">missess</span><span class="p">,</span> <span class="n">currsizes</span>
+            <span class="n">hitss</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">missess</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">currsizes</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">func</span><span class="o">.</span><span class="n">cache_clear</span><span class="p">()</span>
+
+        <span class="n">wrapper</span><span class="o">.</span><span class="n">cache_clear</span> <span class="o">=</span> <span class="n">cache_clear</span>
+        <span class="k">return</span> <span class="n">wrapper</span>
+
+    <span class="k">return</span> <span class="n">decorating_function</span></div>
+
+
+<div class="viewcode-block" id="print_quantile_error_statisctics"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.print_quantile_error_statisctics">[docs]</a><span class="k">def</span> <span class="nf">print_quantile_error_statisctics</span><span class="p">(</span><span class="n">qs_ode</span><span class="p">,</span> <span class="n">qs_pi</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;ODE          :&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;</span><span class="si">{: 7.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">qs_ode</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Expl.        :&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;</span><span class="si">{: 7.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">qs_pi</span><span class="p">])</span>
+    <span class="n">abs_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">qs_ode</span><span class="o">-</span><span class="n">qs_pi</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;abs. err.    :&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;</span><span class="si">{: 7.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">abs_err</span><span class="p">])</span>
+    <span class="n">rel_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">qs_ode</span><span class="o">-</span><span class="n">qs_pi</span><span class="p">)</span><span class="o">/</span><span class="n">qs_pi</span> <span class="o">*</span> <span class="mi">100</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;rel. err. (%):&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;</span><span class="si">{: 7.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">rel_err</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;mean abs. err    :&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="si">{: 6.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">abs_err</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;mean rel. err (%):&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="si">{: 6.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">rel_err</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;max. abs. err    :&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="si">{: 6.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">abs_err</span><span class="p">)))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;max. rel. err (%):&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="si">{: 6.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">rel_err</span><span class="p">)))</span>
+    <span class="nb">print</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="net_Fs_from_discrete_Bs_and_xs"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.net_Fs_from_discrete_Bs_and_xs">[docs]</a><span class="k">def</span> <span class="nf">net_Fs_from_discrete_Bs_and_xs</span><span class="p">(</span><span class="n">Bs</span><span class="p">,</span> <span class="n">xs</span><span class="p">):</span>
+    <span class="n">nr_pools</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">nt</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">Bs</span><span class="p">)</span>
+
+    <span class="n">net_Fs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nt</span><span class="p">,</span> <span class="n">nr_pools</span><span class="p">,</span> <span class="n">nr_pools</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nt</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">j</span><span class="p">:</span>
+                    <span class="n">net_Fs</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">Bs</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">xs</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">net_Fs</span></div>
+
+
+<div class="viewcode-block" id="net_Rs_from_discrete_Bs_and_xs"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.net_Rs_from_discrete_Bs_and_xs">[docs]</a><span class="k">def</span> <span class="nf">net_Rs_from_discrete_Bs_and_xs</span><span class="p">(</span><span class="n">Bs</span><span class="p">,</span> <span class="n">xs</span><span class="p">,</span> <span class="n">decay_corr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">nr_pools</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">nt</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">Bs</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">decay_corr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">decay_corr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">nt</span><span class="p">,))</span>
+
+    <span class="n">net_Rs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nt</span><span class="p">,</span> <span class="n">nr_pools</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nt</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">):</span>
+            <span class="n">net_Rs</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="nb">sum</span><span class="p">(</span><span class="n">Bs</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="p">:,</span> <span class="n">j</span><span class="p">])</span><span class="o">*</span><span class="n">decay_corr</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="o">*</span> <span class="n">xs</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">net_Rs</span></div>
+
+
+<div class="viewcode-block" id="net_Us_from_discrete_Bs_and_xs"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.net_Us_from_discrete_Bs_and_xs">[docs]</a><span class="k">def</span> <span class="nf">net_Us_from_discrete_Bs_and_xs</span><span class="p">(</span><span class="n">Bs</span><span class="p">,</span> <span class="n">xs</span><span class="p">):</span>
+    <span class="n">nr_pools</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">nt</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">Bs</span><span class="p">)</span>
+
+    <span class="n">net_Us</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nt</span><span class="p">,</span> <span class="n">nr_pools</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nt</span><span class="p">):</span>
+        <span class="n">net_Us</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">xs</span><span class="p">[</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">Bs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">@</span> <span class="n">xs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">net_Us</span></div>
+
+
+<div class="viewcode-block" id="check_parameter_dict_complete"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.check_parameter_dict_complete">[docs]</a><span class="k">def</span> <span class="nf">check_parameter_dict_complete</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">parameter_dict</span><span class="p">,</span> <span class="n">func_set</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Check if the parameter set  the function set are complete</span>
+<span class="sd">       to enable a model run.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model (:class:`~.smooth_reservoir_model.SmoothReservoirModel`):</span>
+<span class="sd">            The reservoir model on which the model run bases.</span>
+<span class="sd">        parameter_dict (dict): ``{x: y}`` with ``x`` being a SymPy symbol</span>
+<span class="sd">            and ``y`` being a numerical value.</span>
+<span class="sd">        func_set (dict): ``{f: func}`` with ``f`` being a SymPy symbol and</span>
+<span class="sd">            ``func`` being a Python function. Defaults to ``dict()``.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        free_symbols (set): set of free symbols, parameter_dict is complete if</span>
+<span class="sd">                            ``free_symbols`` is the empty set</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">free_symbols</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">parameter_dict</span><span class="p">)</span><span class="o">.</span><span class="n">free_symbols</span>
+<span class="c1">#    print(&#39;fs&#39;, free_symbols)</span>
+    <span class="n">free_symbols</span> <span class="o">-=</span> <span class="p">{</span><span class="n">model</span><span class="o">.</span><span class="n">time_symbol</span><span class="p">}</span>
+<span class="c1">#    print(free_symbols)</span>
+    <span class="n">free_symbols</span> <span class="o">-=</span> <span class="nb">set</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">state_vector</span><span class="p">)</span>
+<span class="c1">#    print(free_symbols)</span>
+
+    <span class="c1"># remove function names, are given as strings</span>
+    <span class="n">free_names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">symbol</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="n">free_symbols</span><span class="p">])</span>
+    <span class="n">func_names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">func_set</span><span class="o">.</span><span class="n">keys</span><span class="p">()])</span>
+    <span class="n">free_names</span> <span class="o">=</span> <span class="n">free_names</span> <span class="o">-</span> <span class="n">func_names</span>
+
+    <span class="k">return</span> <span class="n">free_names</span></div>
+
+
+<div class="viewcode-block" id="F_Delta_14C"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.helpers_reservoir.F_Delta_14C">[docs]</a><span class="k">def</span> <span class="nf">F_Delta_14C</span><span class="p">(</span><span class="n">C12</span><span class="p">,</span> <span class="n">C14</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">alpha</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">ALPHA_14C</span>
+
+    <span class="n">C12</span><span class="p">[</span><span class="n">C12</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">C14</span><span class="o">/</span><span class="n">C12</span><span class="o">/</span><span class="n">alpha</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

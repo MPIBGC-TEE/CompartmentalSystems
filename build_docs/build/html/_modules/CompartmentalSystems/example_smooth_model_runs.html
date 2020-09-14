@@ -1,0 +1,158 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompartmentalSystems.example_smooth_model_runs &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for CompartmentalSystems.example_smooth_model_runs</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="n">symbols</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">example_smooth_reservoir_models</span> <span class="k">as</span> <span class="n">ESRM</span>
+<span class="kn">from</span> <span class="nn">.smooth_model_run</span> <span class="kn">import</span> <span class="n">SmoothModelRun</span>
+
+
+<div class="viewcode-block" id="critics"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.example_smooth_model_runs.critics">[docs]</a><span class="k">def</span> <span class="nf">critics</span><span class="p">():</span>
+    <span class="n">symbs</span> <span class="o">=</span> <span class="n">symbols</span><span class="p">(</span><span class="s2">&quot;t k_01 k_10 k_0o k_1o&quot;</span><span class="p">)</span>
+    <span class="n">t</span><span class="p">,</span> <span class="n">k_01</span><span class="p">,</span> <span class="n">k_10</span><span class="p">,</span> <span class="n">k_0o</span><span class="p">,</span> <span class="n">k_1o</span> <span class="o">=</span> <span class="n">symbs</span>
+    <span class="n">srm</span> <span class="o">=</span> <span class="n">ESRM</span><span class="o">.</span><span class="n">critics</span><span class="p">(</span><span class="n">symbs</span><span class="p">)</span>
+    <span class="n">pardict</span> <span class="o">=</span> <span class="p">{</span><span class="n">k_0o</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">k_1o</span><span class="p">:</span> <span class="mf">0.08</span><span class="p">,</span> <span class="n">k_01</span><span class="p">:</span> <span class="mf">0.09</span><span class="p">,</span> <span class="n">k_10</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+    <span class="n">start_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">])</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+    <span class="n">pwc_mr</span> <span class="o">=</span> <span class="n">SmoothModelRun</span><span class="p">(</span><span class="n">srm</span><span class="p">,</span> <span class="n">pardict</span><span class="p">,</span> <span class="n">start_values</span><span class="p">,</span> <span class="n">times</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pwc_mr</span></div>
+
+
+<div class="viewcode-block" id="nonlinear_two_pool"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.example_smooth_model_runs.nonlinear_two_pool">[docs]</a><span class="k">def</span> <span class="nf">nonlinear_two_pool</span><span class="p">():</span>
+    <span class="n">symbs</span> <span class="o">=</span> <span class="n">symbols</span><span class="p">(</span><span class="s2">&quot;t k_01 k_10 k_0o k_1o&quot;</span><span class="p">)</span>
+    <span class="n">t</span><span class="p">,</span> <span class="n">k_01</span><span class="p">,</span> <span class="n">k_10</span><span class="p">,</span> <span class="n">k_0o</span><span class="p">,</span> <span class="n">k_1o</span> <span class="o">=</span> <span class="n">symbs</span>
+    <span class="n">srm</span> <span class="o">=</span> <span class="n">ESRM</span><span class="o">.</span><span class="n">nonlinear_two_pool</span><span class="p">(</span><span class="n">symbs</span><span class="p">)</span>
+    <span class="c1"># now create the modelrun</span>
+    <span class="n">pardict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">k_01</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">100</span><span class="p">,</span>
+        <span class="n">k_10</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">100</span><span class="p">,</span>
+        <span class="n">k_0o</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span>
+        <span class="n">k_1o</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">2</span>
+        <span class="p">}</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">1600</span><span class="p">)</span>   <span class="c1"># time grid forward</span>
+    <span class="n">start_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+    <span class="n">pwc_mr</span> <span class="o">=</span> <span class="n">SmoothModelRun</span><span class="p">(</span><span class="n">srm</span><span class="p">,</span> <span class="n">pardict</span><span class="p">,</span> <span class="n">start_values</span><span class="p">,</span> <span class="n">times</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pwc_mr</span></div>
+
+
+<div class="viewcode-block" id="emanuel_1"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.example_smooth_model_runs.emanuel_1">[docs]</a><span class="k">def</span> <span class="nf">emanuel_1</span><span class="p">():</span>
+    <span class="n">symbs</span> <span class="o">=</span> <span class="n">symbols</span><span class="p">(</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            I_1 I_3 x_1 x_2 x_3 x_4 x_5 t F_1 F_2 F_3 F_4 F_5</span>
+<span class="sd">            F_21 F_41 F_42 F_52 F_43 F_53 F_54</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="p">)</span>
+    <span class="p">(</span><span class="n">I_1</span><span class="p">,</span> <span class="n">I_3</span><span class="p">,</span> <span class="n">x_1</span><span class="p">,</span> <span class="n">x_2</span><span class="p">,</span> <span class="n">x_3</span><span class="p">,</span> <span class="n">x_4</span><span class="p">,</span> <span class="n">x_5</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">F_1</span><span class="p">,</span> <span class="n">F_2</span><span class="p">,</span> <span class="n">F_3</span><span class="p">,</span> <span class="n">F_4</span><span class="p">,</span> <span class="n">F_5</span><span class="p">,</span>
+        <span class="n">F_21</span><span class="p">,</span> <span class="n">F_41</span><span class="p">,</span> <span class="n">F_42</span><span class="p">,</span> <span class="n">F_52</span><span class="p">,</span> <span class="n">F_43</span><span class="p">,</span> <span class="n">F_53</span><span class="p">,</span> <span class="n">F_54</span><span class="p">)</span> <span class="o">=</span> <span class="n">symbs</span>
+    <span class="n">srm</span> <span class="o">=</span> <span class="n">ESRM</span><span class="o">.</span><span class="n">emanuel</span><span class="p">(</span><span class="n">symbs</span><span class="p">)</span>
+    <span class="c1"># now create the modelrun</span>
+
+    <span class="n">pardict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">I_1</span><span class="p">:</span> <span class="mi">77</span><span class="p">,</span> <span class="n">I_3</span><span class="p">:</span> <span class="mi">36</span><span class="p">,</span>
+        <span class="n">F_1</span><span class="p">:</span> <span class="mf">2.081</span><span class="p">,</span> <span class="n">F_2</span><span class="p">:</span> <span class="mf">0.0686</span><span class="p">,</span> <span class="n">F_3</span><span class="p">:</span> <span class="mf">0.5217</span><span class="p">,</span> <span class="n">F_4</span><span class="p">:</span> <span class="mf">0.5926</span><span class="p">,</span> <span class="n">F_5</span><span class="p">:</span> <span class="mf">9.813e-3</span><span class="p">,</span>
+        <span class="n">F_21</span><span class="p">:</span> <span class="mf">0.8378</span><span class="p">,</span> <span class="n">F_41</span><span class="p">:</span>  <span class="mf">0.5676</span><span class="p">,</span> <span class="n">F_42</span><span class="p">:</span> <span class="mf">0.0322</span><span class="p">,</span> <span class="n">F_52</span><span class="p">:</span> <span class="mf">4.425e-3</span><span class="p">,</span>
+        <span class="n">F_43</span><span class="p">:</span> <span class="mf">0.1739</span><span class="p">,</span> <span class="n">F_53</span><span class="p">:</span> <span class="mf">0.0870</span><span class="p">,</span> <span class="n">F_54</span><span class="p">:</span> <span class="mf">0.0370</span>
+    <span class="p">}</span>
+    <span class="n">start_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[</span><span class="mf">37.00144</span><span class="p">,</span> <span class="mf">451.89224</span><span class="p">,</span> <span class="mf">69.00518</span><span class="p">,</span> <span class="mf">80.2446</span><span class="p">,</span> <span class="mf">1118.12122</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="mi">365</span><span class="p">)),</span> <span class="mi">1</span><span class="o">/</span><span class="mi">365</span><span class="p">)</span>   <span class="c1"># time grid forward</span>
+    <span class="n">pwc_mr</span> <span class="o">=</span> <span class="n">SmoothModelRun</span><span class="p">(</span><span class="n">srm</span><span class="p">,</span> <span class="n">pardict</span><span class="p">,</span> <span class="n">start_values</span><span class="p">,</span> <span class="n">times</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pwc_mr</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

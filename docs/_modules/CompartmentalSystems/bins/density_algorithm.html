@@ -1,0 +1,179 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompartmentalSystems.bins.density_algorithm &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for CompartmentalSystems.bins.density_algorithm</h1><div class="highlight"><pre>
+<span></span><span class="c1"># vim: set ff=unix expandtab ts=4 sw=4:</span>
+<span class="c1">#from testinfrastructure.helpers import pp,pe</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span>
+<span class="c1">#matplotlib.use(&quot;Agg&quot;)</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">matplotlib.animation</span> <span class="k">as</span> <span class="nn">manimation</span>
+<span class="kn">from</span> <span class="nn">mpl_toolkits.mplot3d</span> <span class="kn">import</span> <span class="n">Axes3D</span>
+
+
+<span class="c1">##def loss(age_dist_plain,eta_plain ):</span>
+<span class="c1">##    return(age_dist_plain*eta_plain)    </span>
+
+<div class="viewcode-block" id="losses"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.density_algorithm.losses">[docs]</a><span class="k">def</span> <span class="nf">losses</span><span class="p">(</span><span class="n">old_rectangles</span><span class="p">,</span><span class="n">death_rates</span><span class="p">,</span><span class="n">time</span><span class="p">):</span>
+    <span class="n">internal_death_rates</span><span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">death_rates</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="nb">tuple</span><span class="p">)}</span>
+    <span class="n">losses</span><span class="o">=</span><span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span><span class="n">death_rate</span> <span class="ow">in</span> <span class="n">internal_death_rates</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="c1">#for pool_number,r in enumerate(old_rectangles):</span>
+        <span class="n">sending_pool</span><span class="o">=</span><span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">receiving_pool</span><span class="o">=</span><span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">r</span><span class="o">=</span><span class="n">old_rectangles</span><span class="p">[</span><span class="n">sending_pool</span><span class="p">]</span>
+        <span class="n">losses</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">=</span><span class="n">r</span><span class="o">*</span><span class="n">death_rate</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="n">time</span><span class="p">)</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">losses</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="gains"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.density_algorithm.gains">[docs]</a><span class="k">def</span> <span class="nf">gains</span><span class="p">(</span><span class="n">pool_number</span><span class="p">,</span><span class="n">internal_losses</span><span class="p">):</span>
+    <span class="c1">#sum over all pool ages</span>
+    <span class="c1">#(first index=SystemAge,second_index PoolAge)</span>
+    <span class="c1">#find pipelines leading to me</span>
+    
+    <span class="n">this_pool_gains</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">internal_losses</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="n">pool_number</span><span class="p">}</span>
+    <span class="k">return</span><span class="p">(</span><span class="nb">sum</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">v</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">this_pool_gains</span><span class="o">.</span><span class="n">values</span><span class="p">()]))</span></div>
+
+<span class="c1">#def age_distributions(initial_plains,external_inputs,external_death_rates,internal_death_rates,start,end):</span>
+<span class="c1">#    tss=initial_plains[0].tss</span>
+<span class="c1">#    # infer the number of pools from the number of start distributions</span>
+<span class="c1">#    number_of_pools=len(initial_plains)</span>
+<span class="c1">#</span>
+<span class="c1">#    # start the list with an element for the first time step </span>
+<span class="c1">#    mpp=[initial_plains]</span>
+<span class="c1">#   </span>
+<span class="c1">#    old_rectangles=initial_plains</span>
+<span class="c1">#</span>
+<span class="c1">#    times= np.arange(start+tss,end+tss,tss)</span>
+<span class="c1">#    for t in times:</span>
+<span class="c1">#        new_rectangles=advance_rectangles(old_rectangles,t-tss,external_inputs,death_rates)</span>
+<span class="c1">#        mpp.append(new_rectangles)</span>
+<span class="c1">#        old_rectangles=new_rectangles</span>
+<span class="c1">#    return(mpp)</span>
+
+<span class="c1">#def advance_rectangles(old_rectangles,time,external_inputs,death_rates):</span>
+<span class="c1">#    new_rectangles=[]</span>
+<span class="c1">#    #extract the deathrates out of the system</span>
+<span class="c1">#    internal_death_rates= {k:v for k,v in death_rates.items() if isinstance(k,tuple)}</span>
+<span class="c1">#    internal_losses=losses(old_rectangles,death_rates,time)</span>
+<span class="c1">#    outward_death_rates= {k:v for k,v in death_rates.items() if not(isinstance(k,tuple))}</span>
+<span class="c1">#</span>
+<span class="c1">#    for pool_number,r in enumerate(old_rectangles):</span>
+<span class="c1">#        x,y=r.shape</span>
+<span class="c1">#        #first remove the outflow for all external deathrates defined for this pool</span>
+<span class="c1">#        this_pool_outward_death_rates={k:v for k,v in outward_death_rates.items() if k==pool_number}</span>
+<span class="c1">#        </span>
+<span class="c1">#        internal_input_to_first_pool=np.zeros(x) #fixme: faked since we know that we have no contributions from other pools</span>
+<span class="c1">#        #accumulate losses through different output channels</span>
+<span class="c1">#        l=np.zeros(r.shape)</span>
+<span class="c1">#        for dr in this_pool_outward_death_rates.values():</span>
+<span class="c1">#            #create the eta field of appropriate size</span>
+<span class="c1">#            eta_rect=dr(r,time)</span>
+<span class="c1">#            l+=loss(r,eta_rect)</span>
+<span class="c1">#        </span>
+<span class="c1">#        x,y=r.shape</span>
+<span class="c1">#        n=np.ndarray((x+1,y+1),dtype=default_data_type())</span>
+<span class="c1">#        n[1:,1:]=r-l</span>
+<span class="c1">#        #print(&quot;n[0,0]&quot;,n[0,0])</span>
+<span class="c1">#        #print(&quot;n=&quot;,n[0,:])</span>
+<span class="c1">#        #print(&quot;inp=&quot;,external_inputs[pool_number](y+1,time))</span>
+<span class="c1">#        n[0,:]=external_inputs[pool_number](y+1,time)</span>
+<span class="c1">#        n[1:,0]=internal_input_to_first_pool</span>
+<span class="c1">#</span>
+<span class="c1">#        new_rectangles.append(n)</span>
+<span class="c1">#    return(new_rectangles)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

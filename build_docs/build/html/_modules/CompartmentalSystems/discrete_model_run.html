@@ -1,0 +1,637 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompartmentalSystems.discrete_model_run &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for CompartmentalSystems.discrete_model_run</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy.linalg</span> <span class="kn">import</span> <span class="n">matrix_power</span><span class="p">,</span> <span class="n">pinv</span>
+<span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="kn">import</span> <span class="n">inv</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">factorial</span><span class="p">,</span> <span class="n">binom</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">lru_cache</span>
+
+<span class="kn">from</span> <span class="nn">.helpers_reservoir</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">net_Us_from_discrete_Bs_and_xs</span><span class="p">,</span>
+    <span class="n">net_Fs_from_discrete_Bs_and_xs</span><span class="p">,</span>
+    <span class="n">net_Rs_from_discrete_Bs_and_xs</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">picklegzip</span>
+
+<span class="c1">##############################################################################</span>
+
+
+<div class="viewcode-block" id="DMRError"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DMRError">[docs]</a><span class="k">class</span> <span class="nc">DMRError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generic error occurring in this module.&quot;&quot;&quot;</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1">##############################################################################</span>
+
+
+<div class="viewcode-block" id="DiscreteModelRun"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun">[docs]</a><span class="k">class</span> <span class="nc">DiscreteModelRun</span><span class="p">():</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">Bs</span><span class="p">,</span> <span class="n">xs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Bs State transition operators for one time step</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="n">times</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bs</span> <span class="o">=</span> <span class="n">Bs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xs</span> <span class="o">=</span> <span class="n">xs</span>
+
+<div class="viewcode-block" id="DiscreteModelRun.acc_net_internal_flux_matrix"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.acc_net_internal_flux_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">acc_net_internal_flux_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">Bs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bs</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xs</span>
+
+        <span class="k">return</span> <span class="n">net_Fs_from_discrete_Bs_and_xs</span><span class="p">(</span><span class="n">Bs</span><span class="p">,</span> <span class="n">xs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.acc_net_external_output_vector"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.acc_net_external_output_vector">[docs]</a>    <span class="k">def</span> <span class="nf">acc_net_external_output_vector</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xs</span>
+        <span class="n">Bs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bs</span>
+
+        <span class="k">return</span> <span class="n">net_Rs_from_discrete_Bs_and_xs</span><span class="p">(</span><span class="n">Bs</span><span class="p">,</span> <span class="n">xs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.acc_net_external_input_vector"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.acc_net_external_input_vector">[docs]</a>    <span class="k">def</span> <span class="nf">acc_net_external_input_vector</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xs</span>
+        <span class="n">Bs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bs</span>
+
+        <span class="k">return</span> <span class="n">net_Us_from_discrete_Bs_and_xs</span><span class="p">(</span><span class="n">Bs</span><span class="p">,</span> <span class="n">xs</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">start_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">xs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">nr_pools</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_values</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DiscreteModelRun.from_Bs_and_net_Us"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.from_Bs_and_net_Us">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_Bs_and_net_Us</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">start_values</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">Bs</span><span class="p">,</span> <span class="n">net_Us</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Bs State transition operators for one time step</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_solve</span><span class="p">(</span><span class="n">start_values</span><span class="p">,</span> <span class="n">Bs</span><span class="p">,</span> <span class="n">net_Us</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">times</span><span class="p">,</span> <span class="n">Bs</span><span class="p">,</span> <span class="n">xs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.from_fluxes"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.from_fluxes">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_fluxes</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">start_values</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">net_Us</span><span class="p">,</span> <span class="n">net_Fs</span><span class="p">,</span> <span class="n">net_Rs</span><span class="p">):</span>
+        <span class="n">Bs</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">reconstruct_Bs_without_xs</span><span class="p">(</span>
+            <span class="n">start_values</span><span class="p">,</span>
+            <span class="n">net_Us</span><span class="p">,</span>
+            <span class="n">net_Fs</span><span class="p">,</span>
+            <span class="n">net_Rs</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_Bs_and_net_Us</span><span class="p">(</span>
+            <span class="n">start_values</span><span class="p">,</span>
+            <span class="n">times</span><span class="p">,</span>
+            <span class="n">Bs</span><span class="p">,</span>
+            <span class="n">net_Us</span>
+        <span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="nd">@lru_cache</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">net_Us</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Bs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">xs</span><span class="p">[</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Bs</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">xs</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The lengths of the time intervals.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DiscreteModelRun.from_SmoothModelRun"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.from_SmoothModelRun">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_SmoothModelRun</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">smr</span><span class="p">,</span> <span class="n">data_times</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">data_times</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data_times</span> <span class="o">=</span> <span class="n">smr</span><span class="o">.</span><span class="n">times</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">data_times</span><span class="p">,</span>
+            <span class="n">smr</span><span class="o">.</span><span class="n">fake_discretized_Bs</span><span class="p">(</span><span class="n">data_times</span><span class="p">),</span>
+            <span class="n">smr</span><span class="o">.</span><span class="n">solve_func</span><span class="p">()(</span><span class="n">data_times</span><span class="p">)</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.reconstruct_from_fluxes_and_solution"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.reconstruct_from_fluxes_and_solution">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">reconstruct_from_fluxes_and_solution</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data_times</span><span class="p">,</span> <span class="n">xs</span><span class="p">,</span> <span class="n">Fs</span><span class="p">,</span> <span class="n">Rs</span><span class="p">):</span>
+        <span class="n">Bs</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">reconstruct_Bs</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">Fs</span><span class="p">,</span> <span class="n">Rs</span><span class="p">)</span>
+        <span class="n">dmr</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">data_times</span><span class="p">,</span> <span class="n">Bs</span><span class="p">,</span> <span class="n">xs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dmr</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.reconstruct_Bs"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.reconstruct_Bs">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">reconstruct_Bs</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">xs</span><span class="p">,</span> <span class="n">Fs</span><span class="p">,</span> <span class="n">Rs</span><span class="p">):</span>
+        <span class="n">Bs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">Fs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Rs</span><span class="p">)):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">B</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">reconstruct_B</span><span class="p">(</span><span class="n">xs</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">Fs</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">Rs</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="n">Bs</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">B</span>
+            <span class="k">except</span> <span class="n">DMRError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;time step </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">k</span>
+                <span class="k">raise</span><span class="p">(</span><span class="n">DMRError</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">Bs</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.reconstruct_Bs_without_xs"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.reconstruct_Bs_without_xs">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">reconstruct_Bs_without_xs</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">start_values</span><span class="p">,</span> <span class="n">Us</span><span class="p">,</span> <span class="n">Fs</span><span class="p">,</span> <span class="n">Rs</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">start_values</span>
+        <span class="n">Bs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">Fs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Rs</span><span class="p">)):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">B</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">reconstruct_B</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">Fs</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">Rs</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="n">Bs</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">B</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">B</span> <span class="o">@</span> <span class="n">x</span> <span class="o">+</span> <span class="n">Us</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+            <span class="k">except</span> <span class="n">DMRError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;time step </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">k</span>
+                <span class="k">raise</span><span class="p">(</span><span class="n">DMRError</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">Bs</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.reconstruct_B"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.reconstruct_B">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">reconstruct_B</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">F</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+        <span class="n">nr_pools</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="n">B</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">F</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span><span class="p">(</span><span class="n">DMRError</span><span class="p">(</span><span class="s1">&#39;Negative flux: &#39;</span><span class="p">))</span>
+
+        <span class="c1"># construct off-diagonals</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span><span class="p">(</span><span class="n">DMRError</span><span class="p">(</span><span class="s1">&#39;Content negative: pool </span><span class="si">%d</span><span class="s1">, &#39;</span> <span class="o">%</span> <span class="n">j</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">B</span><span class="p">[:,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">F</span><span class="p">[:,</span> <span class="n">j</span><span class="p">]</span> <span class="o">/</span> <span class="n">x</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">B</span><span class="p">[:,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># construct diagonals</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">B</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">B</span><span class="p">[:,</span> <span class="n">j</span><span class="p">])</span> <span class="o">-</span> <span class="n">B</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">R</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">/</span> <span class="n">x</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">B</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">raise</span><span class="p">(</span><span class="n">DMRError</span><span class="p">(</span><span class="s1">&#39;Diag. val &lt; 0: pool </span><span class="si">%d</span><span class="s1">, &#39;</span> <span class="o">%</span> <span class="n">j</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">B</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">B</span></div>
+
+<span class="c1">#    @classmethod</span>
+<span class="c1">#    def reconstruct_Bs(cls, data_times, start_values, Fs, rs, net_Us):</span>
+<span class="c1">#        nr_pools = len(start_values)</span>
+<span class="c1">#        Bs = np.zeros((len(data_times)-1, nr_pools, nr_pools))</span>
+<span class="c1">#</span>
+<span class="c1">#        x = start_values</span>
+<span class="c1">#        for k in range(len(data_times)-1):</span>
+<span class="c1">#    #        B = cls.reconstruct_B(xs[k], Fs[k+shift], rs[k+shift])</span>
+<span class="c1">#            B = cls.reconstruct_B(x, Fs[k], rs[k], k)</span>
+<span class="c1">#            x = B @ x + net_Us[k]</span>
+<span class="c1">#            Bs[k,:,:] = B</span>
+<span class="c1">#        return Bs</span>
+
+<div class="viewcode-block" id="DiscreteModelRun.solve"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.solve">[docs]</a>    <span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">xs</span></div>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_solve</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">start_values</span><span class="p">,</span> <span class="n">Bs</span><span class="p">,</span> <span class="n">net_Us</span><span class="p">):</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">Bs</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">start_values</span><span class="p">)))</span>
+        <span class="n">xs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">start_values</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">net_Us</span><span class="p">)):</span>
+            <span class="n">xs</span><span class="p">[</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">Bs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">@</span> <span class="n">xs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">+</span> <span class="n">net_Us</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">xs</span>
+
+<div class="viewcode-block" id="DiscreteModelRun.acc_external_output_vector"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.acc_external_output_vector">[docs]</a>    <span class="k">def</span> <span class="nf">acc_external_output_vector</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
+        <span class="n">rho</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="o">-</span><span class="n">B</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">n</span><span class="p">,))</span> <span class="k">for</span> <span class="n">B</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bs</span><span class="p">])</span>
+        <span class="n">soln</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve</span><span class="p">()[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">rho</span> <span class="o">*</span> <span class="n">soln</span>
+
+        <span class="k">return</span> <span class="n">r</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.acc_internal_flux_matrix"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.acc_internal_flux_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">acc_internal_flux_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># fixme mm 20-04-2020:</span>
+        <span class="c1"># potential gain by use of sparse matrices</span>
+        <span class="n">Bs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bs</span>
+        <span class="n">soln</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve</span><span class="p">()[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">Bs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="n">soln</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Bs</span><span class="p">))])</span></div>
+
+    <span class="c1"># return value in unit &quot;time steps&quot;</span>
+<div class="viewcode-block" id="DiscreteModelRun.compute_start_m_factorial_moment"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.compute_start_m_factorial_moment">[docs]</a>    <span class="k">def</span> <span class="nf">compute_start_m_factorial_moment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">time_index</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="n">Id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">)</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bs</span><span class="p">[</span><span class="n">time_index</span><span class="p">]</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve</span><span class="p">()[</span><span class="n">time_index</span><span class="p">]</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">Id</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">order</span>
+
+        <span class="n">fm</span> <span class="o">=</span> <span class="n">factorial</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">*</span> <span class="n">pinv</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">@</span> <span class="n">matrix_power</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">fm</span> <span class="o">@=</span> <span class="n">matrix_power</span><span class="p">(</span><span class="n">pinv</span><span class="p">(</span><span class="n">Id</span><span class="o">-</span><span class="n">B</span><span class="p">),</span> <span class="n">n</span><span class="p">)</span> <span class="o">@</span> <span class="n">x</span>
+
+        <span class="k">return</span> <span class="n">fm</span></div>
+
+    <span class="c1"># return value in unit &quot;time steps x dt[0]&quot;</span>
+<div class="viewcode-block" id="DiscreteModelRun.compute_start_age_moments"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.compute_start_age_moments">[docs]</a>    <span class="k">def</span> <span class="nf">compute_start_age_moments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_order</span><span class="p">,</span> <span class="n">time_index</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">stirling</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">):</span>
+            <span class="n">n1</span> <span class="o">=</span> <span class="n">n</span>
+            <span class="n">k1</span> <span class="o">=</span> <span class="n">k</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">k</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">0</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">n</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">n</span> <span class="o">==</span> <span class="n">k</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="n">k</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">temp1</span> <span class="o">=</span> <span class="n">stirling</span><span class="p">(</span><span class="n">n1</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">k1</span><span class="p">)</span>
+                <span class="n">temp1</span> <span class="o">=</span> <span class="n">k1</span><span class="o">*</span><span class="n">temp1</span>
+
+            <span class="k">return</span> <span class="p">(</span><span class="n">k1</span><span class="o">*</span><span class="p">(</span><span class="n">stirling</span><span class="p">(</span><span class="n">n1</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">k1</span><span class="p">)))</span><span class="o">+</span><span class="n">stirling</span><span class="p">(</span><span class="n">n1</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">k1</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">nr_pools</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
+<span class="c1">#        Id = np.identity(nr_pools)</span>
+<span class="c1">#        B0 = self.Bs[time_index]</span>
+<span class="c1">#        x0 = self.solve()[time_index]</span>
+<span class="c1">#        X0 = x0 * Id</span>
+        <span class="n">start_age_moments</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_order</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="c1"># the old formula is not correct for higher moments</span>
+            <span class="c1"># in discrete time</span>
+            <span class="c1"># start_age_moment = factorial(n) * inv(X0)</span>
+            <span class="c1"># start_age_moment @= matrix_power(inv(Id-B0), n) @ x0</span>
+            <span class="n">start_m_moment</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">start_m_moment</span> <span class="o">+=</span> <span class="n">stirling</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="o">*</span> \
+                    <span class="bp">self</span><span class="o">.</span><span class="n">compute_start_m_factorial_moment</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">time_index</span><span class="p">)</span>
+
+            <span class="n">start_age_moments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">start_m_moment</span><span class="o">*</span><span class="n">dt</span><span class="o">**</span><span class="n">n</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">start_age_moments</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.age_moment_vector"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.age_moment_vector">[docs]</a>    <span class="k">def</span> <span class="nf">age_moment_vector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">start_age_moments</span><span class="p">):</span>
+        <span class="n">ams</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solve_age_moment_system</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">start_age_moments</span><span class="p">)</span>
+        <span class="n">amv</span> <span class="o">=</span> <span class="n">ams</span><span class="p">[:,</span> <span class="n">order</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="k">return</span> <span class="n">amv</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.system_age_moment"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.system_age_moment">[docs]</a>    <span class="k">def</span> <span class="nf">system_age_moment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">start_age_moments</span><span class="p">):</span>
+        <span class="n">age_moment_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">age_moment_vector</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">start_age_moments</span><span class="p">)</span>
+        <span class="n">age_moment_vector</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">age_moment_vector</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">soln</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+
+        <span class="n">total_mass</span> <span class="o">=</span> <span class="n">soln</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># row sum</span>
+        <span class="n">total_mass</span><span class="p">[</span><span class="n">total_mass</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="n">system_age_moment</span> <span class="o">=</span> <span class="p">(</span><span class="n">age_moment_vector</span><span class="o">*</span><span class="n">soln</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">total_mass</span>
+
+        <span class="k">return</span> <span class="n">system_age_moment</span></div>
+
+    <span class="k">def</span> <span class="nf">_solve_age_moment_system</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_order</span><span class="p">,</span> <span class="n">start_age_moments</span><span class="p">):</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
+        <span class="n">Id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">ones</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">soln</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+        <span class="n">dts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dts</span>
+
+        <span class="n">age_moments</span> <span class="o">=</span> <span class="p">[</span><span class="n">start_age_moments</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">max_order</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
+            <span class="n">X_np1</span> <span class="o">=</span> <span class="n">soln</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">Id</span>
+            <span class="n">X_n</span> <span class="o">=</span> <span class="n">soln</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">Id</span>
+            <span class="n">B</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_order</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">moment_sum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                    <span class="n">moment_sum</span> <span class="o">+=</span> <span class="n">age_moments</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">n</span><span class="p">,))</span> \
+                                  <span class="o">*</span> <span class="n">binom</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="o">*</span> <span class="n">dts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">**</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="n">j</span><span class="p">)</span>
+
+                <span class="n">vec</span><span class="p">[</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">inv</span><span class="p">(</span><span class="n">X_np1</span><span class="p">)</span> <span class="o">@</span> <span class="n">B</span> <span class="o">@</span> <span class="n">X_n</span>
+                <span class="n">vec</span><span class="p">[</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">@=</span> <span class="p">(</span><span class="n">moment_sum</span> <span class="o">+</span> <span class="n">ones</span><span class="o">*</span><span class="n">dts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">**</span><span class="n">k</span><span class="p">)</span>
+
+            <span class="n">age_moments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vec</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">age_moments</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DiscreteModelRun.backward_transit_time_moment"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.backward_transit_time_moment">[docs]</a>    <span class="k">def</span> <span class="nf">backward_transit_time_moment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">start_age_moments</span><span class="p">):</span>
+        <span class="n">age_moment_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">age_moment_vector</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">start_age_moments</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_output_vector</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">r</span><span class="o">*</span><span class="n">age_moment_vector</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">r</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.start_age_densities_func"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.start_age_densities_func">[docs]</a>    <span class="k">def</span> <span class="nf">start_age_densities_func</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">net_Us</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># assuming constant time step before times[0]</span>
+        <span class="k">def</span> <span class="nf">p</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">a</span> <span class="o">//</span> <span class="n">dt</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">a</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">matrix_power</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span> <span class="o">@</span> <span class="n">u</span>  <span class="c1"># if age zero exists</span>
+
+        <span class="k">return</span> <span class="n">p</span></div>
+
+    <span class="k">def</span> <span class="nf">_state_transition_operator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t1</span><span class="p">,</span> <span class="n">t0</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">t0</span> <span class="o">&gt;</span> <span class="n">t1</span><span class="p">:</span>
+            <span class="k">raise</span><span class="p">(</span><span class="n">DMRError</span><span class="p">(</span><span class="s1">&#39;Evaluation before t0 not possible&#39;</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">t1</span> <span class="o">==</span> <span class="n">t0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">x</span>
+
+        <span class="n">k0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">==</span> <span class="n">t0</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">k1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">==</span> <span class="n">t1</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_sto_recent&#39;</span><span class="p">)</span> <span class="ow">and</span>
+           <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sto_recent</span><span class="p">[</span><span class="s1">&#39;k0&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">k0</span><span class="p">)</span> <span class="ow">and</span>
+           <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sto_recent</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">k1</span><span class="p">)):</span>
+            <span class="n">Phi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bs</span><span class="p">[</span><span class="n">k1</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sto_recent</span><span class="p">[</span><span class="s1">&#39;Phi&#39;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_sto_recent&#39;</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sto_recent</span><span class="p">[</span><span class="s1">&#39;k0&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">k0</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sto_recent</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">k1</span><span class="p">)):</span>
+            <span class="n">Phi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sto_recent</span><span class="p">[</span><span class="s1">&#39;Phi&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bs</span><span class="p">[</span><span class="n">k0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">k0</span><span class="p">,</span> <span class="n">k1</span><span class="p">):</span>
+                <span class="n">Phi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Bs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">@</span> <span class="n">Phi</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sto_recent</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;k0&#39;</span><span class="p">:</span> <span class="n">k0</span><span class="p">,</span> <span class="s1">&#39;k1&#39;</span><span class="p">:</span> <span class="n">k1</span><span class="p">,</span> <span class="s1">&#39;Phi&#39;</span><span class="p">:</span> <span class="n">Phi</span><span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">Phi</span> <span class="o">@</span> <span class="n">x</span>
+
+<div class="viewcode-block" id="DiscreteModelRun.age_densities_1_single_value_func"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.age_densities_1_single_value_func">[docs]</a>    <span class="k">def</span> <span class="nf">age_densities_1_single_value_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_age_densities</span><span class="p">):</span>
+        <span class="n">t0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">p0</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">a</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">start_age_densities</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">,))</span>
+
+        <span class="n">Phi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state_transition_operator</span>
+
+        <span class="k">def</span> <span class="nf">p1_sv</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">Phi</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">t0</span><span class="p">,</span> <span class="n">p0</span><span class="p">(</span><span class="n">a</span><span class="o">-</span><span class="p">(</span><span class="n">t</span><span class="o">-</span><span class="n">t0</span><span class="p">)))</span>
+            <span class="k">return</span> <span class="n">res</span>
+
+        <span class="k">return</span> <span class="n">p1_sv</span></div>
+
+    <span class="k">def</span> <span class="nf">_age_densities_1_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_age_densities</span><span class="p">):</span>
+        <span class="n">p1_sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">age_densities_1_single_value_func</span><span class="p">(</span><span class="n">start_age_densities</span><span class="p">)</span>
+
+        <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">times</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">p1</span><span class="p">(</span><span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">coarsity</span><span class="p">):</span>
+            <span class="n">a_min</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">t</span><span class="o">-</span><span class="n">t0</span><span class="o">+</span><span class="n">dt</span><span class="p">,</span> <span class="n">a_min</span><span class="p">)</span>
+
+            <span class="n">rest_a_max</span> <span class="o">=</span> <span class="n">a_max</span> <span class="o">-</span> <span class="p">(</span><span class="n">t</span><span class="o">-</span><span class="n">t0</span><span class="p">)</span>
+            <span class="n">rest_a_min</span> <span class="o">=</span> <span class="n">a_min</span> <span class="o">-</span> <span class="p">(</span><span class="n">t</span><span class="o">-</span><span class="n">t0</span><span class="p">)</span>
+
+            <span class="n">a_min_nr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">rest_a_min</span><span class="o">/</span><span class="n">dt</span><span class="p">)</span>
+            <span class="n">a_max_nr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">rest_a_max</span><span class="o">/</span><span class="n">dt</span><span class="p">)</span>
+
+            <span class="n">ages</span> <span class="o">=</span> <span class="n">t</span><span class="o">-</span><span class="n">t0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">a_min_nr</span><span class="o">*</span><span class="n">dt</span><span class="p">,</span> <span class="p">(</span><span class="n">a_max_nr</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">dt</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+            <span class="n">ages</span> <span class="o">=</span> <span class="n">ages</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ages</span><span class="p">),</span> <span class="n">coarsity</span><span class="p">)]</span>
+<span class="c1">#            vals = np.array([p1_sv(a,t) for a in ages])</span>
+
+            <span class="n">vals</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ages</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">ages</span><span class="p">):</span>
+                    <span class="n">vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p1_sv</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+            <span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">ages</span><span class="p">,</span> <span class="n">vals</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">ages</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">p1</span>
+
+<div class="viewcode-block" id="DiscreteModelRun.age_densities_2_single_value_func"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.age_densities_2_single_value_func">[docs]</a>    <span class="k">def</span> <span class="nf">age_densities_2_single_value_func</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">times</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">Phi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state_transition_operator</span>
+
+        <span class="k">def</span> <span class="nf">p2_sv</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">a</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">t</span><span class="o">-</span><span class="n">t0</span> <span class="o">&lt;</span> <span class="n">a</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">,))</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">times</span> <span class="o">==</span> <span class="n">t</span><span class="o">-</span><span class="n">a</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">net_Us</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">Phi</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">t</span><span class="o">-</span><span class="n">a</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span>  <span class="c1"># age 0 just arrived</span>
+
+            <span class="k">return</span> <span class="n">res</span>
+
+        <span class="k">return</span> <span class="n">p2_sv</span></div>
+
+    <span class="k">def</span> <span class="nf">_age_densities_2_func</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">p2_sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">age_densities_2_single_value_func</span><span class="p">()</span>
+
+        <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">times</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">p2</span><span class="p">(</span><span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">coarsity</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">a_min</span> <span class="o">&gt;</span> <span class="n">t</span><span class="o">-</span><span class="n">t0</span><span class="p">:</span>
+                <span class="n">a_min</span> <span class="o">=</span> <span class="n">t</span><span class="o">-</span><span class="n">t0</span>
+            <span class="n">a_max</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">t</span><span class="o">-</span><span class="n">t0</span><span class="p">,</span> <span class="n">a_max</span><span class="p">)</span>
+
+            <span class="n">k_t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">times</span> <span class="o">==</span> <span class="n">t</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">k_a_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">t</span><span class="o">-</span><span class="n">times</span><span class="p">[:(</span><span class="n">k_t</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span> <span class="o">&gt;=</span> <span class="n">a_min</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">k_a_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">t</span><span class="o">-</span><span class="n">times</span><span class="p">[:(</span><span class="n">k_t</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span> <span class="o">&lt;=</span> <span class="n">a_max</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([]),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+
+            <span class="n">ages</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">t</span><span class="o">-</span><span class="n">times</span><span class="p">[</span><span class="n">k_a_max</span><span class="p">:(</span><span class="n">k_a_min</span><span class="o">+</span><span class="mi">1</span><span class="p">)],</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">ages</span> <span class="o">=</span> <span class="n">ages</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ages</span><span class="p">),</span> <span class="n">coarsity</span><span class="p">)]</span>
+<span class="c1">#            vals = np.array([p2_sv(a,t) for a in ages])</span>
+
+            <span class="n">vals</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ages</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">ages</span><span class="p">):</span>
+                    <span class="n">vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p2_sv</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+            <span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">ages</span><span class="p">,</span> <span class="n">vals</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">ages</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">p2</span>
+
+<div class="viewcode-block" id="DiscreteModelRun.age_densities_single_value_func"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.age_densities_single_value_func">[docs]</a>    <span class="k">def</span> <span class="nf">age_densities_single_value_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_age_densities</span><span class="p">):</span>
+        <span class="n">p1_sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">age_densities_1_single_value_func</span><span class="p">(</span>
+            <span class="n">start_age_densities</span>
+        <span class="p">)</span>
+        <span class="n">p2_sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">age_densities_single_value_func</span><span class="p">()</span>
+
+        <span class="k">def</span> <span class="nf">p_sv</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">p1_sv</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="o">+</span> <span class="n">p2_sv</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">p_sv</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.pool_age_densities_func"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.pool_age_densities_func">[docs]</a>    <span class="k">def</span> <span class="nf">pool_age_densities_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_age_densities</span><span class="p">,</span> <span class="n">coarsity</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">p1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_age_densities_1_func</span><span class="p">(</span><span class="n">start_age_densities</span><span class="p">)</span>
+        <span class="n">p2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_age_densities_2_func</span><span class="p">()</span>
+
+        <span class="k">def</span> <span class="nf">p</span><span class="p">(</span><span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+            <span class="n">ages_1</span><span class="p">,</span> <span class="n">vals_1</span> <span class="o">=</span> <span class="n">p1</span><span class="p">(</span><span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">coarsity</span><span class="p">)</span>
+            <span class="n">ages_1</span> <span class="o">=</span> <span class="n">ages_1</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">vals_1</span> <span class="o">=</span> <span class="n">vals_1</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">ages_2</span><span class="p">,</span> <span class="n">vals_2</span> <span class="o">=</span> <span class="n">p2</span><span class="p">(</span><span class="n">a_min</span><span class="p">,</span> <span class="n">a_max</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">coarsity</span><span class="p">)</span>
+            <span class="n">ages_2</span> <span class="o">=</span> <span class="n">ages_2</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">vals_2</span> <span class="o">=</span> <span class="n">vals_2</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+            <span class="n">ages</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ages_2</span><span class="o">+</span><span class="n">ages_1</span><span class="p">)</span>
+            <span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">vals_2</span><span class="o">+</span><span class="n">vals_1</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">ages</span><span class="p">,</span> <span class="n">vals</span>
+
+        <span class="k">return</span> <span class="n">p</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.age_quantiles_at_time"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.age_quantiles_at_time">[docs]</a>    <span class="k">def</span> <span class="nf">age_quantiles_at_time</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">pools</span><span class="p">,</span> <span class="n">start_age_densities</span><span class="p">):</span>
+        <span class="n">dts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dts</span>
+
+        <span class="n">k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">==</span> <span class="n">t</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">soln</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">pools</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+        <span class="n">prev_age</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">age</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">mass</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">p_sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">age_densities_single_value</span><span class="p">(</span><span class="n">start_age_densities</span><span class="p">)</span>
+        <span class="k">while</span> <span class="n">mass</span> <span class="o">&lt;=</span> <span class="n">q</span><span class="o">*</span><span class="n">x</span><span class="p">:</span>
+            <span class="n">prev_age</span> <span class="o">=</span> <span class="n">age</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">age</span> <span class="o">+=</span> <span class="n">dts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">age</span> <span class="o">+=</span> <span class="n">dts</span><span class="p">[</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">k</span> <span class="o">-=</span> <span class="mi">1</span>
+
+            <span class="n">mass</span> <span class="o">+=</span> <span class="n">p_sv</span><span class="p">(</span><span class="n">age</span><span class="p">,</span> <span class="n">t</span><span class="p">)[</span><span class="n">pools</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">prev_age</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.load_from_file"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.load_from_file">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">load_from_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="n">cmr</span> <span class="o">=</span> <span class="n">picklegzip</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cmr</span></div>
+
+<div class="viewcode-block" id="DiscreteModelRun.save_to_file"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.discrete_model_run.DiscreteModelRun.save_to_file">[docs]</a>    <span class="k">def</span> <span class="nf">save_to_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="n">picklegzip</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span></div></div>
+
+<span class="c1">#    ########## 14C methods #########</span>
+<span class="c1">#</span>
+<span class="c1">#    def to_14C_only(self, start_values_14C, us_14C, decay_rate=0.0001209681):</span>
+<span class="c1">#        times_14C = self.times</span>
+<span class="c1">#</span>
+<span class="c1">#        Bs = self.Bs</span>
+<span class="c1">#        dts = self.dts</span>
+<span class="c1">#</span>
+<span class="c1">#        Bs_14C = np.zeros_like(Bs)</span>
+<span class="c1">#        for k in range(len(Bs)):</span>
+<span class="c1">#            # there seems to be no difference</span>
+<span class="c1">#            Bs_14C[k] = Bs[k] * np.exp(-decay_rate*dts[k])</span>
+<span class="c1">##            Bs_14C[k] = Bs[k] * (1.0-decay_rate*dts[k])  ## noqa</span>
+<span class="c1">#</span>
+<span class="c1">#        dmr_14C = DiscreteModelRun_14C(</span>
+<span class="c1">#            start_values_14C,</span>
+<span class="c1">#            times_14C,</span>
+<span class="c1">#            Bs_14C,</span>
+<span class="c1">#            us_14C,</span>
+<span class="c1">#            decay_rate)</span>
+<span class="c1">#</span>
+<span class="c1">#        return dmr_14C</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

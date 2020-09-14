@@ -1,0 +1,992 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompartmentalSystems.smooth_reservoir_model &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for CompartmentalSystems.smooth_reservoir_model</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Module for symbolical treatment of smooth reservoir models.</span>
+
+<span class="sd">This module handles the symbolic treatment of compartmental/reservoir/pool </span>
+<span class="sd">models.</span>
+<span class="sd">It does not deal with numerical computations and model simulations,</span>
+<span class="sd">but rather defines the underlying structure of the respective model.</span>
+
+<span class="sd">All fluxes or matrix entries are supposed to be SymPy expressions.</span>
+<span class="sd">*Smooth* means that no ``Piecewise`` or ``DiracDelta`` functions should be </span>
+<span class="sd">involved in the model description.</span>
+
+<span class="sd">Counting of compartment/pool/reservoir numbers starts at zero and the </span>
+<span class="sd">total number of pools is :math:`d`.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">matplotlib.patches</span> <span class="k">as</span> <span class="nn">mpatches</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span><span class="p">,</span> <span class="n">deepcopy</span>
+<span class="kn">from</span> <span class="nn">string</span> <span class="kn">import</span> <span class="n">Template</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">reduce</span>
+<span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="p">(</span><span class="n">zeros</span><span class="p">,</span> <span class="n">Matrix</span><span class="p">,</span> <span class="n">simplify</span><span class="p">,</span> <span class="n">diag</span><span class="p">,</span> <span class="n">eye</span><span class="p">,</span> <span class="n">gcd</span><span class="p">,</span> <span class="n">latex</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">,</span> 
+                   <span class="n">flatten</span><span class="p">,</span> <span class="n">Function</span><span class="p">,</span> <span class="n">solve</span><span class="p">,</span> <span class="n">limit</span><span class="p">,</span> <span class="n">oo</span> <span class="p">,</span> <span class="n">ask</span> <span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">assuming</span>
+                   <span class="p">,</span><span class="n">sympify</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">sympy.printing</span> <span class="kn">import</span> <span class="n">pprint</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span>
+
+<span class="kn">from</span> <span class="nn">.helpers_reservoir</span> <span class="kn">import</span> <span class="n">factor_out_from_matrix</span><span class="p">,</span> <span class="n">has_pw</span><span class="p">,</span> <span class="n">flux_dict_string</span><span class="p">,</span> <span class="n">jacobian</span>
+<span class="kn">from</span> <span class="nn">.cs_plotter</span> <span class="kn">import</span> <span class="n">CSPlotter</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TypeVar</span>
+
+
+<div class="viewcode-block" id="Error"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.Error">[docs]</a><span class="k">class</span> <span class="nc">Error</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generic error occurring in this module.&quot;&quot;&quot;</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="SmoothReservoirModel"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel">[docs]</a><span class="k">class</span> <span class="nc">SmoothReservoirModel</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;General class of smooth reservoir models.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        state_vector (SymPy dx1-matrix): The model&#39;s state vector </span>
+<span class="sd">            :math:`x`.</span>
+<span class="sd">            Its entries are SymPy symbols.</span>
+<span class="sd">        state_variables (list of str): </span>
+<span class="sd">            Names of the variables in the state vector.</span>
+<span class="sd">            Its entries are of type ``str``.</span>
+<span class="sd">        time_symbol (SymPy symbol): The model&#39;s time symbol.</span>
+<span class="sd">        input_fluxes (dict): The model&#39;s external input fluxes.</span>
+<span class="sd">            ``{key1: flux1, key2: flux2}`` with ``key`` the pool number and </span>
+<span class="sd">            ``flux`` a SymPy expression for the influx.</span>
+<span class="sd">        output_fluxes (dict): The model&#39;s external output fluxes.</span>
+<span class="sd">            ``{key1: flux1, key2: flux2}`` with ``key`` the pool number and </span>
+<span class="sd">            ``flux`` a SymPy expression for the outflux.</span>
+<span class="sd">        internal_fluxes (dict): The model&#39;s internal_fluxes.</span>
+<span class="sd">            ``{key1: flux1, key2: flux2}`` with ``key = (pool_from, pool_to)``</span>
+<span class="sd">            and *flux* a SymPy expression for the flux.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="SmoothReservoirModel.from_state_variable_indexed_fluxes"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.from_state_variable_indexed_fluxes">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_state_variable_indexed_fluxes</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span><span class="n">state_vector</span><span class="p">,</span> <span class="n">time_symbol</span><span class="p">,</span> 
+            <span class="n">input_fluxes</span><span class="p">,</span> <span class="n">output_fluxes</span><span class="p">,</span> <span class="n">internal_fluxes</span><span class="p">)</span><span class="o">-&gt;</span><span class="s2">&quot;SmoothReservoirModel&quot;</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return an instance of SmoothReservoirModel.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            state_vector (SymPy dx1-matrix): The model&#39;s state vector </span>
+<span class="sd">                :math:`x`.</span>
+<span class="sd">                Its entries are SymPy symbols.</span>
+<span class="sd">            time_symbol (SymPy symbol): The model&#39;s time symbol.</span>
+<span class="sd">            input_fluxes (dict): The model&#39;s external input fluxes.</span>
+<span class="sd">                ``{key1: flux1, key2: flux2}`` with ``key`` the symbol of the target pool. (as used in the state vector)</span>
+<span class="sd">                and ``flux`` a SymPy expression for the influx.</span>
+<span class="sd">            output_fluxes (dict): The model&#39;s external output fluxes.</span>
+<span class="sd">                ``{key1: flux1, key2: flux2}`` with ``key`` the symbols for the source pool (as used in the state vector)</span>
+<span class="sd">                and ``flux`` a SymPy expression for the outflux.</span>
+<span class="sd">            internal_fluxes (dict): The model&#39;s internal_fluxes.</span>
+<span class="sd">                ``{key1: flux1, key2: flux2}`` with </span>
+<span class="sd">                ``key = (source pool symbol, target pool symbol)`` and ``flux`` a SymPy expression </span>
+<span class="sd">                for the flux.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`SmoothReservoirModel`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># transform to integer indexed dicts</span>
+        <span class="n">int_input</span><span class="o">=</span><span class="p">{</span><span class="n">state_vector</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">k</span><span class="p">):</span><span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">input_fluxes</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">int_output</span><span class="o">=</span><span class="p">{</span><span class="n">state_vector</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">k</span><span class="p">):</span><span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">output_fluxes</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">int_internal</span><span class="o">=</span><span class="p">{(</span><span class="n">state_vector</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span><span class="n">state_vector</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="mi">1</span><span class="p">])):</span><span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">internal_fluxes</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="c1"># call normal init</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span> <span class="n">state_vector</span><span class="p">,</span> <span class="n">time_symbol</span><span class="p">,</span> <span class="n">int_input</span><span class="p">,</span> <span class="n">int_output</span><span class="p">,</span> <span class="n">int_internal</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_vector</span><span class="p">,</span> <span class="n">time_symbol</span><span class="p">,</span> 
+                       <span class="n">input_fluxes</span><span class="o">=</span><span class="p">{},</span> <span class="n">output_fluxes</span><span class="o">=</span><span class="p">{},</span> <span class="n">internal_fluxes</span><span class="o">=</span><span class="p">{}):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize an instance of SmoothReservoirModel.</span>
+<span class="sd">    </span>
+<span class="sd">        Args:</span>
+<span class="sd">            state_vector (SymPy dx1-matrix): The model&#39;s state vector </span>
+<span class="sd">                :math:`x`.</span>
+<span class="sd">                Its entries are SymPy symbols.</span>
+<span class="sd">            time_symbol (SymPy symbol): The model&#39;s time symbol.</span>
+<span class="sd">            input_fluxes (dict): The model&#39;s external input fluxes.</span>
+<span class="sd">                ``{key1: flux1, key2: flux2}`` with ``key`` the pool number </span>
+<span class="sd">                and ``flux`` a SymPy expression for the influx.</span>
+<span class="sd">            output_fluxes (dict): The model&#39;s external output fluxes.</span>
+<span class="sd">                ``{key1: flux1, key2: flux2}`` with ``key`` the pool number </span>
+<span class="sd">                and ``flux`` a SymPy expression for the outflux.</span>
+<span class="sd">            internal_fluxes (dict): The model&#39;s internal_fluxes.</span>
+<span class="sd">                ``{key1: flux1, key2: flux2}`` with </span>
+<span class="sd">                ``key = (pool_from, pool_to)`` and ``flux`` a SymPy expression </span>
+<span class="sd">                for the flux.</span>
+<span class="sd">    </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`SmoothReservoirModel`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span> <span class="o">=</span> <span class="n">state_vector</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_variables</span> <span class="o">=</span> <span class="p">[</span><span class="n">sv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">sv</span> <span class="ow">in</span> <span class="n">state_vector</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_symbol</span><span class="o">=</span><span class="n">time_symbol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_fluxes</span><span class="o">=</span><span class="n">input_fluxes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_fluxes</span><span class="o">=</span><span class="n">output_fluxes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">internal_fluxes</span><span class="o">=</span><span class="n">internal_fluxes</span>
+        <span class="c1"># fixme mm:</span>
+        <span class="c1"># this is a kind of circular dependency </span>
+        <span class="c1"># or at least a clumsy, duplicating and therefore error prone approach </span>
+        <span class="c1"># at a one-to-many relationship</span>
+        <span class="c1"># there is no need to store SmoothModelRun objects in ReservoirModel </span>
+        <span class="c1"># objects since we already have the </span>
+        <span class="c1"># attribute model_run_combinations in class Model</span>
+        <span class="c1">#self.model_runs=[]</span>
+
+        <span class="c1"># fixme mm:</span>
+        <span class="c1"># see the description of the model_runs property</span>
+        <span class="c1"># def add_model_run(self,mr):</span>
+        <span class="c1">#     self.model_runs.append(mr)</span>
+    
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">no_input_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">SmoothReservoirModel</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">time_symbol</span><span class="p">,</span>
+            <span class="p">{},</span><span class="c1"># no input fluxes</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_fluxes</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_fluxes</span>
+        <span class="p">)</span>
+        
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">function_expressions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the superset of the free symbols of the flux expressions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">flux_list</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">all_fluxes</span><span class="p">()</span>
+        <span class="n">fun_sets</span><span class="o">=</span><span class="p">[</span> <span class="n">fun_set</span> 
+                <span class="c1"># the sympify in the next line is only necessary for</span>
+                <span class="c1"># fluxexpressions that are integers (which have no atoms method) </span>
+                <span class="k">for</span> <span class="n">fun_set</span> <span class="ow">in</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span>
+                    <span class="n">flux</span><span class="p">:</span><span class="n">sympify</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span><span class="o">.</span><span class="n">atoms</span><span class="p">(</span><span class="n">Function</span><span class="p">),</span><span class="n">flux_list</span><span class="p">)]</span> 
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fun_sets</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">res</span><span class="o">=</span><span class="nb">set</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">res</span><span class="o">=</span><span class="n">reduce</span><span class="p">(</span> <span class="k">lambda</span> <span class="n">A</span><span class="p">,</span><span class="n">B</span><span class="p">:</span> <span class="n">A</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">B</span><span class="p">),</span><span class="n">fun_sets</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span> 
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">free_symbols</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the superset of the free symbols of the flux expressions including the state variables.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">flux_exprs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">all_fluxes</span><span class="p">()</span>
+        <span class="n">free_sym_sets</span><span class="o">=</span><span class="p">[</span> <span class="n">sym_set</span> 
+                <span class="c1"># the sympification in the next line is only necessary for</span>
+                <span class="c1"># fluxexpressions that are numbers</span>
+                <span class="c1"># It does no harm on expressions </span>
+                <span class="k">for</span> <span class="n">sym_set</span> <span class="ow">in</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">sym</span><span class="p">:</span><span class="n">sympify</span><span class="p">(</span><span class="n">sym</span><span class="p">)</span><span class="o">.</span><span class="n">free_symbols</span><span class="p">,</span><span class="n">flux_exprs</span><span class="p">)]</span> 
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">free_sym_sets</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">res</span><span class="o">=</span><span class="nb">set</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">res</span><span class="o">=</span><span class="n">reduce</span><span class="p">(</span> <span class="k">lambda</span> <span class="n">A</span><span class="p">,</span><span class="n">B</span><span class="p">:</span> <span class="n">A</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">B</span><span class="p">),</span><span class="n">free_sym_sets</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span> 
+
+ 
+<div class="viewcode-block" id="SmoothReservoirModel.subs"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.subs">[docs]</a>    <span class="k">def</span> <span class="nf">subs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">parameter_dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns a new instance of class: `SmoothReservoirModel` with all parameters in the parameter_dict replaced </span>
+<span class="sd">            by their values by calling subs on all the flux expressions. </span>
+<span class="sd">            Args:</span>
+<span class="sd">                parameter_dict: A dictionary with the structure {parameter_symbol:parameter_value,....}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">SmoothReservoirModel</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">time_symbol</span><span class="p">,</span>
+            <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">fl</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">parameter_dict</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">fl</span> <span class="ow">in</span>    <span class="bp">self</span><span class="o">.</span><span class="n">input_fluxes</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+            <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">fl</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">parameter_dict</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">fl</span> <span class="ow">in</span>   <span class="bp">self</span><span class="o">.</span><span class="n">output_fluxes</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+            <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">fl</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">parameter_dict</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">fl</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_fluxes</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; This method is called implicitly by print and gives an returns a string that gives an overview over the fluxes </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">s</span><span class="o">=</span><span class="s2">&quot;Object of class &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">)</span>
+        <span class="n">indent</span><span class="o">=</span><span class="mi">2</span> 
+        <span class="n">s</span><span class="o">+=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2"> Input fluxes:</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">s</span><span class="o">+=</span><span class="n">flux_dict_string</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_fluxes</span><span class="p">,</span><span class="n">indent</span><span class="p">)</span>
+
+        <span class="n">s</span><span class="o">+=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2"> Internal fluxes:</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">s</span><span class="o">+=</span><span class="n">flux_dict_string</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">internal_fluxes</span><span class="p">,</span><span class="n">indent</span><span class="p">)</span>
+        
+        <span class="n">s</span><span class="o">+=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2"> Output fluxes:</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">s</span><span class="o">+=</span><span class="n">flux_dict_string</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_fluxes</span><span class="p">,</span><span class="n">indent</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">s</span> 
+
+<div class="viewcode-block" id="SmoothReservoirModel.all_fluxes"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.all_fluxes">[docs]</a>    <span class="k">def</span> <span class="nf">all_fluxes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+        <span class="c1"># since input and output fluxes are indexed by integers they could</span>
+        <span class="c1"># overload each other in a common dictionary</span>
+        <span class="c1"># to avoid this we create a list</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_fluxes</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span> <span class="o">+</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_fluxes</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span> <span class="o">+</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_fluxes</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">jacobian</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">state_vec</span><span class="o">=</span><span class="n">Matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">)</span>
+        <span class="n">vec</span><span class="o">=</span><span class="n">Matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">F</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">jacobian</span><span class="p">(</span><span class="n">vec</span><span class="p">,</span><span class="n">state_vec</span><span class="p">)</span>
+
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_compartmental</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns checks that all fluxes are nonnegative</span>
+<span class="sd">        at the time of implementation this functionality sympy did not support </span>
+<span class="sd">        relations in predicates yet.</span>
+<span class="sd">        So while the following works:</span>
+<span class="sd">        </span>
+<span class="sd">        with assuming(Q.positive(x) &amp; Q.positive(y)):</span>
+<span class="sd">           print(ask(Q.positive(2*x+y)</span>
+<span class="sd">        </span>
+<span class="sd">        it is not possible yet to get a meaningful answer to:</span>
+<span class="sd">        </span>
+<span class="sd">        with assuming(Q.is_true(x&gt;0) &amp; Q.is_true(y&gt;0)):</span>
+<span class="sd">           print(ask(Q.positive(2*x+y)</span>
+<span class="sd">        </span>
+<span class="sd">        We therefore cannot implement more elaborate assumptions like k_1-(a_12+a_32)&gt;=0 </span>
+<span class="sd">        but still can assume all the state_variables and the time_symbol to be nonnegative</span>
+<span class="sd">        Therefore we can check the compartmental_property best after all paramater value have been substituted.</span>
+<span class="sd">        At the moment the function throws an exception if this is not the case.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#check if all free symbols have been removed</span>
+        <span class="n">allowed_symbs</span><span class="o">=</span> <span class="nb">set</span><span class="p">(</span> <span class="p">[</span><span class="n">sym</span> <span class="k">for</span> <span class="n">sym</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="s2">&quot;time_symbol&quot;</span><span class="p">):</span>
+            <span class="n">allowed_symbs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_symbol</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">allowed_symbs</span><span class="o">.</span><span class="n">issuperset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">free_symbols</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                    <span class="n">Template</span><span class="p">(</span><span class="s2">&quot;Sympy can not check the parameters without assumptions. Try to substitute all variables except the state variables and the time symbol. Use the subs methot of the class </span><span class="si">{c}</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="n">self__class__</span><span class="p">)</span>
+                <span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">expr</span><span class="p">):</span>
+            <span class="n">res</span><span class="o">=</span> <span class="n">ask</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">nonnegative</span><span class="p">(</span><span class="n">expr</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">res</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                        <span class="n">Template</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;Sympy can not (yet) check the parameters even with correct assumptions,\ </span>
+<span class="s2">since relations (&lt;,&gt;) are not implemented yet. </span>
+<span class="s2">It gave up for the following expression: $</span><span class="si">{e}</span><span class="s2">.&quot;&quot;&quot;</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">substitute</span><span class="p">(</span><span class="n">e</span><span class="o">=</span><span class="n">expr</span><span class="p">)</span> 
+                    <span class="p">)</span>
+            <span class="k">return</span> <span class="n">res</span>
+
+        <span class="c1"># making a list of predicated stating that all state variables are nonnegative</span>
+        <span class="n">predList</span><span class="o">=</span><span class="p">[</span><span class="n">Q</span><span class="o">.</span><span class="n">nonnegative</span><span class="p">(</span><span class="n">sym</span><span class="p">)</span> <span class="k">for</span> <span class="n">sym</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="s2">&quot;time_symbol&quot;</span><span class="p">):</span>
+            <span class="n">predList</span><span class="o">+=</span><span class="p">[</span><span class="n">Q</span><span class="o">.</span><span class="n">nonnegative</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_symbol</span><span class="p">)]</span>
+
+        <span class="k">with</span> <span class="n">assuming</span><span class="p">(</span><span class="o">*</span><span class="n">predList</span><span class="p">):</span>
+            <span class="c1"># under this assumption eveluate all fluxes</span>
+            <span class="n">all_fluxes_nonnegative</span><span class="o">=</span><span class="nb">all</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">f</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">all_fluxes</span><span class="p">()))</span>
+
+        <span class="k">return</span> <span class="n">all_fluxes_nonnegative</span>
+        
+    
+    <span class="c1"># alternative constructor based on the formulation f=u+Bx</span>
+<div class="viewcode-block" id="SmoothReservoirModel.from_B_u"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.from_B_u">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_B_u</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">state_vector</span><span class="p">,</span> <span class="n">time_symbol</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span><span class="o">-&gt;</span><span class="s1">&#39;SmoothReservoirModel&#39;</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Construct and return a :class:`SmoothReservoirModel` instance from </span>
+<span class="sd">           :math:`\\dot{x}=B\\,x+u`</span>
+<span class="sd">    </span>
+<span class="sd">        Args:</span>
+<span class="sd">            state_vector (SymPy dx1-matrix): The model&#39;s state vector </span>
+<span class="sd">                :math:`x`.</span>
+<span class="sd">                Its entries are SymPy symbols.</span>
+<span class="sd">            time_symbol (SymPy symbol): The model&#39;s time symbol.</span>
+<span class="sd">            B (SymPy dxd-matrix): The model&#39;s compartmental matrix.</span>
+<span class="sd">            u (SymPy dx1-matrix): The model&#39;s external input vector.</span>
+<span class="sd">    </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            :class:`SmoothReservoirModel`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+<span class="c1">#        if not(u):</span>
+<span class="c1">#           # fixme mm:</span>
+<span class="c1">#           # make sure that ReservoirModels standard constructor can handle an </span>
+<span class="c1">#           # empty dict and produce the empty matrix only if necessary later</span>
+<span class="c1">#           u=zeros(x.rows,1)</span>
+        
+        <span class="c1"># fixme mm:</span>
+        <span class="c1"># we do not seem to have a check that makes sure </span>
+        <span class="c1"># that the argument B is compartmental</span>
+        <span class="c1"># maybe the fixme belongs rather to the SmoothModelRun class since </span>
+        <span class="c1"># we perhaps need parameters </span>
+        
+        <span class="n">input_fluxes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">pool</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">rows</span><span class="p">):</span>
+            <span class="n">inp</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="n">pool</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">inp</span><span class="p">:</span>
+                <span class="n">input_fluxes</span><span class="p">[</span><span class="n">pool</span><span class="p">]</span> <span class="o">=</span> <span class="n">inp</span>
+    
+        <span class="n">output_fluxes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="c1"># calculate outputs</span>
+        <span class="k">for</span> <span class="n">pool</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">state_vector</span><span class="o">.</span><span class="n">rows</span><span class="p">):</span>
+            <span class="n">outp</span> <span class="o">=</span> <span class="o">-</span><span class="nb">sum</span><span class="p">(</span><span class="n">B</span><span class="p">[:,</span> <span class="n">pool</span><span class="p">])</span> <span class="o">*</span> <span class="n">state_vector</span><span class="p">[</span><span class="n">pool</span><span class="p">]</span>
+            <span class="n">s_outp</span> <span class="o">=</span> <span class="n">simplify</span><span class="p">(</span><span class="n">outp</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">s_outp</span><span class="p">:</span>
+                <span class="n">output_fluxes</span><span class="p">[</span><span class="n">pool</span><span class="p">]</span> <span class="o">=</span> <span class="n">s_outp</span>
+        
+        <span class="c1"># calculate internal fluxes</span>
+        <span class="n">internal_fluxes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">pipes</span> <span class="o">=</span> <span class="p">[(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">state_vector</span><span class="o">.</span><span class="n">rows</span><span class="p">)</span> 
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">state_vector</span><span class="o">.</span><span class="n">rows</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">j</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">pool_from</span><span class="p">,</span> <span class="n">pool_to</span> <span class="ow">in</span> <span class="n">pipes</span><span class="p">:</span>
+            <span class="n">flux</span> <span class="o">=</span> <span class="n">B</span><span class="p">[</span><span class="n">pool_to</span><span class="p">,</span> <span class="n">pool_from</span><span class="p">]</span> <span class="o">*</span> <span class="n">state_vector</span><span class="p">[</span><span class="n">pool_from</span><span class="p">]</span>
+            <span class="n">s_flux</span> <span class="o">=</span> <span class="n">simplify</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">s_flux</span><span class="p">:</span>
+                <span class="n">internal_fluxes</span><span class="p">[(</span><span class="n">pool_from</span><span class="p">,</span> <span class="n">pool_to</span><span class="p">)]</span> <span class="o">=</span> <span class="n">s_flux</span>
+        
+        <span class="c1"># call the standard constructor </span>
+        <span class="n">srm</span> <span class="o">=</span> <span class="n">SmoothReservoirModel</span><span class="p">(</span><span class="n">state_vector</span><span class="p">,</span> <span class="n">time_symbol</span><span class="p">,</span>
+                  <span class="n">input_fluxes</span><span class="p">,</span> <span class="n">output_fluxes</span><span class="p">,</span> <span class="n">internal_fluxes</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">srm</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">state_variable_set</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">F</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;SymPy dx1-matrix: The right hand side of the differential equation </span>
+<span class="sd">        :math:`\\dot{x}=B\\,x+u`.&quot;&quot;&quot;</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">external_inputs</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_inputs</span>
+                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_outputs</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_outputs</span><span class="p">)</span>
+        <span class="c1">#for i in range(len(v)):</span>
+        <span class="c1">#    v[i] = simplify(v[i])</span>
+        <span class="k">return</span> <span class="n">v</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">external_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;SymPy dx1-matrix: Return the vector of external inputs.&quot;&quot;&quot;</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_fluxes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">u</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+        <span class="k">return</span> <span class="n">u</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">external_outputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;SymPy dx1-matrix: Return the vector of external outputs.&quot;&quot;&quot;</span>
+        <span class="n">o</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_fluxes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">o</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+        <span class="k">return</span> <span class="n">o</span>
+        
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">internal_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;SymPy dx1-matrix: Return the vector of internal inputs.&quot;&quot;&quot;</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
+        <span class="n">u_int</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>     
+            <span class="c1"># find all entries in the fluxes dict that have the target key==ln</span>
+            <span class="n">expr</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_fluxes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">k</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">ln</span><span class="p">:</span> <span class="c1">#the second part of the tupel is the recipient</span>
+                    <span class="n">expr</span> <span class="o">+=</span> <span class="n">val</span>
+            <span class="n">u_int</span><span class="p">[</span><span class="n">ln</span><span class="p">]</span> <span class="o">=</span> <span class="n">expr</span>
+        <span class="k">return</span> <span class="n">u_int</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">internal_outputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;SymPy dx1-matrix: Return the vector of internal outputs.&quot;&quot;&quot;</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
+        <span class="n">o_int</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>     
+            <span class="c1"># find all entries in the fluxes dict that have the target key==ln</span>
+            <span class="n">expr</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_fluxes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">ln</span><span class="p">:</span><span class="c1"># the first part of the tupel is the donator</span>
+                    <span class="n">expr</span> <span class="o">+=</span> <span class="n">val</span>
+            <span class="n">o_int</span><span class="p">[</span><span class="n">ln</span><span class="p">]</span> <span class="o">=</span> <span class="n">expr</span>
+        <span class="k">return</span> <span class="n">o_int</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">nr_pools</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;int: Return the number of pools involved in the model.&quot;&quot;&quot;</span>
+        <span class="k">return</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_variables</span><span class="p">))</span>
+
+<div class="viewcode-block" id="SmoothReservoirModel.port_controlled_Hamiltonian_representation"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.port_controlled_Hamiltonian_representation">[docs]</a>    <span class="k">def</span> <span class="nf">port_controlled_Hamiltonian_representation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;tuple: :math:`J, R, N, x, u` from </span>
+<span class="sd">        :math:`\\dot{x} = [J(x)-R(x)] \\frac{\\partial}{\\partial x}H+u`.</span>
+<span class="sd">    	with :math:`H=\\sum_i x_i \\implies \\frac{\\partial}{\\partial x}H =(1,1,...,1)`</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple:</span>
+<span class="sd">            - J (skew symmetric SymPy dxd-matrix) of internal fluxbalances: </span>
+<span class="sd">              :math:`J_{i,j}=r_{j,i}-r_{i,j}`</span>
+<span class="sd">            - Q (SymPy dxd-matrix): Diagonal matrix describing the dissipation</span>
+<span class="sd">              rates (outfluxes). </span>
+<span class="sd">            - x (SymPy dx1-matrix): The model&#39;s state vector.</span>
+<span class="sd">            - u (SymPy dx1-matrix): The model&#39;s external input vector.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">nr_pools</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_fluxes</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_fluxes</span>
+        <span class="n">internal_fluxes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_fluxes</span>
+
+        <span class="n">C</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span>
+
+        <span class="c1"># convert inputs</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_inputs</span>
+
+        <span class="c1"># calculate decomposition operators</span>
+        <span class="n">decomp_fluxes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">pool</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">pool</span> <span class="ow">in</span> <span class="n">outputs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">decomp_flux</span> <span class="o">=</span> <span class="n">outputs</span><span class="p">[</span><span class="n">pool</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">decomp_flux</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">decomp_fluxes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">simplify</span><span class="p">(</span><span class="n">decomp_flux</span><span class="p">))</span>
+
+        <span class="n">Q</span> <span class="o">=</span> <span class="n">diag</span><span class="p">(</span><span class="o">*</span><span class="n">decomp_fluxes</span><span class="p">)</span>
+
+        <span class="c1"># calculate the skewsymmetric matrix J</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">),</span> <span class="n">flux</span> <span class="ow">in</span> <span class="n">internal_fluxes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">J</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span><span class="n">flux</span>
+            <span class="n">J</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">-=</span><span class="n">flux</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">J</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SmoothReservoirModel.xi_T_N_u_representation"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.xi_T_N_u_representation">[docs]</a>    <span class="k">def</span> <span class="nf">xi_T_N_u_representation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">factor_out_xi</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;tuple: :math:`\\xi, T, N, x, u` from </span>
+<span class="sd">        :math:`\\dot{x} = \\xi\\,T\\,N\\,x+u`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            factor_out_xi (bool): If true, xi is extracted from the matrix,</span>
+<span class="sd">                otherwise :math:`xi=1` will be returned.</span>
+<span class="sd">                (Defaults to ``True``.)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple:</span>
+<span class="sd">            - xi (SymPy number): Environmental coefficient.</span>
+<span class="sd">            - T (SymPy dxd-matrix): Internal fluxes. Main diagonal contains </span>
+<span class="sd">                ``-1`` entries.</span>
+<span class="sd">            - N (SymPy dxd-matrix): Diagonal matrix containing the decomposition</span>
+<span class="sd">                rates.</span>
+<span class="sd">            - x (SymPy dx1-matrix): The model&#39;s state vector.</span>
+<span class="sd">            - u (SymPy dx1-matrix): The model&#39;s external input vector.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">nr_pools</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_fluxes</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_fluxes</span>
+        <span class="n">internal_fluxes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_fluxes</span>
+
+        <span class="n">C</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span>
+
+        <span class="c1"># convert inputs</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_inputs</span>
+
+        <span class="c1"># calculate decomposition operators</span>
+        <span class="n">decomp_rates</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">pool</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">pool</span> <span class="ow">in</span> <span class="n">outputs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">decomp_flux</span> <span class="o">=</span> <span class="n">outputs</span><span class="p">[</span><span class="n">pool</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">decomp_flux</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">decomp_flux</span> <span class="o">+=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">flux</span> <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">),</span> <span class="n">flux</span> <span class="ow">in</span> <span class="n">internal_fluxes</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> 
+                                        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">pool</span><span class="p">])</span>
+            <span class="n">decomp_rates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">simplify</span><span class="p">(</span><span class="n">decomp_flux</span><span class="o">/</span><span class="n">C</span><span class="p">[</span><span class="n">pool</span><span class="p">]))</span>
+
+        <span class="n">N</span> <span class="o">=</span> <span class="n">diag</span><span class="p">(</span><span class="o">*</span><span class="n">decomp_rates</span><span class="p">)</span>
+
+        <span class="c1"># calculate transition operator</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="o">-</span><span class="n">eye</span><span class="p">(</span><span class="n">nr_pools</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">),</span> <span class="n">flux</span> <span class="ow">in</span> <span class="n">internal_fluxes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">T</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">flux</span><span class="o">/</span><span class="n">C</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">/</span><span class="n">N</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">i</span><span class="p">]</span>
+
+        <span class="c1"># try to extract xi from N and T</span>
+        <span class="k">if</span> <span class="n">factor_out_xi</span><span class="p">:</span>
+            <span class="n">xi_N</span> <span class="o">=</span> <span class="n">factor_out_from_matrix</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+            <span class="n">N</span> <span class="o">=</span> <span class="n">N</span><span class="o">/</span><span class="n">xi_N</span>
+
+            <span class="n">xi_T</span> <span class="o">=</span> <span class="n">factor_out_from_matrix</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+            <span class="n">T</span> <span class="o">=</span> <span class="n">T</span><span class="o">/</span><span class="n">xi_T</span>
+
+            <span class="n">xi</span> <span class="o">=</span> <span class="n">xi_N</span> <span class="o">*</span> <span class="n">xi_T</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">xi</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">compartmental_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;SymPy Matrix: :math:`B` from </span>
+<span class="sd">        :math:`\\dot{x} = B\\,x+u`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            SymPy dxd-matrix: :math:`B = \\xi\\,T\\,N`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># could be computed directly from Jaquez</span>
+        <span class="c1"># but since we need the xi*T*N decomposition anyway</span>
+        <span class="c1"># we can use it</span>
+        <span class="n">xi</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi_T_N_u_representation</span><span class="p">(</span><span class="n">factor_out_xi</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">xi</span><span class="o">*</span><span class="n">T</span><span class="o">*</span><span class="n">N</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SmoothReservoirModel.age_moment_system"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.age_moment_system">[docs]</a>    <span class="k">def</span> <span class="nf">age_moment_system</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_order</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the age moment system of the model.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            max_order (int): The maximum order up to which the age moment </span>
+<span class="sd">                system is created (1 for the mean).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple:</span>
+<span class="sd">            - extended_state (SymPy d*(max_order+1)x1-matrix): The extended </span>
+<span class="sd">                state vector of the age moment system.</span>
+<span class="sd">            - extended_rhs (SymPy d*(max_order+1)x1-matrix): The extended right </span>
+<span class="sd">                hand side of the age moment ODE.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_inputs</span>
+        <span class="c1">#X = Matrix(self.state_variables)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compartmental_matrix</span>
+
+        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_pools</span>
+        <span class="n">extended_state</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">former_additional_states</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">n</span>
+        <span class="n">extended_rhs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">F</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_order</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">additional_states</span> <span class="o">=</span> <span class="p">[</span><span class="n">Symbol</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;_moment_&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">X</span><span class="p">]</span>
+            <span class="n">g</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span><span class="o">*</span><span class="n">former_additional_states</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="o">+</span><span class="p">(</span><span class="nb">sum</span><span class="p">([(</span><span class="n">additional_states</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">-</span><span class="n">additional_states</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                        <span class="o">*</span><span class="n">B</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span><span class="o">*</span><span class="n">X</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)])</span>
+                      <span class="o">-</span><span class="n">additional_states</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">/</span><span class="n">X</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)]</span>
+
+            <span class="n">former_additional_states</span> <span class="o">=</span> <span class="n">additional_states</span>
+            <span class="n">extended_state</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">additional_states</span><span class="p">)</span>
+            <span class="n">extended_rhs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+
+        <span class="n">extended_state</span> <span class="o">=</span> <span class="n">Matrix</span><span class="p">(</span><span class="n">flatten</span><span class="p">(</span><span class="n">extended_state</span><span class="p">))</span>
+        <span class="n">extended_rhs</span> <span class="o">=</span> <span class="n">Matrix</span><span class="p">(</span><span class="n">flatten</span><span class="p">(</span><span class="n">extended_rhs</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">extended_state</span><span class="p">,</span> <span class="n">extended_rhs</span><span class="p">)</span></div>
+
+
+
+
+<div class="viewcode-block" id="SmoothReservoirModel.plot_pools_and_fluxes"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.plot_pools_and_fluxes">[docs]</a>    <span class="k">def</span> <span class="nf">plot_pools_and_fluxes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">mutation_scale</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span> <span class="n">fontsize</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span> <span class="n">thumbnail</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_axis_off</span><span class="p">()</span>
+        <span class="n">arrowstyle</span> <span class="o">=</span> <span class="s2">&quot;simple&quot;</span>
+        <span class="n">visible_pool_names</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="n">pipe_colors</span> <span class="o">=</span> <span class="p">{</span>
+             <span class="s1">&#39;linear&#39;</span><span class="p">:</span> <span class="s1">&#39;blue&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;nonlinear&#39;</span><span class="p">:</span> <span class="s1">&#39;green&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;no state dependence&#39;</span><span class="p">:</span> <span class="s1">&#39;red&#39;</span><span class="p">}</span>
+
+        <span class="k">if</span> <span class="n">thumbnail</span><span class="p">:</span>
+            <span class="n">arrowstyle</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span>
+            <span class="n">visible_pool_names</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+        <span class="n">csp</span> <span class="o">=</span> <span class="n">CSPlotter</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">,</span>
+            <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">_input_flux_type</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_fluxes</span><span class="o">.</span><span class="n">keys</span><span class="p">()},</span>
+            <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">_output_flux_type</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_fluxes</span><span class="o">.</span><span class="n">keys</span><span class="p">()},</span>
+            <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">_internal_flux_type</span><span class="p">(</span><span class="o">*</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_fluxes</span><span class="o">.</span><span class="n">keys</span><span class="p">()},</span>
+            <span class="n">pipe_colors</span><span class="p">,</span> 
+            <span class="n">visible_pool_names</span> <span class="o">=</span> <span class="n">visible_pool_names</span><span class="p">,</span> 
+            <span class="n">arrowstyle</span> <span class="o">=</span> <span class="n">arrowstyle</span><span class="p">,</span> 
+            <span class="n">fontsize</span> <span class="o">=</span> <span class="n">fontsize</span>
+        <span class="p">)</span>
+        <span class="n">csp</span><span class="o">.</span><span class="n">plot_pools_and_fluxes</span><span class="p">(</span><span class="n">ax</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">legend</span><span class="p">:</span>
+            <span class="n">csp</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">ax</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SmoothReservoirModel.figure"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.figure">[docs]</a>    <span class="k">def</span> <span class="nf">figure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">figure_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">7</span><span class="p">,</span><span class="mi">7</span><span class="p">),</span> <span class="n">logo</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">thumbnail</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a figure representing the reservoir model.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            figure_size (2-tuple, optional): Width and height of the figure. </span>
+<span class="sd">                Defaults to (7,7).</span>
+<span class="sd">            logo (bool, optional): If True, figure_size set to (3,3), no legend,</span>
+<span class="sd">                smaller font size. Defaults to False.</span>
+<span class="sd">            thumbnail (bool, optional): If True, produce a very small version,</span>
+<span class="sd">                no legend. Defaults to False.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Matplotlib figure: Figure representing the reservoir model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fontsize</span> <span class="o">=</span> <span class="mi">24</span>
+        <span class="n">mutation_scale</span> <span class="o">=</span> <span class="mi">50</span>
+        <span class="c1">#mutation_scale=20</span>
+        <span class="n">arrowstyle</span> <span class="o">=</span> <span class="s2">&quot;simple&quot;</span>
+        <span class="n">fontsize</span> <span class="o">=</span> <span class="mi">24</span>
+        <span class="n">legend</span> <span class="o">=</span> <span class="kc">True</span>
+
+
+        <span class="k">if</span> <span class="n">thumbnail</span><span class="p">:</span>
+            <span class="n">mutation_scale</span> <span class="o">=</span> <span class="mi">10</span>
+            <span class="n">legend</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">arrowstyle</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span>
+            <span class="n">figure_size</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.7</span><span class="p">,</span><span class="mf">0.7</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">logo</span><span class="p">:</span>
+            <span class="n">mutation_scale</span> <span class="o">=</span> <span class="mi">15</span>
+            <span class="n">legend</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">fontsize</span> <span class="o">=</span> <span class="mi">16</span>
+            <span class="n">figure_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="n">figure_size</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">legend</span><span class="p">:</span>
+            <span class="c1">#ax = fig.add_axes([0,0,1,0.9])</span>
+            <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_axes</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mf">0.8</span><span class="p">,</span><span class="mf">0.8</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1">#ax = fig.add_axes([0,0,1,1])</span>
+            <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_pools_and_fluxes</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span>  <span class="n">mutation_scale</span> <span class="o">=</span> <span class="n">mutation_scale</span><span class="p">,</span> <span class="n">fontsize</span> <span class="o">=</span> <span class="n">fontsize</span><span class="p">,</span> <span class="n">thumbnail</span> <span class="o">=</span> <span class="n">thumbnail</span><span class="p">,</span> <span class="n">legend</span> <span class="o">=</span> <span class="n">legend</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">fig</span></div>
+
+
+    <span class="c1">##### 14C methods #####</span>
+
+
+<span class="c1">#    def to_14C_only(self, decay_symbol_name, Fa_expr_name):</span>
+<span class="c1">#        &quot;&quot;&quot;Construct and return a :class:`SmoothReservoirModel` instance that</span>
+<span class="c1">#           models the 14C component of the original model.</span>
+<span class="c1">#    </span>
+<span class="c1">#        Args:</span>
+<span class="c1">#            decay_symbol_name (str): The name of the 14C decay rate symbol.</span>
+<span class="c1">#            Fa_expr_name(str): The name of the symbol to be used for the</span>
+<span class="c1">#                atmospheric C14 fraction function.</span>
+<span class="c1">#        Returns:</span>
+<span class="c1">#            :class:`SmoothReservoirModel`</span>
+<span class="c1">#        &quot;&quot;&quot;</span>
+<span class="c1">##        state_vector_14C = Matrix(</span>
+<span class="c1">##            self.nr_pools,</span>
+<span class="c1">##            1,</span>
+<span class="c1">##            [Symbol(sv.name+&#39;_14C&#39;) for sv in self.state_vector]</span>
+<span class="c1">##        )</span>
+<span class="c1">#        state_vector_14C = self.state_vector</span>
+<span class="c1">#</span>
+<span class="c1">#        decay_symbol = Symbol(decay_symbol_name)</span>
+<span class="c1">#        B_14C = copy(self.compartmental_matrix) - decay_symbol*eye(self.nr_pools)</span>
+<span class="c1">#        u = self.external_inputs</span>
+<span class="c1">#        Fa_expr = Function(Fa_expr_name)(self.time_symbol)</span>
+<span class="c1">#        u_14C = Matrix(self.nr_pools, 1, [expr*Fa_expr for expr in u])</span>
+<span class="c1">#</span>
+<span class="c1">#        srm_14C = SmoothReservoirModel.from_B_u(</span>
+<span class="c1">#            state_vector_14C,</span>
+<span class="c1">#            self.time_symbol,</span>
+<span class="c1">#            B_14C,</span>
+<span class="c1">#            u_14C</span>
+<span class="c1">#        )</span>
+<span class="c1">#</span>
+<span class="c1">#        return srm_14C</span>
+<span class="c1">#</span>
+<span class="c1">#    def to_14C_explicit(self, decay_symbol_name, Fa_expr_name):</span>
+<span class="c1">#        &quot;&quot;&quot;Construct and return a :class:`SmoothReservoirModel` instance that</span>
+<span class="c1">#           models the 14C component additional to the original model.</span>
+<span class="c1">#    </span>
+<span class="c1">#        Args:</span>
+<span class="c1">#            decay_symbol_name (str): The name of the 14C decay rate symbol.</span>
+<span class="c1">#            Fa_expr_name(str): The name of the symbol to be used for the</span>
+<span class="c1">#                atmospheric C14 fraction function.</span>
+<span class="c1">#        Returns:</span>
+<span class="c1">#            :class:`SmoothReservoirModel`</span>
+<span class="c1">#        &quot;&quot;&quot;</span>
+<span class="c1">#        state_vector = self.state_vector</span>
+<span class="c1">#        B, u = self.compartmental_matrix, self.external_inputs</span>
+<span class="c1">#        srm_14C = self.to_14C_only(decay_symbol_name, Fa_expr_name)</span>
+<span class="c1">#        state_vector_14C = srm_14C.state_vector</span>
+<span class="c1">#        B_C14 = srm_14C.compartmental_matrix</span>
+<span class="c1">#        u_14C = srm_14C.external_inputs</span>
+<span class="c1">#</span>
+<span class="c1">#        nr_pools = self.nr_pools</span>
+<span class="c1">#</span>
+<span class="c1">#        state_vector_total = Matrix(nr_pools*2, 1, [1]*(nr_pools*2))</span>
+<span class="c1">#        state_vector_total[:nr_pools,0] = state_vector</span>
+<span class="c1">#        state_vector_total[nr_pools:,0] = state_vector_14C</span>
+<span class="c1">#        </span>
+<span class="c1">#        B_total = eye(nr_pools*2)</span>
+<span class="c1">#        B_total[:nr_pools, :nr_pools] = B</span>
+<span class="c1">#        B_total[nr_pools:, nr_pools:] = B_C14</span>
+<span class="c1">#</span>
+<span class="c1">#        u_total = Matrix(nr_pools*2, 1, [1]*(nr_pools*2))</span>
+<span class="c1">#        u_total[:nr_pools,0] = u</span>
+<span class="c1">#        u_total[nr_pools:,0] = u_14C</span>
+<span class="c1">#</span>
+<span class="c1">#        srm_total = SmoothReservoirModel.from_B_u(</span>
+<span class="c1">#            state_vector_total,</span>
+<span class="c1">#            self.time_symbol,</span>
+<span class="c1">#            B_total,</span>
+<span class="c1">#            u_total)</span>
+<span class="c1">#</span>
+<span class="c1">#        return srm_total</span>
+        
+<div class="viewcode-block" id="SmoothReservoirModel.steady_states"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.steady_states">[docs]</a>    <span class="k">def</span> <span class="nf">steady_states</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">par_set</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">par_set</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1">#compute steady state formulas</span>
+            <span class="n">par_set</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># try to calculate the steady states for ten seconds</span>
+        <span class="c1"># after ten seconds stop it</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+        <span class="k">def</span> <span class="nf">calc_steady_states</span><span class="p">(</span><span class="n">q</span><span class="p">):</span>    
+            <span class="n">ss</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">par_set</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">,</span> <span class="nb">dict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">q</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">ss</span><span class="p">)</span>
+    
+        <span class="n">p</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">calc_steady_states</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">q</span><span class="p">,))</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">is_alive</span><span class="p">():</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+            <span class="n">steady_states</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">steady_states</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+       
+        <span class="n">formal_steady_states</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">ss</span> <span class="ow">in</span> <span class="n">steady_states</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">ss_dict</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">sv_symbol</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">sv_symbol</span> <span class="ow">in</span> <span class="n">ss</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">ss</span><span class="p">[</span><span class="n">sv_symbol</span><span class="p">]</span> <span class="o">=</span> <span class="n">simplify</span><span class="p">(</span><span class="n">ss</span><span class="p">[</span><span class="n">sv_symbol</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ss</span><span class="p">[</span><span class="n">sv_symbol</span><span class="p">]</span> <span class="o">=</span> <span class="n">sv_symbol</span>
+
+                <span class="n">ss_expr</span> <span class="o">=</span> <span class="n">ss</span><span class="p">[</span><span class="n">sv_symbol</span><span class="p">]</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_symbol</span> <span class="ow">in</span> <span class="n">ss_expr</span><span class="o">.</span><span class="n">free_symbols</span><span class="p">:</span>
+                    <span class="c1"># take limit of time to infinity if steady state still depends on time</span>
+                    <span class="n">ss_expr</span> <span class="o">=</span> <span class="n">limit</span><span class="p">(</span><span class="n">ss_expr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_symbol</span><span class="p">,</span> <span class="n">oo</span><span class="p">)</span>
+                <span class="n">ss_dict</span><span class="p">[</span><span class="n">sv_symbol</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">ss_expr</span>
+
+            <span class="n">formal_steady_states</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ss_dict</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">formal_steady_states</span></div>
+
+
+<div class="viewcode-block" id="SmoothReservoirModel.is_state_dependent"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel.is_state_dependent">[docs]</a>    <span class="k">def</span> <span class="nf">is_state_dependent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">expr</span><span class="p">):</span>
+        <span class="n">efss</span><span class="o">=</span><span class="n">expr</span><span class="o">.</span><span class="n">free_symbols</span>
+        <span class="n">svs</span><span class="o">=</span><span class="nb">set</span><span class="p">([</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">])</span>
+        <span class="n">inter</span><span class="o">=</span><span class="n">efss</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">svs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inter</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">)</span>	</div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_linear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns True if we can make SURE that the model is linear by checking that the jacobian is not state dependent.</span>
+<span class="sd">        Note that external numerical functions of state variables are represented as sympy.Function f(x_1,x_2,...,t)</span>
+<span class="sd">        Sympy will consider the derivative of math:`df/dx_i` with respect to state variable math:`x_i` as function math:`g(x_1, x_2,...)` too, since it can not exclude this possibility if we know f only numerically. </span>
+<span class="sd">        In consequence this method will return False even if the numerical implementation of f IS linear in math:`x_1,x_2,...` . </span>
+<span class="sd">        To avoid this situation you can just reformulate linear external functions math:`f(x_1,x_2,...,t)` as linear combinations</span>
+<span class="sd">        of state independent external functions math:`f(x_1,x_2,...,t)=g_1(t)x_1+g_2(t)x_2+...` so that sympy can detect the linearity.</span>
+<span class="sd">        </span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: &#39;True&#39;, &#39;False&#39;</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">is_state_dependent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jacobian</span><span class="p">))</span>
+
+    <span class="c1">##### functions for internal use only #####</span>
+
+
+    <span class="c1"># the following two functions are used by the &#39;figure&#39; method to determine </span>
+    <span class="c1"># the color of the respective arrow </span>
+
+    <span class="k">def</span> <span class="nf">_internal_flux_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_from</span><span class="p">,</span> <span class="n">pool_to</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the type of an internal flux.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pool_from (int): The number of the pool from which the flux starts.</span>
+<span class="sd">            pool_to (int): The number of the pool to which the flux goes.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: &#39;linear&#39;, &#39;nonlinear&#39;, &#39;no state dependence&#39;</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            Error: If unknown flux type is encountered.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">[</span><span class="n">pool_from</span><span class="p">]</span>
+        <span class="n">flux</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_fluxes</span><span class="p">[(</span><span class="n">pool_from</span><span class="p">,</span> <span class="n">pool_to</span><span class="p">)]</span>
+
+        <span class="k">if</span> <span class="n">has_pw</span><span class="p">(</span><span class="n">flux</span><span class="p">):</span>
+            <span class="c1">#print(&quot;Piecewise&quot;)    </span>
+            <span class="c1">#print(latex(flux))</span>
+            <span class="k">return</span> <span class="s2">&quot;nonlinear&quot;</span>
+            
+        <span class="k">if</span> <span class="n">gcd</span><span class="p">(</span><span class="n">sv</span><span class="p">,</span> <span class="n">flux</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;no state dependence&#39;</span>
+
+        <span class="c1"># now test for dependence on further state variables, </span>
+        <span class="c1"># which would lead to nonlinearity</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">gcd</span><span class="p">(</span><span class="n">sv</span><span class="p">,</span> <span class="n">flux</span><span class="p">)</span> <span class="o">==</span> <span class="n">sv</span><span class="p">)</span> <span class="ow">or</span> <span class="n">gcd</span><span class="p">(</span><span class="n">sv</span><span class="p">,</span> <span class="n">flux</span><span class="p">)</span> <span class="o">==</span> <span class="mf">1.0</span><span class="o">*</span><span class="n">sv</span><span class="p">:</span>
+            <span class="n">flux</span> <span class="o">/=</span> <span class="n">sv</span>
+            <span class="n">free_symbols</span> <span class="o">=</span> <span class="n">flux</span><span class="o">.</span><span class="n">free_symbols</span>
+
+            <span class="k">for</span> <span class="n">sv</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">sv</span> <span class="ow">in</span> <span class="n">free_symbols</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="s1">&#39;nonlinear&#39;</span>
+
+            <span class="k">return</span> <span class="s1">&#39;linear&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># probably this can never happen</span>
+            <span class="k">raise</span><span class="p">(</span><span class="n">Error</span><span class="p">(</span><span class="s1">&#39;Unknown internal flux type&#39;</span><span class="p">))</span>
+    
+    <span class="k">def</span> <span class="nf">_input_flux_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_to</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the type of an external input flux.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pool_to (int): The number of the pool to which the flux contributes.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: &#39;linear&#39;, &#39;nonlinear&#39;, &#39;no state dependence&#39;</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            Error: If unknown flux type is encountered.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">[</span><span class="n">pool_to</span><span class="p">]</span>
+        <span class="c1"># we compute the derivative of the appropriate row of the input vector w.r.t. all the state variables</span>
+        <span class="c1"># (This is a row of the jacobian)  </span>
+        <span class="n">u_i</span><span class="o">=</span><span class="n">Matrix</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">external_inputs</span><span class="p">[</span><span class="n">pool_to</span><span class="p">]])</span>
+        <span class="n">s_v</span><span class="o">=</span><span class="n">Matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">)</span>
+        <span class="n">J_i</span><span class="o">=</span><span class="n">jacobian</span><span class="p">(</span><span class="n">u_i</span><span class="p">,</span><span class="n">s_v</span><span class="p">)</span>
+        <span class="c1"># an input that does not depend on state variables has a zero derivative with respect </span>
+        <span class="c1"># to all state variables</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">([</span> <span class="n">j_ij</span><span class="o">==</span><span class="mi">0</span> <span class="k">for</span> <span class="n">j_ij</span> <span class="ow">in</span> <span class="n">J_i</span><span class="p">]):</span>
+            <span class="k">return</span> <span class="s1">&#39;no state dependence&#39;</span>
+        <span class="c1"># an input that depends on state variables in a linear way</span>
+        <span class="c1"># has a constant derivatives with respect to all state variables </span>
+        <span class="c1"># (the derivative has no state variables in its free symbols)</span>
+        <span class="n">J_ifss</span><span class="o">=</span><span class="n">J_i</span><span class="o">.</span><span class="n">free_symbols</span>
+        <span class="n">svs</span><span class="o">=</span><span class="nb">set</span><span class="p">([</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">])</span>
+        <span class="n">inter</span><span class="o">=</span><span class="n">J_ifss</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">svs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inter</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;linear&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;nonlinear&#39;</span>
+
+
+
+    <span class="k">def</span> <span class="nf">_output_flux_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_from</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the type of an external output flux.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pool_from (int): The number of the pool from which the flux starts.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: &#39;linear&#39;, &#39;nonlinear&#39;, &#39;no state dependence&#39;</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            Error: If unknown flux type is encountered.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">[</span><span class="n">pool_from</span><span class="p">]</span>
+        <span class="n">flux</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_fluxes</span><span class="p">[</span><span class="n">pool_from</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">gcd</span><span class="p">(</span><span class="n">sv</span><span class="p">,</span> <span class="n">flux</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;no state dependence&#39;</span>
+
+        <span class="c1"># now test for dependence on further state variables, </span>
+        <span class="c1"># which would lead to nonlinearity</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">gcd</span><span class="p">(</span><span class="n">sv</span><span class="p">,</span> <span class="n">flux</span><span class="p">)</span> <span class="o">==</span> <span class="n">sv</span><span class="p">)</span> <span class="ow">or</span> <span class="n">gcd</span><span class="p">(</span><span class="n">sv</span><span class="p">,</span> <span class="n">flux</span><span class="p">)</span> <span class="o">==</span> <span class="mf">1.0</span><span class="o">*</span><span class="n">sv</span><span class="p">:</span>
+            <span class="n">flux</span> <span class="o">/=</span> <span class="n">sv</span>
+            <span class="n">free_symbols</span> <span class="o">=</span> <span class="n">flux</span><span class="o">.</span><span class="n">free_symbols</span>
+
+            <span class="k">for</span> <span class="n">sv</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_vector</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">sv</span> <span class="ow">in</span> <span class="n">free_symbols</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="s1">&#39;nonlinear&#39;</span>
+
+            <span class="k">return</span> <span class="s1">&#39;linear&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># probably this can never happen</span>
+            <span class="k">raise</span><span class="p">(</span><span class="n">Error</span><span class="p">(</span><span class="s1">&#39;Unknown internal flux type&#39;</span><span class="p">))</span></div>
+    
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

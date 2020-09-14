@@ -1,0 +1,716 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompartmentalSystems.start_distributions &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for CompartmentalSystems.start_distributions</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Module for computing age distributions or moments thereof to be used</span>
+<span class="sd">as start distributions in subsequent simulations.</span>
+
+<span class="sd">The age distribution at the start :math:`t_0` is NOT</span>
+<span class="sd">defined by the reservoir model and the initial values.</span>
+<span class="sd">In fact EVERY age distribution can be chosen.</span>
+<span class="sd">The implemented algorithms will correctly project it</span>
+<span class="sd">to any time :math:`t`.</span>
+<span class="sd">This module provides several ways to generate such a distribution.</span>
+
+
+<span class="sd">The functions containing the word &#39;distributions&#39; usually return a vector</span>
+<span class="sd">valued function of age representing pool wise age distributions that</span>
+<span class="sd">are NOT normalized (Integrating of a vector component over all ages</span>
+<span class="sd">yields the mass of the corresponding pool.)</span>
+<span class="sd">, and in some cases a start vector that should be used in the subsequent</span>
+<span class="sd">simulation for which the start age distribution is computed.</span>
+
+<span class="sd">The functions containing the word &#39;moments&#39; usually return an</span>
+<span class="sd">array: moments x pools, containing the moments of the</span>
+<span class="sd">pool ages .</span>
+<span class="sd">representing the initial values needed for the moment systems e.g. the</span>
+<span class="sd">mean of a start distribution to be used as initial value for the</span>
+<span class="sd">mean age system. The length of the list is determined by the maximum order of</span>
+<span class="sd">the moment system to be solved.</span>
+<span class="sd">In some cases a consistent start vector is also provided.</span>
+
+
+<span class="sd">Zero start age distributions</span>
+<span class="sd">----------------------------</span>
+<span class="sd">The distributions eaisiest to imagine are those that start with zero age:</span>
+
+<span class="sd">#.  The one with all pools empty provided by:</span>
+<span class="sd">    :py:meth:`start_age_distributions_from_zero_initial_content</span>
+<span class="sd">    and the respective moments by:</span>
+<span class="sd">    :py:meth:`start_age_moments_from_zero_initial_content</span>
+
+<span class="sd">#.  The one where all initial mass has age zero, provided by:</span>
+<span class="sd">    :py:meth:`start_age_distributions_from_zero_age_initial_content</span>
+
+<span class="sd">Established distributions</span>
+<span class="sd">----------------------------</span>
+<span class="sd">However for many applications one is interested in the CHANGE of an age</span>
+<span class="sd">distribution that has been established over a (possibly infinitely) long period</span>
+<span class="sd">of time.</span>
+
+<span class="sd">#.  Spinup</span>
+
+<span class="sd">    If we start the computation with all pools empty at time :math:`0`</span>
+<span class="sd">    and run it till time :math:`t = a_{max}`,</span>
+<span class="sd">    the resulting distribution will be non zero only in the interval</span>
+<span class="sd">    :math:`[0,a_{max}]`.</span>
+<span class="sd">    Such a distribution is provided by:</span>
+<span class="sd">    :py:meth:`start_age_distributions_from_empty_spinup`</span>
+<span class="sd">    and the moments by:</span>
+<span class="sd">    :py:meth:`start_age_moments_from_empty_spinup</span>
+
+<span class="sd">    Note that the finiteness of the spin up time has to be considered in the</span>
+<span class="sd">    choice of questions that can be asked.</span>
+<span class="sd">    For instance do not mistake the fact that the percentage</span>
+<span class="sd">    of material older than :math:`a_{max}` will increase over</span>
+<span class="sd">    time for a property of the system, where it is actually a</span>
+<span class="sd">    property of the start distribution resulting from the finiteness</span>
+<span class="sd">    of the spin up time.</span>
+
+
+<span class="sd">#.  Distributions induced by steady states of the autonomous system, if those</span>
+<span class="sd">    exist.</span>
+
+<span class="sd">    If the term &#39;established&#39; is taken to the limit of infinity one can look</span>
+<span class="sd">    for a related system that has persisted unchanged for all  times</span>
+<span class="sd">    :math:`t&lt;t_0` and start with the age distribution created by such a system.</span>
+<span class="sd">    Such a distribution can only occur if the system has been in a steady</span>
+<span class="sd">    state. For a general non-autonomous system this is very unlikely that such</span>
+<span class="sd">    a steady state exist at all.</span>
+<span class="sd">    However we can consider a related autonomous system resulting from</span>
+<span class="sd">    &#39;freezing&#39; the general non-autonomous system at a time :math:`t_0`.</span>
+<span class="sd">    Even for such an autonomous system it is uncertain if and where equilibria</span>
+<span class="sd">    exist. This has to be checked before an equilibrium age distribution can be</span>
+<span class="sd">    computed.</span>
+<span class="sd">    Actually the following steps have to be performed:</span>
+
+<span class="sd">    a.  Transform the general nonlinear non-autonomous system</span>
+<span class="sd">        into a nonlinear autonomous system by freezing it</span>
+<span class="sd">        at time :math:`t=t_0`:</span>
+
+<span class="sd">    b.  Compute :math:`u_0(x)=u(t_0,x_0)` and :math:`B_0(x)=B(t_0,x_0)`</span>
+
+<span class="sd">    c.  Look for an equilibrium :math:`x_{fix}` of the frozen system</span>
+<span class="sd">        such that :math:`0=B_0(x_{fix})+u_0(x_{fix})`.</span>
+<span class="sd">        If the frozen system is linear the we can compute</span>
+<span class="sd">        the fixed point explicitly : :math:`x_{fix}=B_0^{-1}u_0`.</span>
+<span class="sd">        In general the frozen system will be nonlinear and we will have to</span>
+<span class="sd">        look for the fixed point numerically.</span>
+<span class="sd">    d.  Compute the age distribution of the system at equilibrium</span>
+<span class="sd">        :math:`x_{fix}`.</span>
+<span class="sd">        This can be done using the formulas for linear</span>
+<span class="sd">        autonomous pool models. (At the fixed point the nonlinear system</span>
+<span class="sd">        is identical to a linear one. This is a special case of the general</span>
+<span class="sd">        idea of linearizing a nonlinear model with respect to a trajectory,</span>
+<span class="sd">        which in case of a fixed point is constant.)</span>
+
+<span class="sd">    All these steps are performed by</span>
+<span class="sd">    :py:meth:`start_age_distributions_from_steady_state`</span>
+<span class="sd">    and</span>
+<span class="sd">    :py:meth:`start_age_moments_from_steady_state`.</span>
+
+<span class="sd">    Note that :math:`x_{fix}` is the compatible start vector that has to be</span>
+<span class="sd">    used along with this start distributions for the following computation.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="n">Matrix</span><span class="p">,</span> <span class="n">Function</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="kn">import</span> <span class="n">inv</span><span class="p">,</span> <span class="n">LinAlgError</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">root</span>
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.helpers_reservoir</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">jacobian</span><span class="p">,</span>
+    <span class="n">func_subs</span><span class="p">,</span>
+    <span class="n">numerical_function_from_expression</span><span class="p">,</span>
+    <span class="n">warning</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">CompartmentalSystems.smooth_model_run</span> <span class="kn">import</span> <span class="n">SmoothModelRun</span>
+<span class="kn">from</span> <span class="nn">LAPM.linear_autonomous_pool_model</span> <span class="kn">import</span> <span class="n">LinearAutonomousPoolModel</span>
+<span class="c1"># from testinfrastructure.helpers import pe</span>
+
+
+<div class="viewcode-block" id="start_age_distributions_from_empty_spinup"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_distributions_from_empty_spinup">[docs]</a><span class="k">def</span> <span class="nf">start_age_distributions_from_empty_spinup</span><span class="p">(</span>
+    <span class="n">srm</span><span class="p">,</span>
+    <span class="n">t_max</span><span class="p">,</span>
+    <span class="n">parameter_dict</span><span class="p">,</span>
+    <span class="n">func_set</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Finite age spin up from empty pools</span>
+
+<span class="sd">    Creates a SmoothModelRun object with empty pools at :math:`t=0`,</span>
+<span class="sd">    runs it until :math:`t=t_{max}` an returns the age distribution at</span>
+<span class="sd">    :math:`t_{max}`</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        srm (SmoothReservoirModel) : The (symbolic) model</span>
+<span class="sd">        t_max (float):</span>
+<span class="sd">            The end of the spinup (which starts at t=0 and runs until t=t_max)</span>
+
+<span class="sd">        parameter_dict (dict) :</span>
+<span class="sd">            The parameter set that transforms the symbolic model into a</span>
+<span class="sd">            numeric one.</span>
+<span class="sd">            The keys are the sympy symbols, the values are the values used for</span>
+<span class="sd">            the simulation.</span>
+<span class="sd">        func_set (dict):</span>
+<span class="sd">            The keys are the symbolic</span>
+<span class="sd">            sympy expressions for external functions</span>
+<span class="sd">            the values are the numeric functions to be used in the simulation</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        (a_dist_at_end_of_spinup, sol_t_max)  (tuple):</span>
+
+<span class="sd">        a_dist_at_end_of_spinup is a vector valued function of age.</span>
+<span class="sd">        a_dist_at_end_of_spinup(a)[i] reflects the mass of age :math:`a`</span>
+<span class="sd">        in pool i.</span>
+
+<span class="sd">        sol_t_max is a one dimensional vector</span>
+<span class="sd">        representing the pool contents at the end of the spinup.</span>
+<span class="sd">        This is returned since it is very likely needed as start vector in the</span>
+<span class="sd">        simulation for which the start distributions has been computed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">a_dist_at_start_of_spinup</span> <span class="o">=</span>\
+        <span class="n">start_age_distributions_from_zero_initial_content</span><span class="p">(</span><span class="n">srm</span><span class="p">)</span>
+    <span class="c1"># unfortunately the number of time steps has some influence on accuracy</span>
+    <span class="c1"># although the ode solver guarantees a minimum it gets better if you</span>
+    <span class="c1"># force it to make smaller steps...</span>
+<span class="c1">#    times=[0,t_max]</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">t_max</span><span class="p">,</span> <span class="mi">101</span><span class="p">)</span>
+    <span class="n">spin_up_mr</span> <span class="o">=</span> <span class="n">SmoothModelRun</span><span class="p">(</span>
+        <span class="n">srm</span><span class="p">,</span>
+        <span class="n">parameter_dict</span><span class="o">=</span><span class="n">parameter_dict</span><span class="p">,</span>
+        <span class="n">start_values</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">srm</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">),</span>
+        <span class="n">times</span><span class="o">=</span><span class="n">times</span><span class="p">,</span>
+        <span class="n">func_set</span><span class="o">=</span><span class="n">func_set</span>
+    <span class="p">)</span>
+
+    <span class="c1"># p_sv(a,t) returns the mass of age a at time t</span>
+    <span class="n">p_sv</span> <span class="o">=</span> <span class="n">spin_up_mr</span><span class="o">.</span><span class="n">pool_age_densities_single_value</span><span class="p">(</span>
+        <span class="n">a_dist_at_start_of_spinup</span>
+    <span class="p">)</span>
+    <span class="n">sol_t_max</span> <span class="o">=</span> <span class="n">spin_up_mr</span><span class="o">.</span><span class="n">solve</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="k">def</span> <span class="nf">a_dist_at_end_of_spinup</span><span class="p">(</span><span class="n">age</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">p_sv</span><span class="p">(</span><span class="n">age</span><span class="p">,</span> <span class="n">t_max</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">a_dist_at_end_of_spinup</span><span class="p">,</span> <span class="n">sol_t_max</span></div>
+
+
+<div class="viewcode-block" id="start_age_distributions_from_steady_state"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_distributions_from_steady_state">[docs]</a><span class="k">def</span> <span class="nf">start_age_distributions_from_steady_state</span><span class="p">(</span>
+    <span class="n">srm</span><span class="p">,</span>
+    <span class="n">t0</span><span class="p">,</span>
+    <span class="n">parameter_dict</span><span class="p">,</span>
+    <span class="n">func_set</span><span class="p">,</span>
+    <span class="n">x0</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the age distribution of the system at equilibrium :math:`x_{fix}`</span>
+<span class="sd">    , by means of a linear autonomous pool model with identical age</span>
+<span class="sd">    distributions.</span>
+<span class="sd">    The fixed point and the linear model are provided by:</span>
+<span class="sd">    :py:meth:`lapm_for_steady_state`</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        srm (SmoothReservoirModel) : The (symbolic) model</span>
+<span class="sd">        parameter_dict (dict) :</span>
+<span class="sd">            The parameter set that transforms the symbolic model into a</span>
+<span class="sd">            numeric one. The keys are the sympy symbols, the values are the</span>
+<span class="sd">            values used for the simulation.</span>
+<span class="sd">        func_set (dict):</span>
+<span class="sd">            The keys are the symbolic sympy expressions for external functions,</span>
+<span class="sd">            the values are the numeric functions to be used in the simulation</span>
+<span class="sd">        t0 (float):</span>
+<span class="sd">            The time where the non-autonomous system is frozen.</span>
+
+<span class="sd">        x0 (numpy.ndarray):</span>
+<span class="sd">            An initial guess to start the fixed point iteration.</span>
+<span class="sd">            If the frozen model is linear it will be ignored and</span>
+<span class="sd">            can therefore be omitted.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (a_dist_function, x_fix)  (tuple):</span>
+
+<span class="sd">        a_dist_function is a vector valued function of age.</span>
+<span class="sd">        a_dist_function(a)[i] reflects the mass of age :math:`a`</span>
+<span class="sd">        in pool i.</span>
+<span class="sd">        :math:`x_{fix}` is a one dimensional vector representing the</span>
+<span class="sd">            equilibrium.</span>
+<span class="sd">        This is returned since it is very likely needed as start vector in the</span>
+<span class="sd">        simulation for which the start distributions has been computed.</span>
+<span class="sd">        (The computed distribution assumes the system to be in this state.)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">lapm</span><span class="p">,</span> <span class="n">x_fix</span> <span class="o">=</span> <span class="n">lapm_for_steady_state</span><span class="p">(</span>
+        <span class="n">srm</span><span class="p">,</span>
+        <span class="n">t0</span><span class="p">,</span>
+        <span class="n">parameter_dict</span><span class="p">,</span>
+        <span class="n">func_set</span><span class="p">,</span>
+        <span class="n">x0</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">a_dist_function</span><span class="p">(</span><span class="n">age</span><span class="p">):</span>
+        <span class="n">mat_func</span> <span class="o">=</span> <span class="n">lapm</span><span class="o">.</span><span class="n">a_density</span>
+        <span class="c1"># LAPM returns a function that returns a sympy.Matrix</span>
+        <span class="c1"># of NORMALIZED functions per pool</span>
+        <span class="c1"># we have to transform it to a numpy array and</span>
+        <span class="c1"># then multiply it with the start values (x_fix)</span>
+        <span class="n">mat</span> <span class="o">=</span> <span class="n">mat_func</span><span class="p">(</span><span class="n">age</span><span class="p">)</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">srm</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x_fix</span><span class="o">*</span><span class="n">arr</span>
+
+    <span class="k">return</span> <span class="n">a_dist_function</span><span class="p">,</span> <span class="n">x_fix</span></div>
+
+
+<div class="viewcode-block" id="start_age_distributions_from_zero_age_initial_content"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_distributions_from_zero_age_initial_content">[docs]</a><span class="k">def</span> <span class="nf">start_age_distributions_from_zero_age_initial_content</span><span class="p">(</span><span class="n">srm</span><span class="p">,</span> <span class="n">x0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the age distribution (function) for a system into</span>
+<span class="sd">    which all initial mass is injected instantaneous at :math:`t=0`.</span>
+
+<span class="sd">    The function returns a vector valued function dist(a) of the age a</span>
+<span class="sd">    that returns the start vector for a=0 and a</span>
+<span class="sd">    zero vector of the same size everywhere else.</span>
+<span class="sd">    This represents the age distribution of mass in a</span>
+<span class="sd">    compartmental system where the age of all pool contents is zero.</span>
+<span class="sd">    This means that the distribution is NOT normalized to 1.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        srm (SmoothReservoirModel) : The (symbolic) model</span>
+<span class="sd">        x0 (numpy.ndarray) : The contents of the pools at :math:`t=0`</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        dist (callable):a vector valued function of age.</span>
+<span class="sd">        dist(a)[i] reflects the mass of age :math:`a`</span>
+<span class="sd">        in pool i.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">svs</span> <span class="o">=</span> <span class="n">x0</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">srm</span><span class="o">.</span><span class="n">nr_pools</span>
+    <span class="c1"># first check that the start vector has the correct size</span>
+    <span class="k">assert</span> <span class="n">svs</span> <span class="o">==</span> <span class="p">(</span><span class="n">n</span><span class="p">,),</span> <span class="s2">&quot;&quot;&quot;The initial_values had shape </span><span class="si">{0}</span><span class="s2"> while the</span>
+<span class="s2">                            reservoir model had s </span><span class="si">{1}</span><span class="s2"> pools&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">svs</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">dist</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">a</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">x0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">dist</span></div>
+
+
+<div class="viewcode-block" id="start_age_distributions_from_zero_initial_content"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_distributions_from_zero_initial_content">[docs]</a><span class="k">def</span> <span class="nf">start_age_distributions_from_zero_initial_content</span><span class="p">(</span><span class="n">srm</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the age distribution (function) for an empty system.</span>
+
+<span class="sd">    The function returns a vector valued function dist(a) of the age a</span>
+<span class="sd">    that is zero everywhere dist(a)=0 for all a.</span>
+<span class="sd">    This represents the age distribution of a compartmental system with all</span>
+<span class="sd">    pools empty.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        srm (SmoothReservoirModel) : The (symbolic) model</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        callable: dist, a vector valued function of age.</span>
+<span class="sd">        dist(a)[i] reflects the mass of age :math:`a`</span>
+<span class="sd">        in pool i.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">start_age_distributions_from_zero_age_initial_content</span><span class="p">(</span>
+        <span class="n">srm</span><span class="p">,</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">srm</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="compute_fixedpoint_numerically"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.start_distributions.compute_fixedpoint_numerically">[docs]</a><span class="k">def</span> <span class="nf">compute_fixedpoint_numerically</span><span class="p">(</span><span class="n">srm</span><span class="p">,</span> <span class="n">t0</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">parameter_dict</span><span class="p">,</span> <span class="n">func_set</span><span class="p">):</span>
+    <span class="n">B_sym</span> <span class="o">=</span> <span class="n">srm</span><span class="o">.</span><span class="n">compartmental_matrix</span>
+    <span class="n">u_sym</span> <span class="o">=</span> <span class="n">srm</span><span class="o">.</span><span class="n">external_inputs</span>
+
+    <span class="n">t</span> <span class="o">=</span> <span class="n">srm</span><span class="o">.</span><span class="n">time_symbol</span>
+
+    <span class="n">tup</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">srm</span><span class="o">.</span><span class="n">state_vector</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">t</span><span class="p">,)</span>
+    <span class="n">u_func_non_lin</span> <span class="o">=</span> <span class="n">numerical_function_from_expression</span><span class="p">(</span>
+        <span class="n">u_sym</span><span class="p">,</span>
+        <span class="n">tup</span><span class="p">,</span>
+        <span class="n">parameter_dict</span><span class="p">,</span>
+        <span class="n">func_set</span>
+    <span class="p">)</span>
+    <span class="n">B_func_non_lin</span> <span class="o">=</span> <span class="n">numerical_function_from_expression</span><span class="p">(</span>
+        <span class="n">B_sym</span><span class="p">,</span>
+        <span class="n">tup</span><span class="p">,</span>
+        <span class="n">parameter_dict</span><span class="p">,</span>
+        <span class="n">func_set</span>
+    <span class="p">)</span>
+
+    <span class="c1"># get functions of x1,...,xn by partly applying to t0</span>
+    <span class="n">B0_func</span> <span class="o">=</span> <span class="n">func_subs</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">Function</span><span class="p">(</span><span class="s2">&quot;B&quot;</span><span class="p">)(</span><span class="o">*</span><span class="n">tup</span><span class="p">),</span> <span class="n">B_func_non_lin</span><span class="p">,</span> <span class="n">t0</span><span class="p">)</span>
+    <span class="n">u0_func</span> <span class="o">=</span> <span class="n">func_subs</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">Function</span><span class="p">(</span><span class="s2">&quot;u&quot;</span><span class="p">)(</span><span class="o">*</span><span class="n">tup</span><span class="p">),</span> <span class="n">u_func_non_lin</span><span class="p">,</span> <span class="n">t0</span><span class="p">)</span>
+
+    <span class="c1"># build the kind of function that scipy.optimize.root expects</span>
+    <span class="c1"># it has to have a single vector like argument</span>
+    <span class="k">def</span> <span class="nf">ex_func</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="n">tup</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">B0_func</span><span class="p">(</span><span class="o">*</span><span class="n">tup</span><span class="p">)</span> <span class="o">@</span> <span class="n">x</span> <span class="o">+</span> <span class="n">u0_func</span><span class="p">(</span><span class="o">*</span><span class="n">tup</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">root</span><span class="p">(</span><span class="n">fun</span><span class="o">=</span><span class="n">ex_func</span><span class="p">,</span> <span class="n">jac</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="n">x0</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">success</span><span class="p">)</span>
+    <span class="c1"># chose a method that does not use the jacobian</span>
+<span class="c1">#    res = root(fun=ex_func,method=&#39;krylov&#39;,x0=x0,tol=1e-5)</span>
+<span class="c1">#    pe(&#39;res&#39;,locals())</span>
+    <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">x</span></div>
+
+
+<div class="viewcode-block" id="start_age_moments_from_empty_spinup"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_moments_from_empty_spinup">[docs]</a><span class="k">def</span> <span class="nf">start_age_moments_from_empty_spinup</span><span class="p">(</span>
+    <span class="n">srm</span><span class="p">,</span>
+    <span class="n">t_max</span><span class="p">,</span>
+    <span class="n">parameter_dict</span><span class="p">,</span>
+    <span class="n">func_set</span><span class="p">,</span>
+    <span class="n">max_order</span>
+<span class="p">):</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">t_max</span><span class="p">,</span> <span class="mi">101</span><span class="p">)</span>
+    <span class="n">spin_up_mr</span> <span class="o">=</span> <span class="n">SmoothModelRun</span><span class="p">(</span>
+        <span class="n">srm</span><span class="p">,</span>
+        <span class="n">parameter_dict</span><span class="o">=</span><span class="n">parameter_dict</span><span class="p">,</span>
+        <span class="n">start_values</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">srm</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">),</span>
+        <span class="n">times</span><span class="o">=</span><span class="n">times</span><span class="p">,</span>
+        <span class="n">func_set</span><span class="o">=</span><span class="n">func_set</span>
+    <span class="p">)</span>
+    <span class="n">m0</span> <span class="o">=</span> <span class="n">start_age_moments_from_zero_initial_content</span><span class="p">(</span><span class="n">srm</span><span class="p">,</span> <span class="n">max_order</span><span class="p">)</span>
+
+    <span class="n">moment_vector_list</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">spin_up_mr</span><span class="o">.</span><span class="n">age_moment_vector</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">m0</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">order</span><span class="p">,</span> <span class="p">:])[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">for</span> <span class="n">order</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_order</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="c1"># stack the moment vectors line wise</span>
+    <span class="c1"># first line first moment (columns are pools)</span>
+    <span class="c1"># second line second moment (columns are pools)</span>
+    <span class="n">moment_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">moment_vector_list</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">sol_t_max</span> <span class="o">=</span> <span class="n">spin_up_mr</span><span class="o">.</span><span class="n">solve</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="k">return</span> <span class="n">moment_arr</span><span class="p">,</span> <span class="n">sol_t_max</span></div>
+
+
+<div class="viewcode-block" id="start_age_moments_from_zero_initial_content"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_moments_from_zero_initial_content">[docs]</a><span class="k">def</span> <span class="nf">start_age_moments_from_zero_initial_content</span><span class="p">(</span><span class="n">srm</span><span class="p">,</span> <span class="n">max_order</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The function returns an array of shape (max_order, srm.nr_pools)</span>
+
+<span class="sd">    The values are set to numpy.nan to be consistent with other parts of the</span>
+<span class="sd">    code.</span>
+<span class="sd">    For instance the mean age (first moment) of an empty pool is undefined )</span>
+<span class="sd">    Args:</span>
+<span class="sd">        srm (SmoothReservoirModel) : The (symbolic) model</span>
+<span class="sd">        max_order (int): The highest order up to which moments are to be</span>
+<span class="sd">            computed.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">start_age_moments</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">max_order</span><span class="p">,</span> <span class="n">srm</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">))</span>
+    <span class="n">start_age_moments</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="k">return</span> <span class="n">start_age_moments</span></div>
+
+
+<div class="viewcode-block" id="lapm_for_steady_state"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.start_distributions.lapm_for_steady_state">[docs]</a><span class="k">def</span> <span class="nf">lapm_for_steady_state</span><span class="p">(</span><span class="n">srm</span><span class="p">,</span> <span class="n">t0</span><span class="p">,</span> <span class="n">parameter_dict</span><span class="p">,</span> <span class="n">func_set</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    If a fixedpoint of the frozen system can be found, create a linear</span>
+<span class="sd">    autonomous model as an equivalent for the frozen (generally nonlinear)</span>
+<span class="sd">    system there.</span>
+
+<span class="sd">    The function performs the following steps:</span>
+
+<span class="sd">    #.  Substitute symbols and symbolic functions with the parameters and</span>
+<span class="sd">        numeric functions.</span>
+
+<span class="sd">    #.  Transform the general nonlinear non-autonomous system</span>
+<span class="sd">        into a nonlinear autonomous system by freezing it</span>
+<span class="sd">        at time :math:`t=t_0`:</span>
+
+<span class="sd">    #.  Compute :math:`u_0(x)=u(t_0,x_0)` and :math:`B_0(x)=B(t_0,x_0)`</span>
+
+<span class="sd">    #.  Look for an equilibrium :math:`x_{fix}` of the frozen system</span>
+<span class="sd">        such that :math:`0=B_0(x_{fix})+u_0(x_{fix})`.</span>
+<span class="sd">        If the frozen system is linear the we can compute</span>
+<span class="sd">        the fixed point explicitly : :math:`x_{fix}=B_0^{-1}u_0`.</span>
+<span class="sd">        In general the frozen system will be nonlinear and we will have to</span>
+<span class="sd">        look for the fixed point numerically.</span>
+
+<span class="sd">    #.  Create a linear autonomous pool model.</span>
+<span class="sd">        that can be investigated with the</span>
+<span class="sd">        package `LAPM &lt;https://github.com/MPIBGC-TEE/LAPM&gt;`_</span>
+
+<span class="sd">        This is a special case of the general</span>
+<span class="sd">        linearization of a nonlinear model along a trajectory,</span>
+<span class="sd">        which in case of a fixed point is constant.</span>
+<span class="sd">        At the fixed point the age distribution and solution of the</span>
+<span class="sd">        nonlinear system are identical to those of a linear one.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        srm (SmoothReservoirModel): The (symbolic) model</span>
+<span class="sd">        par_set (dict):</span>
+<span class="sd">            The parameter set that transforms the symbolic model into a</span>
+<span class="sd">            numeric one.</span>
+<span class="sd">            The keys are the sympy symbols, the values are the values used</span>
+<span class="sd">            for the simulation.</span>
+<span class="sd">        func_set (dict):</span>
+<span class="sd">            The keys are the symbolic</span>
+<span class="sd">            sympy expressions for external functions</span>
+<span class="sd">            the values are the numeric functions to be used in the simulation.</span>
+<span class="sd">        t0 (float): The time where the non-autonomous system is frozen.</span>
+
+<span class="sd">        x0 (numpy.ndarray):</span>
+<span class="sd">            An initial guess to start the fixed point iteration.</span>
+<span class="sd">            If the frozen model is linear it will be ignored and</span>
+<span class="sd">            can therefore be omitted.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (lapm, x_fix)  (tuple):</span>
+<span class="sd">        lapm is an instance of</span>
+<span class="sd">        (:class:`LAPM.linear_autonomous_pool_model.LinearAutonomousPoolModel`)</span>
+<span class="sd">        representing the linearization with</span>
+<span class="sd">        respect to the (constant) fixed point trajectory. It yields the</span>
+<span class="sd">        same age distribution as the frozen possibly nonlinear system at</span>
+<span class="sd">        the fixed point.</span>
+<span class="sd">        :math:`x_{fix}` is a one dimensional vector representing the</span>
+<span class="sd">        equilibrium.</span>
+<span class="sd">        This is returned since it is very likely needed as start vector in the</span>
+<span class="sd">        simulation for which the start distributions has been computed.</span>
+<span class="sd">        (The computed distribution assumes the system to be in this state.)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">B_sym</span> <span class="o">=</span> <span class="n">srm</span><span class="o">.</span><span class="n">compartmental_matrix</span>
+    <span class="n">u_sym</span> <span class="o">=</span> <span class="n">srm</span><span class="o">.</span><span class="n">external_inputs</span>
+    <span class="k">if</span> <span class="n">srm</span><span class="o">.</span><span class="n">is_linear</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">srm</span><span class="o">.</span><span class="n">is_state_dependent</span><span class="p">(</span><span class="n">u_sym</span><span class="p">):</span>
+            <span class="c1"># in this case we can in principle transform to</span>
+            <span class="c1"># a linear Model with constant</span>
+            <span class="c1"># input and new B</span>
+            <span class="c1"># compute the jacobian of u</span>
+            <span class="n">sv</span> <span class="o">=</span> <span class="n">Matrix</span><span class="p">(</span><span class="n">srm</span><span class="o">.</span><span class="n">state_vector</span><span class="p">)</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="n">jacobian</span><span class="p">(</span><span class="n">u_sym</span><span class="p">,</span> <span class="n">sv</span><span class="p">)</span>
+            <span class="n">u_sym</span> <span class="o">=</span> <span class="n">u_sym</span> <span class="o">-</span> <span class="n">M</span><span class="o">*</span><span class="n">sv</span>
+            <span class="n">B_sym</span> <span class="o">=</span> <span class="n">B_sym</span> <span class="o">+</span> <span class="n">M</span>
+
+        <span class="n">t</span> <span class="o">=</span> <span class="n">srm</span><span class="o">.</span><span class="n">time_symbol</span>
+        <span class="n">tup</span> <span class="o">=</span> <span class="p">(</span><span class="n">t</span><span class="p">,)</span>
+        <span class="n">u_func</span> <span class="o">=</span> <span class="n">numerical_function_from_expression</span><span class="p">(</span>
+            <span class="n">u_sym</span><span class="p">,</span>
+            <span class="n">tup</span><span class="p">,</span>
+            <span class="n">parameter_dict</span><span class="p">,</span>
+            <span class="n">func_set</span>
+        <span class="p">)</span>
+        <span class="n">B_func</span> <span class="o">=</span> <span class="n">numerical_function_from_expression</span><span class="p">(</span>
+            <span class="n">B_sym</span><span class="p">,</span>
+            <span class="n">tup</span><span class="p">,</span>
+            <span class="n">parameter_dict</span><span class="p">,</span>
+            <span class="n">func_set</span>
+        <span class="p">)</span>
+        <span class="n">B0</span> <span class="o">=</span> <span class="n">B_func</span><span class="p">(</span><span class="n">t0</span><span class="p">)</span>
+        <span class="n">u0</span> <span class="o">=</span> <span class="n">u_func</span><span class="p">(</span><span class="n">t0</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">x_fix</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">inv</span><span class="p">(</span><span class="n">B0</span><span class="p">)</span> <span class="o">@</span> <span class="n">u0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">srm</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">)</span>
+<span class="c1">#            pe(&#39;x_fix&#39;,locals())</span>
+        <span class="k">except</span> <span class="n">LinAlgError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            B_0=B(t_0) is not invertable</span>
+<span class="s2">            If a singular matrix B_0 occurs, then the system would have traps.</span>
+<span class="s2">            A steady state could then only occour</span>
+<span class="s2">            if the components of u0=u(t0) would be zero for the pools connected</span>
+<span class="s2">            to the trap.</span>
+<span class="s2">            In this (unlikely) event the startage distribution would</span>
+<span class="s2">            be ambigous because the fixedpoint x_</span><span class="si">{fix}</span><span class="s2"> is not uniqe</span>
+<span class="s2">            (The content of the trap is a free parameter and so is its age.)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">e</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">x0</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">x0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">srm</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">)</span>
+            <span class="n">warning</span><span class="p">(</span>
+                <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                No initial guess for the fix point iteration given.</span>
+<span class="sd">                For nonlinear models equilibria can in general only be found</span>
+<span class="sd">                numerically by an iterative process starting from an initial</span>
+<span class="sd">                guess x0 which has not been provided.</span>
+<span class="sd">                Since a nonlinear model can have several equilibria the initial</span>
+<span class="sd">                guess determines which one will be found by the iteration.</span>
+<span class="sd">                A good guess might also increase the likelihood to find an</span>
+<span class="sd">                equilibrium at all.</span>
+<span class="sd">                In absence of an initial guess we will start with</span>
+<span class="sd">                numpy.ones(smr.nr_pools) which might not be a good choice.</span>
+<span class="sd">                We strongly advise to specify the x0 argument.&quot;&quot;&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">x_fix</span> <span class="o">=</span> <span class="n">compute_fixedpoint_numerically</span><span class="p">(</span>
+            <span class="n">srm</span><span class="p">,</span>
+            <span class="n">t0</span><span class="p">,</span>
+            <span class="n">x0</span><span class="p">,</span>
+            <span class="n">parameter_dict</span><span class="p">,</span>
+            <span class="n">func_set</span>
+        <span class="p">)</span>
+<span class="c1">#        pe(&#39;x_fix&#39;,locals())</span>
+
+        <span class="n">t</span> <span class="o">=</span> <span class="n">srm</span><span class="o">.</span><span class="n">time_symbol</span>
+        <span class="n">tup</span> <span class="o">=</span> <span class="p">(</span><span class="n">t</span><span class="p">,)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">srm</span><span class="o">.</span><span class="n">state_vector</span><span class="p">)</span>
+        <span class="n">u_func_non_lin</span> <span class="o">=</span> <span class="n">numerical_function_from_expression</span><span class="p">(</span>
+            <span class="n">u_sym</span><span class="p">,</span>
+            <span class="n">tup</span><span class="p">,</span>
+            <span class="n">parameter_dict</span><span class="p">,</span>
+            <span class="n">func_set</span>
+        <span class="p">)</span>
+        <span class="n">B_func_non_lin</span> <span class="o">=</span> <span class="n">numerical_function_from_expression</span><span class="p">(</span>
+            <span class="n">B_sym</span><span class="p">,</span>
+            <span class="n">tup</span><span class="p">,</span>
+            <span class="n">parameter_dict</span><span class="p">,</span>
+            <span class="n">func_set</span>
+        <span class="p">)</span>
+        <span class="n">B0</span> <span class="o">=</span> <span class="n">B_func_non_lin</span><span class="p">(</span><span class="n">t0</span><span class="p">,</span> <span class="o">*</span><span class="n">x_fix</span><span class="p">)</span>
+        <span class="n">u0</span> <span class="o">=</span> <span class="n">u_func_non_lin</span><span class="p">(</span><span class="n">t0</span><span class="p">,</span> <span class="o">*</span><span class="n">x_fix</span><span class="p">)</span>
+
+    <span class="n">B0_m</span> <span class="o">=</span> <span class="n">Matrix</span><span class="p">(</span><span class="n">B0</span><span class="p">)</span>
+    <span class="n">u0_m</span> <span class="o">=</span> <span class="n">Matrix</span><span class="p">(</span><span class="n">u0</span><span class="p">)</span>
+<span class="c1">#    pe(&#39;B0&#39;,locals())</span>
+<span class="c1">#    pe(&#39;u0&#39;,locals())</span>
+    <span class="n">lapm</span> <span class="o">=</span> <span class="n">LinearAutonomousPoolModel</span><span class="p">(</span><span class="n">u0_m</span><span class="p">,</span> <span class="n">B0_m</span><span class="p">,</span> <span class="n">force_numerical</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">lapm</span><span class="p">,</span> <span class="n">x_fix</span></div>
+
+
+<div class="viewcode-block" id="start_age_moments_from_steady_state"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_moments_from_steady_state">[docs]</a><span class="k">def</span> <span class="nf">start_age_moments_from_steady_state</span><span class="p">(</span>
+    <span class="n">srm</span><span class="p">,</span>
+    <span class="n">t0</span><span class="p">,</span>
+    <span class="n">parameter_dict</span><span class="p">,</span>
+    <span class="n">func_set</span><span class="p">,</span>
+    <span class="n">max_order</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the age moments of the system at equilibrium :math:`x_{fix}`</span>
+<span class="sd">    , by means of a linear autonomous pool model with identical age</span>
+<span class="sd">    distributions.</span>
+<span class="sd">    The fixed point and the linear model are provided by:</span>
+<span class="sd">    :py:meth:`lapm_for_steady_state`</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        srm (SmoothReservoirModel) : The (symbolic) model</span>
+<span class="sd">        parameter_dict (dict):</span>
+<span class="sd">            The parameter set that transforms the symbolic model into a</span>
+<span class="sd">            numeric one. The keys are the sympy symbols, the values are the</span>
+<span class="sd">            values used for the simulation.</span>
+<span class="sd">        func_set (dict):</span>
+<span class="sd">            The keys are the symbolic sympy expressions for external functions</span>
+<span class="sd">            the values are the numeric functions to be used in the simulation</span>
+<span class="sd">        t0 (float): The time where the non-autonomous system is frozen.</span>
+
+<span class="sd">        x0 (numpy.ndarray):</span>
+<span class="sd">            An initial guess to start the fixed point iteration.</span>
+<span class="sd">            If the frozen model is linear it will be ignored and</span>
+<span class="sd">            can therefore be omitted.</span>
+<span class="sd">        max_order (int):</span>
+<span class="sd">            The highest order up to which moments are to be computed.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        numpy.ndarray: moments x pools, containing the moments of the</span>
+<span class="sd">        pool ages in equilibrium.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">lapm</span><span class="p">,</span> <span class="n">x_fix</span> <span class="o">=</span> <span class="n">lapm_for_steady_state</span><span class="p">(</span>
+        <span class="n">srm</span><span class="p">,</span>
+        <span class="n">t0</span><span class="p">,</span>
+        <span class="n">parameter_dict</span><span class="p">,</span>
+        <span class="n">func_set</span><span class="p">,</span>
+        <span class="n">x0</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">)</span>
+    <span class="n">start_age_moments</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_order</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">start_age_moment_sym</span> <span class="o">=</span> <span class="n">lapm</span><span class="o">.</span><span class="n">a_nth_moment</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">start_age_moment</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">start_age_moment_sym</span><span class="p">)</span>\
+            <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>\
+            <span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">srm</span><span class="o">.</span><span class="n">nr_pools</span><span class="p">)</span>
+
+        <span class="n">start_age_moments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">start_age_moment</span><span class="p">)</span>
+
+    <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">start_age_moments</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

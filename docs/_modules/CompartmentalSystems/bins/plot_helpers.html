@@ -1,0 +1,153 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompartmentalSystems.bins.plot_helpers &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for CompartmentalSystems.bins.plot_helpers</h1><div class="highlight"><pre>
+<span></span><span class="c1"># vim:set ff=unix expandtab ts=4 sw=4:</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">matplotlib.colors</span> <span class="kn">import</span> <span class="n">colorConverter</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">mpl_toolkits.mplot3d</span> <span class="kn">import</span> <span class="n">Axes3D</span>
+
+<span class="c1"># scatter plots</span>
+<span class="n">xhist_fs</span> <span class="o">=</span> <span class="mi">16</span>
+<span class="n">yhist_fs</span> <span class="o">=</span> <span class="mi">16</span>
+
+<span class="c1">#bin plots</span>
+<div class="viewcode-block" id="cc"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.plot_helpers.cc">[docs]</a><span class="k">def</span> <span class="nf">cc</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span><span class="n">alpha</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">alpha</span><span class="p">):</span>
+        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.9</span>
+    <span class="k">return</span> <span class="n">colorConverter</span><span class="o">.</span><span class="n">to_rgba</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span></div>
+
+<span class="n">content_facecolors</span><span class="o">=</span><span class="p">[</span><span class="n">cc</span><span class="p">(</span><span class="s2">&quot;black&quot;</span><span class="p">,</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)]</span><span class="o">*</span><span class="mi">5</span>
+<span class="n">deathrate_facecolors</span><span class="o">=</span><span class="p">[</span><span class="n">cc</span><span class="p">(</span><span class="s2">&quot;red&quot;</span><span class="p">,</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)]</span><span class="o">*</span><span class="mi">5</span>
+<span class="n">loss_facecolors</span><span class="o">=</span><span class="n">deathrate_facecolors</span>
+<span class="n">gain_facecolors</span><span class="o">=</span><span class="p">[</span><span class="n">cc</span><span class="p">(</span><span class="s2">&quot;green&quot;</span><span class="p">,</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)]</span><span class="o">*</span><span class="mi">5</span>
+
+<div class="viewcode-block" id="add_xhist_data_to_scatter"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.plot_helpers.add_xhist_data_to_scatter">[docs]</a><span class="k">def</span> <span class="nf">add_xhist_data_to_scatter</span><span class="p">(</span><span class="n">plot_ax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">fontsize</span><span class="p">,</span> <span class="n">show_grid</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+    <span class="c1"># add top x-axis with histogram data</span>
+
+    <span class="c1"># add second x-axis at the top</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">plot_ax</span><span class="o">.</span><span class="n">twiny</span><span class="p">()</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_position</span><span class="p">(</span><span class="n">plot_ax</span><span class="o">.</span><span class="n">get_position</span><span class="p">())</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">plot_ax</span><span class="o">.</span><span class="n">get_xlim</span><span class="p">())</span>
+
+    <span class="c1"># prepare data</span>
+    <span class="n">bins</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">data</span><span class="p">),</span><span class="nb">max</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">+</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">)]</span>
+    <span class="n">hisx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
+
+    <span class="c1"># set ticks and labels</span>
+    <span class="n">x2_ticks</span> <span class="o">=</span> <span class="p">[</span><span class="n">hisx</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hisx</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="k">if</span> <span class="n">hisx</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">x2_ticklabels</span> <span class="o">=</span> <span class="p">[</span><span class="n">hisx</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hisx</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="k">if</span> <span class="n">hisx</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">x2_ticks</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">x2_ticklabels</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fontsize</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">fontsize</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">show_grid</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SinglePlotFigureHandler"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.plot_helpers.SinglePlotFigureHandler">[docs]</a><span class="k">class</span> <span class="nc">SinglePlotFigureHandler</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">figure_filename</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">figure_filename</span><span class="o">=</span><span class="n">figure_filename</span>
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">ax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">projection</span><span class="o">=</span><span class="s2">&quot;3d&quot;</span><span class="p">)</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">ax</span><span class="p">)</span>
+        
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">type</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">traceback</span><span class="p">):</span>    
+        <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">figure_filename</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">number</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,229 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompartmentalSystems.bins.TsTpMassFields &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for CompartmentalSystems.bins.TsTpMassFields</h1><div class="highlight"><pre>
+<span></span><span class="c1"># vim: set ff=unix expandtab ts=4 sw=4:</span>
+<span class="kn">from</span> <span class="nn">string</span> <span class="kn">import</span> <span class="n">Template</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">reduce</span>
+<span class="kn">from</span> <span class="nn">.TsTpMassField</span> <span class="kn">import</span> <span class="n">TsTpMassField</span>
+<span class="kn">from</span> <span class="nn">.TsMassField</span> <span class="kn">import</span> <span class="n">TsMassField</span>
+
+<div class="viewcode-block" id="TimeMassFields"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFields.TimeMassFields">[docs]</a><span class="k">class</span> <span class="nc">TimeMassFields</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
+<div class="viewcode-block" id="TimeMassFields.shift"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFields.TimeMassFields.shift">[docs]</a>    <span class="k">def</span> <span class="nf">shift</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1">#shift everything forward one tss step</span>
+        <span class="c1"># this has to be done for all the pools even if they neither loose nor gain in this time step</span>
+        <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">el</span><span class="o">.</span><span class="n">shift</span><span class="p">()</span></div></div>
+<span class="c1"># the  classes are mutually dependent and have to be part of the same module to avoid </span>
+<span class="c1"># circular imports</span>
+
+<div class="viewcode-block" id="TsMassFieldsPerPool"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFields.TsMassFieldsPerPool">[docs]</a><span class="k">class</span> <span class="nc">TsMassFieldsPerPool</span><span class="p">(</span><span class="n">TimeMassFields</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span><span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="nb">int</span><span class="p">)):</span>
+                <span class="k">raise</span><span class="p">(</span><span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;only integers (describing the pool number) are allowed as indices here&quot;</span><span class="p">))</span>
+                <span class="n">atom_type</span><span class="o">=</span><span class="n">TsMassField</span>
+            <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">atom_type</span><span class="p">)):</span>
+                <span class="k">raise</span><span class="p">(</span><span class="ne">Exception</span><span class="p">(</span><span class="n">Template</span><span class="p">(</span><span class="s2">&quot;only &quot;</span><span class="o">+</span><span class="n">atome_type</span> <span class="o">+</span><span class="s2">&quot;elements are allowed as values, got an element of type $</span><span class="si">{vt}</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">substitute</span><span class="p">(</span><span class="n">vt</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">))))</span></div>
+
+<div class="viewcode-block" id="TsTpMassFieldsPerPool"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFields.TsTpMassFieldsPerPool">[docs]</a><span class="k">class</span> <span class="nc">TsTpMassFieldsPerPool</span><span class="p">(</span><span class="n">TimeMassFields</span><span class="p">):</span>
+    <span class="c1"># Although derived from dict the class implements </span>
+    <span class="c1"># an array like structure </span>
+    <span class="c1"># of TsTpFields indexed by pool number </span>
+    <span class="c1"># It is in the current implementation derived from </span>
+    <span class="c1"># dictionary to avoid the neccessaty to </span>
+    <span class="c1"># set all item from 0..n-1 before setting item n</span>
+    <span class="c1"># So we can have incomplete lists used in the losses method</span>
+    
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span><span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="nb">int</span><span class="p">)):</span>
+                <span class="k">raise</span><span class="p">(</span><span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;only integers (describing the pool number) are allowed as indices here&quot;</span><span class="p">))</span>
+            <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">TsTpMassField</span><span class="p">)):</span>
+                <span class="k">raise</span><span class="p">(</span><span class="ne">Exception</span><span class="p">(</span><span class="n">Template</span><span class="p">(</span><span class="s2">&quot;only TsTpMassFields are allowed as values, got an element of type $</span><span class="si">{vt}</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">substitute</span><span class="p">(</span><span class="n">vt</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">))))</span>
+
+<div class="viewcode-block" id="TsTpMassFieldsPerPool.shift"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFields.TsTpMassFieldsPerPool.shift">[docs]</a>    <span class="k">def</span> <span class="nf">shift</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1">#shift everything forward one tss step</span>
+        <span class="c1"># this has to be done for all the pools even if they neither loose nor gain in this time step</span>
+        <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">el</span><span class="o">.</span><span class="n">shift</span><span class="p">()</span></div>
+
+        
+<div class="viewcode-block" id="TsTpMassFieldsPerPool.internal_losses"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFields.TsTpMassFieldsPerPool.internal_losses">[docs]</a>    <span class="k">def</span> <span class="nf">internal_losses</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">internal_death_rate_fields</span><span class="p">):</span>
+        <span class="n">losses</span><span class="o">=</span><span class="n">TsTpMassFieldsPerPipe</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span><span class="n">death_rate</span> <span class="ow">in</span> <span class="n">internal_death_rate_fields</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">sending_pool</span><span class="o">=</span><span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">r</span><span class="o">=</span><span class="bp">self</span><span class="p">[</span><span class="n">sending_pool</span><span class="p">]</span>
+            <span class="n">losses</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">=</span><span class="n">r</span><span class="o">.</span><span class="n">loss</span><span class="p">(</span><span class="n">death_rate</span><span class="p">)</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">losses</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="TsTpMassFieldsPerPool.receive_external"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFields.TsTpMassFieldsPerPool.receive_external">[docs]</a>    <span class="k">def</span> <span class="nf">receive_external</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">external_inputs</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">receiving_pool</span><span class="p">,</span><span class="n">stuff</span> <span class="ow">in</span> <span class="n">external_inputs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="p">[</span><span class="n">receiving_pool</span><span class="p">]</span><span class="o">.</span><span class="n">receive_external</span><span class="p">(</span><span class="n">stuff</span><span class="p">)</span></div>
+            
+        
+<div class="viewcode-block" id="TsTpMassFieldsPerPool.receive"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFields.TsTpMassFieldsPerPool.receive">[docs]</a>    <span class="k">def</span> <span class="nf">receive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">gains</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">receiving_pool</span><span class="p">,</span><span class="n">gain</span> <span class="ow">in</span> <span class="n">gains</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="p">[</span><span class="n">receiving_pool</span><span class="p">]</span><span class="o">.</span><span class="n">receive</span><span class="p">(</span><span class="n">gain</span><span class="p">)</span></div>
+        
+<span class="c1">#    def receive_shifting(self,gains_from_previous_time_step):</span>
+<span class="c1">#        # calling this method avoids the shifting operation</span>
+<span class="c1">#        # on the gains before incorporation</span>
+<span class="c1">#        # this avoids one array creation </span>
+<span class="c1">#        for receiving_pool,gain in gains_from_previous_time_step.items():</span>
+<span class="c1">#            rfield=self[receiving_pool]</span>
+<span class="c1">#            rfield.receive_shifting(gain)</span>
+        
+    
+<div class="viewcode-block" id="TsTpMassFieldsPerPool.remove"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFields.TsTpMassFieldsPerPool.remove">[docs]</a>    <span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">l</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">l</span><span class="p">,</span><span class="n">TsTpMassFieldsPerPool</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">sending_pool</span><span class="p">,</span><span class="n">loss</span> <span class="ow">in</span> <span class="n">l</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">sfield</span><span class="o">=</span><span class="bp">self</span><span class="p">[</span><span class="n">sending_pool</span><span class="p">]</span>
+                <span class="n">sfield</span><span class="o">.</span><span class="n">remove_loss</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span> 
+            <span class="c1">#note that self[sending_pool] will be changed (reference vs. copy)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">l</span><span class="p">,</span><span class="n">TsTpMassFieldsPerPipe</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">pipe_key</span><span class="p">,</span><span class="n">loss</span> <span class="ow">in</span> <span class="n">l</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">sending_pool</span><span class="o">=</span><span class="n">pipe_key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">sfield</span><span class="o">=</span><span class="bp">self</span><span class="p">[</span><span class="n">sending_pool</span><span class="p">]</span>
+                <span class="n">sfield</span><span class="o">.</span><span class="n">remove_loss</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span> </div>
+            
+      
+        
+<div class="viewcode-block" id="TsTpMassFieldsPerPool.external_losses"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFields.TsTpMassFieldsPerPool.external_losses">[docs]</a>    <span class="k">def</span> <span class="nf">external_losses</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">external_death_rate_fields</span><span class="p">):</span>
+        <span class="n">losses</span><span class="o">=</span><span class="n">TsTpMassFieldsPerPool</span><span class="p">([])</span> <span class="c1">#call constructor of this class (while self might be member of a subclass)</span>
+        <span class="k">for</span> <span class="n">sending_pool</span><span class="p">,</span><span class="n">death_rate</span> <span class="ow">in</span> <span class="n">external_death_rate_fields</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">r</span><span class="o">=</span><span class="bp">self</span><span class="p">[</span><span class="n">sending_pool</span><span class="p">]</span>
+            <span class="n">losses</span><span class="p">[</span><span class="n">sending_pool</span><span class="p">]</span><span class="o">=</span><span class="n">r</span><span class="o">.</span><span class="n">loss</span><span class="p">(</span><span class="n">death_rate</span><span class="p">)</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">losses</span><span class="p">)</span></div></div>
+        
+<span class="c1">##############################################################################</span>
+<span class="c1">##############################################################################</span>
+<div class="viewcode-block" id="TsTpMassFieldsPerPipe"><a class="viewcode-back" href="../../../CompartmentalSystems.bins.html#CompartmentalSystems.bins.TsTpMassFields.TsTpMassFieldsPerPipe">[docs]</a><span class="k">class</span> <span class="nc">TsTpMassFieldsPerPipe</span><span class="p">(</span><span class="n">TimeMassFields</span><span class="p">):</span>
+    <span class="c1"># The class implements a list of TsTpFields indexed by a tuple=(sender,receiver) </span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span><span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="nb">tuple</span><span class="p">)</span><span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span> <span class="ow">and</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">!=</span><span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="k">raise</span><span class="p">(</span><span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;only tuples (describing the sending and receiving pool ) are allowed as keys here&quot;</span><span class="p">))</span>
+            <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">TsTpMassField</span><span class="p">)):</span>
+                <span class="k">raise</span><span class="p">(</span><span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;only TsTpMassFields are allowed as values&quot;</span><span class="p">))</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">gains</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># gains always have pool age 0</span>
+        <span class="c1"># and a minimal system age of 0+tss</span>
+        <span class="c1"># gains are represented by a pool-number indexed dict</span>
+        <span class="c1"># of one-dimensional fields which for Ts values which are </span>
+        <span class="c1"># longer by one compared to the loss fields they are computed from</span>
+        <span class="c1"># This represents the aging (shift) that occurs for them </span>
+        <span class="c1"># only with respect to Ts</span>
+        <span class="n">res</span><span class="o">=</span><span class="n">TsMassFieldsPerPool</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">pipe_key</span><span class="p">,</span><span class="n">mass_field</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">receiving_pool</span><span class="o">=</span><span class="n">pipe_key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">pipe_gain</span><span class="o">=</span><span class="n">mass_field</span><span class="o">.</span><span class="n">sum_over_all_pool_ages</span><span class="p">()</span><span class="o">.</span><span class="n">shifted</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">receiving_pool</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">res</span><span class="p">[</span><span class="n">receiving_pool</span><span class="p">]</span><span class="o">+=</span><span class="n">pipe_gain</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">res</span><span class="p">[</span><span class="n">receiving_pool</span><span class="p">]</span><span class="o">=</span><span class="n">pipe_gain</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">res</span><span class="p">)</span></div>
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

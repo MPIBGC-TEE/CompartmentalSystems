@@ -1,0 +1,305 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompartmentalSystems.BlockIvp &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for CompartmentalSystems.BlockIvp</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">.myOdeResult</span> <span class="kn">import</span> <span class="n">solve_ivp_pwc</span>
+
+
+<div class="viewcode-block" id="BlockIvp"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.BlockIvp.BlockIvp">[docs]</a><span class="k">class</span> <span class="nc">BlockIvp</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper class to build initial value systems from functions that operate</span>
+<span class="sd">    on blocks of the state_variables.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="BlockIvp.build_rhss"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.BlockIvp.BlockIvp.build_rhss">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">build_rhss</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">time_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">start_blocks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]],</span>
+<span class="c1">#        functions: List[Tuple[Callable, List[str]]],  # noqa</span>
+        <span class="n">functionss</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">double</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The function returns a function dot_X=f(t,X) suitable as the right-hand</span>
+<span class="sd">        side for the ode solver scipy.solve_ivp from a collection of array</span>
+<span class="sd">        valued functions that compute blocks of dot_X from time and blocks of X</span>
+<span class="sd">        rather than from single equations.</span>
+
+<span class="sd">        A special application is the creation of block triangular systems, to</span>
+<span class="sd">        integrate variables whose time derivative depends on the solution</span>
+<span class="sd">        of an original system instantaneously along with it.</span>
+
+<span class="sd">        Assume that</span>
+<span class="sd">        X_1(t) is the solution of the initial value problem (ivp)</span>
+
+<span class="sd">        ivp_1:</span>
+<span class="sd">        dot_X_1=f_1(t,X), X_1(t_0)</span>
+
+<span class="sd">        and X_2(t) the solution of another ivp</span>
+
+<span class="sd">        ivp_2:</span>
+<span class="sd">        dot_X_2=f_2(t,X_1,X_2), X_2(t_0) whose right-hand side depends on x_1.</span>
+
+<span class="sd">        Then we can obtain the solution of both ivps simultaneously by</span>
+<span class="sd">        combining them into one.</span>
+
+<span class="sd">        (dot_X_1, dox_X_2)^t = (f_1(t,X_1),f_2(t,X_1,X_2))^t</span>
+
+<span class="sd">        For n instead of 2 variables one has:</span>
+<span class="sd">        (dot_X_1, dot_X_2,..., dot_X_n)^t</span>
+<span class="sd">            = (f_1(t,X_1), f_2(t,X_1,X_2),..., f_n(t,X_1,...X_n))^t</span>
+
+<span class="sd">        For a full lower triangular system the block derivative dot_X_i</span>
+<span class="sd">        depends on t and ALL the blocks X_1,...,X_i</span>
+<span class="sd">        but often it will only depend on</span>
+<span class="sd">        SOME of the previous blocks so that f_i has a considerably</span>
+<span class="sd">        smaller argument list.</span>
+
+<span class="sd">        This function therefore allows to specify WHICH blocks the f_i depend</span>
+<span class="sd">        on.</span>
+<span class="sd">        Consider the following 5+2*2 = 9 -dimensional block diagonal example:</span>
+
+<span class="sd">        b_s=block_rhs(</span>
+<span class="sd">             time_str=&#39;t&#39;</span>
+<span class="sd">            ,start_blocks=[(&#39;X1&#39;,np.ones((5,1)),(&#39;X2&#39;,np.ones((2,2)))]</span>
+<span class="sd">            ,functions=[</span>
+<span class="sd">                 ((lambda x   : x*2 ),  [&#39;X1&#39;]    )</span>
+<span class="sd">                ,((lambda t,x : t*x ),  [&#39;t&#39; ,&#39;X2&#39;])</span>
+<span class="sd">             ])</span>
+
+<span class="sd">        The first argument &#39;time_str&#39; denotes the alias for the t argument to</span>
+<span class="sd">        be used later in the signature of the block functions.</span>
+<span class="sd">        The second argument &#39;start_blocks&#39; describes the decomposition of X</span>
+<span class="sd">        into blocks by a list of tuples of the form (&#39;Name&#39;,array).</span>
+<span class="sd">        The third argument &#39;functions&#39; is a list of tuples of the function</span>
+<span class="sd">        itself and the list of the names of its block arguments as specified</span>
+<span class="sd">        in the &#39;start_blocks&#39; argument.</span>
+<span class="sd">        Order is important for the &#39;start_blocks&#39; and the &#39;functions&#39;.</span>
+<span class="sd">        It is assumed that the i-th function computes the derivative of the</span>
+<span class="sd">        i-th block.</span>
+<span class="sd">        The names of the blocks itself are arbitrary and have no meaning apart</span>
+<span class="sd">        from their correspondence in the start_blocks and functions argument.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">start_block_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">start_blocks</span><span class="p">}</span>
+        <span class="n">block_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">start_blocks</span><span class="p">]</span>
+        <span class="n">sizes</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">size</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">start_blocks</span><span class="p">]</span>
+        <span class="n">nb</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sizes</span><span class="p">)</span>
+
+        <span class="c1"># first compute the indices of block boundaries in X by summing the</span>
+        <span class="c1"># dimensions of the blocks</span>
+<span class="c1">#        indices = np.array([0] + [sum(sizes[:(i+1)]) for i in range(nb)])</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="nb">sum</span><span class="p">(</span><span class="n">sizes</span><span class="p">[:(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nb</span><span class="p">)]</span>
+
+        <span class="k">def</span> <span class="nf">rhs_wrapper</span><span class="p">(</span><span class="n">functions</span><span class="p">):</span>
+            <span class="n">strArgLists</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">functions</span><span class="p">]</span>
+            <span class="c1"># make sure that all argument lists are really lists</span>
+            <span class="k">assert</span><span class="p">(</span><span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">strArgLists</span><span class="p">]))</span>
+            <span class="c1"># make sure that the function argument lists do not contain</span>
+            <span class="c1"># block names that are not mentioned in the Xblocks argument</span>
+            <span class="n">flatArgList</span> <span class="o">=</span> <span class="p">[</span><span class="n">arg</span> <span class="k">for</span> <span class="n">argList</span> <span class="ow">in</span> <span class="n">strArgLists</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">argList</span><span class="p">]</span>
+            <span class="k">assert</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">flatArgList</span><span class="p">)</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">block_names</span><span class="o">+</span><span class="p">[</span><span class="n">time_str</span><span class="p">]))</span>
+
+            <span class="k">def</span> <span class="nf">rhs</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+                <span class="n">vecBlockDict</span> <span class="o">=</span> <span class="p">{</span><span class="n">block_names</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span> <span class="n">X</span><span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span><span class="n">indices</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span>
+                                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nb</span><span class="p">)}</span>
+                <span class="n">blockDict</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">vecBlock</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                                <span class="n">start_block_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
+                            <span class="p">)</span>
+                            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">vecBlock</span> <span class="ow">in</span> <span class="n">vecBlockDict</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                <span class="n">blockDict</span><span class="p">[</span><span class="n">time_str</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span>
+                <span class="n">arg_lists</span> <span class="o">=</span> <span class="p">[[</span><span class="n">blockDict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+                             <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">f</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+                             <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">functions</span><span class="p">]</span>
+                <span class="n">vecResults</span> <span class="o">=</span> <span class="p">[</span><span class="n">functions</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">](</span><span class="o">*</span><span class="n">arg_lists</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                              <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nb</span><span class="p">)]</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">vecResults</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">rhs</span>
+
+        <span class="n">rhss</span> <span class="o">=</span> <span class="p">[</span><span class="n">rhs_wrapper</span><span class="p">(</span><span class="n">functions</span><span class="p">)</span> <span class="k">for</span> <span class="n">functions</span> <span class="ow">in</span> <span class="n">functionss</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">rhss</span></div>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">time_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">start_blocks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]],</span>
+        <span class="n">functionss</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]],</span>
+        <span class="n">disc_times</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">array_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">tup</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">tup</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">tup</span> <span class="ow">in</span> <span class="n">start_blocks</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_str</span> <span class="o">=</span> <span class="n">time_str</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">sb</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">sb</span> <span class="ow">in</span> <span class="n">start_blocks</span><span class="p">]</span>
+        <span class="n">start_arrays</span> <span class="o">=</span> <span class="p">[</span><span class="n">sb</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">sb</span> <span class="ow">in</span> <span class="n">start_blocks</span><span class="p">]</span>
+
+        <span class="n">sizes</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">size</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">start_arrays</span><span class="p">]</span>
+        <span class="n">nb</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sizes</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">nb</span><span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="nb">sum</span><span class="p">(</span><span class="n">sizes</span><span class="p">[:(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">r</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">names</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span> <span class="p">(</span><span class="n">indices</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">indices</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">r</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rhss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_rhss</span><span class="p">(</span>
+            <span class="n">time_str</span><span class="o">=</span><span class="n">time_str</span><span class="p">,</span>
+            <span class="n">start_blocks</span><span class="o">=</span><span class="n">start_blocks</span><span class="p">,</span>
+            <span class="n">functionss</span><span class="o">=</span><span class="n">functionss</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">a</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">start_arrays</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">disc_times</span> <span class="o">=</span> <span class="n">disc_times</span>
+
+<div class="viewcode-block" id="BlockIvp.check_block_exists"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.BlockIvp.BlockIvp.check_block_exists">[docs]</a>    <span class="k">def</span> <span class="nf">check_block_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block_name</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">block_name</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_str</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;There is no block with this name&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BlockIvp.block_solve"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.BlockIvp.BlockIvp.block_solve">[docs]</a>    <span class="k">def</span> <span class="nf">block_solve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t_span</span><span class="p">,</span> <span class="n">first_step</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">sol_obj</span> <span class="o">=</span> <span class="n">solve_ivp_pwc</span><span class="p">(</span>
+            <span class="n">rhss</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rhss</span><span class="p">,</span>
+            <span class="n">t_span</span><span class="o">=</span><span class="n">t_span</span><span class="p">,</span>
+            <span class="n">y0</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">start_vec</span><span class="p">,</span>
+            <span class="n">disc_times</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">disc_times</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">block_sol</span><span class="p">(</span><span class="n">block_name</span><span class="p">):</span>
+            <span class="n">start_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">array_dict</span><span class="p">[</span><span class="n">block_name</span><span class="p">]</span>
+            <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_dict</span><span class="p">[</span><span class="n">block_name</span><span class="p">]</span>
+            <span class="n">time_dim_size</span> <span class="o">=</span> <span class="n">sol_obj</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="n">sol_obj</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">lower</span><span class="p">:</span><span class="n">upper</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="n">start_array</span><span class="o">.</span><span class="n">shape</span><span class="o">+</span><span class="p">(</span><span class="n">time_dim_size</span><span class="p">,)</span>
+            <span class="p">)</span>
+            <span class="c1"># solve_ivp returns an array that has time as the LAST dimension</span>
+            <span class="c1"># but our code usually expects it as FIRST dimension</span>
+            <span class="c1"># Therefore we move the last axis to the first position</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">block_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="n">block_sols</span> <span class="o">=</span> <span class="p">{</span><span class="n">block_name</span><span class="p">:</span> <span class="n">block_sol</span><span class="p">(</span><span class="n">block_name</span><span class="p">)</span>
+                      <span class="k">for</span> <span class="n">block_name</span> <span class="ow">in</span> <span class="n">block_names</span><span class="p">}</span>
+        <span class="k">return</span> <span class="n">block_sols</span></div>
+
+<div class="viewcode-block" id="BlockIvp.block_solve_functions"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.BlockIvp.BlockIvp.block_solve_functions">[docs]</a>    <span class="k">def</span> <span class="nf">block_solve_functions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t_span</span><span class="p">,</span> <span class="n">first_step</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">sol_obj</span> <span class="o">=</span> <span class="n">solve_ivp_pwc</span><span class="p">(</span>
+            <span class="n">rhss</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rhss</span><span class="p">,</span>
+            <span class="n">t_span</span><span class="o">=</span><span class="n">t_span</span><span class="p">,</span>
+            <span class="n">y0</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">start_vec</span><span class="p">,</span>
+            <span class="n">disc_times</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">disc_times</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">block_sol</span><span class="p">(</span><span class="n">block_name</span><span class="p">):</span>
+            <span class="n">start_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">array_dict</span><span class="p">[</span><span class="n">block_name</span><span class="p">]</span>
+            <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_dict</span><span class="p">[</span><span class="n">block_name</span><span class="p">]</span>
+
+            <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">times</span><span class="p">):</span>
+                <span class="n">tmp</span> <span class="o">=</span> <span class="n">sol_obj</span><span class="o">.</span><span class="n">sol</span><span class="p">(</span><span class="n">times</span><span class="p">)[</span><span class="n">lower</span><span class="p">:</span><span class="n">upper</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">times</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+                    <span class="n">res</span> <span class="o">=</span> <span class="n">tmp</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                        <span class="p">(</span><span class="n">start_array</span><span class="o">.</span><span class="n">shape</span><span class="o">+</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">times</span><span class="p">),))</span>
+                    <span class="p">)</span>
+                    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">tmp</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">start_array</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+            <span class="c1"># solve_ivp returns an array that has time as the LAST dimension</span>
+            <span class="c1"># but our code usually expects it as FIRST dimension</span>
+            <span class="c1"># Therefore we move the last axis to the first position</span>
+            <span class="k">return</span> <span class="n">func</span>
+
+        <span class="n">block_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="n">block_sols</span> <span class="o">=</span> <span class="p">{</span><span class="n">block_name</span><span class="p">:</span> <span class="n">block_sol</span><span class="p">(</span><span class="n">block_name</span><span class="p">)</span>
+                      <span class="k">for</span> <span class="n">block_name</span> <span class="ow">in</span> <span class="n">block_names</span><span class="p">}</span>
+        <span class="k">return</span> <span class="n">block_sols</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,178 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Compartmental Systems &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="compartmental-systems">
+<h1>Compartmental Systems<a class="headerlink" href="#compartmental-systems" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="https://github.com/MPIBGC-TEE/CompartmentalSystems">CompartmentalSystems</a> is a
+Python package to deal with compartmental models of the form</p>
+<div class="math notranslate nohighlight">
+\[\frac{d}{dt}\,x(t) = B(x(t),t)\,x(t) + u(t).\]</div>
+<p>Since most computations are based on the state transition operator <span class="math notranslate nohighlight">\(\Phi\)</span> that solves</p>
+<div class="math notranslate nohighlight">
+\[\frac{d}{dt}\,\Phi(t,s) = B(t)\,\Phi(t,s),\quad \Phi(s,s) = \bf{I},\]</div>
+<p>nonlinear models need to be linearized in the first step. Then the package provides numerical computation of</p>
+<ul>
+<li><p>age</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>compartmental age densities</p></li>
+<li><p>system age densities</p></li>
+<li><p>compartmental age mean and higher order moments</p></li>
+<li><p>system age mean and higher order moments</p></li>
+<li><p>compartmental age quantiles</p></li>
+<li><p>system age quantiles</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>transit time</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>forward and backward transit time densities</p></li>
+<li><p>backward transit time mean and higher order moments</p></li>
+<li><p>forward and backward transit time quantiles</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+<div class="section" id="table-of-contents">
+<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+</div>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+</tbody>
+</table>
+</div>
+<div class="section" id="jupyter-notebook-examples">
+<h2>Jupyter notebook examples<a class="headerlink" href="#jupyter-notebook-examples" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p><a class="reference download internal" download="" href="_downloads/9357bd395d159f064d7a1e95380cefcf/nonl_gcm_3p.html"><code class="xref download docutils literal notranslate"><span class="pre">Analysis</span> <span class="pre">of</span> <span class="pre">a</span> <span class="pre">nonlinear</span> <span class="pre">global</span> <span class="pre">carbon</span> <span class="pre">cycle</span> <span class="pre">model</span> <span class="pre">(html)</span></code></a></p></li>
+<li><p><a class="reference download internal" download="" href="_downloads/cf077b7fe25254dbd7d1f0efc5afbae4/nonl_gcm_3p.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Analysis</span> <span class="pre">of</span> <span class="pre">a</span> <span class="pre">nonlinear</span> <span class="pre">global</span> <span class="pre">carbon</span> <span class="pre">cycle</span> <span class="pre">model</span> <span class="pre">(ipynb)</span></code></a></p>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference external" href="_downloads/nonl_gcm_3p.html">Analysis of a nonlinear global carbon cycle model (html)</a> <code class="xref download docutils literal notranslate"><span class="pre">.</span></code></p></li>
+<li><p><code class="xref download docutils literal notranslate"><span class="pre">Analysis</span> <span class="pre">of</span> <span class="pre">a</span> <span class="pre">nonlinear</span> <span class="pre">global</span> <span class="pre">carbon</span> <span class="pre">cycle</span> <span class="pre">model</span> <span class="pre">(ipynb)</span></code></p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div>
+<div class="section" id="important-note">
+<h2>Important Note<a class="headerlink" href="#important-note" title="Permalink to this headline">¶</a></h2>
+<p><span class="math notranslate nohighlight">\(B(t)=(b_{ij}(t))\)</span> is supposed to be a <em>compartmental matrix</em> for all times <span class="math notranslate nohighlight">\(t\)</span>:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(b_{ii}(t)\leq0\)</span> for all <span class="math notranslate nohighlight">\(i\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(b_{ij}(t)\geq0\)</span> for <span class="math notranslate nohighlight">\(i\neq j\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\sum\limits_{i=1}^d b_{ij}(t)\leq 0\)</span> for all <span class="math notranslate nohighlight">\(j\)</span></p></li>
+</ul>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

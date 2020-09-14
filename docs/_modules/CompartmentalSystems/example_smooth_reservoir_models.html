@@ -1,0 +1,188 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompartmentalSystems.example_smooth_reservoir_models &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for CompartmentalSystems.example_smooth_reservoir_models</h1><div class="highlight"><pre>
+<span></span><span class="c1"># this module provides some examples of reservoir systems that are used in the</span>
+<span class="c1"># tests to avoid global variables we put them in functions</span>
+<span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="n">symbols</span><span class="p">,</span> <span class="n">tanh</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="n">cos</span><span class="p">,</span> <span class="n">Matrix</span><span class="p">,</span> <span class="n">pi</span>
+
+<span class="kn">from</span> <span class="nn">.smooth_reservoir_model</span> <span class="kn">import</span> <span class="n">SmoothReservoirModel</span>
+
+
+<div class="viewcode-block" id="critics"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.example_smooth_reservoir_models.critics">[docs]</a><span class="k">def</span> <span class="nf">critics</span><span class="p">(</span><span class="n">symbs</span><span class="p">):</span>
+    <span class="n">t</span><span class="p">,</span> <span class="n">k_01</span><span class="p">,</span> <span class="n">k_10</span><span class="p">,</span> <span class="n">k_0o</span><span class="p">,</span> <span class="n">k_1o</span> <span class="o">=</span> <span class="n">symbs</span>
+    <span class="n">x_0</span><span class="p">,</span> <span class="n">x_1</span> <span class="o">=</span> <span class="n">symbols</span><span class="p">(</span><span class="s2">&quot;x_0 x_1&quot;</span><span class="p">)</span>
+    <span class="n">state_variables</span> <span class="o">=</span> <span class="p">[</span><span class="n">x_0</span><span class="p">,</span> <span class="n">x_1</span><span class="p">]</span>  <span class="c1"># order is important</span>
+    <span class="n">s1</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="n">s2</span> <span class="o">=</span> <span class="mi">20</span>
+    <span class="n">t1</span> <span class="o">=</span> <span class="mi">20</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="n">s1</span><span class="o">+</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">tanh</span><span class="p">(</span><span class="o">-</span><span class="n">k</span><span class="o">*</span><span class="p">(</span><span class="n">t</span><span class="o">-</span><span class="n">t1</span><span class="p">))</span><span class="o">*</span><span class="p">(</span><span class="n">s2</span><span class="o">-</span><span class="n">s1</span><span class="p">))</span>
+        <span class="p">}</span>
+    <span class="n">outputs</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="n">k_0o</span><span class="o">*</span><span class="n">x_0</span><span class="p">,</span>  <span class="c1"># output from pool 0</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="n">k_1o</span><span class="o">*</span><span class="n">x_1</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>  <span class="c1"># output from pool 0</span>
+        <span class="p">}</span>
+    <span class="n">internal_fluxes</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span> <span class="n">k_01</span><span class="o">*</span><span class="n">x_0</span>  <span class="c1"># flux from pool 0 to pool 1</span>
+        <span class="p">}</span>
+    <span class="n">time_symbol</span> <span class="o">=</span> <span class="n">t</span>
+    <span class="n">srm</span> <span class="o">=</span> <span class="n">SmoothReservoirModel</span><span class="p">(</span>
+        <span class="n">state_variables</span><span class="p">,</span>
+        <span class="n">time_symbol</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="p">,</span>
+        <span class="n">outputs</span><span class="p">,</span>
+        <span class="n">internal_fluxes</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">srm</span></div>
+
+
+<div class="viewcode-block" id="nonlinear_two_pool"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.example_smooth_reservoir_models.nonlinear_two_pool">[docs]</a><span class="k">def</span> <span class="nf">nonlinear_two_pool</span><span class="p">(</span><span class="n">symbs</span><span class="p">):</span>
+    <span class="n">t</span><span class="p">,</span> <span class="n">k_01</span><span class="p">,</span> <span class="n">k_10</span><span class="p">,</span> <span class="n">k_0o</span><span class="p">,</span> <span class="n">k_1o</span> <span class="o">=</span> <span class="n">symbs</span>
+    <span class="n">C_0</span><span class="p">,</span> <span class="n">C_1</span> <span class="o">=</span> <span class="n">symbols</span><span class="p">(</span><span class="s2">&quot;C_0 C_1&quot;</span><span class="p">)</span>
+    <span class="n">state_variables</span> <span class="o">=</span> <span class="p">[</span><span class="n">C_0</span><span class="p">,</span> <span class="n">C_1</span><span class="p">]</span>  <span class="c1"># order is important</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">+</span><span class="mi">2</span><span class="p">,</span>  <span class="c1"># input to pool 0</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">+</span><span class="mi">2</span>   <span class="c1"># input to pool 1</span>
+        <span class="p">}</span>
+    <span class="n">outputs</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="n">k_0o</span><span class="o">*</span><span class="n">C_0</span><span class="o">**</span><span class="mi">3</span><span class="p">,</span>  <span class="c1"># output from pool 0</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="n">k_1o</span><span class="o">*</span><span class="n">C_1</span><span class="o">**</span><span class="mi">3</span>   <span class="c1"># output from pool 0</span>
+        <span class="p">}</span>
+    <span class="n">internal_fluxes</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span> <span class="n">k_01</span><span class="o">*</span><span class="n">C_0</span><span class="o">*</span><span class="n">C_1</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>  <span class="c1"># flux from pool 0  to pool 1</span>
+        <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span> <span class="n">k_10</span><span class="o">*</span><span class="n">C_0</span><span class="o">*</span><span class="n">C_1</span>  <span class="c1"># flux from pool 1 to pool 0</span>
+        <span class="p">}</span>
+    <span class="n">time_symbol</span> <span class="o">=</span> <span class="n">t</span>
+    <span class="n">srm</span> <span class="o">=</span> <span class="n">SmoothReservoirModel</span><span class="p">(</span>
+        <span class="n">state_variables</span><span class="p">,</span>
+        <span class="n">time_symbol</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="p">,</span>
+        <span class="n">outputs</span><span class="p">,</span>
+        <span class="n">internal_fluxes</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">srm</span></div>
+
+
+<div class="viewcode-block" id="minimal"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.example_smooth_reservoir_models.minimal">[docs]</a><span class="k">def</span> <span class="nf">minimal</span><span class="p">(</span><span class="n">symbs</span><span class="p">):</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">symbs</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+    <span class="n">outputs</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="o">-</span><span class="n">x</span><span class="o">*</span><span class="n">k</span><span class="p">}</span>
+    <span class="n">internal_fluxes</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">mod</span> <span class="o">=</span> <span class="n">SmoothReservoirModel</span><span class="p">([</span><span class="n">x</span><span class="p">],</span> <span class="n">t</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">internal_fluxes</span><span class="p">)</span>
+
+    <span class="k">return</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="emanuel"><a class="viewcode-back" href="../../CompartmentalSystems.html#CompartmentalSystems.example_smooth_reservoir_models.emanuel">[docs]</a><span class="k">def</span> <span class="nf">emanuel</span><span class="p">(</span><span class="n">symbs</span><span class="p">):</span>
+    <span class="p">(</span><span class="n">u_1</span><span class="p">,</span> <span class="n">u_3</span><span class="p">,</span> <span class="n">x_1</span><span class="p">,</span> <span class="n">x_2</span><span class="p">,</span> <span class="n">x_3</span><span class="p">,</span> <span class="n">x_4</span><span class="p">,</span> <span class="n">x_5</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">F_1</span><span class="p">,</span> <span class="n">F_2</span><span class="p">,</span> <span class="n">F_3</span><span class="p">,</span> <span class="n">F_4</span><span class="p">,</span> <span class="n">F_5</span><span class="p">,</span>
+        <span class="n">F_21</span><span class="p">,</span> <span class="n">F_41</span><span class="p">,</span> <span class="n">F_42</span><span class="p">,</span> <span class="n">F_52</span><span class="p">,</span> <span class="n">F_43</span><span class="p">,</span> <span class="n">F_53</span><span class="p">,</span> <span class="n">F_54</span><span class="p">)</span> <span class="o">=</span> <span class="n">symbs</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">Matrix</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="n">x_1</span><span class="p">,</span> <span class="n">x_2</span><span class="p">,</span> <span class="n">x_3</span><span class="p">,</span> <span class="n">x_4</span><span class="p">,</span> <span class="n">x_5</span><span class="p">])</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="o">*</span><span class="n">pi</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">Matrix</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="n">u_1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">u_3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+
+    <span class="n">B</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="o">*</span><span class="n">pi</span><span class="o">*</span><span class="mi">2</span><span class="p">))</span><span class="o">*</span><span class="n">Matrix</span><span class="p">([[</span><span class="o">-</span><span class="n">F_1</span><span class="p">,</span>        <span class="mi">0</span><span class="p">,</span>       <span class="mi">0</span><span class="p">,</span>       <span class="mi">0</span><span class="p">,</span>        <span class="mi">0</span><span class="p">],</span>
+                                <span class="p">[</span><span class="n">F_21</span><span class="p">,</span>     <span class="o">-</span><span class="n">F_2</span><span class="p">,</span>       <span class="mi">0</span><span class="p">,</span>       <span class="mi">0</span><span class="p">,</span>        <span class="mi">0</span><span class="p">],</span>
+                                <span class="p">[</span>   <span class="mi">0</span><span class="p">,</span>        <span class="mi">0</span><span class="p">,</span>    <span class="o">-</span><span class="n">F_3</span><span class="p">,</span>       <span class="mi">0</span><span class="p">,</span>        <span class="mi">0</span><span class="p">],</span>  <span class="c1"># noqa</span>
+                                <span class="p">[</span><span class="n">F_41</span><span class="p">,</span>     <span class="n">F_42</span><span class="p">,</span>    <span class="n">F_43</span><span class="p">,</span>    <span class="o">-</span><span class="n">F_4</span><span class="p">,</span>        <span class="mi">0</span><span class="p">],</span>
+                                <span class="p">[</span>   <span class="mi">0</span><span class="p">,</span>     <span class="n">F_52</span><span class="p">,</span>    <span class="n">F_53</span><span class="p">,</span>    <span class="n">F_54</span><span class="p">,</span>     <span class="o">-</span><span class="n">F_5</span><span class="p">]])</span>  <span class="c1"># noqa</span>
+    <span class="n">srm</span> <span class="o">=</span> <span class="n">SmoothReservoirModel</span><span class="o">.</span><span class="n">from_B_u</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">srm</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
