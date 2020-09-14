@@ -29,19 +29,17 @@ nonlinear models need to be linearized in the first step. Then the package provi
     * forward and backward transit time quantiles
 
 
-Table of Contents
------------------
+Main modules
+------------
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
+(comprehensive list under Module Index)
 
 .. autosummary::
-   :toctree:
-   :recursive:
+  :toctree: _autosummary
 
-   ../../CompartmentalSystems
+  ~CompartmentalSystems.smooth_reservoir_model
+  ~CompartmentalSystems.smooth_model_run
+  ~CompartmentalSystems.start_distributions
 
 
 Jupyter notebook examples
@@ -51,10 +49,9 @@ Jupyter notebook examples
 * `Analysis of a nonlinear global carbon cycle model (html) <http://htmlpreview.github.io/?https://github.com/MPIBGC-TEE/CompartmentalSystems/blob/master/notebooks/nonl_gcm_3p/nonl\_gcm\_3p.html>`_
 * `Analysis of a nonlinear global carbon cycle model (ipynb) <https://github.com/MPIBGC-TEE/CompartmentalSystems/blob/master/notebooks/nonl_gcm_3p/nonl\_gcm\_3p.ipynb>`_
 
-        * :download:`Analysis of a nonlinear global carbon cycle model (html) <../../notebooks/nonl_gcm_3p/nonl_gcm_3p.html>`
-
-        * :download:`Analysis of a nonlinear global carbon cycle model (ipynb) <../../notebooks/nonl_gcm_3p/nonl_gcm_3p.ipynb>`
-        * `Analysis of a nonlinear global carbon cycle model (html) <_downloads/nonl_gcm_3p.html>`_ :download:`. <../notebooks/nonl_gcm_3p/nonl_gcm_3p.html>`
+.. * :download:`Analysis of a nonlinear global carbon cycle model (html) <../../notebooks/nonl_gcm_3p/nonl_gcm_3p.html>`
+.. * :download:`Analysis of a nonlinear global carbon cycle model (ipynb) <../../notebooks/nonl_gcm_3p/nonl_gcm_3p.ipynb>`
+.. * `Analysis of a nonlinear global carbon cycle model (html) <_downloads/nonl_gcm_3p.html>`_ :download:`. <../notebooks/nonl_gcm_3p/nonl_gcm_3p.html>`
         * :download:`Analysis of a nonlinear global carbon cycle model (ipynb) <../notebooks/nonl_gcm_3p/nonl_gcm_3p.ipynb>`
 
 
