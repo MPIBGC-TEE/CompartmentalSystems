@@ -47,10 +47,13 @@ Table of Contents
 Jupyter notebook examples
 -------------------------
 
-* :download:`Analysis of a nonlinear global carbon cycle model (html) <../../notebooks/nonl_gcm_3p/nonl_gcm_3p.html>`
 
-* :download:`Analysis of a nonlinear global carbon cycle model (ipynb) <../../notebooks/nonl_gcm_3p/nonl_gcm_3p.ipynb>`
+* `Analysis of a nonlinear global carbon cycle model (html) <http://htmlpreview.github.io/?https://github.com/MPIBGC-TEE/CompartmentalSystems/blob/master/notebooks/nonl_gcm_3p/nonl\_gcm\_3p.html>`_
+* `Analysis of a nonlinear global carbon cycle model (ipynb) <https://github.com/MPIBGC-TEE/CompartmentalSystems/blob/master/notebooks/nonl_gcm_3p/nonl\_gcm\_3p.ipynb>`_
 
+        * :download:`Analysis of a nonlinear global carbon cycle model (html) <../../notebooks/nonl_gcm_3p/nonl_gcm_3p.html>`
+
+        * :download:`Analysis of a nonlinear global carbon cycle model (ipynb) <../../notebooks/nonl_gcm_3p/nonl_gcm_3p.ipynb>`
         * `Analysis of a nonlinear global carbon cycle model (html) <_downloads/nonl_gcm_3p.html>`_ :download:`. <../notebooks/nonl_gcm_3p/nonl_gcm_3p.html>`
         * :download:`Analysis of a nonlinear global carbon cycle model (ipynb) <../notebooks/nonl_gcm_3p/nonl_gcm_3p.ipynb>`
 
