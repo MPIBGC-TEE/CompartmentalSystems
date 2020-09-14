@@ -16,6 +16,7 @@ help:
 publish:
 	@rm -rf $(PUBDIR)/* 
 	@cp -r $(BUILDDIR)/html/* $(PUBDIR)
+	@touch $(PUBDIR)/.nojekyll
 
 .PHONY: help Makefile publish 
 
