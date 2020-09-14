@@ -25,7 +25,9 @@ computations of
 
 ---
 
-[Documentation](http://compartmentalsystems.readthedocs.io/en/latest/)
+[Documentaion:](https://mpibgc-tee.github.io/CompartmentalSystems/).
+
+[comment]: <> ([Documentation on read the docs](http://compartmentalsystems.readthedocs.io/en/latest/))
 
 ---
 [Installation]
