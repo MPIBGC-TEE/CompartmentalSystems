@@ -1,7 +1,7 @@
 __pycache__/
 .ipynb_checkpoints
 .Rhistory
-CompartmentalSystems.egg-info/*
+src/CompartmentalSystems.egg-info/*
 tests/tmp/*
 tmp/*
 tests/bins/tmp/*
@@ -12,3 +12,6 @@ tests/bins/tmp/*
 *.ipynb
 /notebooks/PNAS/output_data_v1/*
 /notebooks/PNAS/output_data_v2/*
+docs/_sources/_autosummary/*
+build_docs/_build/*
+build_docs/source/_autosummary/*

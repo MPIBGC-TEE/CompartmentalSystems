@@ -35,6 +35,7 @@ Main modules
 (comprehensive list under Module Index)
 
 .. autosummary::
+  :template: autosummary/module.rst
   :toctree: _autosummary
 
   ~CompartmentalSystems.smooth_reservoir_model
