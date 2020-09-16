@@ -37,7 +37,8 @@ class PWCModelRun(ModelRun):
         start_values,
         times,
         disc_times,
-        func_dicts=None
+        func_dicts=None,
+        no_check=False
     ):
         if len(disc_times) == 0:
             raise(Error("No 'disc_times' given"))
@@ -51,19 +52,20 @@ class PWCModelRun(ModelRun):
             func_dicts = (dict()) * (len(disc_times)+1)
 
         # check parameter_dicts + func_dicts for completeness
-        for pd, fd in zip(parameter_dicts, func_dicts):
-            free_symbols = check_parameter_dict_complete(
-                model,
-                pd,
-                fd
-            )
-
-            if free_symbols != set():
-                raise(
-                    Error(
-                        "Missing parameter values for {}".format(free_symbols)
-                    )
+        if not no_check:
+            for pd, fd in zip(parameter_dicts, func_dicts):
+                free_symbols = check_parameter_dict_complete(
+                    model,
+                    pd,
+                    fd
                 )
+    
+                if free_symbols != set():
+                    raise(
+                        Error(
+                            "Missing parameter values for {}".format(free_symbols)
+                        )
+                    )
 
         self.model = model
         self.parameter_dicts = tuple(frozendict(pd) for pd in parameter_dicts)
@@ -257,6 +259,243 @@ class PWCModelRun(ModelRun):
         Bs = self.fake_discretized_Bs(data_times)
 
         return net_Rs_from_discrete_Bs_and_xs(Bs, xs)
+
+    @staticmethod
+    def moments_from_densities(max_order, densities):
+        """Compute the moments up to max_order of the given densities.
+
+        Args:
+            max_order (int): The highest order up to which moments are 
+                to be computed.
+            densities (numpy.array): Each entry is a Python function of one 
+                variable (age) that represents a probability density function.
+
+        Returns:
+            numpy.ndarray: moments x pools, containing the moments of the given 
+            densities.
+        """
+        n = densities(0).shape[0]
+
+        def kth_moment(k):
+            def kth_moment_pool(k, pool):
+                norm = quad(lambda a: densities(a)[pool], 0, np.infty)[0]
+                if norm == 0: return np.nan
+                return (quad(lambda a: a**k*densities(a)[pool], 0, np.infty)[0] 
+                            / norm)
+
+            return np.array([kth_moment_pool(k,pool) for pool in range(n)])
+
+        return np.array([kth_moment(k) for k in range(1, max_order+1)])
+
+#    def age_moment_vector_semi_explicit(
+#        self,
+#        order,
+#        start_age_moments=None,
+#        times=None
+#    ):
+#        """Compute the ``order`` th moment of the pool ages by a semi-explicit 
+#        formula.
+#
+#        This function bases on a semi-explicit formula such that no improper 
+#        integrals need to be computed.
+#        
+#        Args:
+#            order (int): The order of the age moment to be computed.
+#            start_age_moments (numpy.ndarray order x nr_pools, optional): 
+#                Given initial age moments up to the order of interest. 
+#                Can possibly be computed by :func:`moments_from_densities`. 
+#                Defaults to ``None`` assuming zero initial ages.
+#            times (numpy.array, optional): Time grid. 
+#                Defaults to ``None`` and the original time grid is used.
+#
+#        Returns:
+#            numpy.ndarray: len(times) x nr_pools.
+#            The ``order`` th pool age moments over the time grid.
+#        """
+#            
+#        if times is None: times = self.times
+#        t0 = times[0]
+#        n = self.nr_pools
+#        k = order
+#        
+#        if start_age_moments is None:
+#            start_age_moments = np.zeros((order, n))
+#
+#        start_age_moments[np.isnan(start_age_moments)] = 0
+#
+#        p2_sv = self._age_densities_2_single_value()
+#
+#        def binomial(n, k):
+#            return 1 if k==0 else (0 if n==0 
+#                                    else binomial(n-1, k) + binomial(n-1, k-1))
+#
+#        def Phi_x(t, t0, x):
+#            return np.matmul(self.Phi(t, t0), x)
+#
+#        def x0_a0_bar(j):
+#            if j == 0: 
+#                return self.start_values
+#                
+#            return np.array(self.start_values) * start_age_moments[j-1,:]
+#
+#        def both_parts_at_time(t):
+#            def part2_time(t):
+#                def part2_time_index_pool(ti, pool):
+#                    return quad(lambda a: a**k * p2_sv(a, t)[pool], 0, t-t0)[0]
+#
+#                return np.array([part2_time_index_pool(t, pool) 
+#                                    for pool in range(n)])
+#
+#            def part1_time(t):
+#                def summand(j):
+#                    return binomial(k, j)*(t-t0)**(k-j)*Phi_x(t, t0, x0_a0_bar(j))
+#
+#                return sum([summand(j) for j in range(k+1)])
+#
+#            return part1_time(t) + part2_time(t)
+#
+#        #soln = self.solve_old()
+#        soln = self.solve()
+#
+#        def both_parts_normalized_at_time_index(ti):
+#            t = times[ti]
+#            bp = both_parts_at_time(t)
+#            diag_values = np.array([x if x>0 else np.nan for x in soln[ti,:]])
+#            X_inv = np.diag(diag_values**(-1))
+#
+#            #return (np.mat(X_inv) * np.mat(bp).transpose()).A1
+#            return (np.matmul(X_inv, bp).transpose()).flatten()
+#
+#        return np.array([both_parts_normalized_at_time_index(ti) 
+#                            for ti in range(len(times))])
+        
+    def age_moment_vector(self, order, start_age_moments=None):
+        """Compute the ``order`` th pool age moment vector over the time grid 
+        by an ODE system.
+
+        This function solves an ODE system to obtain the pool age moments very
+        fast. If the system has empty pools at the beginning, the semi-explicit 
+        formula is used until all pools are non-empty. Then the ODE system 
+        starts.
+
+        Args:
+            order (int): The order of the pool age moments to be computed.
+            start_age_moments (numpy.ndarray order x nr_pools, optional): 
+                Given initial age moments up to the order of interest. 
+                Can possibly be computed by :func:`moments_from_densities`. 
+                Defaults to None assuming zero initial ages.
+
+        Returns:
+            numpy.ndarray: len(times) x nr_pools.
+            The ``order`` th pool age moments over the time grid.
+        """
+        n = self.nr_pools
+        times = self.times
+        
+        if start_age_moments is None:
+            start_age_moments = np.zeros((order, n))
+        
+        max_order=start_age_moments.shape[0]
+        if order>max_order:
+            raise Error("""
+                To solve the moment system with order{0}
+                start_age_moments up to (at least) the same order have to be
+                provided. But the start_age_moments.shape was
+                {1}""".format(order,start_age_moments.shape)
+            )
+        if order<max_order:
+            warning("""
+                Start_age_moments contained higher order values than needed.
+                start_age_moments order was {0} while the requested order was
+                {1}. This is no problem but possibly unintended. The higer
+                order moments will be clipped """.format(max_order,order)
+            )
+            # make sure that the start age moments are clipped to the order
+            # (We do not need start values for higher moments and the clipping
+            # avoids problems with recasting if higher order moments are given 
+            # by the user)
+            start_age_moments=start_age_moments[0:order,:]
+
+        if not (0 in self.start_values):
+            #ams = self._solve_age_moment_system_old(order, start_age_moments)
+            ams,_ = self._solve_age_moment_system(order, start_age_moments)
+            return ams[:,n*order:]
+        else:
+            raise(ValueError('At least one pool is empty at the beginning.'))
+#            # try to start adapted mean_age_system once no pool 
+#            # has np.nan as mean_age (empty pool)
+#
+#            # find last time index that contains an empty pool --> ti
+#            #soln = self.solve_old()
+#            soln = self.solve()
+#            ti = len(times)-1
+#            content = soln[ti,:]
+#            while not (0 in content) and (ti>0): 
+#                ti = ti-1
+#                content = soln[ti,:]
+#
+#            # not forever an empty pool there?
+#            if ti+1 < len(times):
+#                # compute moment with semi-explicit formula 
+#                # as long as there is an empty pool
+#                amv1_list = []
+#                amv1 = np.zeros((ti+2, order*n))
+#                for k in range(1, order+1):
+#                    amv1_k = self.age_moment_vector_semi_explicit(
+#                        k, start_age_moments, times[:ti+2])
+#                    amv1[:,(k-1)*n:k*n] = amv1_k
+#
+#                # use last values as start values for moment system 
+#                # with nonzero start values
+#                new_start_age_moments = amv1[-1,:].reshape((n, order))
+#                start_values = soln[ti+1]
+#                #ams = self._solve_age_moment_system_old(
+#                #    order, new_start_age_moments, times[ti+1:], start_values)
+#                ams,_ = self._solve_age_moment_system(
+#                    order, new_start_age_moments, start_values, times[ti+1:])
+#                amv2 = ams[:,n*order:]
+#
+#                # put the two parts together
+#                part1 = amv1[:,(order-1)*n:order*n][:-1]
+#                amv = np.ndarray((len(times), n))
+#                amv[:part1.shape[0], :part1.shape[1]] = part1
+#                amv[part1.shape[0]:, :amv2.shape[1]] = amv2
+#                return amv
+#            else:
+#                # always an empty pool there
+#                return self.age_moment_vector_semi_explicit(
+#                        order, start_age_moments)
+
+
+    # requires start moments <= order
+    def system_age_moment(self, order, start_age_moments=None):
+        """Compute the ``order`` th system age moment vector over the time grid 
+        by an ODE system.
+
+        The pool age moments are computed by :func:`age_moment_vector` and then 
+        weighted corresponding to the pool contents.
+
+        Args:
+            order (int): The order of the pool age moments to be computed.
+            start_age_moments (numpy.ndarray order x nr_pools, optional): 
+                Given initial age moments up to the order of interest. 
+                Can possibly be computed by :func:`moments_from_densities`. 
+                Defaults to None assuming zero initial ages.
+
+        Returns:
+            numpy.array: The ``order`` th system age moment over the time grid.
+        """
+        n = self.nr_pools
+        age_moment_vector = self.age_moment_vector(order, start_age_moments)
+        age_moment_vector[np.isnan(age_moment_vector)] = 0
+        soln = self.solve()
+         
+        total_mass = soln.sum(1) # row sum
+        total_mass[total_mass==0] = np.nan
+
+        system_age_moment = (age_moment_vector*soln).sum(1)/total_mass
+
+        return system_age_moment
 
 ###############################################################################
 

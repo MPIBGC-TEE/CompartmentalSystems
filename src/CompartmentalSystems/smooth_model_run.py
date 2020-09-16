@@ -980,7 +980,6 @@ class SmoothModelRun(ModelRun):
         n = self.nr_pools
         times = self.times
 
-        
         if start_age_moments is None:
             start_age_moments = np.zeros((order, n))
         

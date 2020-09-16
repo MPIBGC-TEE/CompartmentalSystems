@@ -144,7 +144,8 @@ class PWCModelRunFD(ModelRun):
             start_values,
             data_times,
             func_dicts=func_dicts,
-            disc_times=disc_times
+            disc_times=disc_times,
+            no_check=True
         )
         
         return cls(Bs, us, pwc_mr)
@@ -203,12 +204,12 @@ class PWCModelRunFD(ModelRun):
     def B_func(self, vec_sol_func=None):
         return self.pwc_mr.B_func(vec_sol_func)
 
-    def external_input_vector_func(self, cut_off=True):
-        return self.pwc_mr.external_input_vector_func(cut_off)
-
     @property
     def times(self):
         return self.data_times
+
+    def external_input_vector_func(self, cut_off=True):
+        return self.pwc_mr.external_input_vector_func(cut_off)
 
     def acc_gross_external_input_vector(self):
         return self.us*self.dts.reshape(-1, 1)
@@ -231,6 +232,32 @@ class PWCModelRunFD(ModelRun):
     def fake_discretized_Bs(self, data_times=None):
         return self.pwc_mr.fake_discretized_Bs(data_times)
 
+#    def age_moment_vector_semi_explicit(
+#        self,
+#        order,
+#        start_age_moments=None,
+#        times=None
+#    ):
+#        return self.pwc_mr.age_moment_vector_semi_explicit(
+#            order,
+#            start_age_moments
+#            times
+#        )
+
+    def age_moment_vector(self, order, start_age_moments = None):
+        return self.pwc_mr.age_moment_vector(
+            order,
+            start_age_moments
+        )
+
+    def system_age_moment(self, order, start_age_moments=None):
+        return self.pwc_mr.system_age_moment(
+            order,
+            start_age_moments
+        )
+
+
+#    moved to ModelDataObject
 #    def to_netcdf(self, mdo, file_path):
 #        """Return a netCDF dataset that contains stocks and fluxes."""
 #
@@ -511,9 +538,9 @@ class PWCModelRunFD(ModelRun):
 
         def is_constant_Bs(i, j):
             c = Bs[0, i, j]
-            diff = Bs[:, i, j] - c
+            diff = np.float64(Bs[:, i, j] - c)
 
-            if len(diff[diff == 0]) == len(Bs):
+            if len(diff[diff == 0.0]) == len(Bs):
                 res = True
             else:
                 res = False
@@ -542,9 +569,9 @@ class PWCModelRunFD(ModelRun):
 
         def is_constant_us(i):
             c = us[0, i]
-            diff = us[:, i] - c
+            diff = np.float64(us[:, i] - c)
 
-            if len(diff[diff == 0]) == len(us):
+            if len(diff[diff == 0.0]) == len(us):
                 res = True
             else:
                 res = False
