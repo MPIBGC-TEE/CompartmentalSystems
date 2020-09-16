@@ -9,6 +9,7 @@ SOURCEDIR     = source
 BUILDDIR      = _build
 AUTOSUMMARYDIR= _autosummary
 PUBDIR        = ../docs
+MODULESDIR    = ../src/CompartmentalSystems
 
 # Internal variables.
 ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(SPHINXOPTS)
@@ -22,6 +23,10 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/*
 	rm -rf $(SOURCEDIR)/$(AUTOSUMMARYDIR)/*
+
+.PHONY: api-doc
+api-doc:
+	sphinx-apidoc -o $(SOURCEDIR)/ --ext-autodoc $(MODULESDIR)
 
 .PHONY: html
 html:
