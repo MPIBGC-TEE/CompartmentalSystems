@@ -383,8 +383,8 @@ def start_age_moments_from_zero_initial_content(srm, max_order):
     """
     The function returns an array of shape (max_order, srm.nr_pools)
 
-    The values are set to numpy.nan to be consistent with other parts of the
-    code.
+    The values are set to 0 for use in the moment system, 
+    although they are actually undefined. 
     For instance the mean age (first moment) of an empty pool is undefined )
     Args:
         srm (SmoothReservoirModel) : The (symbolic) model
@@ -393,7 +393,8 @@ def start_age_moments_from_zero_initial_content(srm, max_order):
 
     """
     start_age_moments = np.empty((max_order, srm.nr_pools))
-    start_age_moments[:, :] = np.nan
+    # start_age_moments[:, :] = np.nan leads to problems when used as a startvalue
+    start_age_moments[:, :] = 0.0
 
     return start_age_moments
 
