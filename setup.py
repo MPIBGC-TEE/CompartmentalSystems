@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# vim:set ff=unix expandtab ts=4 sw=4:
+# vim:set ff=unix expandtab ts=4 sw=4 fileencoding=utf-8:
 from setuptools import setup, find_packages
 def readme():
     with open('README.md') as f:
