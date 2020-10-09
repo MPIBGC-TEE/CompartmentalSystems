@@ -48,6 +48,7 @@ class TestPWCModelRunFD(unittest.TestCase):
         xs, gross_Us, gross_Fs, gross_Rs =\
             smr.fake_gross_discretized_output(smr.times)
 
+        # integration_method = 'solve_ivp'
         pwc_mr_fd = PWCModelRunFD.from_gross_fluxes(
             smr.model.time_symbol,
             smr.times,
@@ -56,40 +57,143 @@ class TestPWCModelRunFD(unittest.TestCase):
             gross_Fs,
             gross_Rs
         )
-
-        self.assertTrue(
-            np.allclose(
-                smr.solve(),
-                pwc_mr_fd.solve(),
-                rtol=1e-03
+    
+        with self.subTest():
+            self.assertTrue(
+                np.allclose(
+                    smr.solve(),
+                    pwc_mr_fd.solve(),
+                    rtol=1e-03
+                )
             )
-        )
-
-        self.assertTrue(
-            np.allclose(
-                smr.acc_gross_external_input_vector(),
-                pwc_mr_fd.acc_gross_external_input_vector(),
-                rtol=1e-4
+    
+        with self.subTest():
+            self.assertTrue(
+                np.allclose(
+                    smr.acc_gross_external_input_vector(),
+                    pwc_mr_fd.acc_gross_external_input_vector(),
+                    rtol=1e-4
+                )
             )
-        )
-
-        self.assertTrue(
-            np.allclose(
-                smr.acc_gross_external_output_vector(),
-                pwc_mr_fd.acc_gross_external_output_vector(),
-                rtol=1e-4
+    
+        with self.subTest():
+            self.assertTrue(
+                np.allclose(
+                    smr.acc_gross_external_output_vector(),
+                    pwc_mr_fd.acc_gross_external_output_vector(),
+                    rtol=1e-4
+                )
             )
-        )
-
-        self.assertTrue(
-            np.allclose(
-                smr.acc_gross_internal_flux_matrix(),
-                pwc_mr_fd.acc_gross_internal_flux_matrix(),
-                rtol=1e-4
+    
+        with self.subTest():
+            self.assertTrue(
+                np.allclose(
+                    smr.acc_gross_internal_flux_matrix(),
+                    pwc_mr_fd.acc_gross_internal_flux_matrix(),
+                    rtol=1e-4
+                )
             )
-        )
+    
+        # integration_method = 'trapezoidal'
+        # nr_nodes = 3 result in insufficient accuracy
+        pwc_mr_fd = PWCModelRunFD.from_gross_fluxes(
+            smr.model.time_symbol,
+            smr.times,
+            xs[0, :],
+            gross_Us,
+            gross_Fs,
+            gross_Rs,
+            integration_method='trapezoidal',
+            nr_nodes=3
+            )
+    
+        with self.subTest():
+            self.assertFalse(
+                np.allclose(
+                    smr.solve(),
+                    pwc_mr_fd.solve(),
+                    rtol=1e-03
+                )
+            )
+    
+        with self.subTest():
+            self.assertTrue(
+                np.allclose(
+                    smr.acc_gross_external_input_vector(),
+                    pwc_mr_fd.acc_gross_external_input_vector(),
+                    rtol=1e-04
+                )
+            )
+    
+        with self.subTest():
+            self.assertFalse(
+                np.allclose(
+                    smr.acc_gross_external_output_vector(),
+                    pwc_mr_fd.acc_gross_external_output_vector(),
+                    rtol=1e-04
+                )
+            )
+    
+        with self.subTest():
+            self.assertFalse(
+                np.allclose(
+                    smr.acc_gross_internal_flux_matrix(),
+                    pwc_mr_fd.acc_gross_internal_flux_matrix(),
+                    rtol=1e-04
+                )
+            )
 
                 
+        # integration_method = 'trapezoidal'
+        # nr_nodes = 3 result in insufficient accuracy
+        pwc_mr_fd = PWCModelRunFD.from_gross_fluxes(
+            smr.model.time_symbol,
+            smr.times,
+            xs[0, :],
+            gross_Us,
+            gross_Fs,
+            gross_Rs,
+            integration_method='trapezoidal',
+            nr_nodes=151
+            )
+    
+        with self.subTest():
+            self.assertTrue(
+                np.allclose(
+                    smr.solve(),
+                    pwc_mr_fd.solve(),
+                    rtol=1e-03
+                )
+            )
+    
+        with self.subTest():
+            self.assertTrue(
+                np.allclose(
+                    smr.acc_gross_external_input_vector(),
+                    pwc_mr_fd.acc_gross_external_input_vector(),
+                    rtol=1e-04
+                )
+            )
+    
+        with self.subTest():
+            self.assertTrue(
+                np.allclose(
+                    smr.acc_gross_external_output_vector(),
+                    pwc_mr_fd.acc_gross_external_output_vector(),
+                    rtol=1e-04
+                )
+            )
+    
+        with self.subTest():
+            self.assertTrue(
+                np.allclose(
+                    smr.acc_gross_internal_flux_matrix(),
+                    pwc_mr_fd.acc_gross_internal_flux_matrix(),
+                    rtol=1e-04
+                )
+            )
+
+
 ###############################################################################
 
 

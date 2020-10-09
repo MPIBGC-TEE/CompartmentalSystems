@@ -2,7 +2,7 @@ import numpy as np
 
 from numpy.linalg import pinv
 from scipy.linalg import expm
-from scipy.optimize import root
+from scipy.optimize import root, least_squares
 from sympy import Matrix, symbols, zeros, Symbol
 from tqdm import tqdm
 
@@ -158,20 +158,29 @@ class PWCModelRunFD(ModelRun):
         start_values,
         gross_Us,
         gross_Fs,
-        gross_Rs
+        gross_Rs,
+#        xs,
+        integration_method='solve_ivp',
+        nr_nodes=None
     ):
 
         print('reconstructing us')
         dts = np.diff(data_times).astype(np.float64)
         us = gross_Us / dts.reshape(-1, 1)
 
-        print('reconstructing Bs')
+        print(
+            'reconstructing Bs, using integration_method =',
+            integration_method
+        )
         Bs = cls.reconstruct_Bs(
             data_times,
             start_values,
             gross_Us,
             gross_Fs,
-            gross_Rs
+            gross_Rs,
+#            xs,
+            integration_method,
+            nr_nodes
         )
 
         return cls.from_Bs_and_us(
@@ -315,11 +324,32 @@ class PWCModelRunFD(ModelRun):
 #
 
     @classmethod
-    def reconstruct_B_surrogate(cls, dt, x0, gross_U, gross_F, gross_R, B0):
+    def reconstruct_B_surrogate(
+        cls,
+        dt,
+        x0,
+        gross_U,
+        gross_F,
+        gross_R,
+        B0,
+        integration_method,
+        nr_nodes
+    ):
         # reconstruct a B that meets F and r possibly well,
         # B0 is some initial guess for the optimization
         nr_pools = len(x0)
         gross_u = gross_U/dt
+
+        def x_trapz(tr_times, B):
+            def x_of_tau(tau):
+                M = expm(tau*B)
+#                x = M @ x0 + inv(B) @ (-np.identity(nr_pools)+M) @ gross_u
+                x = M @ x0 + pinv(B) @ (-np.identity(nr_pools)+M) @ gross_u
+                return x
+    
+            xs = np.array(list(map(x_of_tau, tr_times)))
+#            x1 = x(tr_times[-1])
+            return np.trapz(xs, tr_times, axis=0)#, x1
 
         def x_tau(tau, B):
             M = expm(tau*B)
@@ -352,11 +382,21 @@ class PWCModelRunFD(ModelRun):
 
         # function to minimize difference vector of
         # internal fluxes F and outfluxes r
-        def g_tr(pars):
+        def g_tr(pars, integration_method, nr_nodes):
             B = pars_to_matrix(pars)
-#            tr_times = np.linspace(0, dt, 11)
-            tr_times = (0, dt)
-            int_x = integrate_x(tr_times, B)
+
+            if integration_method == 'solve_ivp':
+                tr_times = (0, dt)
+                int_x = integrate_x(tr_times, B)
+            elif integration_method == 'trapezoidal':
+                if nr_nodes is None:
+                    raise PWCModelRunFDError(
+                        'For trapezoidal rule nr_nodes is obligatory'
+                    )
+                tr_times = np.linspace(0, dt, nr_nodes)
+                int_x = x_trapz(tr_times, B)
+            else:
+                raise PWCModelRunFDError('Invalid integration_method')
 
             res1_int = gross_F.reshape((nr_pools**2,))[int_indices.tolist()]
             res2_int = pars[:len(int_indices)] \
@@ -369,17 +409,32 @@ class PWCModelRunFD(ModelRun):
             res_ext = np.abs(res1_ext-res2_ext)
 
             res = np.append(res_int, res_ext)
+
+#            print(np.max(res))
+#            print('B', np.max(B))
+#            print(B)
+#            if np.max(res) < 1e-04:
+#                res = 0.0*res
+#            print(res)
+
             return res
 
         # wrapper around g_tr that keeps parameter within boundaries
-        def constrainedFunction(x, f, lower, upper, minIncr=0.001):
+        def constrainedFunction(
+                x,
+                f,
+                lower,
+                upper,
+                integration_method,
+                nr_nodes,
+                minIncr=0.001):
             x = np.asarray(x)
             lower = np.asarray(lower)
             upper = np.asarray(upper)
 
             xBorder = np.where(x < lower, lower, x)
             xBorder = np.where(x > upper, upper, xBorder)
-            fBorder = f(xBorder)
+            fBorder = f(xBorder, integration_method, nr_nodes)
             distFromBorder = (
                 np.sum(np.where(x < lower, lower-x, 0.))
                 + np.sum(np.where(x > upper, x-upper, 0.))
@@ -418,17 +473,29 @@ class PWCModelRunFD(ModelRun):
         y = root(
             constrainedFunction,
             x0=pars0,
-            args=(g_tr, lbounds, ubounds)
+            args=(g_tr, lbounds, ubounds, integration_method, nr_nodes),
         )
 
 #        y = least_squares(
 #            g_tr,
 #            x0      = pars0,
 #            verbose = 2,
-##            xtol    = 1e-03,
+#            xtol    = 1000,
 #            bounds  = (lbounds, ubounds)
 #        )
 
+#        import scipy.optimize as opt
+#
+#        bounds = [(lbounds[i], ubounds[i]) for i in range(len(lbounds))]
+#        y = opt.minimize(
+#            g_tr,
+#            x0=pars0,
+#            bounds=bounds,
+#            options={'disp': True},
+#            method='trust-constr'
+#        )
+
+#        print('y', y)
         if not y.success:
             raise(PWCModelRunFDError(y.message))
 
@@ -438,7 +505,17 @@ class PWCModelRunFD(ModelRun):
         return B, x1
 
     @classmethod
-    def reconstruct_Bs(cls, times, start_values, gross_Us, gross_Fs, gross_Rs):
+#    def reconstruct_Bs(cls, times, start_values, gross_Us, gross_Fs, gross_Rs, xs):
+    def reconstruct_Bs(
+        cls,
+        times,
+        start_values,
+        gross_Us,
+        gross_Fs,
+        gross_Rs,
+        integration_method='solve_ivp',
+        nr_nodes=None
+    ):
         nr_pools = len(start_values)
 
         def guess_B0(dt, x_approx, F, r):
@@ -474,6 +551,8 @@ class PWCModelRunFD(ModelRun):
                 gross_Fs[k],
                 gross_Rs[k],
                 B0,
+                integration_method,
+                nr_nodes
             )
 
             Bs[k, :, :] = B
