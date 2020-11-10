@@ -496,8 +496,8 @@ class PWCModelRunFD(ModelRun):
 #        )
 
 #        print('y', y)
-        if not y.success:
-            raise(PWCModelRunFDError(y.message))
+#        if not y.success:
+#            raise(PWCModelRunFDError(y.message))
 
         B = pars_to_matrix(y.x)
 
