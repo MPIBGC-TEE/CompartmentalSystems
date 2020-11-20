@@ -9,7 +9,8 @@ from tqdm import tqdm
 from .model_run import ModelRun
 from .pwc_model_run import PWCModelRun
 from .smooth_reservoir_model import SmoothReservoirModel
-from .myOdeResult import solve_ivp_pwc
+#from .myOdeResult import solve_ivp_pwc
+from scipy.integrate import solve_ivp
 # from bgc_md2.Variable import Variable
 
 ###############################################################################
@@ -165,8 +166,10 @@ class PWCModelRunFD(ModelRun):
     ):
 
         print('reconstructing us')
-        dts = np.diff(data_times).astype(np.float64)
-        us = gross_Us / dts.reshape(-1, 1)
+        us = cls.reconstruct_us(
+            data_times,
+            gross_Us
+        )
 
         print(
             'reconstructing Bs, using integration_method =',
@@ -322,6 +325,14 @@ class PWCModelRunFD(ModelRun):
 #        return smr
 #
 #
+    
+    @classmethod
+    def reconstruct_us(cls, data_times, gross_Us):
+        dts = np.diff(data_times).astype(np.float64)
+        us = gross_Us / dts.reshape(-1, 1)
+        
+        return us
+
 
     @classmethod
     def reconstruct_B_surrogate(
@@ -362,10 +373,16 @@ class PWCModelRunFD(ModelRun):
 
 #            xs = np.array(list(map(x, tr_times))), x(tr_times[-1])
 #            int_x np.trapz(xs, tr_times, axis=0)
-            int_x = solve_ivp_pwc(
-                rhss=[rhs],
+#            int_x = solve_ivp_pwc(
+#                rhss=[rhs],
+#                t_span=(tr_times[0], tr_times[-1]),
+#                y0=np.zeros_like(x0)
+#            ).y[..., -1]
+            int_x = solve_ivp(
+                rhss=rhs,
                 t_span=(tr_times[0], tr_times[-1]),
-                y0=np.zeros_like(x0)
+                y0=np.zeros_like(x0),
+                method="Radau"
             ).y[..., -1]
             return int_x
 
