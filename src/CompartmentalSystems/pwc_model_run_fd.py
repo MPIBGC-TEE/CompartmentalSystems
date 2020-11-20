@@ -379,7 +379,7 @@ class PWCModelRunFD(ModelRun):
 #                y0=np.zeros_like(x0)
 #            ).y[..., -1]
             int_x = solve_ivp(
-                rhss=rhs,
+                rhs,
                 t_span=(tr_times[0], tr_times[-1]),
                 y0=np.zeros_like(x0),
                 method="Radau"
