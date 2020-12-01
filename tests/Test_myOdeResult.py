@@ -142,7 +142,7 @@ class TestmyOdeResult(InDirTest):
             ls='--'
         )
         ax.legend()
-        fig.savefig('inaccuracies.pdf', tight_layout=True)
+        fig.savefig('inaccuracies.pdf')#, tight_layout=True)
 
     def test_sub_t_spans(self):
         disc_times = np.array([2, 3, 4])

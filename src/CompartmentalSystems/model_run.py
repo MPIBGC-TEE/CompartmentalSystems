@@ -39,7 +39,7 @@ def plot_attributes(mrs, file_name):
                     )
                 ax.legend()
 
-    fig.savefig(file_name, tight_layout=True)
+    fig.savefig(file_name)#, tight_layout=True)
 
 
 def plot_stocks_and_fluxes(mrs, file_name, labels=None):
@@ -140,7 +140,7 @@ def plot_stocks_and_fluxes(mrs, file_name, labels=None):
                         ax.legend()
 
         axs[nr_pools, 0].set_visible(False)
-        fig.savefig(file_name, tight_layout=True)
+        fig.savefig(file_name)#, tight_layout=True)
 
 
 class ModelRun(metaclass=ABCMeta):
