@@ -1,6 +1,6 @@
 from sympy import Matrix
 from numbers import Number
-from CompartmentalSystems.helpers_reservoir import  numsol_symbolic_system ,numerical_function_from_expression ,make_cut_func_set,f_of_t_maker
+from CompartmentalSystems.helpers_reservoir import  numsol_symbolical_system, numerical_function_from_expression ,make_cut_func_set,f_of_t_maker
 from copy import copy,deepcopy
 from testinfrastructure.helpers  import pe
 from scipy.interpolate import interp1d, UnivariateSpline
@@ -43,16 +43,16 @@ class BastinModelRun():
 
     def solve(self):
         bm=self.bm
-        soln = numsol_symbolic_system(
+        soln = numsol_symbolical_system(
             bm.state_vector,
             bm.time_symbol,
             bm.F,
-            self.par_dict,
-            self.func_dict,
+            [self.par_dict],
+            [self.func_dict],
             self.start_values, 
             self.times
         )
-        return soln
+        return soln[0]
     def _flux_funcs(self, expr_dict):
         bm = self.bm
         srm=bm.srm
@@ -115,7 +115,7 @@ class BastinModelRun():
         """
         return self._flux_funcs(self.bm.srm.internal_fluxes)
 
-    def output_flux_funcs(self):
+    def external_output_flux_funcs(self):
         """Return a dictionary of the external output fluxes.
         
         The resulting functions base on sol_funcs and are linear interpolations.

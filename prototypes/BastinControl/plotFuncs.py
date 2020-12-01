@@ -8,9 +8,8 @@ import matplotlib.pyplot as plt
 from testinfrastructure.helpers  import pe
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
-from CompartmentalSystems.helpers_reservoir import  numsol_symbolic_system ,numerical_function_from_expression
 from testinfrastructure.helpers  import pe
-from Classes import BastinModel,BastinModelRun
+from Classes import BastinModel, BastinModelRun
 import drivers #contains the fossil fuel interpolating functions
 from string import Template
 from limiters import cubic,deceleration,half_saturation,atan_ymax
@@ -123,6 +122,7 @@ def panel_one(limited_srm,bm, par_dict_v1, control_start_values, times, func_dic
     soln_uncontrolled = limited_smr.solve()
 
     soln_controlled = bmr.solve()
+
     fig=plt.figure(figsize=(10,10))
     #fig1.title('Total carbon'+title_suffs[version])
     ax1=fig.add_subplot(2,1,1)
@@ -362,7 +362,7 @@ def compare_model_runs(mr_dict,u_A_func):
         ax2.set_title("solutions")
         eifl=mr.sol_funcs()
         for i,f in enumerate(eifl):
-            values=f(times)
+            values=[f(t) for t in times]
             ax2.plot(times,values,label=str(i))
         ax2.legend(loc=0)
 
@@ -371,7 +371,7 @@ def compare_model_runs(mr_dict,u_A_func):
         eifl=mr.external_input_flux_funcs()
         for key in eifl.keys():
             f=eifl[key]
-            values=f(times)
+            values=[f(t) for t in times]
             ax3.plot(times,values,label=key)
         ax3.legend(loc=0)
 
@@ -381,15 +381,19 @@ def compare_model_runs(mr_dict,u_A_func):
         ax4.set_title("internal fluxes")
         ifl=mr.internal_flux_funcs()
         for key,fluxFunc in ifl.items():
-            ax4.plot(times,fluxFunc(times),label=key)
+            ax4.plot(
+                times,
+                [fluxFunc(t) for t in times],
+                label=key
+            )
         ax4.legend(loc=0)
         
         ax5=subplotArr[5,ind]
         ax5.set_title("external outputs")
-        ofl=mr.output_flux_funcs()
+        ofl=mr.external_output_flux_funcs()
         for key in ofl.keys():
             f=ofl[key]
-            values=f(times)
+            values=[f(t) for t in times]
             ax5.plot(times,values,label=key)
         ax5.legend(loc=0)
 

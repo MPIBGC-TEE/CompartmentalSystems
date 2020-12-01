@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
-from CompartmentalSystems.helpers_reservoir import  numsol_symbolic_system ,numerical_function_from_expression
+#from CompartmentalSystems.helpers_reservoir import  numsol_symbolical_system, numerical_function_from_expression
 from testinfrastructure.helpers  import pe
 
 # load other files in the same directory that support this script

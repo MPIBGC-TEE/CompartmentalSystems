@@ -15,6 +15,7 @@ from sympy import gcd, lambdify, DiracDelta, solve, Matrix, diff
 from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
+from collections.abc import Iterable
 from .BlockOde import BlockOde
 from .myOdeResult import solve_ivp_pwc
 
@@ -315,6 +316,9 @@ def numsol_symbolical_system(
     times,
     disc_times=()
 ):
+    assert(isinstance(parameter_dicts, Iterable))
+    assert(isinstance(func_dicts, Iterable))
+
     nr_pools = len(state_vector)
     t_min = times[0]
     t_max = times[-1]
