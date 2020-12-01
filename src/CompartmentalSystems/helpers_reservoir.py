@@ -181,7 +181,6 @@ def numerical_function_from_expression(expr, tup, parameter_dict, func_set):
     cut_func_set = make_cut_func_set(func_set)
 #    expr_par=expr.subs(parameter_dict)
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
-
     def expr_func_safe_0_over_0(*val):
         with np.errstate(invalid='raise'):
             try:
@@ -215,7 +214,12 @@ def numerical_rhs(
     # accepts array instead of the separate arguments for the states)
     def num_rhs(t, X):
         # we need the arguments to be numpy arrays to be able to catch 0/0
-        Y = (np.array([x]) for x in X)
+        # Holger: I made 0/0 being caught by a subfunction in 
+        # numerical_function_from_expression
+#        Y = (np.array([x]) for x in X) # Markus' version, lead to 
+#       deprecation warnings, so I rewrote it to (Holger):
+        Y = np.array([x for x in X]) # 
+
         Fval = FL(t, *Y)
         return Fval.reshape(X.shape,)
 

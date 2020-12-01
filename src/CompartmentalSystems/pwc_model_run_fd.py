@@ -165,16 +165,15 @@ class PWCModelRunFD(ModelRun):
         nr_nodes=None
     ):
 
-        print('reconstructing us')
         us = cls.reconstruct_us(
             data_times,
             gross_Us
         )
 
-        print(
-            'reconstructing Bs, using integration_method =',
-            integration_method
-        )
+#        print(
+#            'reconstructing Bs, using integration_method =',
+#            integration_method
+#        )
         Bs = cls.reconstruct_Bs(
             data_times,
             start_values,
@@ -533,6 +532,13 @@ class PWCModelRunFD(ModelRun):
         integration_method='solve_ivp',
         nr_nodes=None
     ):
+        print(
+            "reconstructing Bs using 'integration_method' =",
+            integration_method,
+            "and 'nr_nodes' =",
+            nr_nodes
+        )
+
         nr_pools = len(start_values)
 
         def guess_B0(dt, x_approx, F, r):
