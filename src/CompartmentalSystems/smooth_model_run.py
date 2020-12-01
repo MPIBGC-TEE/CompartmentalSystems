@@ -1868,7 +1868,7 @@ class SmoothModelRun(ModelRun):
             make_ax_nice(
                 ax, "$" + latex(self.model.state_variables[pool]) + "$")
 
-        fig.tight_layout()
+#        fig.tight_layout()
    
  
     def plot_phase_plane(self, ax, i, j, fontsize = 10):
@@ -1935,7 +1935,7 @@ class SmoothModelRun(ModelRun):
                         ax.get_xaxis().set_ticks([])
                         ax.get_yaxis().set_ticks([])
 
-            fig.tight_layout()
+#            fig.tight_layout()
     
 
     ## fluxes ##
@@ -1975,7 +1975,7 @@ class SmoothModelRun(ModelRun):
             ax.set_ylabel(self._add_flux_unit('flux'), fontsize=fontsize)
             i += 1
 
-        fig.tight_layout()
+#        fig.tight_layout()
 
 
     def plot_external_output_fluxes(self, fig, fontsize = 10):
@@ -2010,7 +2010,7 @@ class SmoothModelRun(ModelRun):
             ax.set_ylabel(self._add_flux_unit('flux'), fontsize=fontsize)
             i += 1
 
-        fig.tight_layout()
+#        fig.tight_layout()
                 
     
     def plot_external_input_fluxes(self, fig, fontsize = 10):
@@ -2044,7 +2044,7 @@ class SmoothModelRun(ModelRun):
             ax.set_ylabel(self._add_flux_unit('flux'), fontsize=fontsize)
             i += 1
 
-        fig.tight_layout()
+#        fig.tight_layout()
 
 
     # means # 
@@ -2091,7 +2091,7 @@ class SmoothModelRun(ModelRun):
             ax.plot(times, ma_vector[:,i])
             make_ax_nice(ax, "$" + latex(states[i]) + "$")
                 
-        fig.tight_layout()
+#        fig.tight_layout()
 
 
     def plot_mean_backward_transit_time(self, ax, start_mean_ages):
