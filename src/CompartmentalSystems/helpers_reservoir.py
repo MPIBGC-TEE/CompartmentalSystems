@@ -1006,44 +1006,45 @@ def densities_to_distributions(
 
         return distributions    
 
-def pool_wise_bin_contents_from_densities_and_index(
+def pool_wise_bin_densities_from_smooth_densities_and_index(
         densities: Callable[[float],np.ndarray],
         nr_pools: int,
         dt: float,
     )->Callable[[int],np.ndarray]:
     def content(ai:int)->np.ndarray:
+        da = dt
         return np.array(
             [
                 quad(
                     lambda a:densities(a)[i],
-                    ai*dt,
-                    (ai+1)*dt
-                )[0] / dt
+                    ai*da,
+                    (ai+1)*da
+                )[0] / da
                 for i in range(nr_pools)
             ]
         )
     return content     
 
-def pool_wise_bin_contents_from_densities_and_indecies(
+def pool_wise_bin_densities_from_smooth_densities_and_indices(
         densities: Callable[[float],np.ndarray],
         nr_pools: int,
         dt: float,
     )->Callable[[np.ndarray],np.ndarray]:
-    contents_single = pool_wise_bin_contents_from_densities_and_index(
+    bin_density = pool_wise_bin_densities_from_smooth_densities_and_index(
                 densities,
                 nr_pools,
                 dt
             )
     # vectorize it
-    def contents(age_bin_indices: np.ndarray)->np.ndarray:
+    def bin_densities(age_bin_indices: np.ndarray)->np.ndarray:
         return np.stack(
             [
-                contents_single(ai)
+                bin_density(ai)
                 for ai in age_bin_indices
             ],
             axis=1
         )
-    return contents
+    return bin_densities
 
 def negative_indicies_to_zero(
         f: Callable[[np.ndarray],np.ndarray]

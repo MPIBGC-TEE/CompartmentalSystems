@@ -36,10 +36,11 @@ class TestDiscreteModelRun(InDirTest):
             outputs,
             internal_fluxes
         )
-
+        nr_bins = 20
+        nr_bins_fine = 80
         t_max = 2*np.pi
-        times = np.linspace(0, t_max, 21)
-        times_fine = np.linspace(0, t_max, 81)
+        times = np.linspace(0, t_max, nr_bins + 1)
+        times_fine = np.linspace(0, t_max, nr_bins_fine + 1)
         x0 = np.float(10)
         start_values = np.array([x0, x0])
         parameter_dict = {
@@ -60,7 +61,7 @@ class TestDiscreteModelRun(InDirTest):
         xs_fine, gross_Us_fine, gross_Fs_fine, gross_Rs_fine \
             = smr_fine.fake_gross_discretized_output(times_fine)
 
-        dmr_from_pwc = DMR.from_SmoothModelRun(smr)
+        dmr_from_pwc = DMR.from_SmoothModelRun(smr, nr_bins)
         dmr_from_fake_net_data = DMR.reconstruct_from_fluxes_and_solution(
             times,
             xs,
@@ -141,16 +142,16 @@ class TestDiscreteModelRun(InDirTest):
 #            ],
 #            'plot.pdf'
 #        )
-        plot_stocks_and_fluxes(
-            [
-                smr,
-                # dmr_from_fake_net_data,
-                # dmr_from_pwc,
-                dmr_from_fake_gross_data_ff,
-                dmr_from_fake_gross_data_ff_fine
-            ],
-            'stocks_and_fluxes.pdf'
-        )
+#        plot_stocks_and_fluxes(
+#            [
+#                smr,
+#                # dmr_from_fake_net_data,
+#                # dmr_from_pwc,
+#                dmr_from_fake_gross_data_ff,
+#                dmr_from_fake_gross_data_ff_fine
+#            ],
+#            'stocks_and_fluxes.pdf'
+#        )
 #        plot_stocks_and_gross_fluxes(
 #            [
 #                smr,
@@ -186,7 +187,10 @@ class TestDiscreteModelRun(InDirTest):
         nt = 10
         DMR.from_SmoothModelRun(smr, nt)
 
-    @unittest.skip('testing against an unspecified use case of smoot_model_run')
+    @unittest.skip(
+        '''the reference solution is not implemented 
+        in smooth_model_run yet'''
+    )
     def test_pool_age_densities_1(self):
         # two-dimensional
         C_0, C_1 = symbols('C_0 C_1')
@@ -216,10 +220,6 @@ class TestDiscreteModelRun(InDirTest):
         smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         dmr = DMR.from_SmoothModelRun(smr,max_bin_nr)
 
-        start_age_densities = lambda a: (1 if a == 0 else 0) * start_values
-        start_age_distributions = lambda a: (1 if a >= 0 else 0 ) * start_values
-        p_smr = smr.pool_age_densities_func(start_age_densities)
-        p_smr2 = smr.pool_age_densities_func_from_start_age_distributions(start_age_distributions)
 
         def start_age_distributions_of_bins(age_bin_indices):
             # - in the continuous case this the value is the
@@ -229,7 +229,7 @@ class TestDiscreteModelRun(InDirTest):
             #   user as the difference of the
             #   distribution function between F(dt*ai)-F(dt*(ai-1))
             #   as it the case here where the whoe initial mass
-            #   is in the first abe bin (in python ia ==0)
+            #   is in the first age bin (in python ia ==0)
             nr_pools = len(start_values)
             return np.stack(
                 [
@@ -242,6 +242,15 @@ class TestDiscreteModelRun(InDirTest):
                 ]
             )
         p_dmr = dmr.pool_age_densities_func(start_age_distributions_of_bins)
+        
+        # To test this localized distribution against the smooth model run
+        # we would have to generalize the smoth model run class to accept
+        # distributions or distribution differences since no density
+        # exists for these cases.
+        start_age_distributions = lambda a: (1 if a >= 0 else 0 ) * start_values
+        # the next function is not implemented yet but would be the appropriate
+        # tool to test a 
+        p_smr2 = smr.pool_age_densities_func_from_start_age_distributions(start_age_distributions)
         
         # we can choose arbitrary age bin indices
         # which are the arguments for the discrete computations
@@ -266,6 +275,10 @@ class TestDiscreteModelRun(InDirTest):
             )
         )
 
+    @unittest.skip
+    def test_backward_transit_time_quantile_from_density(self):
+        raise
+
     def test_pool_age_densities_2(self):
         # two-dimensional
         C_0, C_1 = symbols('C_0 C_1')
@@ -284,7 +297,7 @@ class TestDiscreteModelRun(InDirTest):
         )
 
         start_values = np.array([5, 3])
-        dt = 1e-6
+        dt = 1e-09
         max_bin_nr = 10
 
         # The times array is 1 longer than the array of bin indices
@@ -314,38 +327,38 @@ class TestDiscreteModelRun(InDirTest):
         
         # now create a function that yields the mass in every pool
         # as a function of the age bin index
-        def start_age_distributions_of_bin(ai: np.int64)->np.ndarray:
-            da  = dt
-            return np.array(
-                [
-                    quad(
-                        lambda a:start_age_densities(a)[i],
-                        ai*da,
-                        (ai+1)*da
-                    )[0]/da
-                    for i in range(dmr.nr_pools)
-                ]
-            )
-
-        # and vectorize it for an array of indices
-        def start_age_distributions_of_bins(
-                age_bin_indices: List[int]
-            )->np.ndarray:
-            return np.stack(
-                [
-                    start_age_distributions_of_bin(ai)
-                    for ai in age_bin_indices
-                ],
-                axis=1
-            )
-        #start_age_distributions_of_bins = hr.negative_indicies_to_zero(
-        #    hr.pool_wise_bin_contents_from_densities_and_indecies(
-        #        start_age_densities,
-        #        dmr.nr_pools,
-        #        dt
+        #def start_age_distributions_of_bin(ai: np.int64)->np.ndarray:
+        #    da  = dt
+        #    return np.array(
+        #        [
+        #            quad(
+        #                lambda a:start_age_densities(a)[i],
+        #                ai*da,
+        #                (ai+1)*da
+        #            )[0] / da
+        #            for i in range(dmr.nr_pools)
+        #        ]
         #    )
-        #)
-        p_dmr = dmr.pool_age_densities_func(start_age_distributions_of_bins)
+
+        ## and vectorize it for an array of indices
+        #def start_age_densities_of_bins(
+        #        age_bin_indices: List[int]
+        #    )->np.ndarray:
+        #    return np.stack(
+        #        [
+        #            start_age_distributions_of_bin(ai)
+        #            for ai in age_bin_indices
+        #        ],
+        #        axis=1
+        #    )
+        start_age_densities_of_bins = hr.negative_indicies_to_zero(
+            hr.pool_wise_bin_densities_from_smooth_densities_and_indices(
+                start_age_densities,
+                dmr.nr_pools,
+                dt
+            )
+        )
+        p_dmr = dmr.pool_age_densities_func(start_age_densities_of_bins)
 
         #def start_age_densities(a):
         #    return start_values*(1 if a == 0 else 0.0)
@@ -360,10 +373,10 @@ class TestDiscreteModelRun(InDirTest):
         pool_age_densities_dmr = p_dmr(age_bin_indices)
         ## dims = len(age_bin_indices),len(times)-1,npool
         print(
-            pool_age_densities_smr[0:,0,0 ], '\n',
-            pool_age_densities_dmr[0:,0,0 ], '\n',
-            pool_age_densities_smr[0:,0,0 ] -
-            pool_age_densities_dmr[0:,0,0 ]
+            pool_age_densities_smr[0,:,0 ], '\n',
+            pool_age_densities_dmr[0,:,0 ], '\n',
+            pool_age_densities_smr[0,:,0 ] -
+            pool_age_densities_dmr[0,:,0 ]
         )
         print(times.shape)
         print(age_bin_indices.shape)
@@ -390,7 +403,11 @@ class TestDiscreteModelRun(InDirTest):
         #        #p1
         #        a_next=
 
+    @unittest.skip
     def test_backward_transit_time_moment(self):
+        # <outflux_vector, age_moment_vector> / sum(outflux_vector)
+
+
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
         B = Matrix([[-1, 0],

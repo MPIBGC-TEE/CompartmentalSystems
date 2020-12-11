@@ -350,7 +350,6 @@ class DiscreteModelRun():
         else:
             # im=int((k1+k0)/2)
             im=k1-1
-            print(im)
         return phi(im,k0)*phi(k1,im)
 
         #if (hasattr(self, '_sto_recent') and
@@ -485,7 +484,7 @@ class DiscreteModelRun():
         Phi = self._state_transition_operator
         kt0=0
         def p2_sv(ia, kt):
-            if (ia < 0) or (kt-kt0 < ia):
+            if (ia < 0) or (kt-kt0 <= ia):
                 return np.zeros((self.nr_pools,))
             #k = np.where(times == t-a)[0][0]
             #kt = np.where(np.abs(times - (t-a)) < 1e-09)[0][0]

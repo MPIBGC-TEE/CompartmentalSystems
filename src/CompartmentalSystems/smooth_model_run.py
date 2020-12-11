@@ -3835,7 +3835,7 @@ class SmoothModelRun(ModelRun):
 
         def ppp(a, t):
             #print('input', a, t)
-            if (a < 0) or (t-t0 < a):
+            if (a < 0) or (t-t0 <= a):
                 val = np.zeros((1, self.nr_pools))[-1]
             else:
                 u_val = u(t-a)
