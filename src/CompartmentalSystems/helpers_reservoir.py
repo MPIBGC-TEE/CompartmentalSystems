@@ -986,3 +986,82 @@ def F_Delta_14C(C12, C14, alpha=None):
 
     C12[C12 == 0] = np.nan
     return (C14/C12/alpha - 1) * 1000
+
+def densities_to_distributions(
+        densities: Callable[[float],np.ndarray],
+        nr_pools: int
+    )->Callable[[float],np.ndarray]:
+        
+        def distributions(A: np.float) ->np.ndarray: 
+            return np.array(
+                [
+                    quad(
+                        lambda a:densities(a)[i],
+                        -np.inf, 
+                        A
+                    )[0]
+                    for i in range(nr_pools)
+                ]
+            )
+
+        return distributions    
+
+def pool_wise_bin_contents_from_densities_and_index(
+        densities: Callable[[float],np.ndarray],
+        nr_pools: int,
+        dt: float,
+    )->Callable[[int],np.ndarray]:
+    def content(ai:int)->np.ndarray:
+        return np.array(
+            [
+                quad(
+                    lambda a:densities(a)[i],
+                    ai*dt,
+                    (ai+1)*dt
+                )[0] / dt
+                for i in range(nr_pools)
+            ]
+        )
+    return content     
+
+def pool_wise_bin_contents_from_densities_and_indecies(
+        densities: Callable[[float],np.ndarray],
+        nr_pools: int,
+        dt: float,
+    )->Callable[[np.ndarray],np.ndarray]:
+    contents_single = pool_wise_bin_contents_from_densities_and_index(
+                densities,
+                nr_pools,
+                dt
+            )
+    # vectorize it
+    def contents(age_bin_indices: np.ndarray)->np.ndarray:
+        return np.stack(
+            [
+                contents_single(ai)
+                for ai in age_bin_indices
+            ],
+            axis=1
+        )
+    return contents
+
+def negative_indicies_to_zero(
+        f: Callable[[np.ndarray],np.ndarray]
+    )->Callable[[np.ndarray],np.ndarray]:
+
+    def wrapper(age_bin_indices):
+        arr_true = f(age_bin_indices)
+        nr_pools = arr_true.shape[0]
+        return np.stack(
+            [
+                np.where(
+                    age_bin_indices >=0,
+                    arr_true[ip,:],
+                    0
+                )
+                for ip in range(nr_pools)
+            ]
+        )
+
+    return wrapper
+
