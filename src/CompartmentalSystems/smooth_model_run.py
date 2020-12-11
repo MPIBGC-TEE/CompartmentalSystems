@@ -758,17 +758,17 @@ class SmoothModelRun(ModelRun):
                                 (start_age_densities, tuple(ages))]
             else:
                 self._computed_age_density_fields = {}
-        
+
             field_list = []
             for a in tqdm(ages):
                 field_list.append(p1(np.array([a])) + p2(np.array([a])))
 
             field = np.array(field_list)[:,0,:,:]
-            
+
             self._computed_age_density_fields[
                 (start_age_densities, tuple(ages))] = field
             return field
-                
+
         return p
 
     
@@ -3835,8 +3835,8 @@ class SmoothModelRun(ModelRun):
 
         def ppp(a, t):
             #print('input', a, t)
-            if (a < 0) or (t-t0 <= a):
-                val = np.zeros((1,self.nr_pools))[-1]
+            if (a < 0) or (t-t0 < a):
+                val = np.zeros((1, self.nr_pools))[-1]
             else:
                 u_val = u(t-a)
                 #print('u_val', u_val)

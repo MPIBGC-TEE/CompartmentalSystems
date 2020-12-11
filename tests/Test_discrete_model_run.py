@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 # vim:set ff=unix expandtab ts=4 sw=4:
 
-# import unittest
+import unittest
 import numpy as np
-from sympy import sin, symbols, Matrix
-
+from typing import List
+from sympy import sin, symbols, Matrix, Symbol
+from scipy.integrate import quad
 from testinfrastructure.InDirTest import InDirTest
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 from CompartmentalSystems.model_run import plot_stocks_and_fluxes
+import CompartmentalSystems.helpers_reservoir as hr
 
 
 class TestDiscreteModelRun(InDirTest):
@@ -181,4 +183,286 @@ class TestDiscreteModelRun(InDirTest):
             lru_maxsize=None
         )
 
-        DMR.from_SmoothModelRun(smr)
+        nt = 10
+        DMR.from_SmoothModelRun(smr, nt)
+
+    @unittest.skip('testing against an unspecified use case of smoot_model_run')
+    def test_pool_age_densities_1(self):
+        # two-dimensional
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = Matrix([C_0, C_1])
+        time_symbol = Symbol('t')
+        #fixme: both input anoutput should be 1, 2, C_0, C_1
+        #input_fluxes = {0: 1, 1: 2}
+        input_fluxes = {0: 1, 1: 2}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(
+                state_vector,
+                time_symbol,input_fluxes,
+                output_fluxes,
+                internal_fluxes
+        )
+
+        start_values = np.array([5, 3])
+        dt = 1e-9
+        max_bin_nr = 100
+
+        # The times array is 1 longer than the array of bin indices
+        # At the moment it is supposed to be equidistant
+        times=np.linspace(0, (max_bin_nr)*dt, max_bin_nr+1)
+        print('times', times)
+        smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        dmr = DMR.from_SmoothModelRun(smr,max_bin_nr)
+
+        start_age_densities = lambda a: (1 if a == 0 else 0) * start_values
+        start_age_distributions = lambda a: (1 if a >= 0 else 0 ) * start_values
+        p_smr = smr.pool_age_densities_func(start_age_densities)
+        p_smr2 = smr.pool_age_densities_func_from_start_age_distributions(start_age_distributions)
+
+        def start_age_distributions_of_bins(age_bin_indices):
+            # - in the continuous case this the value is the
+            #   integral \int_{ia*dt}^{(ia+1)*dt start_age_density
+            #   (for each pool)
+            # - more generally it can be defined directly by the
+            #   user as the difference of the
+            #   distribution function between F(dt*ai)-F(dt*(ai-1))
+            #   as it the case here where the whoe initial mass
+            #   is in the first abe bin (in python ia ==0)
+            nr_pools = len(start_values)
+            return np.stack(
+                [
+                    np.where(
+                        age_bin_indices==0,    
+                        start_values[ip],
+                        0
+                    )
+                    for ip in range(nr_pools)
+                ]
+            )
+        p_dmr = dmr.pool_age_densities_func(start_age_distributions_of_bins)
+        
+        # we can choose arbitrary age bin indices
+        # which are the arguments for the discrete computations
+        age_bin_indices = np.array([1,5,10,20])
+
+        # The ages fed to the reference smooth_model_run
+        # are therefore integral multiples of dt
+        ages = age_bin_indices * dt
+        # since the grid for the smooth model run has one more index then the
+        # discrete one we discard the last result here (for the comparison)
+        ts = slice(0,-1) 
+        pool_age_densities_smr = p_smr(ages)[:, ts]
+
+        pool_age_densities_dmr = p_dmr(age_bin_indices)
+        ## dims = len(age_bin_indices),len(times)-1,npool
+
+        self.assertTrue(
+            np.allclose(
+                pool_age_densities_dmr,
+                pool_age_densities_smr,
+                atol=1e-06
+            )
+        )
+
+    def test_pool_age_densities_2(self):
+        # two-dimensional
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = Matrix([C_0, C_1])
+        time_symbol = Symbol('t')
+        #fixme: both input anoutput should be 1, 2, C_0, C_1
+        #input_fluxes = {0: 1, 1: 2}
+        input_fluxes = {0: 1, 1: 2}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(
+                state_vector,
+                time_symbol,input_fluxes,
+                output_fluxes,
+                internal_fluxes
+        )
+
+        start_values = np.array([5, 3])
+        dt = 1e-6
+        max_bin_nr = 10
+
+        # The times array is 1 longer than the array of bin indices
+        # At the moment it is supposed to be equidistant
+        times=np.linspace(0, (max_bin_nr)*dt, max_bin_nr+1)
+        print('times', times)
+        smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+        dmr = DMR.from_SmoothModelRun(smr,max_bin_nr)
+
+        
+        # we can choose arbitrary age bin indices
+        # which are the arguments for the discrete computations
+        age_bin_indices = np.array([0,1,5,10,20])
+
+        # The ages fed to the reference smooth_model_run
+        # are therefore integral multiples of dt
+        ages = age_bin_indices * dt
+        
+
+        #p_dmr = dmr.pool_age_densities_func(wrapper_maker(start_age_densities_bin))
+
+        
+        start_age_densities = lambda a: (np.exp(-a)  if a>=0 else 0)* start_values
+        # 
+        p_smr = smr.pool_age_densities_func(start_age_densities)
+        
+        # now create a function that yields the mass in every pool
+        # as a function of the age bin index
+        def start_age_distributions_of_bin(ai: np.int64)->np.ndarray:
+            da  = dt
+            return np.array(
+                [
+                    quad(
+                        lambda a:start_age_densities(a)[i],
+                        ai*da,
+                        (ai+1)*da
+                    )[0]/da
+                    for i in range(dmr.nr_pools)
+                ]
+            )
+
+        # and vectorize it for an array of indices
+        def start_age_distributions_of_bins(
+                age_bin_indices: List[int]
+            )->np.ndarray:
+            return np.stack(
+                [
+                    start_age_distributions_of_bin(ai)
+                    for ai in age_bin_indices
+                ],
+                axis=1
+            )
+        #start_age_distributions_of_bins = hr.negative_indicies_to_zero(
+        #    hr.pool_wise_bin_contents_from_densities_and_indecies(
+        #        start_age_densities,
+        #        dmr.nr_pools,
+        #        dt
+        #    )
+        #)
+        p_dmr = dmr.pool_age_densities_func(start_age_distributions_of_bins)
+
+        #def start_age_densities(a):
+        #    return start_values*(1 if a == 0 else 0.0)
+
+
+
+        # since the grid for the smooth model run has one more index then the
+        # discrete one we discard the last result here (for the comparison)
+        ts = slice(0,-1) 
+        pool_age_densities_smr = p_smr(ages)[:, ts]
+
+        pool_age_densities_dmr = p_dmr(age_bin_indices)
+        ## dims = len(age_bin_indices),len(times)-1,npool
+        print(
+            pool_age_densities_smr[0:,0,0 ], '\n',
+            pool_age_densities_dmr[0:,0,0 ], '\n',
+            pool_age_densities_smr[0:,0,0 ] -
+            pool_age_densities_dmr[0:,0,0 ]
+        )
+        print(times.shape)
+        print(age_bin_indices.shape)
+        print(pool_age_densities_dmr.shape)
+
+        self.assertTrue(
+            np.allclose(
+                pool_age_densities_dmr,
+                pool_age_densities_smr,
+                atol=1e-06
+            )
+        )
+        # A third way is to compute the whole field of
+        # all dt*dt bins from the beginning
+
+        # initialize the initial age for all bins from 
+        # 0 to ia_max and move forward by the application of B
+        # and addition of the influxes
+        #a0 = np.array(
+        #   [ start_age_densities_bin(ia) for ia in range(max(age_bin_indices))]   
+        #)
+        #for it in range(nt):
+        #    for ia in range(na-it):
+        #        #p1
+        #        a_next=
+
+    def test_backward_transit_time_moment(self):
+        x, y, t = symbols("x y t")
+        state_vector = Matrix([x,y])
+        B = Matrix([[-1, 0],
+                    [ 0,-2]])
+        u = Matrix(2, 1, [9,1])
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
+
+        dt = 1e-0
+        max_bin_nr = 9
+
+        # The times array is 1 longer than the array of bin indices
+        # At the moment it is supposed to be equidistant
+        times=np.linspace(0, (max_bin_nr)*dt, max_bin_nr+1)
+        start_values = np.array([1,1])
+        
+        smr = SmoothModelRun(srm, {}, start_values, times=times)
+        dmr = DMR.from_SmoothModelRun(smr,max_bin_nr)
+        #smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+
+        # poolwise vector of age densities as function of age: dm_i(a)/da(a)  
+        start_age_densities = lambda a: (np.exp(-a)  if a>=0 else 0)* start_values
+        
+
+        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+
+
+        mbtt_smr = smr.backward_transit_time_moment(1, start_age_moments)
+        mbtt_dmr = dmr.backward_transit_time_moment(1, start_age_moments)
+        ##mbtt_ref = smr.mean_backward_transit_time(tuple(start_age_moments[0]))
+        #mbtt_ref = np.array([
+        #    0.66666667, 0.53307397, 0.46606145, 0.43533026, 0.42580755,
+        #    0.42915127, 0.44056669, 0.45707406, 0.47678225, 0.49837578
+        #])
+        self.assertTrue(np.allclose(mbtt_smr, mbtt_dmr))
+
+    def test_age_moment_vector(self):
+        x, y, t = symbols("x y t")
+        state_vector = Matrix([x,y])
+        B = Matrix([[-1, 0],
+                    [ 0,-2]])
+        u = Matrix(2, 1, [9,1])
+        srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
+
+        start_values = np.array([1,1])
+        dt = 1e-09
+        max_bin_nr = 1000
+        times=np.linspace(0, (max_bin_nr)*dt, max_bin_nr+1)
+        smr = SmoothModelRun(srm, {}, start_values, times=times)
+        print('smr.times',smr.times)
+        start_age_densities = lambda a: np.exp(-a) * start_values
+        max_order = 1
+        start_age_moments = smr.moments_from_densities(max_order, start_age_densities)
+
+        res_smr= smr.age_moment_vector(1, start_age_moments)
+        start_values = np.array([1,1])
+
+        smr = SmoothModelRun(srm, {}, start_values, times=times)
+        dmr = DMR.from_SmoothModelRun(smr,max_bin_nr)
+        # build startage_moment_vector samv
+        res_dmr = dmr.age_moment_vector(max_order,start_age_moments)
+
+        print(
+               res_smr[...], '\n',
+               res_dmr[...], '\n',
+               #res_smr[...] - \
+               #res_dmr[...]
+        )
+        self.assertTrue(
+            np.allclose(
+                res_dmr,
+                res_smr,
+                atol=1e-06
+            )
+        )
+
