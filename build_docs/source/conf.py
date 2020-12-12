@@ -36,6 +36,8 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
+    # 'sphinx_autodoc_typehints', # has to come after napoleon but does not
+    # seem to be compatible anyway
     'sphinx.ext.autosummary'
 ]
 
@@ -52,7 +54,7 @@ master_doc = 'index'
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
-
+napoleon_use_param = True
 
 # -- Options for HTML output -------------------------------------------------
 

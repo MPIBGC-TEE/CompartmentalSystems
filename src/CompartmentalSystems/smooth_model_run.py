@@ -1281,8 +1281,11 @@ class SmoothModelRun(ModelRun):
         """ 
         age_moment_vector = self.age_moment_vector(order, start_age_moments)
         r = self.external_output_vector
-        
-        return (r*age_moment_vector).sum(1)/r.sum(1)
+        pool_axis=1
+        return (
+                    (r*age_moment_vector).sum(axis=pool_axis)/
+                    r.sum(axis=pool_axis)
+               )
 
 
 #    def forward_transit_time_moment(self, order, epsrel=1e-2):

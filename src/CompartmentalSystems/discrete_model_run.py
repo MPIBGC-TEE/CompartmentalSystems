@@ -297,7 +297,6 @@ class DiscreteModelRun():
         ones = np.ones(n)
         soln = self.solve()
         dts = self.dts
-        print('dmr.times',self.times)
 
         age_moments = [start_age_moments]
         for i in range(len(self.times)-1):
@@ -318,11 +317,46 @@ class DiscreteModelRun():
 
         return np.array(age_moments)
 
-    def backward_transit_time_moment(self, order, start_age_moments):
-        age_moment_vector = self.age_moment_vector(order, start_age_moments)
-        r = self.external_output_vector
+    def backward_transit_time_moment(
+            self,
+            order: int,
+            start_age_moments: np.ndarray
+        )-> np.ndarray:
+        """Compute the ``order`` th backward transit time moment based on the 
+        This is done by computing a weighted sum of of the pool wise 
+        age moments. 
+        For every pool the weight is givem by the fraction of the 
+        of this pools output of the combined output of all pools.
+        :func:`age_moment_vector`.
 
-        return (r*age_moment_vector[:-1]).sum(1)/r.sum(1)
+        Args:
+            order (int): The order of the backward transit time moment that is 
+                to be computed.
+            start_age_moments (numpy.ndarray order x nr_pools, optional): 
+                Given initial age moments up to the order of interest. 
+                Can possibly be computed by :func:`moments_from_densities`. 
+                Defaults to None assuming zero initial ages.
+
+        Returns:
+            numpy.array: shape (nr_bins,nr_pools) 
+            The ``order`` th backward transit time moment over the time grid.
+        """ 
+
+        # the shape of the age moment vector is (nr_bins,nr_pools)
+        r=self.acc_net_external_output_vector()
+
+        # the shape of the age moment vector is (nr_bins+1,nr_pools)
+        # so we have to cut it
+        age_moment_vector = self.age_moment_vector(
+                order,
+                start_age_moments
+        )[:-1,:] 
+        pool_axis=1
+        return (
+                    (r*age_moment_vector).sum(axis=pool_axis)/
+                    r.sum(axis=pool_axis)
+               )
+
 
     def start_age_densities_func(self):
         B = self.Bs[0]

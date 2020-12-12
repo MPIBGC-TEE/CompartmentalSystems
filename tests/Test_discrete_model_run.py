@@ -403,10 +403,9 @@ class TestDiscreteModelRun(InDirTest):
         #        #p1
         #        a_next=
 
-    @unittest.skip
+    #@unittest.skip
     def test_backward_transit_time_moment(self):
         # <outflux_vector, age_moment_vector> / sum(outflux_vector)
-
 
         x, y, t = symbols("x y t")
         state_vector = Matrix([x,y])
@@ -415,33 +414,40 @@ class TestDiscreteModelRun(InDirTest):
         u = Matrix(2, 1, [9,1])
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
 
-        dt = 1e-0
+        dt = 1e-4
         max_bin_nr = 9
 
         # The times array is 1 longer than the array of bin indices
         # At the moment it is supposed to be equidistant
         times=np.linspace(0, (max_bin_nr)*dt, max_bin_nr+1)
         start_values = np.array([1,1])
-        
+
         smr = SmoothModelRun(srm, {}, start_values, times=times)
         dmr = DMR.from_SmoothModelRun(smr,max_bin_nr)
         #smr.initialize_state_transition_operator_cache(lru_maxsize=None)
 
         # poolwise vector of age densities as function of age: dm_i(a)/da(a)  
         start_age_densities = lambda a: (np.exp(-a)  if a>=0 else 0)* start_values
-        
 
-        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+        order = 1
+        start_age_moments = smr.moments_from_densities(order, start_age_densities)
 
-
-        mbtt_smr = smr.backward_transit_time_moment(1, start_age_moments)
-        mbtt_dmr = dmr.backward_transit_time_moment(1, start_age_moments)
-        ##mbtt_ref = smr.mean_backward_transit_time(tuple(start_age_moments[0]))
-        #mbtt_ref = np.array([
-        #    0.66666667, 0.53307397, 0.46606145, 0.43533026, 0.42580755,
-        #    0.42915127, 0.44056669, 0.45707406, 0.47678225, 0.49837578
-        #])
-        self.assertTrue(np.allclose(mbtt_smr, mbtt_dmr))
+        mbtt_smr = smr.backward_transit_time_moment(order, start_age_moments)
+        mbtt_dmr = dmr.backward_transit_time_moment(order, start_age_moments)
+        ts = slice(0,max_bin_nr)
+        #print(
+        #       mbtt_smr[ts], '\n',
+        #       mbtt_dmr[ts], '\n',
+        #       mbtt_smr[ts] - \
+        #       mbtt_dmr[ts]
+        #)
+        self.assertTrue(
+            np.allclose(
+                mbtt_smr[ts], 
+                mbtt_dmr,
+                atol=1e-06
+            )
+        )
 
     def test_age_moment_vector(self):
         x, y, t = symbols("x y t")
@@ -469,12 +475,12 @@ class TestDiscreteModelRun(InDirTest):
         # build startage_moment_vector samv
         res_dmr = dmr.age_moment_vector(max_order,start_age_moments)
 
-        print(
-               res_smr[...], '\n',
-               res_dmr[...], '\n',
-               #res_smr[...] - \
-               #res_dmr[...]
-        )
+        #print(
+        #       res_smr[...], '\n',
+        #       res_dmr[...], '\n',
+        #       #res_smr[...] - \
+        #       #res_dmr[...]
+        #)
         self.assertTrue(
             np.allclose(
                 res_dmr,
