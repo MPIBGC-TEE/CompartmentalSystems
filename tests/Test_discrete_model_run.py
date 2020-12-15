@@ -222,6 +222,7 @@ class TestDiscreteModelRun(InDirTest):
 
 
         def start_age_distributions_of_bins(age_bin_indices):
+            # Note (mm 12-14 2020):
             # - in the continuous case this the value is the
             #   integral \int_{ia*dt}^{(ia+1)*dt start_age_density
             #   (for each pool)
@@ -389,7 +390,7 @@ class TestDiscreteModelRun(InDirTest):
                 atol=1e-06
             )
         )
-        # A third way is to compute the whole field of
+        # A third way would be to compute the whole field of
         # all dt*dt bins from the beginning
 
         # initialize the initial age for all bins from 
@@ -488,4 +489,121 @@ class TestDiscreteModelRun(InDirTest):
                 atol=1e-06
             )
         )
+
+    def test_pool_age_distributions_quantiles(self):
+        # two-dimensional
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        time_symbol = Symbol('t')
+        input_fluxes = {0: 0, 1: 1}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(
+            state_vector,
+            time_symbol,
+            input_fluxes,
+            output_fluxes,
+            internal_fluxes
+        )
+
+        start_values = np.array([1, 0])
+        nr_bins = 10
+        t_max = 1.0
+        dt = t_max/nr_bins
+        times = np.linspace(0,t_max,nr_bins+1)
+        smr = SmoothModelRun(srm, {}, start_values, times)
+        dmr = DMR.from_SmoothModelRun(smr,nr_bins)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+
+
+        start_age_densities = lambda a: np.exp(-a)*start_values
+        start_age_densities_of_bins = hr.negative_indicies_to_zero(
+            hr.pool_wise_bin_densities_from_smooth_densities_and_indices(
+                start_age_densities,
+                dmr.nr_pools,
+                dt
+            )
+        )
+        
+        # compute the median with different numerical methods
+        start_age_moments = smr.moments_from_densities(1, start_age_densities)
+        start_values_q = smr.age_moment_vector(1, start_age_moments)
+        a_star_newton = smr.pool_age_distributions_quantiles(
+            0.5,
+            start_values=start_values_q,
+            start_age_densities=start_age_densities,
+            method='newton'
+        )
+        print(a_star_newton.shape)
+        #a_star_dmr = dmr.pool_age_distributions_quantiles(
+        #    0.5,
+        #    start_age_densities_of_bins
+        #    #start_values=start_values_q,
+        #    #start_age_densities=start_age_densities,
+        #    #method='newton'
+        #)
+        #self.assertTrue(
+        #    np.allclose(
+        #        a_star_dmr[:,0],
+        #        np.log(2)+times,
+        #        rtol=1e-3
+        #    )
+        #)
+
+        #a, t = symbols('a t')
+        #ref_sym = solve(Eq(1/2*(1-exp(-t)), 1 - exp(-a)), a)[0]
+        #ref = np.array(
+        #    [ref_sym.subs({t: time}) for time in times],
+        #    dtype=np.float
+        #)
+        #ref[0] = np.nan
+
+        #self.assertTrue(
+        #    np.allclose(a_star_dmr[:,1],
+        #        ref,
+        #        equal_nan=True,
+        #        rtol=1e-03
+        #    )
+        #)
+
+
+    def test_age_quantile_bin_at_time_bin(self):
+        # two-dimensional
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        time_symbol = Symbol('t')
+        input_fluxes = {0: 0, 1: 1}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(
+            state_vector,
+            time_symbol,
+            input_fluxes,
+            output_fluxes,
+            internal_fluxes
+        )
+
+        start_values = np.array([1, 0])
+        nr_bins = 10
+        t_max = 1.0
+        dt = t_max/nr_bins
+        times = np.linspace(0,t_max,nr_bins+1)
+        smr = SmoothModelRun(srm, {}, start_values, times)
+        dmr = DMR.from_SmoothModelRun(smr,nr_bins)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+
+        start_age_densities = lambda a: np.exp(-a)*start_values
+        start_age_densities_of_bin = hr.pool_wise_bin_densities_from_smooth_densities_and_index(
+                start_age_densities,
+                dmr.nr_pools,
+                dt
+        )
+        dmr = DMR.from_SmoothModelRun(smr,nr_bins)
+        dmr.age_quantile_bin_at_time_bin(
+            q=0.5,
+            it=0,
+            pools=[0],
+            start_age_densities_of_bin=start_age_densities_of_bin
+        )
+
 

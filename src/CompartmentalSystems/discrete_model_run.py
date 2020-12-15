@@ -4,6 +4,7 @@ from scipy.linalg import inv
 from scipy.special import factorial, binom
 from tqdm import tqdm
 from functools import lru_cache
+from typing import List, Callable, Union, Tuple
 
 from .helpers_reservoir import (
     net_Us_from_discrete_Bs_and_xs,
@@ -452,22 +453,33 @@ class DiscreteModelRun():
 
         return Phi @ x
 
-    def age_densities_1_single_value_func(self, start_age_densities_bin):
+    def age_densities_1_single_value_func(
+            self,
+            start_age_densities_of_bin:
+                Callable[[int], np.ndarray]
+        ) -> Callable[[int, int], float]:
+        """Returns a function f(ia,it) that computes
+        the quotient delta_m(ia,it)/delta_a where delta_m
+        it the remainder of the initial mass distribution that
+        has age ia*da at time it*dt.
+        """
+
         t0 = self.times[0]
 
-        #def p0(a):
-        #    if a >= 0:
-        #        return start_age_densities(a)
-        #    else:
-        #        return np.zeros((self.nr_pools,))
+        # make sure that the start age distribution
+        # will be truncated for negative ages
+        def p0(ai):
+            if ai >= 0:
+                return start_age_densities_of_bin(ai)
+            else:
+                return np.zeros((self.nr_pools,))
 
         Phi = self._state_transition_operator
 
         def p1_sv(ia, kt):
             #res = Phi(t, t0, p0(a-(t-t0)))
             kt0 = 0
-            #res = Phi(kt, kt0, start_age_densities_bin(ia-(kt-kt0)))
-            res = Phi(kt, 0, start_age_densities_bin(ia-(kt)))
+            res = Phi(kt, kt0, p0(ia-kt))
             return res
 
         return p1_sv
@@ -512,6 +524,7 @@ class DiscreteModelRun():
                 return vals
 
         return p1
+
     def age_densities_2_single_value_func(self):
         times = self.times
         t0 = times[0]
@@ -615,7 +628,7 @@ class DiscreteModelRun():
         p1_sv = self.age_densities_1_single_value_func(
             start_age_densities
         )
-        p2_sv = self.age_densities_single_value_func()
+        p2_sv = self.age_densities_2_single_value_func()
 
         def p_sv(a, t):
             return p1_sv(a, t) + p2_sv(a, t)
@@ -632,29 +645,135 @@ class DiscreteModelRun():
             vals = vals_2 + vals_1
             return vals
         return p
+    
+    # Old version is commented because we now avoid real valued arguments for times
+    # and ages and replaced them by and index denoting the age or time
+    # bin. 
+    # This ensures the predicatabiliyt of the size of the returned arrays
+    # for more than one time.
+    #def age_quantiles_at_time(self, q, t, pools, start_age_densities):
+    #    dts = self.dts
 
-    def age_quantiles_at_time(self, q, t, pools, start_age_densities):
+    #    k = np.where(self.times == t)[0][0]
+    #    x = self.soln[k, pools].sum()
+
+    #    prev_age = 0
+    #    age = 0
+    #    mass = 0
+
+    #    p_sv = self.age_densities_single_value(start_age_densities)
+    #    while mass <= q*x:
+    #        prev_age = age
+    #        if k == 0:
+    #            age += dts[0]
+    #        else:
+    #            age += dts[k-1]
+    #            k -= 1
+
+    #        mass += p_sv(age, t)[pools].sum()
+
+    #    return prev_age
+    def age_quantiles_at_time(
+            self,
+            q,
+            t,
+            pools,
+            start_age_densities
+        )-> float:
+        """Returns pool age distribution quantiles for the time.
+        This is a wrapper providing an interface similar to the continuous
+        model runs.
+        Internally it will compute the index of the bin containing the given
+        time, and call the indexed version, whose result is the index of
+        that age bin. The boundary of this age bin will be returned.
+
+        For internal use the indexed version func:age_quantile_bin_at_time_bin
+        is usually preferred since it avoids the repeated computation of the
+        indices of age and time bins which are the more natural variables for
+        this discrete model run.
+
+
+        Args:
+            q:
+                    quantile (between 0 and 1): The relative share of mass that is
+                    considered to be left of the computed value. A value of ``0.5``
+                    leads to the computation of the median of the distribution.
+            it:
+                    index of the age bin for which the quantile is to be computed.
+            pools:
+                    the indices of the pools that contribute to the mass
+                    that the quantile computation is refering to.
+                    If for example a list containing a single index is given
+                    then the quantile of mass in the respective pool will be
+                    computed.
+                    If the list contains all the pool indices the result
+                    will be the system age.
+            start_age_densities_of_bins:
+                    A function that takes a single integer (denoting the
+                    age bin) and returns the value of mass per age in that bin.
+                    (piecewise constant approximation of a density).
+
+
+        Returns: an age (will be a multiple of the binsize of the age bins)
+        """
+        raise
+
+    def age_quantile_bin_at_time_bin(
+            self,
+            q: float,
+            it: int,
+            pools: List[int],
+            start_age_densities_of_bin: Callable[[int],np.ndarray]
+        ) -> int:
+        """Returns pool age bin index for the  the quantile of the combined
+        mass of the mentioned pools for the provided time bin index.
+
+        Args:
+            q:
+                quantile (between 0 and 1): The relative share of mass that is 
+                considered to be left of the computed value. A value of ``0.5`` 
+                leads to the computation of the median of the distribution.
+            it:
+                index of the time bin for which the quantile is to be computed.
+            pools:
+                the indices of the pools that contribute to the mass
+                that the quantile computation is refering to.
+                If for example a list containing a single index is given
+                then the quantile of mass in the respective pool will be
+                computed.
+                If the list contains all the pool indices the result
+                will be the system age.
+            start_age_densities_of_bin:
+                A function that takes a single integer (denoting the
+                age bin) and returns the value of mass per age in that bin.
+                (piecewise constant approximation of a density).
+
+          Returns:
+                An integer array of shape (nr_pools,) containing the bin
+                number for every pool.
+          """
+
+
+
         dts = self.dts
 
-        k = np.where(self.times == t)[0][0]
-        x = self.soln[k, pools].sum()
+        # x = self.soln[k, pools].sum()
+        x = self.solve()[it,pools].sum()
 
-        prev_age = 0
-        age = 0
+        prev_ai = 0
+        ai = 0
         mass = 0
 
-        p_sv = self.age_densities_single_value(start_age_densities)
+        p_sv = self.age_densities_single_value_func(
+            start_age_densities_of_bin
+        )
+        print(p_sv)
         while mass <= q*x:
-            prev_age = age
-            if k == 0:
-                age += dts[0]
-            else:
-                age += dts[k-1]
-                k -= 1
+            prev_ai = ai
+            ai += 1
+            mass += p_sv(ai, it)[pools].sum()
 
-            mass += p_sv(age, t)[pools].sum()
-
-        return prev_age
+        return prev_ai
 
     @classmethod
     def load_from_file(cls, filename):
