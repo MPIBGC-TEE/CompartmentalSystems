@@ -1066,3 +1066,15 @@ def negative_indicies_to_zero(
 
     return wrapper
 
+# make sure that the start age distribution
+# yields zero for negative ages or indices 
+def p0_maker(
+        start_age_densities_of_bin: Callable[[int],np.ndarray],
+):
+    def p0(ai):
+        res = start_age_densities_of_bin(ai)
+        if ai >= 0:
+            return res
+        else:
+            return np.zeros_like(res)
+    return p0
