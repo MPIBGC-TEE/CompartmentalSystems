@@ -19,7 +19,8 @@ from .helpers_reservoir import (
     net_Rs_from_discrete_Bs_and_xs,
     custom_lru_cache_wrapper,
     phi_tmax,
-    numerical_function_from_expression
+    numerical_function_from_expression,
+    warning
 )
 from .Cache import Cache
 
@@ -172,6 +173,7 @@ class PWCModelRun(ModelRun):
             self._external_input_vector_func = self.join_functions_rc(L)
 
         return self._external_input_vector_func
+
 
     def acc_gross_external_input_vector(self, data_times=None):
         times = self.times if data_times is None else data_times
@@ -497,6 +499,168 @@ class PWCModelRun(ModelRun):
 
         return system_age_moment
 
+    @property
+    def external_output_vector(self):
+        """Return the grid of external output vectors.
+
+        Returns:
+            numpy.ndarray: len(times) x nr_pools
+        """
+        times = self.times
+        nt = len(times)
+
+        flux_funcss = self.external_output_flux_funcss()
+        res = np.zeros((nt, self.nr_pools))
+        for pool_nr in range(self.nr_pools):
+            flux_func = self.join_flux_funcss_rc(flux_funcss, pool_nr)
+            for k in range(nt):
+                res[k, pool_nr] = flux_func(times[k])
+
+        return res
+
+
+    def backward_transit_time_moment(self, order, start_age_moments=None):
+        """Compute the ``order`` th backward transit time moment based on the 
+        :func:`age_moment_vector`.
+
+        Args:
+            order (int): The order of the backward transit time moment that is 
+                to be computed.
+            start_age_moments (numpy.ndarray order x nr_pools, optional): 
+                Given initial age moments up to the order of interest. 
+                Can possibly be computed by :func:`moments_from_densities`. 
+                Defaults to None assuming zero initial ages.
+       
+        Returns:
+            numpy.array: The ``order`` th backward transit time moment over the 
+            time grid.
+        """ 
+        age_moment_vector = self.age_moment_vector(order, start_age_moments)
+        r = self.external_output_vector
+        
+        return (r*age_moment_vector).sum(1)/r.sum(1)
+
+    def cumulative_pool_age_distributions_single_value(self, 
+            start_age_densities=None, F0=None):
+        """Return a function for the cumulative pool age distributions.
+
+        Args:
+            start_age_densities (Python function, optional): A function of age 
+                that returns a numpy.array containing the masses with the given 
+                age at time :math:`t_0`. Defaults to None.
+            F0 (Python function): A function of age that returns a numpy.array 
+                containing the masses with age less than or equal to the age at 
+                time :math:`t_0`. Defaults to None.
+
+        Raises:
+            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
+                One must be given.
+                It is fastest to provide ``F0``, otherwise ``F0`` will be 
+                computed by numerical integration of ``start_age_densities``.
+
+        Returns:
+            Python function ``F_sv``: ``F_sv(a,t)`` is the vector of pool 
+            masses (``numpy.array``) with age less than or equal to ``a`` at 
+            time ``t``.
+        """
+        n = self.nr_pools
+        #soln = self.solve_old()
+        soln = self.solve()
+        if soln[0,:].sum() == 0:
+            start_age_densities = lambda a: np.zeros((n,))
+
+        if F0 is None and start_age_densities is None:
+            raise(Error('Either F0 or start_age_densities must be given.'))
+
+        times = self.times
+        t0 = times[0]
+        #sol_funcs = self.sol_funcs()
+        #sol_funcs_array = lambda t: np.array([sol_funcs[pool](t) 
+        #                                           for pool in range(n)])
+        #sol_funcs_array = self.solve_single_value_old()
+        sol_funcs_array = self.solve_func()
+
+        if F0 is None:
+            p0 = start_age_densities
+            F0 = lambda a: np.array([quad(lambda s: p0(s)[pool], 0, a)[0] 
+                                        for pool in range(n)])
+
+        def G_sv(a, t):
+            if a < t-t0: return np.zeros((n,))
+            res = np.matmul(self.Phi(t, t0), F0(a-(t-t0)))
+            return res
+
+        def H_sv(a, t):
+            # count everything from beginning?
+            if a >= t-t0: 
+                a = t-t0
+
+            # mass at time t
+            #x_t_old = np.array([sol_funcs[pool](t) for pool in range(n)])
+            x_t = sol_funcs_array(t)
+            # mass at time t-a
+            #x_tma_old = [np.float(sol_funcs[pool](t-a)) for pool in range(n)]
+            x_tma = sol_funcs_array(t-a)
+            # what remains from x_tma at time t
+            m = np.matmul(self.Phi(t, t-a), x_tma)
+            # difference is not older than t-a
+            res = x_t-m
+            # cut off accidental negative values
+            return np.maximum(res, np.zeros(res.shape))
+
+        def F(a, t):
+            res = G_sv(a,t) + H_sv(a,t)
+            #print(a, t, res)
+            #print('G', G_sv(a,t), 'H', H_sv(a,t))
+            return res
+
+        return F
+
+    def cumulative_backward_transit_time_distribution_single_value_func(
+        self,
+        start_age_densities=None,
+        F0=None
+    ):
+        """Return a function for the cumulative backward transit time 
+        distribution.
+
+        Args:
+            start_age_densities (Python function, optional): A function of age
+                that returns a numpy.array containing the masses with the given
+                age at time :math:`t_0`. Defaults to None.
+            F0 (Python function): A function of age that returns a numpy.array
+                containing the masses with age less than or equal to the age at
+                time :math:`t_0`. Defaults to None.
+
+        Raises:
+            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
+                One must be given.
+                It is fastest to provide ``F0``, otherwise ``F0`` will be 
+                computed by numerical integration of ``start_age_densities``.
+
+        Returns:
+            Python function ``F_sv``: ``F_sv(a, t)`` is the mass leaving the 
+            system at time ``t`` with age less than or equal to ``a``.
+        """
+        if F0 is None and start_age_densities is None:
+            raise(Error('Either F0 or start_age_densities must be given.'))
+
+        F_sv = self.cumulative_pool_age_distributions_single_value(
+            start_age_densities=start_age_densities,
+            F0=F0
+        )
+#        rho = self.output_rate_vector_at_t
+        
+        B_func = self.B_func()
+        rho = lambda t: -B_func(t).sum(0)
+
+        def F_btt_sv(a, t):
+            res = (rho(t)*F_sv(a, t)).sum()
+            #print(a, t, res)
+            return res
+
+        return F_btt_sv
+
 ###############################################################################
 
     def _solve_age_moment_system(
@@ -690,6 +854,9 @@ class PWCModelRun(ModelRun):
 
     def join_functions_rc(self, funcs):
         def func(t):
+            if t == self.boundaries[-1]:
+                return funcs[-1](t)
+
             index = np.where(self.boundaries[1:] > t)[0][0]
             index = min(index, len(self.boundaries)-2)
             res = funcs[index](t)

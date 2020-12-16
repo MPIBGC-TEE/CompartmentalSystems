@@ -516,7 +516,6 @@ class SmoothModelRun(ModelRun):
     def external_output_flux_funcs(self):
         """Return a dictionary of the external output fluxes.
         
-
         Returns:
             dict: ``{key: func}`` with ``key`` representing the pool from which
             the output comes and ``func`` a function of time that returns a 
@@ -2463,8 +2462,7 @@ class SmoothModelRun(ModelRun):
         
         return lambda a, t: F_sv(a,t).sum()
 
-    #fixme: test
-    def cumulative_backward_transit_time_distribution_single_value(self,
+    def cumulative_backward_transit_time_distribution_single_value_func(self,
             start_age_densities=None, F0=None):
         """Return a function for the cumulative backward transit time 
         distribution.
@@ -2501,7 +2499,6 @@ class SmoothModelRun(ModelRun):
 
         return F_btt_sv
 
-    #fixme: test
     def cumulative_forward_transit_time_distribution_single_value_func(
             self, cut_off=True):
         """Return a function for the cumulative forward transit time 

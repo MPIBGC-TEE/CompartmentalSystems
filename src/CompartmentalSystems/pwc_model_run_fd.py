@@ -105,6 +105,10 @@ class PWCModelRunFD(ModelRun):
 
     @classmethod
     def from_Bs_and_us(cls, time_symbol, data_times, start_values, Bs, us):
+        isnan = np.isnan(start_values).sum() + np.isnan(Bs).sum() + np.isnan(us).sum()
+        if isnan > 0:
+            raise(PWCModelRunFDError("Nans detected"))
+        
         disc_times = data_times[1:-1]
 
         nr_pools = len(start_values)
@@ -139,13 +143,14 @@ class PWCModelRunFD(ModelRun):
 
         func_dicts = [dict()] * len(us)
 
+#        print("loading PWCModelRun", flush=True) # leaves a message to scheduler, prevents timeout
         pwc_mr = PWCModelRun(
             srm_generic,
             par_dicts,
             start_values,
             data_times,
-            func_dicts=func_dicts,
             disc_times=disc_times,
+            func_dicts=func_dicts,
             no_check=True
         )
         
@@ -255,7 +260,7 @@ class PWCModelRunFD(ModelRun):
 #            times
 #        )
 
-    def age_moment_vector(self, order, start_age_moments = None):
+    def age_moment_vector(self, order, start_age_moments=None):
         return self.pwc_mr.age_moment_vector(
             order,
             start_age_moments
@@ -267,6 +272,21 @@ class PWCModelRunFD(ModelRun):
             start_age_moments
         )
 
+    def backward_transit_time_moment(self, order, start_age_moments=None):
+        return self.pwc_mr.backward_transit_time_moment(
+            order,
+            start_age_moments
+        )
+
+    def cumulative_backward_transit_time_distribution_single_value_func(
+        self,
+        start_age_densities=None,
+        F0=None
+    ):
+        return self.pwc_mr.cumulative_backward_transit_time_distribution_single_value_func(
+            start_age_densities,
+            F0
+        )
 
 #    moved to ModelDataObject
 #    def to_netcdf(self, mdo, file_path):
@@ -530,7 +550,7 @@ class PWCModelRunFD(ModelRun):
         gross_Fs,
         gross_Rs,
         integration_method='solve_ivp',
-        nr_nodes=None
+        nr_nodes=None,
     ):
         print(
             "reconstructing Bs using 'integration_method' =",
@@ -640,6 +660,7 @@ class PWCModelRunFD(ModelRun):
 
         def is_constant_Bs(i, j):
             c = Bs[0, i, j]
+#            print("pwc_mr_fd 647", c, Bs[:, i, j], flush=True)
             diff = np.float64(Bs[:, i, j] - c)
 
             if len(diff[diff == 0.0]) == len(Bs):

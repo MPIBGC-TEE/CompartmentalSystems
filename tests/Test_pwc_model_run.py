@@ -63,6 +63,58 @@ class TestPWCModelRun(unittest.TestCase):
             tmp_start_values = smrs[i].solve()[-1]
         self.smrs = smrs
 
+
+        # create an equilibrium model
+
+        state_vector = Matrix([x, y])
+        B = Matrix([[-1,  0],
+                    [ 0, -2]])
+        u = Matrix(2, 1, [1, 4])
+        self.srm_eq = SmoothReservoirModel.from_B_u(
+            state_vector,
+            t,
+            B,
+            u
+        )
+
+        start_values = np.array([1, 2])
+        t_0 = 0
+        t_max = 10
+        times = np.linspace(t_0, t_max, 11)
+        disc_times = [5]
+
+        parameter_dicts = [dict(), dict()]
+        func_dicts = [dict(), dict()]
+
+        self.pwc_mr_eq = PWCModelRun(
+            self.srm_eq,
+            parameter_dicts,
+            start_values,
+            times,
+            disc_times,
+            func_dicts
+        )
+
+        timess = [
+            np.linspace(t_0, disc_times[0], 6),
+            np.linspace(disc_times[0], t_max, 6)
+        ]
+
+        smrs = []
+        tmp_start_values = start_values
+        for i in range(len(disc_times)+1):
+            smrs.append(
+                SmoothModelRun(
+                    self.srm_eq,
+                    parameter_dict=parameter_dicts[i],
+                    start_values=tmp_start_values,
+                    times=timess[i],
+                    func_set=func_dicts[i]
+                )
+            )
+            tmp_start_values = smrs[i].solve()[-1]
+        self.smrs_eq = smrs
+
     def test_nr_intervals(self):
         self.assertEqual(len(self.smrs), self.pwc_mr.nr_intervals)
 
@@ -112,6 +164,21 @@ class TestPWCModelRun(unittest.TestCase):
             with self.subTest():
                 t = self.smrs[k].times[0]
                 self.assertTrue(np.all(u_func_k(t) == u_func_pwc(t)))
+
+    def test_external_output_vector(self):
+        eov_smrs = [smr.external_output_vector for smr in self.smrs]
+        L =[eov[:-1] for eov in eov_smrs[:-1]] + [eov_smrs[-1]]
+        eov_ref = np.concatenate(L, axis=0)
+        self.assertTrue(np.allclose(eov_ref, self.pwc_mr.external_output_vector))
+
+#    def test_external_output_vector_func(self):
+#        r_func_smrs = [smr.external_output_vector_func() for smr in self.smrs]
+#
+#        r_func_pwc = self.pwc_mr.external_output_vector_func()
+#        for k, r_func_k in enumerate(r_func_smrs):
+#            with self.subTest():
+#                t = self.smrs[k].times[0]
+#                self.assertTrue(np.all(r_func_k(t) == r_func_pwc(t)))
 
     def test_acc_gross_external_input_vector(self):
         ageiv_smrs = [smr.acc_gross_external_input_vector()
@@ -350,6 +417,253 @@ class TestPWCModelRun(unittest.TestCase):
                 self.pwc_mr.system_age_moment(1, start_age_moments)
             )
         )
+
+    def test_backward_transit_time_moment(self):
+        start_values = self.smrs[0].start_values
+
+        def start_age_densities(a):
+            p1 = np.exp(-a) * start_values[0]
+            p2 = 2*np.exp(-2*a) * start_values[1]
+        
+            return np.array([p1, p2])
+
+        start_age_moments = PWCModelRun.moments_from_densities(1, start_age_densities)
+
+        start_age_moments_tmp = start_age_moments.copy()
+        mbtt_smrs = []
+        mbtt_smrs.append(
+            self.smrs[0].backward_transit_time_moment(
+                1,
+                start_age_moments_tmp
+            )[0]
+        )
+        for smr in self.smrs:
+            mbtts = smr.backward_transit_time_moment(
+                1,
+                start_age_moments_tmp
+            )
+
+            start_age_moments_tmp = smr.age_moment_vector(
+                1,
+                start_age_moments_tmp
+            )[-1].reshape(1, -1)
+            mbtt_smrs.extend(mbtts[1:].flatten())
+
+        ref = np.array(mbtt_smrs)
+        res = np.array(self.pwc_mr.backward_transit_time_moment(1, start_age_moments))
+
+        self.assertTrue(
+            np.allclose(
+                ref,
+                res,
+                rtol=1e-02
+            )
+        )
+
+
+    def test_cumulative_backward_transit_time_distribution_single_value_func_from_F0(self):
+        # test in equilibrium
+        
+        smrs = self.smrs_eq
+        pwc_mr = self.pwc_mr_eq
+        
+        start_values = smrs[0].start_values
+
+#        def start_age_densities(a):
+#            p1 = np.exp(-a) * start_values[0]
+#            p2 = 2*np.exp(-2*a) * start_values[1]
+#        
+#            return np.array([p1, p2])
+
+        def F0(a):
+            # eq. age densities
+            F1 = (1-np.exp(-1*a)) * start_values[0]
+            F2 = (1-np.exp(-2*a)) * start_values[1]
+
+            return np.array([F1, F2])
+
+#        start_age_densities_tmp = start_age_densities
+        F0_tmp = F0
+
+        def F0_tmp_maker(smr, F_sv):
+            F0_tmp = lambda a: F_sv(a, smr.times[-1])
+            return F0_tmp
+
+        F_btt_sv_smrs = []
+        for k, smr in enumerate(smrs):
+            F_btt_sv = smr.cumulative_backward_transit_time_distribution_single_value_func(
+#                start_age_densities_tmp
+                F0=F0_tmp
+            )
+            F_btt_sv_smrs.append(F_btt_sv)
+
+#            p_sv = smr.pool_age_densities_single_value(start_age_densities_tmp)
+#            start_age_densities_tmp = lambda a: p_sv(a, smr.times[-1])
+            F_sv = smr.cumulative_pool_age_distributions_single_value(
+                F0=F0_tmp
+            )
+            F0_tmp = F0_tmp_maker(smr, F_sv)
+
+#        F_btt_sv_res = pwc_mr.cumulative_backward_transit_time_distribution_single_value_func(
+#            start_age_densities
+#        )
+        F_btt_sv_res = pwc_mr.cumulative_backward_transit_time_distribution_single_value_func(
+            F0=F0
+        )
+
+        for age in [0.0, 0.5, 1.0]:
+            for k, func_ref in enumerate(F_btt_sv_smrs):
+                if k < len(smrs)-1:
+                    times = smrs[k].times[:-1]
+                else:
+                    times = smrs[k].times
+                for t in times:
+                    with self.subTest():
+                        self.assertTrue(
+                            np.allclose(
+                                func_ref(age, t),
+                                F_btt_sv_res(age, t),
+                                rtol=1e-03
+                            )
+                        )
+
+        # test out of equilibrium
+        
+        smrs = self.smrs
+        pwc_mr = self.pwc_mr
+        
+        start_values = smrs[0].start_values
+
+#        def start_age_densities(a):
+#            p1 = np.exp(-a) * start_values[0]
+#            p2 = 2*np.exp(-2*a) * start_values[1]
+#        
+#            return np.array([p1, p2])
+
+        def F0(a):
+            # eq. age densities
+            F1 = (1-np.exp(-1*a)) * start_values[0]
+            F2 = (1-np.exp(-2*a)) * start_values[1]
+
+            return np.array([F1, F2])
+
+#        start_age_densities_tmp = start_age_densities
+        F0_tmp = F0
+
+        def F0_tmp_maker(smr, F_sv):
+            F0_tmp = lambda a: F_sv(a, smr.times[-1])
+            return F0_tmp
+
+        F_btt_sv_smrs = []
+        for k, smr in enumerate(smrs):
+            F_btt_sv = smr.cumulative_backward_transit_time_distribution_single_value_func(
+#                start_age_densities_tmp
+                F0=F0_tmp
+            )
+            F_btt_sv_smrs.append(F_btt_sv)
+
+#            p_sv = smr.pool_age_densities_single_value(start_age_densities_tmp)
+#            start_age_densities_tmp = lambda a: p_sv(a, smr.times[-1])
+            F_sv = smr.cumulative_pool_age_distributions_single_value(
+                F0=F0_tmp
+            )
+            F0_tmp = F0_tmp_maker(smr, F_sv)
+
+#        F_btt_sv_res = pwc_mr.cumulative_backward_transit_time_distribution_single_value_func(
+#            start_age_densities
+#        )
+        F_btt_sv_res = pwc_mr.cumulative_backward_transit_time_distribution_single_value_func(
+            F0=F0
+        )
+
+        for age in [0.0, 0.5, 1.0]:
+            for k, func_ref in enumerate(F_btt_sv_smrs):
+                if k < len(smrs)-1:
+                    times = smrs[k].times[:-1]
+                else:
+                    times = smrs[k].times
+                for t in times:
+                    with self.subTest():
+                        self.assertTrue(
+                            np.allclose(
+                                func_ref(age, t),
+                                F_btt_sv_res(age, t),
+                                rtol=1e-03
+                            )
+                        )
+
+    def test_cumulative_backward_transit_time_distribution_single_value_func_from_p0(self):
+        # test in equilibrium
+        
+        smrs = self.smrs_eq
+        pwc_mr = self.pwc_mr_eq
+        
+        start_values = smrs[0].start_values
+
+        def start_age_densities(a):
+            p1 = np.exp(-a) * start_values[0]
+            p2 = 2*np.exp(-2*a) * start_values[1]
+        
+            return np.array([p1, p2])
+
+#        def F0(a):
+#            # eq. age densities
+#            F1 = (1-np.exp(-1*a)) * start_values[0]
+#            F2 = (1-np.exp(-2*a)) * start_values[1]
+#
+#            return np.array([F1, F2])
+
+        start_age_densities_tmp = start_age_densities
+#        F0_tmp = F0
+
+        def p0_tmp_maker(smr, p_sv):
+            start_age_densities_tmp = lambda a: p_sv(a, smr.times[-1])
+            return start_age_densities_tmp
+
+#        def F0_tmp_maker(smr, F_sv):
+#            F0_tmp = lambda a: F_sv(a, smr.times[-1])
+#            return F0_tmp
+
+        F_btt_sv_smrs = []
+        for k, smr in enumerate(smrs):
+            F_btt_sv = smr.cumulative_backward_transit_time_distribution_single_value_func(
+                start_age_densities_tmp
+#                F0=F0_tmp
+            )
+            F_btt_sv_smrs.append(F_btt_sv)
+
+            p_sv = smr.pool_age_densities_single_value(start_age_densities_tmp)
+            start_age_densities_tmp = p0_tmp_maker(smr, p_sv)
+
+#            F_sv = smr.cumulative_pool_age_distributions_single_value(
+#                F0=F0_tmp
+#            )
+#            F0_tmp = F0_tmp_maker(smr, F_sv)
+
+        F_btt_sv_res = pwc_mr.cumulative_backward_transit_time_distribution_single_value_func(
+            start_age_densities
+        )
+#        F_btt_sv_res = pwc_mr.cumulative_backward_transit_time_distribution_single_value_func(
+#            F0=F0
+#        )
+
+        for age in [0.0, 0.5, 1.0]:
+            for k, func_ref in enumerate(F_btt_sv_smrs):
+                if k < len(smrs)-1:
+                    times = smrs[k].times[:-1]
+                else:
+                    times = smrs[k].times
+                for t in times:
+                    with self.subTest():
+                        self.assertTrue(
+                            np.allclose(
+                                func_ref(age, t),
+                                F_btt_sv_res(age, t),
+                                rtol=1e-03
+                            )
+                        )
+
+
 
     ###########################################################################
 

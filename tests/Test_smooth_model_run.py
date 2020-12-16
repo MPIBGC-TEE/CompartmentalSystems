@@ -1200,6 +1200,42 @@ class TestSmoothModelRun(InDirTest):
                     )
         
 
+    def test_cumulative_transit_time_distributions_single_value_func(self):
+        # two-dimensional, test FTT=BTT in steady state
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        time_symbol = Symbol('t')
+        input_fluxes = {0: 1, 1: 2}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {}
+        srm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+
+        start_values = np.array([1, 2])
+        times = np.linspace(0, 1, 6)
+        smr = SmoothModelRun(srm, {}, start_values, times)
+        smr.initialize_state_transition_operator_cache(lru_maxsize=None)
+
+        ages = np.linspace(0, 1, 3)
+        # negative ages will be cut off automatically
+        start_age_densities = lambda a: np.exp(-a) * start_values
+#        p = smr.pool_age_densities_func(start_age_densities)
+#        age_densities = p(ages)
+#        btt_arr = smr.backward_transit_time_density(age_densities)
+#        p_ftt = smr.forward_transit_time_density_func()
+#        ftt_arr = p_ftt(ages)
+
+        F_btt_sv = smr.cumulative_backward_transit_time_distribution_single_value_func(start_age_densities)
+        F_ftt_sv = smr.cumulative_forward_transit_time_distribution_single_value_func()
+
+        for age in ages:
+            for time in times:
+                if not np.isnan(F_ftt_sv(age, time)):
+                    self.assertEqual(
+                        round(F_ftt_sv(age, time), 3),
+                        round(F_btt_sv(age, time), 3)
+                    )
+        
+
     ##### transit time moment methods #####
 
 

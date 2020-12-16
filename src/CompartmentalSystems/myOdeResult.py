@@ -24,6 +24,8 @@ def get_sub_t_spans(t_span, disc_times):
 
 
 def solve_ivp_pwc(rhss, t_span, y0, disc_times=(), **kwargs):
+#    print("myOdeResult.py 27", disc_times, flush=True)
+    
     if not isinstance(rhss, Iterable):
         rhss = (rhss,)
 
