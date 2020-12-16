@@ -22,7 +22,9 @@ class TestDiscreteModelRun_14C(InDirTest):
         srm = SmoothReservoirModel.from_B_u(state_vector, t, B, u)
         parameter_dict = {}
         start_values = np.array([1])
-        times = np.arange(0, 6, 1)
+        nr_bins = 5
+        dt = 1.0
+        times = np.arange(0, nr_bins + 1, dt)
 
         smr = SmoothModelRun(srm, parameter_dict, start_values, times)
 
@@ -38,8 +40,8 @@ class TestDiscreteModelRun_14C(InDirTest):
             decay_rate
         )
 
-        dmr_from_pwc = DMR.from_SmoothModelRun(smr)
-        fake_net_Us = DMR.from_SmoothModelRun(self.smr_14C).net_Us
+        dmr_from_pwc = DMR.from_SmoothModelRun(smr,nr_bins)
+        fake_net_Us = DMR.from_SmoothModelRun(self.smr_14C,nr_bins).net_Us
 
         # we cannot infer net_Us_14C coming from data, hence we use the
         # net_Us from the 14C model coming from the Smooth 14C model

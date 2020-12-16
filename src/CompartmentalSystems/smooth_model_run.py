@@ -757,17 +757,17 @@ class SmoothModelRun(ModelRun):
                                 (start_age_densities, tuple(ages))]
             else:
                 self._computed_age_density_fields = {}
-        
+
             field_list = []
             for a in tqdm(ages):
                 field_list.append(p1(np.array([a])) + p2(np.array([a])))
 
             field = np.array(field_list)[:,0,:,:]
-            
+
             self._computed_age_density_fields[
                 (start_age_densities, tuple(ages))] = field
             return field
-                
+
         return p
 
     
@@ -1280,8 +1280,11 @@ class SmoothModelRun(ModelRun):
         """ 
         age_moment_vector = self.age_moment_vector(order, start_age_moments)
         r = self.external_output_vector
-        
-        return (r*age_moment_vector).sum(1)/r.sum(1)
+        pool_axis=1
+        return (
+                    (r*age_moment_vector).sum(axis=pool_axis)/
+                    r.sum(axis=pool_axis)
+               )
 
 
 #    def forward_transit_time_moment(self, order, epsrel=1e-2):
@@ -3833,7 +3836,7 @@ class SmoothModelRun(ModelRun):
         def ppp(a, t):
             #print('input', a, t)
             if (a < 0) or (t-t0 <= a):
-                val = np.zeros((1,self.nr_pools))[-1]
+                val = np.zeros((1, self.nr_pools))[-1]
             else:
                 u_val = u(t-a)
                 #print('u_val', u_val)

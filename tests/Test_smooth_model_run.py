@@ -556,7 +556,7 @@ class TestSmoothModelRun(InDirTest):
                   [ 0.        ,  0.        ],
                   [ 0.        ,  0.        ],
                   [ 0.        ,  0.        ]],
-                
+
                  [[ 0.        ,  0.        ],
                   [ 1.        ,  2.        ],
                   [ 1.        ,  2.        ],
@@ -570,12 +570,35 @@ class TestSmoothModelRun(InDirTest):
                   [ 0         ,  0         ],
                   [ 0         ,  0         ],
                   [ 0         ,  0         ]]])
+#
+#        a2_ref = np.array(
+#                [[[ 0.        ,  0.        ],
+#                  [ 0.        ,  0.        ],
+#                  [ 0.        ,  0.        ],
+#                  [ 0.        ,  0.        ],
+#                  [ 0.        ,  0.        ],
+#                  [ 0.        ,  0.        ]],
+#
+#                 [[ 1.        ,  2.        ],
+#                  [ 1.        ,  2.        ],
+#                  [ 1.        ,  2.        ],
+#                  [ 1.        ,  2.        ],
+#                  [ 1.        ,  2.        ],
+#                  [ 1.        ,  2.        ]],
+#                
+#                 [[ 0         ,  0         ],
+#                  [ 0         ,  0         ],
+#                  [ 0         ,  0         ],
+#                  [ 0         ,  0         ],
+#                  [ 0         ,  0         ],
+#                  [  0.36788825, 0.73576626000000010         ]]])
 
         a_ref = a1_ref + a2_ref
         ref = np.ndarray((3,6,2), np.float, a_ref)
         y = p_sv(0,0)
         res_l = [[p_sv(a, t) for t in times] for a in ages]
         res = np.array(res_l)
+#        print(res)
         self.assertTrue(np.allclose(res, ref,rtol=1e-3))
 
 

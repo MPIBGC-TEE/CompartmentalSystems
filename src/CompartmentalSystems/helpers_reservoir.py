@@ -986,3 +986,95 @@ def F_Delta_14C(C12, C14, alpha=None):
 
     C12[C12 == 0] = np.nan
     return (C14/C12/alpha - 1) * 1000
+
+def densities_to_distributions(
+        densities: Callable[[float],np.ndarray],
+        nr_pools: int
+    )->Callable[[float],np.ndarray]:
+        
+        def distributions(A: np.float) ->np.ndarray: 
+            return np.array(
+                [
+                    quad(
+                        lambda a:densities(a)[i],
+                        -np.inf, 
+                        A
+                    )[0]
+                    for i in range(nr_pools)
+                ]
+            )
+
+        return distributions    
+
+def pool_wise_bin_densities_from_smooth_densities_and_index(
+        densities: Callable[[float],np.ndarray],
+        nr_pools: int,
+        dt: float,
+    )->Callable[[int],np.ndarray]:
+    def content(ai:int)->np.ndarray:
+        da = dt
+        return np.array(
+            [
+                quad(
+                    lambda a:densities(a)[i],
+                    ai*da,
+                    (ai+1)*da
+                )[0] / da
+                for i in range(nr_pools)
+            ]
+        )
+    return content     
+
+def pool_wise_bin_densities_from_smooth_densities_and_indices(
+        densities: Callable[[float],np.ndarray],
+        nr_pools: int,
+        dt: float,
+    )->Callable[[np.ndarray],np.ndarray]:
+    bin_density = pool_wise_bin_densities_from_smooth_densities_and_index(
+                densities,
+                nr_pools,
+                dt
+            )
+    # vectorize it
+    def bin_densities(age_bin_indices: np.ndarray)->np.ndarray:
+        return np.stack(
+            [
+                bin_density(ai)
+                for ai in age_bin_indices
+            ],
+            axis=1
+        )
+    return bin_densities
+
+def negative_indicies_to_zero(
+        f: Callable[[np.ndarray],np.ndarray]
+    )->Callable[[np.ndarray],np.ndarray]:
+
+    def wrapper(age_bin_indices):
+        arr_true = f(age_bin_indices)
+        nr_pools = arr_true.shape[0]
+        return np.stack(
+            [
+                np.where(
+                    age_bin_indices >=0,
+                    arr_true[ip,:],
+                    0
+                )
+                for ip in range(nr_pools)
+            ]
+        )
+
+    return wrapper
+
+# make sure that the start age distribution
+# yields zero for negative ages or indices 
+def p0_maker(
+        start_age_densities_of_bin: Callable[[int],np.ndarray],
+):
+    def p0(ai):
+        res = start_age_densities_of_bin(ai)
+        if ai >= 0:
+            return res
+        else:
+            return np.zeros_like(res)
+    return p0

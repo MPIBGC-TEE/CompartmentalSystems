@@ -49,9 +49,9 @@ class TestModelRun_14C(InDirTest):
         )
 
     def test_DiscreteModelRun_14CFromFakeData(self):
-        dmr_from_smr_14C = DiscreteModelRun.from_SmoothModelRun(self.smr_14C)
+        dmr_from_smr_14C = DiscreteModelRun.from_SmoothModelRun(self.smr_14C,self.ntmo)
         dmr_14C = DiscreteModelRun_14C(
-            DiscreteModelRun.from_SmoothModelRun(self.smr),
+            DiscreteModelRun.from_SmoothModelRun(self.smr,self.ntmo),
             self.start_values_14C,
             dmr_from_smr_14C.net_Us,
             self.decay_rate
@@ -116,10 +116,10 @@ class TestModelRun_14C(InDirTest):
                     # the error should actually be zero
                     # and is only due to numerical inaccuracy.
                 )
-        plot_stocks_and_fluxes(
-            [
-                self.smr_14C,
-                pwc_mr_fd_14C
-            ],
-            'stocks_and_fluxes.pdf'
-        )
+        #plot_stocks_and_fluxes(
+        #    [
+        #        self.smr_14C,
+        #        pwc_mr_fd_14C
+        #    ],
+        #    'stocks_and_fluxes.pdf'
+        #)

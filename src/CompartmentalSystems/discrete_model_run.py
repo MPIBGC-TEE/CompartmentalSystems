@@ -4,11 +4,13 @@ from scipy.linalg import inv
 from scipy.special import factorial, binom
 from tqdm import tqdm
 from functools import lru_cache
+from typing import List, Callable, Union, Tuple
 
 from .helpers_reservoir import (
     net_Us_from_discrete_Bs_and_xs,
     net_Fs_from_discrete_Bs_and_xs,
-    net_Rs_from_discrete_Bs_and_xs
+    net_Rs_from_discrete_Bs_and_xs,
+    p0_maker
 )
 from . import picklegzip
 
@@ -98,12 +100,35 @@ class DiscreteModelRun():
         The lengths of the time intervals.
         """
         return np.diff(self.times).astype(np.float64)
+    
+    @property
+    def dt(self):
+        """
+        The length of the time intervals.
+        At the moment we assume equidistance without checking
+        """
+        return self.dts[0]
+
+    def time_bin_index(
+            self,
+            t: float
+    ) -> int:
+        """
+        The index of the bin enclosing the given time
+        """
+        return int(np.floor(t/self.dt)) 
 
     @classmethod
-    def from_SmoothModelRun(cls, smr, data_times=None):
-        if data_times is None:
-            data_times = smr.times
+    def from_SmoothModelRun(cls, smr, nr_bin):
 
+        # we discard the inner spacing
+        # of smr.times since it is potentially
+        # not equidistant
+        data_times=np.linspace(
+            smr.times[0],
+            smr.times[-1],
+            nr_bin+1 
+        )
         return cls(
             data_times,
             smr.fake_discretized_Bs(data_times),
@@ -304,18 +329,53 @@ class DiscreteModelRun():
                     moment_sum += age_moments[-1][j-1, :].reshape((n,)) \
                                   * binom(k, j) * dts[i]**(k-j)
 
-                vec[k-1, :] = inv(X_np1) @ B @ X_n
-                vec[k-1, :] @= (moment_sum + ones*dts[i]**k)
+                vec[k-1, :] = inv(X_np1) @ B @\
+                        X_n @ (moment_sum + ones*dts[i]**k)
 
             age_moments.append(vec)
 
         return np.array(age_moments)
 
-    def backward_transit_time_moment(self, order, start_age_moments):
-        age_moment_vector = self.age_moment_vector(order, start_age_moments)
-        r = self.external_output_vector
+    def backward_transit_time_moment(
+            self,
+            order: int,
+            start_age_moments: np.ndarray
+        )-> np.ndarray:
+        """Compute the ``order`` th backward transit time moment based on the 
+        This is done by computing a weighted sum of of the pool wise 
+        age moments. 
+        For every pool the weight is givem by the fraction of the 
+        of this pools output of the combined output of all pools.
+        :func:`age_moment_vector`.
 
-        return (r*age_moment_vector[:-1]).sum(1)/r.sum(1)
+        Args:
+            order (int): The order of the backward transit time moment that is 
+                to be computed.
+            start_age_moments (numpy.ndarray order x nr_pools, optional): 
+                Given initial age moments up to the order of interest. 
+                Can possibly be computed by :func:`moments_from_densities`. 
+                Defaults to None assuming zero initial ages.
+
+        Returns:
+            numpy.array: shape (nr_bins,nr_pools) 
+            The ``order`` th backward transit time moment over the time grid.
+        """ 
+
+        # the shape of the age moment vector is (nr_bins,nr_pools)
+        r=self.acc_net_external_output_vector()
+
+        # the shape of the age moment vector is (nr_bins+1,nr_pools)
+        # so we have to cut it
+        age_moment_vector = self.age_moment_vector(
+                order,
+                start_age_moments
+        )[:-1,:] 
+        pool_axis=1
+        return (
+                    (r*age_moment_vector).sum(axis=pool_axis)/
+                    r.sum(axis=pool_axis)
+               )
+
 
     def start_age_densities_func(self):
         B = self.Bs[0]
@@ -331,77 +391,165 @@ class DiscreteModelRun():
 
         return p
 
-    def _state_transition_operator(self, t1, t0, x):
-        if t0 > t1:
-            raise(DMRError('Evaluation before t0 not possible'))
-
-        if t1 == t0:
-            return x
-
-        k0 = np.where(self.times == t0)[0][0]
-        k1 = np.where(self.times == t1)[0][0]
-
-        if (hasattr(self, '_sto_recent') and
-           (self._sto_recent['k0'] == k0) and
-           (self._sto_recent['k1'] == k1)):
-            Phi = self.Bs[k1-1] @ self._sto_recent['Phi']
-        elif (hasattr(self, '_sto_recent') and
-                (self._sto_recent['k0'] == k0+1) and
-                (self._sto_recent['k1'] == k1)):
-            Phi = self._sto_recent['Phi'] * self.Bs[k0]
+    @lru_cache(maxsize=20)
+    def _state_transition_operator_matrix(self, k1, k0):
+        phi=self._state_transition_operator_matrix
+        if k0>k1:
+            raise
+        elif k0 == k1:
+            return np.eye(self.nr_pools)
+        elif k1 == k0+1:
+            return self.Bs[k0]
         else:
-            Phi = np.identity(self.nr_pools)
-            for k in range(k0, k1):
-                Phi = self.Bs[k] @ Phi
+            # im=int((k1+k0)/2)
+            im=k1-1
+        return phi(im,k0)*phi(k1,im)
 
-        self._sto_recent = {'k0': k0, 'k1': k1, 'Phi': Phi}
+        #if (hasattr(self, '_sto_recent') and
+        #   (self._sto_recent['k0'] == k0) and
+        #   (self._sto_recent['k1'] == k1)):
+        #    Phi = self.Bs[k1-1] @ self._sto_recent['Phi']
+        #elif (hasattr(self, '_sto_recent') and
+        #        (self._sto_recent['k0'] == k0+1) and
+        #        (self._sto_recent['k1'] == k1)):
+        #    Phi = self._sto_recent['Phi'] * self.Bs[k0]
+        #else:
+        #Phi = np.identity(self.nr_pools)
+        #for k in range(k0, k1):
+        #    Phi = self.Bs[k] @ Phi
 
+        ##self._sto_recent = {'k0': k0, 'k1': k1, 'Phi': Phi}
+
+        #return Phi 
+  
+    def _state_transition_operator(self, k1, k0, x):
+        # fixme mm 12-3-2020
+        # This code implicitly assumes that 
+        # t0 and t1 are elements of self.times
+        # So the actual arguments are the indices k0 and k1
+        # If we restrict the ages to integral multiples of 
+        # dt too, we could perform all computations 
+        # on an integer grid, and scale the results later
+        # by multiplying ages and times by dt
+        # This would avoid the 'np.where' calls
+        #
+        # There is an argument for using equidistant age
+        # distributions:
+        # While it is perfectly possible to have mass with
+        # arbitrary age there is usually an influx of mass
+        # with original age 0 that aquires over time an 
+        # age that is in integral multiple of dt. So every
+        # (original) age that is not such a multiple will eventually        # be stradled by two integral multiples
+        
+
+        ## grid
+        #if k0 > k1:
+        #    raise(DMRError('Evaluation before t0 not possible'))
+
+        #if k1 == k0:
+        #    return x
+
+       # #k0 = np.where(self.times == t0)[0][0]
+       # k0 = np.where(np.abs(self.times - t0) < 1e-09)[0][0]
+       # #k1 = np.where(self.times == t1)[0][0]
+       # k1 = np.where(np.abs(self.times - t1) < 1e-09)[0][0]
+
+       # if (hasattr(self, '_sto_recent') and
+       #    (self._sto_recent['k0'] == k0) and
+       #    (self._sto_recent['k1'] == k1)):
+       #     Phi = self.Bs[k1-1] @ self._sto_recent['Phi']
+       # elif (hasattr(self, '_sto_recent') and
+       #         (self._sto_recent['k0'] == k0+1) and
+       #         (self._sto_recent['k1'] == k1)):
+       #     Phi = self._sto_recent['Phi'] * self.Bs[k0]
+       # else:
+       #     Phi = np.identity(self.nr_pools)
+       #     for k in range(k0, k1):
+       #         Phi = self.Bs[k] @ Phi
+
+       # self._sto_recent = {'k0': k0, 'k1': k1, 'Phi': Phi}
+        Phi = self._state_transition_operator_matrix(k1, k0 )
         return Phi @ x
 
-    def age_densities_1_single_value_func(self, start_age_densities):
+    def age_densities_1_single_value_func(
+            self,
+            start_age_densities_of_bin: Callable[[int], np.ndarray]
+        ) -> Callable[[int, int], float]:#
+        """Returns a function f(ia,it) th#at computes
+        the quotient delta_m(ia,it)/delta_a where delta_m
+        it the remainder of the initial mass distribution that
+        has age ia*da at time it*dt.
+        """
+
         t0 = self.times[0]
 
-        def p0(a):
-            if a >= 0:
-                return start_age_densities(a)
-            else:
-                return np.zeros((self.nr_pools,))
+        #def p0(ai):
+        #    if ai >= 0:
+        #        return start_age_densities_of_bin(ai)
+        #    else:
+        #        return np.zeros((self.nr_pools,))
+        p0 = p0_maker(start_age_densities_of_bin)
 
         Phi = self._state_transition_operator
 
-        def p1_sv(a, t):
-            res = Phi(t, t0, p0(a-(t-t0)))
+        def p1_sv(ia, kt):
+            #res = Phi(t, t0, p0(a-(t-t0)))
+            kt0 = 0
+            res = Phi(kt, kt0, p0(ia-kt))
             return res
 
         return p1_sv
 
-    def _age_densities_1_func(self, start_age_densities):
-        p1_sv = self.age_densities_1_single_value_func(start_age_densities)
+    def _age_densities_1_func(
+            self,
+            start_age_densities_of_bin_index
+        ):
 
-        times = self.times
-        t0 = times[0]
-        dt = self.dts[0]
+        #p1_sv = self.age_densities_1_single_value_func(start_age_densities)
+        #times = self.times
+        #t0 = times[0]
+        #dt = self.dts[0]
+        #def p1(age_bin_indices):
 
-        def p1(a_min, a_max, t, coarsity):
-            a_min = max(t-t0+dt, a_min)
+        #    vals = []
+        #    if len(age_bin_indices) > 0:
+        #        for ia in tqdm(age_bin_indices):
+        #            vals.append(
+        #                np.stack(
+        #                    [p1_sv(ia, it) for it in range(len(self.times[:-1]))],
+        #                    axis=0
+        #                )
+        #            )
+        #            print(vals[-1].shape)
+        #            #vals.append(p1_sv(a, t))
+        #    vals = np.array(vals)
 
-            rest_a_max = a_max - (t-t0)
-            rest_a_min = a_min - (t-t0)
+        #    return vals
 
-            a_min_nr = np.ceil(rest_a_min/dt)
-            a_max_nr = np.floor(rest_a_max/dt)
+        #return p1
 
-            ages = t-t0 + np.arange(a_min_nr*dt, (a_max_nr+1)*dt, dt)
-            ages = ages[np.arange(0, len(ages), coarsity)]
-#            vals = np.array([p1_sv(a,t) for a in ages])
+        p0 = p0_maker(start_age_densities_of_bin_index)
 
-            vals = []
-            if len(ages) > 0:
-                for a in tqdm(ages):
-                    vals.append(p1_sv(a, t))
-            vals = np.array(vals)
-
-            return ages, vals.reshape((len(ages), self.nr_pools))
+        def p1(age_bin_indices):
+            nt = len(self.times[:-1])
+            na = len(age_bin_indices)
+            nrp = self.nr_pools
+            if len(age_bin_indices) > 0:
+                vals = np.zeros((na,nt,nrp))
+                for it in range(nt):
+                    phi = self._state_transition_operator_matrix(it,0)
+                    sais= np.stack(
+                        [
+                            p0(ai - it) 
+                            for ai in age_bin_indices
+                        ],
+                        axis=1
+                    )
+                    #print(sais.shape)
+                    #print((phi @ sais).shape)
+                    #print(vals.shape)
+                    vals[:,it,:] = (phi @ sais).transpose()
+                return vals
 
         return p1
 
@@ -409,15 +557,22 @@ class DiscreteModelRun():
         times = self.times
         t0 = times[0]
         Phi = self._state_transition_operator
-
-        def p2_sv(a, t):
-            if (a < 0) or (t-t0 < a):
+        kt0=0
+        def p2_sv(ia, kt):
+            if (ia < 0) or (kt-kt0 <= ia):
                 return np.zeros((self.nr_pools,))
-            k = np.where(times == t-a)[0][0]
-            u = self.net_Us[k]
-            res = Phi(t, t-a, u)  # age 0 just arrived
+            #k = np.where(times == t-a)[0][0]
+            #kt = np.where(np.abs(times - (t-a)) < 1e-09)[0][0]
+            U = self.net_Us[kt]
+            res = Phi(kt, kt-ia, U)  # age 0 just arrived
 
-            return res
+            # the density returned by the smooth model run has
+            # dimension mass*time^-1 for every point in the age,time plane
+            # whereas the discrete model run
+            # returns a mass for every (da x dt) bin in the age,time plane
+            # Therefore we have to divide by dt here
+            return res / self.dts[0] 
+            #return res 
 
         return p2_sv
 
@@ -427,29 +582,73 @@ class DiscreteModelRun():
         times = self.times
         t0 = times[0]
 
-        def p2(a_min, a_max, t, coarsity):
-            if a_min > t-t0:
-                a_min = t-t0
-            a_max = min(t-t0, a_max)
+        #def p2(a_min, a_max, t, coarsity):
+        #    if a_min > t-t0:
+        #        a_min = t-t0
+        #    a_max = min(t-t0, a_max)
 
-            k_t = np.where(times == t)[0][0]
-            try:
-                k_a_min = np.where(t-times[:(k_t+1)] >= a_min)[0][-1]
-                k_a_max = np.where(t-times[:(k_t+1)] <= a_max)[0][0]
-            except IndexError:
-                return np.array([]), np.array([])
+        #    k_t = np.where(times == t)[0][0]
+        #    try:
+        #        k_a_min = np.where(t-times[:(k_t+1)] >= a_min)[0][-1]
+        #        k_a_max = np.where(t-times[:(k_t+1)] <= a_max)[0][0]
+        #    except IndexError:
+        #        return np.array([]), np.array([])
 
-            ages = np.flip(t-times[k_a_max:(k_a_min+1)], 0)
-            ages = ages[np.arange(0, len(ages), coarsity)]
+        #    ages = np.flip(t-times[k_a_max:(k_a_min+1)], 0)
+        #    ages = ages[np.arange(0, len(ages), coarsity)]
+#       #     vals = np.array([p2_sv(a,t) for a in ages])
+
+        #    vals = []
+        #    if len(ages) > 0:
+        #        for a in tqdm(ages):
+        #            vals.append(p2_sv(a, t))
+        #    vals = np.array(vals)
+
+        #    return ages, vals.reshape((len(ages), self.nr_pools))
+
+        #return p2
+        def p2(age_bin_indices):
+            #if a_min > t-t0:
+            #    a_min = t-t0
+            #a_max = min(t-t0, a_max)
+
+            #k_t = np.where(times == t)[0][0]
+            #try:
+            #    k_a_min = np.where(t-times[:(k_t+1)] >= a_min)[0][-1]
+            #    k_a_max = np.where(t-times[:(k_t+1)] <= a_max)[0][0]
+            #except IndexError:
+            #    return np.array([]), np.array([])
+
+            #ages = np.flip(t-times[k_a_max:(k_a_min+1)], 0)
+            #ages = ages[np.arange(0, len(ages), coarsity)]
 #            vals = np.array([p2_sv(a,t) for a in ages])
 
-            vals = []
-            if len(ages) > 0:
-                for a in tqdm(ages):
-                    vals.append(p2_sv(a, t))
-            vals = np.array(vals)
+            #vals = []
+            #if len(age_bin_indices) > 0:
+            #    for ia in tqdm(age_bin_indices):
+            #        vals.append(
+            #            np.stack(
+            #                [p2_sv(ia, it) for it in range(len(self.times[:-1]))],
+            #                axis=0
+            #            )    
+            #        )    
+            #        #vals.append(p2_sv(a, t))
+            #vals = np.array(vals)
+            nt = len(self.times[:-1])
+            na = len(age_bin_indices)
+            nrp = self.nr_pools
+            if len(age_bin_indices) > 0:
+                vals = np.stack(
+                    [
+                        np.stack(
+                            [p2_sv(ia, it) for it in range(nt)],
+                            axis=0
+                        )
+                        for ia in tqdm(age_bin_indices)
+                    ]
+                )
 
-            return ages, vals.reshape((len(ages), self.nr_pools))
+            return vals
 
         return p2
 
@@ -457,54 +656,151 @@ class DiscreteModelRun():
         p1_sv = self.age_densities_1_single_value_func(
             start_age_densities
         )
-        p2_sv = self.age_densities_single_value_func()
+        p2_sv = self.age_densities_2_single_value_func()
 
         def p_sv(a, t):
             return p1_sv(a, t) + p2_sv(a, t)
 
         return p_sv
 
-    def pool_age_densities_func(self, start_age_densities, coarsity=1):
-        p1 = self._age_densities_1_func(start_age_densities)
+    def pool_age_densities_func(self, start_age_densities_bin, coarsity=1):
+        p1 = self._age_densities_1_func(start_age_densities_bin)
         p2 = self._age_densities_2_func()
 
-        def p(a_min, a_max, t):
-            ages_1, vals_1 = p1(a_min, a_max, t, coarsity)
-            ages_1 = ages_1.tolist()
-            vals_1 = vals_1.tolist()
-            ages_2, vals_2 = p2(a_min, a_max, t, coarsity)
-            ages_2 = ages_2.tolist()
-            vals_2 = vals_2.tolist()
-
-            ages = np.array(ages_2+ages_1)
-            vals = np.array(vals_2+vals_1)
-
-            return ages, vals
-
+        def p(ages):
+            vals_1 = p1(ages)
+            vals_2 = p2(ages)
+            vals = vals_2 + vals_1
+            return vals
         return p
+    
+    # Old version is commented because we now avoid real valued arguments for times
+    # and ages and replaced them by and index denoting the age or time
+    # bin. 
+    # This ensures the predicatabiliyt of the size of the returned arrays
+    # for more than one time.
+    #def age_quantiles_at_time(self, q, t, pools, start_age_densities):
+    #    dts = self.dts
 
-    def age_quantiles_at_time(self, q, t, pools, start_age_densities):
-        dts = self.dts
+    #    k = np.where(self.times == t)[0][0]
+    #    x = self.soln[k, pools].sum()
 
-        k = np.where(self.times == t)[0][0]
-        x = self.soln[k, pools].sum()
+    #    prev_age = 0
+    #    age = 0
+    #    mass = 0
 
-        prev_age = 0
-        age = 0
+    #    p_sv = self.age_densities_single_value(start_age_densities)
+    #    while mass <= q*x:
+    #        prev_age = age
+    #        if k == 0:
+    #            age += dts[0]
+    #        else:
+    #            age += dts[k-1]
+    #            k -= 1
+
+    #        mass += p_sv(age, t)[pools].sum()
+
+    #    return prev_age
+    def age_quantile_at_time(
+            self,
+            q,
+            t,
+            pools,
+            start_age_densities_of_bin
+        )-> float:
+        """Returns pool age distribution quantiles for the time.
+        This is a wrapper providing an interface similar to the continuous
+        model runs.
+        Internally it will compute the index of the bin containing the given
+        time, and call the indexed version, whose result is the index of
+        that age bin. The boundary of this age bin will be returned.
+
+        For internal use the indexed version func:age_quantile_bin_at_time_bin
+        is usually preferred since it avoids the repeated computation of the
+        indices of age and time bins which are the more natural variables for
+        this discrete model run.
+
+
+        Args:
+            q:
+                    quantile (between 0 and 1): The relative share of mass that is
+                    considered to be left of the computed value. A value of ``0.5``
+                    leads to the computation of the median of the distribution.
+            it:
+                    index of the age bin for which the quantile is to be computed.
+            pools:
+                    the indices of the pools that contribute to the mass
+                    that the quantile computation is refering to.
+                    If for example a list containing a single index is given
+                    then the quantile of mass in the respective pool will be
+                    computed.
+                    If the list contains all the pool indices the result
+                    will be the system age.
+            start_age_densities_of_bins:
+                    A function that takes a single integer (denoting the
+                    age bin) and returns the value of mass per age in that bin.
+                    (piecewise constant approximation of a density).
+
+
+        Returns: an age (will be a multiple of the binsize of the age bins)
+        """
+        it = self.time_bin_index(t)
+        ia = self.age_quantile_bin_at_time_bin(q,it,pools,start_age_densities_of_bin)
+        a = self.dt*ia
+        return a
+
+    def age_quantile_bin_at_time_bin(
+            self,
+            q: float,
+            it: int,
+            pools: List[int],
+            start_age_densities_of_bin: Callable[[int],np.ndarray]
+        ) -> int:
+        """Returns pool age bin index for the  the quantile of the combined
+        mass of the mentioned pools for the provided time bin index.
+
+        Args:
+            q:
+                quantile (between 0 and 1): The relative share of mass that is 
+                considered to be left of the computed value. A value of ``0.5`` 
+                leads to the computation of the median of the distribution.
+            it:
+                index of the time bin for which the quantile is to be computed.
+            pools:
+                the indices of the pools that contribute to the mass
+                that the quantile computation is refering to.
+                If for example a list containing a single index is given
+                then the quantile of mass in the respective pool will be
+                computed.
+                If the list contains all the pool indices the result
+                will be the system age.
+            start_age_densities_of_bin:
+                A function that takes a single integer (denoting the
+                age bin) and returns the value of mass per age in that bin.
+                (piecewise constant approximation of a density).
+
+          Returns:
+                An integer array of shape (nr_pools,) containing the bin
+                number for every pool.
+          """
+
+        # x = self.soln[k, pools].sum()
+        x = self.solve()[it,pools].sum()
+
+        prev_ai = 0
+        ai = 0
         mass = 0
 
-        p_sv = self.age_densities_single_value(start_age_densities)
+        p_sv = self.age_densities_single_value_func(
+            start_age_densities_of_bin
+        )
         while mass <= q*x:
-            prev_age = age
-            if k == 0:
-                age += dts[0]
-            else:
-                age += dts[k-1]
-                k -= 1
+            prev_ai = ai
+            ai += 1
+            mass += p_sv(ai, it)[pools].sum()*self.dt
 
-            mass += p_sv(age, t)[pools].sum()
-
-        return prev_age
+        print(prev_ai)
+        return prev_ai
 
     @classmethod
     def load_from_file(cls, filename):
