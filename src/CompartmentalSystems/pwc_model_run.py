@@ -5,8 +5,10 @@ from sympy import flatten, lambdify, ImmutableMatrix
 from scipy.integrate import quad
 import hashlib
 import base64
+from tqdm import tqdm
 
 from .model_run import ModelRun
+from .smooth_model_run import SmoothModelRun
 from .helpers_reservoir import (
     numsol_symbolical_system,
     check_parameter_dict_complete,
@@ -506,18 +508,20 @@ class PWCModelRun(ModelRun):
         Returns:
             numpy.ndarray: len(times) x nr_pools
         """
-        times = self.times
-        nt = len(times)
+        if not hasattr(self, "_external_output_vector"):
+            times = self.times
+            nt = len(times)
 
-        flux_funcss = self.external_output_flux_funcss()
-        res = np.zeros((nt, self.nr_pools))
-        for pool_nr in range(self.nr_pools):
-            flux_func = self.join_flux_funcss_rc(flux_funcss, pool_nr)
-            for k in range(nt):
-                res[k, pool_nr] = flux_func(times[k])
+            flux_funcss = self.external_output_flux_funcss()
+            res = np.zeros((nt, self.nr_pools))
+            for pool_nr in range(self.nr_pools):
+                flux_func = self.join_flux_funcss_rc(flux_funcss, pool_nr)
+                for k in range(nt):
+                    res[k, pool_nr] = flux_func(times[k])
 
-        return res
+            self._external_output_vector = res
 
+        return self._external_output_vector
 
     def backward_transit_time_moment(self, order, start_age_moments=None):
         """Compute the ``order`` th backward transit time moment based on the 
@@ -587,7 +591,7 @@ class PWCModelRun(ModelRun):
 
         def G_sv(a, t):
             if a < t-t0: return np.zeros((n,))
-            res = np.matmul(self.Phi(t, t0), F0(a-(t-t0)))
+            res = np.matmul(self.Phi(t, t0), F0(a-(t-t0))).reshape((self.nr_pools,))
             return res
 
         def H_sv(a, t):
@@ -602,7 +606,7 @@ class PWCModelRun(ModelRun):
             #x_tma_old = [np.float(sol_funcs[pool](t-a)) for pool in range(n)]
             x_tma = sol_funcs_array(t-a)
             # what remains from x_tma at time t
-            m = np.matmul(self.Phi(t, t-a), x_tma)
+            m = np.matmul(self.Phi(t, t-a), x_tma).reshape((self.nr_pools,))
             # difference is not older than t-a
             res = x_t-m
             # cut off accidental negative values
@@ -610,8 +614,6 @@ class PWCModelRun(ModelRun):
 
         def F(a, t):
             res = G_sv(a,t) + H_sv(a,t)
-            #print(a, t, res)
-            #print('G', G_sv(a,t), 'H', H_sv(a,t))
             return res
 
         return F
@@ -660,6 +662,42 @@ class PWCModelRun(ModelRun):
             return res
 
         return F_btt_sv
+
+    def backward_transit_time_quantiles(
+        self,
+        quantile,
+        F0, # cumulative star age distribution (not normalized)
+        start_values=None,
+        time_indices=None,
+        method="brentq",
+        tol=1e-08
+    ):
+        times = self.times
+        norm_consts = self.external_output_vector.sum(axis=1)
+        if time_indices is not None:
+            times = times[time_indices]
+            norm_consts = norm_consts[time_indices]
+        
+        if start_values is None:
+            start_values = np.zeros_like(times)
+
+        F_btt_sv = self.cumulative_backward_transit_time_distribution_single_value_func(
+            F0=F0
+        )
+
+        res = []
+        for k in tqdm(range(len(times))):
+            xi = SmoothModelRun.distribution_quantile(
+                quantile, 
+                lambda a: F_btt_sv(a, times[k]), 
+                norm_const=norm_consts[k],
+                start_value=start_values[k],
+                method=method,
+                tol=tol
+            )
+            res.append(xi)
+
+        return np.array(res)
 
 ###############################################################################
 

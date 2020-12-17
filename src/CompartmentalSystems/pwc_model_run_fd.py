@@ -278,6 +278,10 @@ class PWCModelRunFD(ModelRun):
             start_age_moments
         )
 
+    @property
+    def external_output_vector(self):
+        return self.pwc_mr.external_output_vector
+
     def cumulative_backward_transit_time_distribution_single_value_func(
         self,
         start_age_densities=None,
@@ -286,6 +290,36 @@ class PWCModelRunFD(ModelRun):
         return self.pwc_mr.cumulative_backward_transit_time_distribution_single_value_func(
             start_age_densities,
             F0
+        )
+
+    def backward_transit_time_quantiles(
+        self,
+        quantile,
+        F0, # cumulative star age distribution (not normalized)
+        start_values=None,
+        time_indices=None,
+        method="brentq",
+        tol=1e-08
+    ):
+        return self.pwc_mr.backward_transit_time_quantiles(
+            quantile,
+            F0,
+            start_values,
+            time_indices,
+            method,
+            tol
+        )
+
+    def initialize_state_transition_operator_cache(
+        self,
+        lru_maxsize,
+        lru_stats=False,
+        size=1
+    ):
+        self.pwc_mr.initialize_state_transition_operator_cache(
+            lru_maxsize,
+            lru_stats,
+            size
         )
 
 #    moved to ModelDataObject
