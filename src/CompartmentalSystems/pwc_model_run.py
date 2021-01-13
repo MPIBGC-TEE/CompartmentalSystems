@@ -369,9 +369,9 @@ class PWCModelRun(ModelRun):
 #        return np.array([both_parts_normalized_at_time_index(ti) 
 #                            for ti in range(len(times))])
         
-    def age_moment_vector(self, order, start_age_moments=None):
-        """Compute the ``order`` th pool age moment vector over the time grid 
-        by an ODE system.
+    def age_moment_vector_up_to(self, up_to_order, start_age_moments=None):
+        """Compute the pool age moment vectors up to ``up_to_order`` over
+        the time grid by an ODE system.
 
         This function solves an ODE system to obtain the pool age moments very
         fast. If the system has empty pools at the beginning, the semi-explicit 
@@ -379,36 +379,38 @@ class PWCModelRun(ModelRun):
         starts.
 
         Args:
-            order (int): The order of the pool age moments to be computed.
+            up_to_order (int): The order up to which the pool age moments
+                are to be computed.
             start_age_moments (numpy.ndarray order x nr_pools, optional): 
                 Given initial age moments up to the order of interest. 
                 Can possibly be computed by :func:`moments_from_densities`. 
                 Defaults to None assuming zero initial ages.
 
         Returns:
-            numpy.ndarray: len(times) x nr_pools.
-            The ``order`` th pool age moments over the time grid.
+            numpy.ndarray: len(times) x order x nr_pools.
+            The orders up to ``up_to_order`` of the  pool age moments
+            over the time grid.
         """
         n = self.nr_pools
         times = self.times
         
         if start_age_moments is None:
-            start_age_moments = np.zeros((order, n))
+            start_age_moments = np.zeros((up_to_order, n))
         
         max_order=start_age_moments.shape[0]
-        if order>max_order:
+        if up_to_order>max_order:
             raise Error("""
                 To solve the moment system with order{0}
                 start_age_moments up to (at least) the same order have to be
                 provided. But the start_age_moments.shape was
-                {1}""".format(order,start_age_moments.shape)
+                {1}""".format(up_to_order, start_age_moments.shape)
             )
-        if order<max_order:
+        if up_to_order<max_order:
             warning("""
                 Start_age_moments contained higher order values than needed.
                 start_age_moments order was {0} while the requested order was
                 {1}. This is no problem but possibly unintended. The higer
-                order moments will be clipped """.format(max_order,order)
+                order moments will be clipped """.format(max_order, up_to_order)
             )
             # make sure that the start age moments are clipped to the order
             # (We do not need start values for higher moments and the clipping
@@ -418,8 +420,8 @@ class PWCModelRun(ModelRun):
 
         if not (0 in self.start_values):
             #ams = self._solve_age_moment_system_old(order, start_age_moments)
-            ams,_ = self._solve_age_moment_system(order, start_age_moments)
-            return ams[:,n*order:]
+            ams, _ = self._solve_age_moment_system(up_to_order, start_age_moments)
+            return ams.reshape((-1, up_to_order+1, n))
         else:
             raise(ValueError('At least one pool is empty at the beginning.'))
 #            # try to start adapted mean_age_system once no pool 
@@ -465,6 +467,30 @@ class PWCModelRun(ModelRun):
 #                # always an empty pool there
 #                return self.age_moment_vector_semi_explicit(
 #                        order, start_age_moments)
+
+
+    def age_moment_vector(self, order, start_age_moments=None):
+        """Compute the ``order`` th pool age moment vector over the time grid 
+        by an ODE system.
+
+        This function solves an ODE system to obtain the pool age moments very
+        fast. If the system has empty pools at the beginning, the semi-explicit 
+        formula is used until all pools are non-empty. Then the ODE system 
+        starts.
+
+        Args:
+            order (int): The order of the pool age moments to be computed.
+            start_age_moments (numpy.ndarray order x nr_pools, optional): 
+                Given initial age moments up to the order of interest. 
+                Can possibly be computed by :func:`moments_from_densities`. 
+                Defaults to None assuming zero initial ages.
+
+        Returns:
+            numpy.ndarray: len(times) x nr_pools.
+            The ``order`` th pool age moments over the time grid.
+        """
+        amvs_up_to_order = self.age_moment_vector_up_to(order, start_age_moments)
+        return amvs_up_to_order[:, order, :]
 
 
     # requires start moments <= order

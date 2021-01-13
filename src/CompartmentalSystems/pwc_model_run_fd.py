@@ -255,6 +255,12 @@ class PWCModelRunFD(ModelRun):
 #            times
 #        )
 
+    def age_moment_vector_up_to(self, up_to_order, start_age_moments=None):
+        return self.pwc_mr.age_moment_vector_up_to(
+            up_to_order,
+            start_age_moments
+        )
+
     def age_moment_vector(self, order, start_age_moments = None):
         return self.pwc_mr.age_moment_vector(
             order,
