@@ -403,7 +403,8 @@ class PWCModelRunFD(ModelRun):
         gross_R,
         B0,
         integration_method,
-        nr_nodes
+        nr_nodes,
+        check_success=False
     ):
         # reconstruct a B that meets F and r possibly well,
         # B0 is some initial guess for the optimization
@@ -572,8 +573,9 @@ class PWCModelRunFD(ModelRun):
 #        )
 
 #        print('y', y)
-#        if not y.success:
-#            raise(PWCModelRunFDError(y.message))
+        if check_success and (not y.success):
+            msg = y.message.replace("\n", " ")
+            raise(PWCModelRunFDError(msg))
 
         B = pars_to_matrix(y.x)
 
@@ -591,6 +593,7 @@ class PWCModelRunFD(ModelRun):
         gross_Rs,
         integration_method='solve_ivp',
         nr_nodes=None,
+        check_success=False
     ):
         print(
             "reconstructing Bs using 'integration_method' =",
@@ -635,7 +638,8 @@ class PWCModelRunFD(ModelRun):
                 gross_Rs[k],
                 B0,
                 integration_method,
-                nr_nodes
+                nr_nodes,
+                check_success
             )
 
             Bs[k, :, :] = B
