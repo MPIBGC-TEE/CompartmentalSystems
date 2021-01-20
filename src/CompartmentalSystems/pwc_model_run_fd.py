@@ -13,6 +13,9 @@ from .smooth_reservoir_model import SmoothReservoirModel
 from scipy.integrate import solve_ivp
 # from bgc_md2.Variable import Variable
 
+from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel as LAPM
+
+
 ###############################################################################
 
 
@@ -259,6 +262,30 @@ class PWCModelRunFD(ModelRun):
 #            start_age_moments
 #            times
 #        )
+
+    def fake_eq_model(self, nr_time_steps):
+        # average the first `nr_time_steps` us and Bs
+        mean_u = Matrix(self.us[:nr_time_steps, ...].mean(axis=0))
+        mean_B = Matrix(self.Bs[:nr_time_steps, ...].mean(axis=0))
+                            
+        eq_model = LAPM(
+            mean_u,
+            mean_B,
+            force_numerical=True
+        )
+        return eq_model
+
+    def fake_start_age_moments(self, nr_time_steps, up_to_order):
+        eq_model = self.fake_eq_model(nr_time_steps)
+
+        start_age_moments = np.stack(
+            [
+                np.array(eq_model.a_nth_moment(order), dtype=np.float64).reshape((-1,))
+                for order in range(1, up_to_order+1)
+            ],
+            axis=0
+        )
+        return start_age_moments
 
     def age_moment_vector_up_to(self, up_to_order, start_age_moments=None):
         return self.pwc_mr.age_moment_vector_up_to(

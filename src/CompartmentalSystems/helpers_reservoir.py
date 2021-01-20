@@ -408,7 +408,10 @@ def generalized_inverse_CDF(CDF, u, start_dist=1e-4, tol=1e-8):
     if np.isnan(y1):
         res = np.nan
     else:
-        res = brentq(f, 0, x1, xtol=tol)
+        res, root_results = brentq(f, 0, x1, xtol=tol, full_output=True)
+        if not root_results.converged:
+            print("quantile convegence failed")
+
 #    if f(res) > tol: res = np.nan
 #    print('gi_res', res)
 #    print('finished', method_f.__name__, 'on [0,', x1, ']')

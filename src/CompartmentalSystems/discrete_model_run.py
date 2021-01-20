@@ -246,7 +246,7 @@ class DiscreteModelRun():
         n = order
 
         fm = factorial(n) * pinv(X) @ matrix_power(B, n)
-        fm @= matrix_power(pinv(Id-B), n) @ x
+        fm = fm @ matrix_power(pinv(Id-B), n) @ x
 
         return fm
 
@@ -291,6 +291,78 @@ class DiscreteModelRun():
             start_age_moments.append(start_m_moment*dt**n)
 
         return np.array(start_age_moments)
+
+    # return value in unit "time steps"
+    def fake_start_m_factorial_moment(self, order, nr_time_steps):
+        Id = np.identity(self.nr_pools)
+
+        mean_u = self.net_Us[:nr_time_steps, ...].mean(axis=0)
+        mean_B = self.Bs[:nr_time_steps, ...].mean(axis=0)
+
+        # fake equilibrium
+        fake_xss = -pinv(Id-mean_B) @ mean_u
+
+        B = mean_B
+        x = fake_xss
+        X = x * Id
+        n = order
+
+        fm = factorial(n) * pinv(X) @ matrix_power(B, n)
+        fm = fm @ matrix_power(pinv(Id-B), n) @ x
+
+        return fm
+
+    # return value in unit "time steps x dt[0]"
+    def fake_start_age_moments(self, nr_time_steps, up_to_order):
+        def stirling(n, k):
+            n1 = n
+            k1 = k
+            if n <= 0:
+                return 1
+            elif k <= 0:
+                return 0
+            elif (n == 0 and k == 0):
+                return -1
+            elif n != 0 and n == k:
+                return 1
+            elif n < k:
+                return 0
+            else:
+                temp1 = stirling(n1-1, k1)
+                temp1 = k1*temp1
+
+            return (k1*(stirling(n1-1, k1)))+stirling(n1-1, k1-1)
+
+        nr_pools = self.nr_pools
+#        Id = np.identity(nr_pools)
+#        B0 = self.Bs[time_index]
+#        x0 = self.solve()[time_index]
+#        X0 = x0 * Id
+        start_age_moments = []
+        dt = self.dts[0]
+        for n in range(1, up_to_order+1):
+            # the old formula is not correct for higher moments
+            # in discrete time
+            # start_age_moment = factorial(n) * inv(X0)
+            # start_age_moment @= matrix_power(inv(Id-B0), n) @ x0
+            start_m_moment = np.zeros(nr_pools)
+            for k in range(n+1):
+                start_m_moment += stirling(n, k) * \
+                    self.fake_start_m_factorial_moment(k, nr_time_steps)
+
+            start_age_moments.append(start_m_moment*dt**n)
+
+        return np.array(start_age_moments)
+
+    def age_moment_vector_up_to(self, up_to_order, start_age_moments=None):
+        soln = self.solve()
+        ams = self._solve_age_moment_system(up_to_order, start_age_moments)
+
+        res = np.nan * np.ones((ams.shape[0], ams.shape[1]+1, ams.shape[2]))
+        res[:, 0, :] = soln
+        res[:, 1:, :] = ams
+        
+        return res
 
     def age_moment_vector(self, order, start_age_moments):
         ams = self._solve_age_moment_system(order, start_age_moments)
@@ -376,7 +448,6 @@ class DiscreteModelRun():
                     r.sum(axis=pool_axis)
                )
 
-
     def start_age_densities_func(self):
         B = self.Bs[0]
         u = self.net_Us[0]
@@ -393,8 +464,8 @@ class DiscreteModelRun():
 
     @lru_cache(maxsize=20)
     def _state_transition_operator_matrix(self, k1, k0):
-        phi=self._state_transition_operator_matrix
-        if k0>k1:
+        phi = self._state_transition_operator_matrix
+        if k0 > k1:
             raise
         elif k0 == k1:
             return np.eye(self.nr_pools)
@@ -402,8 +473,8 @@ class DiscreteModelRun():
             return self.Bs[k0]
         else:
             # im=int((k1+k0)/2)
-            im=k1-1
-        return phi(im,k0)*phi(k1,im)
+            im = k1-1
+        return phi(im, k0) @ phi(k1, im)
 
         #if (hasattr(self, '_sto_recent') and
         #   (self._sto_recent['k0'] == k0) and
