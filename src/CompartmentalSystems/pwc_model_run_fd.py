@@ -1,6 +1,6 @@
 import numpy as np
 
-from numpy.linalg import pinv
+from scipy.integrate import solve_ivp
 from scipy.linalg import expm
 from scipy.optimize import root, least_squares
 from sympy import Matrix, symbols, zeros, Symbol
@@ -9,9 +9,6 @@ from tqdm import tqdm
 from .model_run import ModelRun
 from .pwc_model_run import PWCModelRun
 from .smooth_reservoir_model import SmoothReservoirModel
-#from .myOdeResult import solve_ivp_pwc
-from scipy.integrate import solve_ivp
-# from bgc_md2.Variable import Variable
 
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel as LAPM
 
@@ -170,7 +167,8 @@ class PWCModelRunFD(ModelRun):
         gross_Rs,
 #        xs,
         integration_method='solve_ivp',
-        nr_nodes=None
+        nr_nodes=None,
+        check_success=True
     ):
 
         us = cls.reconstruct_us(
@@ -190,7 +188,8 @@ class PWCModelRunFD(ModelRun):
             gross_Rs,
 #            xs,
             integration_method,
-            nr_nodes
+            nr_nodes,
+            check_success
         )
 
         return cls.from_Bs_and_us(
@@ -485,17 +484,43 @@ class PWCModelRunFD(ModelRun):
         def x_trapz(tr_times, B):
             def x_of_tau(tau):
                 M = expm(tau*B)
-#                x = M @ x0 + inv(B) @ (-np.identity(nr_pools)+M) @ gross_u
-                x = M @ x0 + pinv(B) @ (-np.identity(nr_pools)+M) @ gross_u
-                return x
+                if np.linalg.det(B) != 0:
+                    return M @ x0 + np.linalg.inv(B) @ (-np.identity(nr_pools)+M) @ gross_u
+                else:
+#                    tr_sub_times = np.linspace(0, tau, nr_nodes)
+#                    xs_sub = np.array(
+#                        list(
+#                            map(lambda s: expm((tau-s)*B), tr_sub_times)
+#                        )
+#                    )
+#                    return M @ x0 + np.trapz(xs_sub, tr_sub_times, axis=0) @ gross_u
+
+                    x = solve_ivp(
+#                        lambda s, _: expm((tau-s)*B) @ gross_u,
+                        lambda _, xi: (B @ xi) + gross_u,
+                        t_span=(0, tau),
+                        y0=x0,
+                        method="Radau"
+                    ).y[..., -1]
+                    return x
     
             xs = np.array(list(map(x_of_tau, tr_times)))
-#            x1 = x(tr_times[-1])
-            return np.trapz(xs, tr_times, axis=0)#, x1
+            x1 = x_of_tau(tr_times[-1])
+            return np.trapz(xs, tr_times, axis=0), x1
 
         def x_tau(tau, B):
-            M = expm(tau*B)
-            return M @ x0 + pinv(B) @ (-np.identity(nr_pools)+M) @ gross_u
+            if np.linalg.det(B) != 0:
+                M = expm(tau*B)
+                return M @ x0 + np.linalg.inv(B) @ (-np.identity(nr_pools)+M) @ gross_u
+            else:
+                x = solve_ivp(
+                    #lambda s, _: expm((tau-s)*B) @ gross_u,
+                    lambda _, xi: (B @ xi) + gross_u,
+                    t_span=(0, tau),
+                    y0=x0,
+                    method="Radau"
+                ).y[..., -1]
+            return x
 
         # integrate x
         def integrate_x(tr_times, B):
@@ -515,7 +540,7 @@ class PWCModelRunFD(ModelRun):
                 y0=np.zeros_like(x0),
                 method="Radau"
             ).y[..., -1]
-            return int_x
+            return int_x, x_tau(tr_times[-1], B)
 
         # convert parameter vector to compartmental matrix
         def pars_to_matrix(pars):
@@ -535,14 +560,14 @@ class PWCModelRunFD(ModelRun):
 
             if integration_method == 'solve_ivp':
                 tr_times = (0, dt)
-                int_x = integrate_x(tr_times, B)
+                int_x, x_end = integrate_x(tr_times, B)
             elif integration_method == 'trapezoidal':
                 if nr_nodes is None:
                     raise PWCModelRunFDError(
                         'For trapezoidal rule nr_nodes is obligatory'
                     )
                 tr_times = np.linspace(0, dt, nr_nodes)
-                int_x = x_trapz(tr_times, B)
+                int_x, x_end = x_trapz(tr_times, B)
             else:
                 raise PWCModelRunFDError('Invalid integration_method')
 
@@ -550,20 +575,28 @@ class PWCModelRunFD(ModelRun):
             res2_int = pars[:len(int_indices)] \
                 * int_x[(int_indices % nr_pools).tolist()]
             res_int = np.abs(res1_int-res2_int)
+            
+#            tmp_F = np.zeros_like(gross_F).reshape(nr_pools**2)
+#            tmp_F[int_indices.tolist()] = res2_int
+#            tmp_F = tmp_F.reshape(nr_pools, nr_pools)
+#            print(gross_F-tmp_F)
 
             res1_ext = gross_R[(ext_indices-nr_pools**2).tolist()]
             res2_ext = pars[len(int_indices):]\
                 * int_x[(ext_indices-nr_pools**2).tolist()]
             res_ext = np.abs(res1_ext-res2_ext)
+            
+            tmp_R = np.zeros_like(gross_R)
+#            tmp_R[(ext_indices-nr_pools**2).tolist()] = res2_ext
+#            print()
+#            print(gross_R)
+#            print(tmp_R)
+#            print(gross_R-tmp_R)
 
             res = np.append(res_int, res_ext)
+#            res = res ** 2
 
 #            print(np.max(res))
-#            print('B', np.max(B))
-#            print(B)
-#            if np.max(res) < 1e-04:
-#                res = 0.0*res
-#            print(res)
 
             return res
 
@@ -622,13 +655,17 @@ class PWCModelRunFD(ModelRun):
             constrainedFunction,
             x0=pars0,
             args=(g_tr, lbounds, ubounds, integration_method, nr_nodes),
+            method="lm",
+#            options={"xtol": 1e-08}
         )
+#        print(np.max(y.fun))
 
 #        y = least_squares(
 #            g_tr,
 #            x0      = pars0,
-#            verbose = 2,
-#            xtol    = 1000,
+##            verbose = 2,
+##            xtol    = 1000,
+#            args=(integration_method, nr_nodes),
 #            bounds  = (lbounds, ubounds)
 #        )
 
@@ -651,10 +688,11 @@ class PWCModelRunFD(ModelRun):
         B = pars_to_matrix(y.x)
 
         x1 = x_tau(dt, B)
+#        x1 = x0 + gross_U + gross_F.sum(1) - gross_F.sum(0) - gross_R
+
         return B, x1
 
     @classmethod
-#    def reconstruct_Bs(cls, times, start_values, gross_Us, gross_Fs, gross_Rs, xs):
     def reconstruct_Bs(
         cls,
         times,
