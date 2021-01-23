@@ -2612,6 +2612,7 @@ class SmoothModelRun(ModelRun):
             F_sv_pool = lambda a, t: F_sv(a,t)[pool]
             res.append(
                 self.distribution_quantiles(
+                    self,
                     quantile,
                     F_sv_pool,
                     norm_consts  = soln[:,pool],
@@ -2695,6 +2696,7 @@ class SmoothModelRun(ModelRun):
             start_values = self.system_age_moment(1, start_age_moments)
 
         a_star = self.distribution_quantiles(
+            self,
             quantile, 
             F_sv, 
             norm_consts  = soln.sum(1), 
@@ -2774,7 +2776,7 @@ class SmoothModelRun(ModelRun):
             if method == 'brentq': 
                 a_star = generalized_inverse_CDF(lambda a: F_sv(a, times[ti]), 
                                                  quantile*norm_consts[ti], 
-                                                 start_dist=start_age, 
+#                                                 start_dist=start_age, 
                                                  tol=tol)
 
             return a_star
@@ -2840,10 +2842,11 @@ class SmoothModelRun(ModelRun):
             if method == 'newton': 
                 a_star = newton(g, start_value, maxiter=500, tol=tol)
             if method == 'brentq': 
+                print(norm_const)
                 a_star = generalized_inverse_CDF(
                            lambda a: F(a), 
                            quantile*norm_const, 
-                           start_dist=start_value, 
+#                           start_dist=start_value, 
                            tol=tol
                         )
 
