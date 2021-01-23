@@ -392,13 +392,14 @@ def melt(ndarr, identifiers=None):
 
 # fixme: test
 # compute inverse of CDF at u for quantiles or generation of random variables
-def generalized_inverse_CDF(CDF, u, start_dist=1e-4, tol=1e-8):#, idx=""):
+#def generalized_inverse_CDF(CDF, u, start_dist=1e-4, tol=1e-8):
+def generalized_inverse_CDF(CDF, u, tol=1e-8):
     y1 = -1
     def f(a):
-#        print("HR 398", idx, x1, y1, u)
+#        print("HR 398", x1, y1, u)
         return u-CDF(a)
 
-    x1 = start_dist
+    x1 = 0.0
 
     y1 = f(x1)
     if y1 <= 0:
