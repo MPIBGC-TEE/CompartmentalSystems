@@ -570,8 +570,11 @@ class PWCModelRun(ModelRun):
         
         return (r*age_moment_vector).sum(1)/r.sum(1)
 
-    def cumulative_pool_age_distributions_single_value(self, 
-            start_age_densities=None, F0=None):
+    def cumulative_pool_age_distributions_single_value(
+        self, 
+        start_age_densities=None,
+        F0=None
+    ):
         """Return a function for the cumulative pool age distributions.
 
         Args:
@@ -692,7 +695,7 @@ class PWCModelRun(ModelRun):
     def backward_transit_time_quantiles(
         self,
         quantile,
-        F0, # cumulative star age distribution (not normalized)
+        F0, # cumulative start age distribution (not normalized)
         start_values=None,
         time_indices=None,
         method="brentq",
@@ -725,7 +728,214 @@ class PWCModelRun(ModelRun):
 
         return np.array(res)
 
+    def pool_age_distributions_quantiles(
+        self,
+        quantile,
+        start_values=None, 
+        start_age_densities=None,
+        F0=None,
+        method='brentq',
+        tol=1e-8
+    ):
+        """Return pool age distribution quantiles over the time grid.
+
+        The compuation is done by computing the generalized inverse of the 
+        respective cumulative distribution using a nonlinear root search 
+        algorithm. Depending on how slowly the cumulative distribution can be 
+        computed, this can take quite some time.
+
+        Args:
+            quantile (between 0 and 1): The relative share of mass that is 
+                considered to be left of the computed value. A value of ``0.5`` 
+                leads to the computation of the median of the distribution.
+            start_values (numpy.ndarray, len(times) x nr_pools, optional): 
+                For each pool an array over the time grid of start values for 
+                the nonlinear search.
+                Good values are slighty greater than the solution values.
+                Defaults to an array of zeros for each pool
+            start_age_densities (Python function, optional): A function of age 
+                that returns a ``numpy.array`` containing the masses with the 
+                given age at time :math:`t_0`. 
+                Defaults to ``None``.
+            F0 (Python function): A function of age that returns a 
+                ``numpy.array`` containing the masses with age less than or
+                equal to the age at time :math:`t_0`. 
+                Defaults to ``None``.
+            method (str): The method that is used for finding the roots of a 
+                nonlinear function. Either 'brentq' or 'newton'. 
+                Defaults to 'brentq'.
+            tol (float): The tolerance used in the numerical root search 
+                algorithm. A low tolerance decreases the computation speed 
+                tremendously, so a value of ``1e-01`` might already be fine. 
+                Defaults to ``1e-08``.
+
+        Raises:
+            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
+                One must be given.
+                It is fastest to provide ``F0``, otherwise ``F0`` will be 
+                computed by numerical integration of ``start_age_densities``.
+
+        Returns:
+            numpy.ndarray: (len(times) x nr_pools)
+            The computed quantile values over the time-pool grid.
+        """
+        n = self.nr_pools
+        soln = self.solve()
+        if soln[0,:].sum() == 0:
+            start_age_densities = lambda a: np.zeros((n,))
+
+        if F0 is None and start_age_densities is None:
+            raise(Error('Either F0 or start_age_densities must be given.'))
+
+        times = self.times
+
+        if start_values is None:
+            start_values = np.ones((len(times), n))
+
+        F_sv = self.cumulative_pool_age_distributions_single_value(
+            start_age_densities=start_age_densities,
+            F0=F0
+        )
+
+        res = []
+        for pool in range(n):
+            print('Pool:', pool)
+            F_sv_pool = lambda a, t: F_sv(a,t)[pool]
+            res.append(
+                SmoothModelRun.distribution_quantiles(
+                    self,
+                    quantile,
+                    F_sv_pool,
+                    norm_consts=soln[:,pool],
+                    start_values=start_values[:,pool],
+                    method=method,
+                    tol=tol
+                )
+        )
+
+        return np.array(res).transpose()
+    
+    def cumulative_system_age_distribution_single_value(
+        self, 
+        start_age_densities=None, F0=None
+    ):
+        """Return a function for the cumulative system age distribution.
+
+        Args:
+            start_age_densities (Python function, optional): A function of age 
+                that returns a numpy.array containing the masses with the given 
+                age at time :math:`t_0`. Defaults to None.
+            F0 (Python function): A function of age that returns a numpy.array 
+                containing the masses with age less than or equal to the age at 
+                time :math:`t_0`. Defaults to None.
+
+        Raises:
+            Error: If both ``start_age_densities`` and ``F0`` are None. 
+                One must be given.
+                It is fastest to provide ``F0``, otherwise ``F0`` will be 
+                computed by numerical integration of ``start_age_densities``.
+
+        Returns:
+            Python function ``F_sv``: ``F_sv(a, t)`` is the mass in the system 
+            with age less than or equal to ``a`` at time ``t``.
+        """
+        n = self.nr_pools
+        #soln = self.solve_old()
+        soln = self.solve()
+        if soln[0,:].sum() == 0:
+            start_age_densities = lambda a: np.zeros((n,))
+        
+        if F0 is None and start_age_densities is None:
+            raise(Error('Either F0 or start_age_densities must be given.'))
+
+        F_sv = self.cumulative_pool_age_distributions_single_value(
+            start_age_densities=start_age_densities,
+            F0=F0
+        )
+        
+        return lambda a, t: F_sv(a,t).sum()
+
+    def system_age_distribution_quantiles(
+            self,
+            quantile,
+            start_values=None, 
+            start_age_densities=None,
+            F0=None,
+            method='brentq',
+            tol=1e-8
+        ):
+        """Return system age distribution quantiles over the time grid.
+
+        The compuation is done by computing the generalized inverse of the 
+        respective cumulative distribution using a nonlinear root search 
+        algorithm. Depending on how slowly the cumulative distribution can be 
+        computed, this can take quite some time.
+
+        Args:
+            quantile (between 0 and 1): The relative share of mass that is 
+                considered to be left of the computed value. A value of ``0.5`` 
+                leads to the computation of the median of the distribution.
+            start_values (numpy.array, optional): An array over the time grid of
+                start values for the nonlinear search.
+                Good values are slighty greater than the solution values.
+                Must have the same length as ``times``.
+                Defaults to an array of zeros.
+            start_age_densities (Python function, optional): A function of age 
+                that returns a ``numpy.array`` containing the masses with the 
+                given age at time :math:`t_0`. 
+                Defaults to ``None``.
+            F0 (Python function): A function of age that returns a 
+                ``numpy.array`` containing the masses with age less than or 
+                equal to the age at time :math:`t_0`. 
+                Defaults to ``None``.
+            method (str): The method that is used for finding the roots of a 
+                nonlinear function. Either 'brentq' or 'newton'. 
+                Defaults to 'brentq'.
+            tol (float): The tolerance used in the numerical root search 
+                algorithm. A low tolerance decreases the computation speed 
+                tremendously, so a value of ``1e-01`` might already be fide. 
+                Defaults to ``1e-08``.
+
+        Raises:
+            Error: If both ``start_age_densities`` and ``F0`` are ``None``. 
+                One must be given.
+                It is fastest to provide ``F0``, otherwise ``F0`` will be 
+                computed by numerical integration of ``start_age_densities``.
+
+        Returns:
+            numpy.array: The computed quantile values over the time grid.
+        """
+        n = self.nr_pools
+        soln = self.solve()
+        if soln[0, :].sum() == 0:
+            start_age_densities = lambda a: np.zeros((n,))
+
+        if F0 is None and start_age_densities is None:
+            raise(Error('Either F0 or start_age_densities must be given.'))
+        
+        F_sv = self.cumulative_system_age_distribution_single_value(
+            start_age_densities=start_age_densities,
+            F0=F0
+        )
+
+        if start_values is None:
+            start_values = np.ones((len(self.times), ))
+
+        a_star = SmoothModelRun.distribution_quantiles(
+            self,
+            quantile, 
+            F_sv, 
+            norm_consts=soln.sum(1), 
+            start_values=start_values, 
+            method=method,
+            tol=tol
+        )
+
+        return a_star
+
+
 ###############################################################################
+
 
     def _solve_age_moment_system(
         self,

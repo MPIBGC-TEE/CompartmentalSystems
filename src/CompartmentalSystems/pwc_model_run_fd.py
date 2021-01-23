@@ -287,6 +287,14 @@ class PWCModelRunFD(ModelRun):
         )
         return start_age_moments
 
+    def fake_cumulative_start_age_distribution(self, nr_time_steps):
+        eq_model = self.fake_eq_model(nr_time_steps)
+
+        F0_normalized = lambda a: np.array(eq_model.a_cum_dist_func(a), dtype=np.float64).reshape((-1,))
+        F0 = lambda a: F0_normalized(a) * self.start_values
+
+        return F0
+
     def age_moment_vector_up_to(self, up_to_order, start_age_moments=None):
         return self.pwc_mr.age_moment_vector_up_to(
             up_to_order,
@@ -353,6 +361,42 @@ class PWCModelRunFD(ModelRun):
             lru_maxsize,
             lru_stats,
             size
+        )
+
+    def pool_age_distributions_quantiles(
+        self,
+        quantile,
+        start_values=None, 
+        start_age_densities=None,
+        F0=None,
+        method='brentq',
+        tol=1e-8
+    ):
+        return self.pwc_mr.pool_age_distributions_quantiles(
+            quantile,
+            start_values, 
+            start_age_densities,
+            F0,
+            method,
+            tol
+        )
+
+    def system_age_distribution_quantiles(
+        self,
+        quantile,
+        start_values=None, 
+        start_age_densities=None,
+        F0=None,
+        method='brentq',
+        tol=1e-8
+    ):
+        return self.pwc_mr.system_age_distribution_quantiles(
+            quantile,
+            start_values, 
+            start_age_densities,
+            F0,
+            method,
+            tol
         )
 
 #    moved to ModelDataObject

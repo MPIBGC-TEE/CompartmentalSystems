@@ -10,7 +10,9 @@ from .helpers_reservoir import (
     net_Us_from_discrete_Bs_and_xs,
     net_Fs_from_discrete_Bs_and_xs,
     net_Rs_from_discrete_Bs_and_xs,
-    p0_maker
+    p0_maker,
+    custom_lru_cache_wrapper,
+    generalized_inverse_CDF
 )
 from . import picklegzip
 
@@ -292,15 +294,27 @@ class DiscreteModelRun():
 
         return np.array(start_age_moments)
 
-    # return value in unit "time steps"
-    def fake_start_m_factorial_moment(self, order, nr_time_steps):
+    def fake_xss(self, nr_time_steps):
         Id = np.identity(self.nr_pools)
 
+        if np.all(self.net_Us == 0):
+            raise(DMRError("Cannot fake xss, because there are no inputs to the systems"))
         mean_u = self.net_Us[:nr_time_steps, ...].mean(axis=0)
         mean_B = self.Bs[:nr_time_steps, ...].mean(axis=0)
 
         # fake equilibrium
-        fake_xss = -pinv(Id-mean_B) @ mean_u
+        fake_xss = pinv(Id-mean_B) @ mean_u
+
+        return fake_xss
+
+    # return value in unit "time steps"
+    def fake_start_m_factorial_moment(self, order, nr_time_steps):
+        Id = np.identity(self.nr_pools)
+
+
+        # fake equilibrium
+        fake_xss = self.fake_xss(nr_time_steps)
+        mean_B = self.Bs[:nr_time_steps, ...].mean(axis=0)
 
         B = mean_B
         x = fake_xss
@@ -462,19 +476,40 @@ class DiscreteModelRun():
 
         return p
 
-    @lru_cache(maxsize=20)
+    def initialize_state_transition_operator_matrix_cache(
+        self,
+        lru_maxsize,
+        lru_stats=False,
+    ):
+        custom_lru_cache = custom_lru_cache_wrapper(
+            maxsize=lru_maxsize,  # variable maxsize now for lru cache
+            typed=False,
+            stats=lru_stats  # use custom statistics feature
+        )
+
+        self._state_transition_operator_matrix_cache = custom_lru_cache(
+            self._state_transition_operator_matrix
+        )
+
+    # or initialize by function above with adaptable size
+#    @lru_cache(maxsize=200)
     def _state_transition_operator_matrix(self, k1, k0):
-        phi = self._state_transition_operator_matrix
+        if hasattr(self, "_state_transition_operator_matrix_cache"):
+            phi = self._state_transition_operator_matrix_cache
+        else:
+            phi = self._state_transition_operator_matrix
+
         if k0 > k1:
-            raise
+            raise(ValueError("k0 > k1 in state_transition_operator_matrix"))
         elif k0 == k1:
             return np.eye(self.nr_pools)
         elif k1 == k0+1:
             return self.Bs[k0]
         else:
-            # im=int((k1+k0)/2)
-            im = k1-1
-        return phi(im, k0) @ phi(k1, im)
+             im=int((k1+k0)/2)
+            #im = k1-1
+        #return phi(im, k0) @ phi(k1, im)
+        return phi(k1, im) @ phi(im, k0)
 
         #if (hasattr(self, '_sto_recent') and
         #   (self._sto_recent['k0'] == k0) and
@@ -545,9 +580,10 @@ class DiscreteModelRun():
     def age_densities_1_single_value_func(
             self,
             start_age_densities_of_bin: Callable[[int], np.ndarray]
-        ) -> Callable[[int, int], float]:#
-        """Returns a function f(ia,it) th#at computes
-        the quotient delta_m(ia,it)/delta_a where delta_m
+        ) -> Callable[[int, int], float]:# not a float but an np.array (nr_pools)
+        """
+        Return a function f(ia, it) that computes
+        the quotient delta_m(ia, it)/delta_a where delta_m
         it the remainder of the initial mass distribution that
         has age ia*da at time it*dt.
         """
@@ -734,7 +770,7 @@ class DiscreteModelRun():
 
         return p_sv
 
-    def pool_age_densities_func(self, start_age_densities_bin, coarsity=1):
+    def pool_age_densities_func(self, start_age_densities_bin):#, coarsity=1):
         p1 = self._age_densities_1_func(start_age_densities_bin)
         p2 = self._age_densities_2_func()
 
@@ -863,7 +899,7 @@ class DiscreteModelRun():
         mass = 0
 
         p_sv = self.age_densities_single_value_func(
-            start_age_densities_of_bin
+            start_age_densities_of_bin # really a density per bin, not a mass (--> *dt=da below)
         )
         while mass <= q*x:
             prev_ai = ai
@@ -873,6 +909,166 @@ class DiscreteModelRun():
         print(prev_ai)
         return prev_ai
 
+    def fake_start_age_masses(self, nr_time_steps):
+        Id = np.identity(self.nr_pools)
+
+        mean_u = self.net_Us[:nr_time_steps, ...].mean(axis=0)
+        mean_B = self.Bs[:nr_time_steps, ...].mean(axis=0)
+
+        # assuming constant time step before times[0]
+        def p0(ai): # ai = age bin index
+            if ai < 0: 
+                return np.zeros_like(mean_u)
+            return matrix_power(mean_B, ai) @ mean_u  # if age zero exists
+
+        return p0
+
+    def cumulative_pool_age_masses_single_value(self, P0):
+        nr_pools = self.nr_pools
+        soln = self.solve()
+        times = self.times
+        ti0 = 0
+
+        Phi = self._state_transition_operator_matrix
+        def G_sv(ai, ti):
+            if ai < ti: 
+                return np.zeros((nr_pools,))
+            res = np.matmul(Phi(ti, 0), P0(ai-ti)).reshape((self.nr_pools,))
+            return res
+
+        def H_sv(ai, ti):
+            # count everything from beginning?
+            if ai >= ti:
+                ai = ti-1
+
+            if ai < 0:
+                return np.zeros((nr_pools,))
+
+            # mass at time index ti
+            x_ti = soln[ti]
+            # mass at time index ti-(ai+1)
+            x_ti_minus_ai_plus_1 = soln[ti-(ai+1)]
+            # what remains from x_ti_minus_ai_plus1 at time index ti
+            m = np.matmul(Phi(ti, ti-(ai+1)), x_ti_minus_ai_plus_1).reshape((self.nr_pools,))
+            # difference is not older than ti-ai
+            res = x_ti-m
+            # cut off accidental negative values
+            return np.maximum(res, np.zeros(res.shape))
+
+        def P_sv(ai, ti):
+            res = G_sv(ai, ti) + H_sv(ai, ti)
+            return res
+
+        return P_sv
+
+    # return value in unit "time steps x dt[0]"
+    def fake_cumulative_start_age_masses(self, nr_time_steps):
+        Id = np.identity(self.nr_pools)
+
+        mean_u = self.net_Us[:nr_time_steps, ...].mean(axis=0)
+        mean_B = self.Bs[:nr_time_steps, ...].mean(axis=0)
+
+        IdmB_inv = pinv(Id-mean_B)
+        # assuming constant time step before times[0]
+        def P0(ai): # ai = age bin index
+            if ai < 0:
+                return np.zeros_like(mean_u)
+            return IdmB_inv @ (Id-matrix_power(mean_B, ai+1)) @ mean_u
+
+        return P0
+
+    def backward_transit_time_quantiles(self, q, P0):
+        P_sv = self.cumulative_pool_age_masses_single_value(P0)
+        rho = 1 - self.Bs.sum(1)
+        P_btt_sv = lambda ai, ti: (rho[ti] * P_sv(ai, ti)).sum() 
+        R = self.acc_net_external_output_vector()
+
+        res = np.nan * np.ones(len(self.times[:-1]))
+
+#        idx = np.random.randint(1000)
+
+        for ti in tqdm(range(len(self.times[:-1]))):
+#        for ti in range(len(self.times[:-1])):
+#            print()
+#            if ti % 500 == 0:
+#                print(idx, ti, flush=True)
+#            
+#            print(R[ti, :].sum())
+#             for ai in range(0, 100000, 1000):
+#                 print(ai, P_btt_sv(ai, ti).sum(), flush=True)
+#            print(P_btt_sv(int(1e10), ti).sum(), flush=True)
+#            print(
+#                "m_btt",
+#                self.backward_transit_time_moment(
+#                    1,
+#                    self.fake_start_age_moments(120, 1)
+#                )[ti]
+#            )
+#            print(self.solve()[ti, :].sum())
+#             for ai in range(0, 100000, 1000):
+#                 print(ai, P_sv(ai, ti).sum())
+#            print(P_sv(int(1e10), ti).sum())
+#            
+#            print("quantiling")
+            quantile_ai = generalized_inverse_CDF(
+                lambda ai: P_btt_sv(int(ai), ti),
+                q * R[ti, ...].sum(),
+#                idx=str(idx)
+            )
+            
+            if P_btt_sv(int(quantile_ai), ti) > q * R[ti, ...].sum():
+                quantile_ai = quantile_ai - 1
+            res[ti] = int(quantile_ai)
+
+#            print(
+#                "DMR 983",
+#                idx,
+#                ti,
+#                q*R[ti, :].sum(),
+#                quantile_ai,
+#                P_btt_sv(int(quantile_ai), ti).sum()
+#            )
+#            raise("XXX")
+#        print("done", idx)
+        return res * self.dt
+
+#    # return value in unit "time steps x dt[0]"
+#    def backward_transit_time_quantiles_from_masses(self, q, start_age_masses_at_age_bin):
+#        R = self.acc_net_external_output_vector()
+#
+#        # pool age mass vector based on age and time indices
+#        p_sv = self.age_densities_single_value_func(
+#            start_age_masses_at_age_bin
+#        )
+#
+#        rho = 1 - self.Bs.sum(1)
+#        p_btt_sv = lambda ai, ti: (rho[ti] * p_sv(ai, ti)).sum() # outflow mass vector at ai, ti
+#
+#        res = np.nan * np.ones(len(self.times[:-1]))
+#        for ti in tqdm(range(len(self.times[:-1]))):
+#            prev_ai = 0
+#            ai = 0
+#            mass = 0
+#            total_outflow_mass_ti = R[ti, ...].sum()
+#
+#            while mass <= q * total_outflow_mass_ti:
+#                if ai % 10000 == 0:
+#                    print(
+#                        "%04d" % ti, 
+#                        "%2.2f" % (ti/len(self.times[:-1])*100), "%",
+#                        "%05d" % ai,
+#                        "%02.2f" % (mass/(q*total_outflow_mass_ti)*100), "%",
+#                        "%05.2f" % mass,
+#                        flush=True
+#                    )
+#                prev_ai = ai
+#                ai += 1
+#                mass += p_btt_sv(ai, ti)
+#
+#            res[ti] = prev_ai
+#        
+#        return res * self.dt # from age index to age
+        
     @classmethod
     def load_from_file(cls, filename):
         cmr = picklegzip.load(filename)

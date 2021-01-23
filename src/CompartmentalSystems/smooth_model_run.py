@@ -2686,7 +2686,10 @@ class SmoothModelRun(ModelRun):
             F0                  = F0
         )
         #soln = self.solve_old()
-        start_age_moments = self.moments_from_densities(1, start_age_densities)
+        if start_age_densities is not None:
+            start_age_moments = self.moments_from_densities(1, start_age_densities)
+        else:
+            start_age_moments = None
         
         if start_values is None: 
             start_values = self.system_age_moment(1, start_age_moments)
@@ -2702,8 +2705,8 @@ class SmoothModelRun(ModelRun):
 
         return a_star
 
-
-    def distribution_quantiles(self, quantile, F_sv, norm_consts=None, 
+    @staticmethod
+    def distribution_quantiles(mr, quantile, F_sv, norm_consts=None, 
                 start_values=None, times=None, method='brentq', tol=1e-8):
         """Return distribution quantiles over the time grid of a given 
         distribution.
@@ -2745,13 +2748,13 @@ class SmoothModelRun(ModelRun):
             numpy.array: The computed quantile values over the time grid.
         """
         if times is None:
-            times = self.times
+            times = mr.times
         
         if start_values is None:
-            start_values = np.zeros((times,))
+            start_values = np.zeros((len(times),))
 
         if norm_consts is None:
-            norm_consts = np.ones((times,))
+            norm_consts = np.ones((len(times),))
 
         def quantile_at_ti(ti):
             #print('ti', ti)
