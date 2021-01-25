@@ -916,10 +916,14 @@ class DiscreteModelRun():
         mean_B = self.Bs[:nr_time_steps, ...].mean(axis=0)
 
         # assuming constant time step before times[0]
-        def p0(ai): # ai = age bin index
+        def p0_fake_eq(ai): # ai = age bin index
             if ai < 0: 
                 return np.zeros_like(mean_u)
             return matrix_power(mean_B, ai) @ mean_u  # if age zero exists
+
+        fake_xss = self.fake_xss(nr_time_steps)
+        renorm_vector = self.start_values / fake_xss 
+        p0 = lambda ai: p0_fake_eq(ai) * renorm_vector
 
         return p0
 
@@ -970,13 +974,55 @@ class DiscreteModelRun():
 
         IdmB_inv = pinv(Id-mean_B)
         # assuming constant time step before times[0]
-        def P0(ai): # ai = age bin index
+        def P0_fake_eq(ai): # ai = age bin index
             if ai < 0:
                 return np.zeros_like(mean_u)
             return IdmB_inv @ (Id-matrix_power(mean_B, ai+1)) @ mean_u
 
+        # rescale from fake equilibrium pool contents to start_vector contents
+        fake_xss = self.fake_xss(nr_time_steps)
+        renorm_vector = self.start_values / fake_xss 
+        P0 = lambda ai: P0_fake_eq(ai) * renorm_vector
+
         return P0
 
+    def pool_age_quantiles(self, q, P0):
+        P_sv = self.cumulative_pool_age_masses_single_value(P0)
+        soln = self.solve()
+
+        res = np.nan * np.ones((len(self.times), self.nr_pools))
+        for pool_nr in range(self.nr_pools):
+            print('Pool:', pool_nr)
+            for ti in tqdm(range(len(self.times))):
+                quantile_ai = generalized_inverse_CDF(
+                    lambda ai: P_sv(int(ai), ti)[pool_nr],
+                    q * soln[ti, pool_nr]
+            )
+            
+            if P_sv(int(quantile_ai), ti)[pool_nr] > q * soln[ti, pool_nr]:
+                quantile_ai = quantile_ai - 1
+            res[ti, pool_nr] = int(quantile_ai)
+
+        return res * self.dt
+        
+    def system_age_quantiles(self, q, P0):
+        P_sv = self.cumulative_pool_age_masses_single_value(P0)
+        P_sys_sv = lambda ai, ti: P_sv(ai, ti).sum()
+        soln_sum = self.solve().sum(axis=1)
+
+        res = np.nan * np.ones(len(self.times))
+        for ti in tqdm(range(len(self.times))):
+            quantile_ai = generalized_inverse_CDF(
+                lambda ai: P_sys_sv(int(ai), ti),
+                q * soln_sum[ti]
+            )
+            
+            if P_sys_sv(int(quantile_ai), ti) > q * soln_sum[ti]:
+                quantile_ai = quantile_ai - 1
+            res[ti] = int(quantile_ai)
+
+        return res * self.dt
+        
     def backward_transit_time_quantiles(self, q, P0):
         P_sv = self.cumulative_pool_age_masses_single_value(P0)
         rho = 1 - self.Bs.sum(1)
@@ -985,51 +1031,16 @@ class DiscreteModelRun():
 
         res = np.nan * np.ones(len(self.times[:-1]))
 
-#        idx = np.random.randint(1000)
-
         for ti in tqdm(range(len(self.times[:-1]))):
-#        for ti in range(len(self.times[:-1])):
-#            print()
-#            if ti % 500 == 0:
-#                print(idx, ti, flush=True)
-#            
-#            print(R[ti, :].sum())
-#             for ai in range(0, 100000, 1000):
-#                 print(ai, P_btt_sv(ai, ti).sum(), flush=True)
-#            print(P_btt_sv(int(1e10), ti).sum(), flush=True)
-#            print(
-#                "m_btt",
-#                self.backward_transit_time_moment(
-#                    1,
-#                    self.fake_start_age_moments(120, 1)
-#                )[ti]
-#            )
-#            print(self.solve()[ti, :].sum())
-#             for ai in range(0, 100000, 1000):
-#                 print(ai, P_sv(ai, ti).sum())
-#            print(P_sv(int(1e10), ti).sum())
-#            
-#            print("quantiling")
             quantile_ai = generalized_inverse_CDF(
                 lambda ai: P_btt_sv(int(ai), ti),
-                q * R[ti, ...].sum(),
-#                idx=str(idx)
+                q * R[ti, ...].sum()
             )
             
             if P_btt_sv(int(quantile_ai), ti) > q * R[ti, ...].sum():
                 quantile_ai = quantile_ai - 1
             res[ti] = int(quantile_ai)
 
-#            print(
-#                "DMR 983",
-#                idx,
-#                ti,
-#                q*R[ti, :].sum(),
-#                quantile_ai,
-#                P_btt_sv(int(quantile_ai), ti).sum()
-#            )
-#            raise("XXX")
-#        print("done", idx)
         return res * self.dt
 
 #    # return value in unit "time steps x dt[0]"
