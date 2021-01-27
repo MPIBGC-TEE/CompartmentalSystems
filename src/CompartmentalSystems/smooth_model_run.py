@@ -1868,7 +1868,7 @@ class SmoothModelRun(ModelRun):
             ax = fig.add_subplot(n+1, 1, 2+pool)
             ax.plot(times, soln[:,pool])
             make_ax_nice(
-                ax, "$" + latex(self.model.state_variables[pool]) + "$")
+                ax, "\$" + latex(self.model.state_variables[pool]) + "\$")
 
 #        fig.tight_layout()
    
@@ -1966,14 +1966,14 @@ class SmoothModelRun(ModelRun):
             ax.plot(times, [internal_flux_funcs[key](t) for t in times])
     
             ax.set_title(
-                'Flux from $' 
+                'Flux from \$' 
                 + latex(self.model.state_variables[key[0]]) 
-                + '$ to $'
+                + '\$ to \$'
                 + latex(self.model.state_variables[key[1]]) 
-                + '$',
+                + '\$',
                 fontsize=fontsize)
             ax.set_xlabel(self._add_time_unit(
-                '$' + latex(self.model.time_symbol) + '$'), fontsize=fontsize)
+                '\$' + latex(self.model.time_symbol) + '\$'), fontsize=fontsize)
             ax.set_ylabel(self._add_flux_unit('flux'), fontsize=fontsize)
             i += 1
 
@@ -2002,12 +2002,12 @@ class SmoothModelRun(ModelRun):
             ax = fig.add_subplot(n,1,i)
             ax.plot(times, [output_flux_funcs[key](t) for t in times])
             ax.set_title(
-                'External outflux from $' 
+                'External outflux from \$' 
                 + latex(self.model.state_variables[key]) 
-                + '$', 
+                + '\$', 
                 fontsize=fontsize)
             ax.set_xlabel(
-                self._add_time_unit('$' + latex(self.model.time_symbol) + '$'), 
+                self._add_time_unit('\$' + latex(self.model.time_symbol) + '\$'), 
                 fontsize=fontsize)
             ax.set_ylabel(self._add_flux_unit('flux'), fontsize=fontsize)
             i += 1
@@ -2036,12 +2036,12 @@ class SmoothModelRun(ModelRun):
             ax = fig.add_subplot(n,1,i)
             ax.plot(times, [input_flux_funcs[key](t) for t in times])
             ax.set_title(
-                'External influx to $' 
+                'External influx to \$' 
                 + latex(self.model.state_variables[key]) 
-                + '$', 
+                + '\$', 
                 fontsize=fontsize)
             ax.set_xlabel(
-                self._add_time_unit('$' + latex(self.model.time_symbol) + '$'), 
+                self._add_time_unit('\$' + latex(self.model.time_symbol) + '\$'), 
                 fontsize=fontsize)
             ax.set_ylabel(self._add_flux_unit('flux'), fontsize=fontsize)
             i += 1
@@ -2079,7 +2079,7 @@ class SmoothModelRun(ModelRun):
 
         def make_ax_nice(ax, title):
             ax.set_title(title)
-            ax.set_xlabel(self._add_time_unit("$" + latex(time_symbol) + "$"))
+            ax.set_xlabel(self._add_time_unit("\$" + latex(time_symbol) + "\$"))
             ax.set_ylabel(self._add_time_unit("mean age"))
 
             ax.set_xlim([times[0], times[-1]])
@@ -2091,7 +2091,7 @@ class SmoothModelRun(ModelRun):
         for i in range(n):
             ax = fig.add_subplot(n+1, 1, 2+i)
             ax.plot(times, ma_vector[:,i])
-            make_ax_nice(ax, "$" + latex(states[i]) + "$")
+            make_ax_nice(ax, "\$" + latex(states[i]) + "\$")
                 
 #        fig.tight_layout()
 
