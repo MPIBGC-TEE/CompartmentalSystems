@@ -574,9 +574,9 @@ class PWCModelRunFD(ModelRun):
                 * int_x[(int_indices % nr_pools).tolist()]
             res_int = np.abs(res1_int-res2_int)
             
-#            tmp_F = np.zeros_like(gross_F).reshape(nr_pools**2)
-#            tmp_F[int_indices.tolist()] = res2_int
-#            tmp_F = tmp_F.reshape(nr_pools, nr_pools)
+            tmp_F = np.zeros_like(gross_F).reshape(nr_pools**2)
+            tmp_F[int_indices.tolist()] = res2_int
+            tmp_F = tmp_F.reshape(nr_pools, nr_pools)
 #            print(gross_F-tmp_F)
 
             res1_ext = gross_R[(ext_indices-nr_pools**2).tolist()]
@@ -585,7 +585,7 @@ class PWCModelRunFD(ModelRun):
             res_ext = np.abs(res1_ext-res2_ext)
             
             tmp_R = np.zeros_like(gross_R)
-#            tmp_R[(ext_indices-nr_pools**2).tolist()] = res2_ext
+            tmp_R[(ext_indices-nr_pools**2).tolist()] = res2_ext
 #            print()
 #            print(gross_R)
 #            print(tmp_R)
@@ -594,7 +594,7 @@ class PWCModelRunFD(ModelRun):
             res = np.append(res_int, res_ext)
 #            res = res ** 2
 
-#            print(np.max(res))
+            print(np.max(res))
 
             return res
 
@@ -678,7 +678,7 @@ class PWCModelRunFD(ModelRun):
 #            method='trust-constr'
 #        )
 
-#        print('y', y)
+        print('y', y)
         if check_success and (not y.success):
             msg = y.message.replace("\n", " ")
             raise(PWCModelRunFDError(msg))
@@ -749,6 +749,12 @@ class PWCModelRunFD(ModelRun):
                 check_success
             )
 
+            print(k)
+            print(B.sum(0))
+            print(B)
+            print()
+            if k == 15:
+                raise
             Bs[k, :, :] = B
 
         return Bs
