@@ -2842,13 +2842,13 @@ class SmoothModelRun(ModelRun):
             if method == 'newton': 
                 a_star = newton(g, start_value, maxiter=500, tol=tol)
             if method == 'brentq': 
-                print(norm_const)
                 a_star = generalized_inverse_CDF(
-                           lambda a: F(a), 
-                           quantile*norm_const, 
-#                           start_dist=start_value, 
-                           tol=tol
-                        )
+                    lambda a: F(a), 
+                    quantile*norm_const, 
+#                    start_dist=start_value,
+                    x1=start_value,    
+                    tol=tol
+                )
 
             return a_star
 

@@ -336,7 +336,6 @@ class PWCModelRunFD(ModelRun):
         self,
         quantile,
         F0, # cumulative star age distribution (not normalized)
-        start_values=None,
         time_indices=None,
         method="brentq",
         tol=1e-08
@@ -344,7 +343,6 @@ class PWCModelRunFD(ModelRun):
         return self.pwc_mr.backward_transit_time_quantiles(
             quantile,
             F0,
-            start_values,
             time_indices,
             method,
             tol
