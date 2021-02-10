@@ -393,29 +393,36 @@ def melt(ndarr, identifiers=None):
 # fixme: test
 # compute inverse of CDF at u for quantiles or generation of random variables
 #def generalized_inverse_CDF(CDF, u, start_dist=1e-4, tol=1e-8):
-def generalized_inverse_CDF(CDF, u, tol=1e-8):
+def generalized_inverse_CDF(CDF, u, x1=0.0, tol=1e-8):
     y1 = -1
     def f(a):
 #        print("HR 398", x1, y1, u)
         return u-CDF(a)
 
-    x1 = 0.0
+    x0 = 0.0
 
     y1 = f(x1)
-    if y1 <= 0:
-#        print("schon fertig", "\n"*200)
-        return x1
+    if (y1 <= 0):
+        if x1 == 0.0:
+#            print("schon fertig", "\n"*200)
+            return x1
+        else:
+            x1 = 0.0
+            y1 = f(x1)
+            if y1 <= 0:
+                return x1
 
     # go so far to the right such that CDF(x1) > u, the bisect in
     # interval [0, x1]
     while y1 >= 0:
+        x0 = x1
         x1 = x1*2 + 0.1
         y1 = f(x1)
 
     if np.isnan(y1):
         res = np.nan
     else:
-        res, root_results = brentq(f, 0, x1, xtol=tol, full_output=True)
+        res, root_results = brentq(f, x0, x1, xtol=tol, full_output=True)
         if not root_results.converged:
             print("quantile convegence failed")
 

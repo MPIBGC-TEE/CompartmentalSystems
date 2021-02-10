@@ -696,7 +696,7 @@ class PWCModelRun(ModelRun):
         self,
         quantile,
         F0, # cumulative start age distribution (not normalized)
-        start_values=None,
+#        start_values=None,
         time_indices=None,
         method="brentq",
         tol=1e-08
@@ -707,20 +707,22 @@ class PWCModelRun(ModelRun):
             times = times[time_indices]
             norm_consts = norm_consts[time_indices]
         
-        if start_values is None:
-            start_values = np.zeros_like(times)
+#        if start_values is None:
+#            start_values = np.zeros_like(times)
 
         F_btt_sv = self.cumulative_backward_transit_time_distribution_single_value_func(
             F0=F0
         )
 
         res = []
+        xi = 0.0
         for k in tqdm(range(len(times))):
             xi = SmoothModelRun.distribution_quantile(
                 quantile, 
                 lambda a: F_btt_sv(a, times[k]), 
                 norm_const=norm_consts[k],
-                start_value=start_values[k],
+#                start_value=start_values[k],
+                start_value=xi,
                 method=method,
                 tol=tol
             )

@@ -993,10 +993,12 @@ class DiscreteModelRun():
         res = np.nan * np.ones((len(self.times), self.nr_pools))
         for pool_nr in range(self.nr_pools):
             print('Pool:', pool_nr)
+            quantile_ai = 0
             for ti in tqdm(range(len(self.times))):
                 quantile_ai = generalized_inverse_CDF(
                     lambda ai: P_sv(int(ai), ti)[pool_nr],
-                    q * soln[ti, pool_nr]
+                    q * soln[ti, pool_nr],
+                    x1=quantile_ai
             )
             
             if P_sv(int(quantile_ai), ti)[pool_nr] > q * soln[ti, pool_nr]:
@@ -1011,10 +1013,12 @@ class DiscreteModelRun():
         soln_sum = self.solve().sum(axis=1)
 
         res = np.nan * np.ones(len(self.times))
+        quantile_ai = 0
         for ti in tqdm(range(len(self.times))):
             quantile_ai = generalized_inverse_CDF(
                 lambda ai: P_sys_sv(int(ai), ti),
-                q * soln_sum[ti]
+                q * soln_sum[ti],
+                x1=quantile_ai
             )
             
             if P_sys_sv(int(quantile_ai), ti) > q * soln_sum[ti]:
@@ -1031,10 +1035,12 @@ class DiscreteModelRun():
 
         res = np.nan * np.ones(len(self.times[:-1]))
 
+        quantile_ai = 0
         for ti in tqdm(range(len(self.times[:-1]))):
             quantile_ai = generalized_inverse_CDF(
                 lambda ai: P_btt_sv(int(ai), ti),
-                q * R[ti, ...].sum()
+                q * R[ti, ...].sum(),
+                x1=quantile_ai
             )
             
             if P_btt_sv(int(quantile_ai), ti) > q * R[ti, ...].sum():
