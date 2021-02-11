@@ -472,7 +472,7 @@ class PWCModelRunFD(ModelRun):
         B0,
         integration_method,
         nr_nodes,
-        check_success=False
+        check_success=True
     ):
         # reconstruct a B that meets F and r possibly well,
         # B0 is some initial guess for the optimization
@@ -546,9 +546,18 @@ class PWCModelRunFD(ModelRun):
             B[int_indices.tolist()] = pars[:len(int_indices)]
             B = B.reshape((nr_pools, nr_pools))
             d = B.sum(0)
+            #print("d", d)
             d[(ext_indices-nr_pools**2).tolist()] += pars[len(int_indices):]
+#            if (len(ext_indices) > 3) and (pars[len(int_indices):][3] < 0):
+#                print(551, pars)
+#                print(pars[len(int_indices):], pars[len(int_indices):].shape)
             B[np.diag_indices(nr_pools)] = -d
 
+            #print("=====================")
+            #print(pars)
+            #print(d)
+            #print(B)
+            #print("nnnnnnnnnnnnnnnnnnnn")
             return B
 
         # function to minimize difference vector of
@@ -592,22 +601,31 @@ class PWCModelRunFD(ModelRun):
 #            print(gross_R-tmp_R)
 
             res = np.append(res_int, res_ext)
+            #print(B.sum(0))
+            #print(pars)
+            #print("B")
+            #print(B)
+            #res += sum(B.sum(0) > 0) * 1e10
 #            res = res ** 2
 
-            print(np.max(res))
-
+#            print(np.sum(res))
+#            print("res.shape", res.shape)
             return res
 
         # wrapper around g_tr that keeps parameter within boundaries
         def constrainedFunction(
-                x,
-                f,
-                lower,
-                upper,
-                integration_method,
-                nr_nodes,
-                minIncr=0.001):
+            x,
+            f,
+            lower,
+            upper,
+            integration_method,
+            nr_nodes,
+            minIncr=0.001
+        ):
             x = np.asarray(x)
+            s = pars_to_matrix(x).sum(0)
+            penalty = np.sum(np.where(s > 0, s, 0)) * 1e5
+
             lower = np.asarray(lower)
             upper = np.asarray(upper)
 
@@ -618,16 +636,19 @@ class PWCModelRunFD(ModelRun):
                 np.sum(np.where(x < lower, lower-x, 0.))
                 + np.sum(np.where(x > upper, x-upper, 0.))
             )
-            return (fBorder + (
+            res = (fBorder + (
                         fBorder + np.where(fBorder > 0, minIncr, -minIncr)
                     ) * distFromBorder
-                    )
+                    ) + penalty
+#            print(sum(res))
+            return res
 
         lbounds = [0]*(nr_pools**2 + nr_pools)
         for i in range(nr_pools):
             lbounds[i*nr_pools+i] = -10
 
         ubounds = [10]*(nr_pools**2 + nr_pools)
+#        ubounds = [1]*(nr_pools**2 + nr_pools)
         for i in range(nr_pools):
             ubounds[i*nr_pools+i] = 0
 
@@ -648,13 +669,12 @@ class PWCModelRunFD(ModelRun):
         ubounds = np.array(ubounds)[par_indices.tolist()]
         A0 = np.append(B0.reshape((nr_pools**2,)), -B0.sum(0))
         pars0 = A0[par_indices.tolist()]
-
         y = root(
             constrainedFunction,
             x0=pars0,
             args=(g_tr, lbounds, ubounds, integration_method, nr_nodes),
             method="lm",
-#            options={"xtol": 1e-08}
+            options={"xtol": 1e-08}
         )
 #        print(np.max(y.fun))
 
@@ -671,19 +691,26 @@ class PWCModelRunFD(ModelRun):
 #
 #        bounds = [(lbounds[i], ubounds[i]) for i in range(len(lbounds))]
 #        y = opt.minimize(
-#            g_tr,
+#            lambda x, im, n: np.sum(np.abs(g_tr(x, im, n))),
 #            x0=pars0,
+#            args=(integration_method, nr_nodes),
 #            bounds=bounds,
 #            options={'disp': True},
 #            method='trust-constr'
 #        )
 
-        print('y', y)
+#        print('y', y)
         if check_success and (not y.success):
             msg = y.message.replace("\n", " ")
             raise(PWCModelRunFDError(msg))
 
-        B = pars_to_matrix(y.x)
+        x = y.x
+#        print(x)
+        xBorder = np.where(x < lbounds, lbounds, x)
+        xBorder = np.where(x > ubounds, ubounds, xBorder)
+#        print("708", xBorder)
+        B = pars_to_matrix(xBorder)
+        #print(B)
 
         x1 = x_tau(dt, B)
 #        x1 = x0 + gross_U + gross_F.sum(1) - gross_F.sum(0) - gross_R
@@ -700,7 +727,7 @@ class PWCModelRunFD(ModelRun):
         gross_Rs,
         integration_method='solve_ivp',
         nr_nodes=None,
-        check_success=False
+        check_success=True
     ):
         print(
             "reconstructing Bs using 'integration_method' =",
@@ -736,7 +763,12 @@ class PWCModelRunFD(ModelRun):
         for k in tqdm(range(len(times)-1)):
             dt = times[k+1] - times[k]
 #            B0 = guess_B0(dt, (xs[k]+xs[k+1])/2, gross_Fs[k], gross_Rs[k])
-            B0 = guess_B0(dt, x, gross_Fs[k], gross_Rs[k])
+
+            if (k == 0) or True:
+                B0 = guess_B0(dt, x, gross_Fs[k], gross_Rs[k])
+            else:
+                B0 = Bs[k-1]
+
             B, x = cls.reconstruct_B_surrogate(
                 dt,
                 x,
@@ -749,12 +781,12 @@ class PWCModelRunFD(ModelRun):
                 check_success
             )
 
-            print(k)
-            print(B.sum(0))
-            print(B)
-            print()
-            if k == 15:
-                raise
+            if sum(B.sum(0)>0) > 0:
+                msg = "reconstructed matrix is not compartmental in time step %d\n" % k
+#                msg += str(B) + "\n"
+                msg += str(B.sum(0))
+                raise(PWCModelRunFDError(msg))
+
             Bs[k, :, :] = B
 
         return Bs
