@@ -165,12 +165,11 @@ class PWCModelRunFD(ModelRun):
         gross_Us,
         gross_Fs,
         gross_Rs,
-#        xs,
+        xs=None,
         integration_method='solve_ivp',
         nr_nodes=None,
         check_success=True
     ):
-
         us = cls.reconstruct_us(
             data_times,
             gross_Us
@@ -186,7 +185,7 @@ class PWCModelRunFD(ModelRun):
             gross_Us,
             gross_Fs,
             gross_Rs,
-#            xs,
+            xs,
             integration_method,
             nr_nodes,
             check_success
@@ -502,9 +501,9 @@ class PWCModelRunFD(ModelRun):
                     ).y[..., -1]
                     return x
     
-            xs = np.array(list(map(x_of_tau, tr_times)))
+            x_vals = np.array(list(map(x_of_tau, tr_times)))
             x1 = x_of_tau(tr_times[-1])
-            return np.trapz(xs, tr_times, axis=0), x1
+            return np.trapz(x_vals, tr_times, axis=0), x1
 
         def x_tau(tau, B):
             if np.linalg.det(B) != 0:
@@ -669,53 +668,60 @@ class PWCModelRunFD(ModelRun):
         ubounds = np.array(ubounds)[par_indices.tolist()]
         A0 = np.append(B0.reshape((nr_pools**2,)), -B0.sum(0))
         pars0 = A0[par_indices.tolist()]
-        y = root(
-            constrainedFunction,
-            x0=pars0,
-            args=(g_tr, lbounds, ubounds, integration_method, nr_nodes),
-            method="lm",
-            options={"xtol": 1e-08}
-        )
-#        print(np.max(y.fun))
 
-#        y = least_squares(
-#            g_tr,
-#            x0      = pars0,
-##            verbose = 2,
-##            xtol    = 1000,
-#            args=(integration_method, nr_nodes),
-#            bounds  = (lbounds, ubounds)
-#        )
-
-#        import scipy.optimize as opt
-#
-#        bounds = [(lbounds[i], ubounds[i]) for i in range(len(lbounds))]
-#        y = opt.minimize(
-#            lambda x, im, n: np.sum(np.abs(g_tr(x, im, n))),
-#            x0=pars0,
-#            args=(integration_method, nr_nodes),
-#            bounds=bounds,
-#            options={'disp': True},
-#            method='trust-constr'
-#        )
-
-#        print('y', y)
-        if check_success and (not y.success):
-            msg = y.message.replace("\n", " ")
-            raise(PWCModelRunFDError(msg))
-
-        x = y.x
-#        print(x)
-        xBorder = np.where(x < lbounds, lbounds, x)
-        xBorder = np.where(x > ubounds, ubounds, xBorder)
-#        print("708", xBorder)
-        B = pars_to_matrix(xBorder)
-        #print(B)
-
-        x1 = x_tau(dt, B)
-#        x1 = x0 + gross_U + gross_F.sum(1) - gross_F.sum(0) - gross_R
-
-        return B, x1
+        methods = ["hybr", "lm"]
+        for nr, method in enumerate(methods):
+            y = root(
+                constrainedFunction,
+                x0=pars0,
+                args=(g_tr, lbounds, ubounds, integration_method, nr_nodes),
+                method=method,
+    #            options={"xtol": 1e-08}
+            )
+    #        print(np.max(y.fun))
+    
+    #        y = least_squares(
+    #            g_tr,
+    #            x0      = pars0,
+    ##            verbose = 2,
+    ##            xtol    = 1000,
+    #            args=(integration_method, nr_nodes),
+    #            bounds  = (lbounds, ubounds)
+    #        )
+    
+    #        import scipy.optimize as opt
+    #
+    #        bounds = [(lbounds[i], ubounds[i]) for i in range(len(lbounds))]
+    #        y = opt.minimize(
+    #            lambda x, im, n: np.sum(np.abs(g_tr(x, im, n))),
+    #            x0=pars0,
+    #            args=(integration_method, nr_nodes),
+    #            bounds=bounds,
+    #            options={'disp': True},
+    #            method='trust-constr'
+    #        )
+    
+    #        print('y', y)
+            if check_success and (not y.success):
+                if nr == len(methods)-1:
+                    msg = y.message.replace("\n", " ")
+                    raise(PWCModelRunFDError(msg))
+                else:
+                    print("switching root method from '%s' to '%s'" % (method, methods[nr+1]))
+    
+            else:
+                x = y.x
+        #        print(x)
+                xBorder = np.where(x < lbounds, lbounds, x)
+                xBorder = np.where(x > ubounds, ubounds, xBorder)
+        #        print("708", xBorder)
+                B = pars_to_matrix(xBorder)
+                #print(B)
+        
+                x1 = x_tau(dt, B)
+        #        x1 = x0 + gross_U + gross_F.sum(1) - gross_F.sum(0) - gross_R
+    
+                return B, x1
 
     @classmethod
     def reconstruct_Bs(
@@ -725,6 +731,7 @@ class PWCModelRunFD(ModelRun):
         gross_Us,
         gross_Fs,
         gross_Rs,
+        xs=None,
         integration_method='solve_ivp',
         nr_nodes=None,
         check_success=True
@@ -760,14 +767,16 @@ class PWCModelRunFD(ModelRun):
 
         x = start_values
         Bs = np.zeros((len(times)-1, nr_pools, nr_pools))
+        computed_xs = np.nan * np.ones((len(times), nr_pools))
+        computed_xs[0] = start_values
         for k in tqdm(range(len(times)-1)):
             dt = times[k+1] - times[k]
-#            B0 = guess_B0(dt, (xs[k]+xs[k+1])/2, gross_Fs[k], gross_Rs[k])
 
-            if (k == 0) or True:
-                B0 = guess_B0(dt, x, gross_Fs[k], gross_Rs[k])
+            if xs is not None:
+                B0 = guess_B0(dt, (x+xs[k+1])/2, gross_Fs[k], gross_Rs[k])
+                #x = xs[k]
             else:
-                B0 = Bs[k-1]
+                B0 = guess_B0(dt, x, gross_Fs[k], gross_Rs[k])
 
             B, x = cls.reconstruct_B_surrogate(
                 dt,
@@ -781,6 +790,13 @@ class PWCModelRunFD(ModelRun):
                 check_success
             )
 
+            print(
+                k, 
+                np.max(np.abs(xs[k+1]-x)),
+                np.max((np.abs(xs[k+1]-x)/xs[k+1])*100),
+                #xs[k+1],
+                #x
+            )
             if sum(B.sum(0)>0) > 0:
                 msg = "reconstructed matrix is not compartmental in time step %d\n" % k
 #                msg += str(B) + "\n"
@@ -788,8 +804,16 @@ class PWCModelRunFD(ModelRun):
                 raise(PWCModelRunFDError(msg))
 
             Bs[k, :, :] = B
+            computed_xs[k+1] = x
 
-        return Bs
+        if xs is not None:
+            max_abs_err = np.max(np.abs(xs-computed_xs))
+            max_rel_err = np.max(np.abs(xs-computed_xs)/xs*100)
+        else:
+            max_abs_err = None
+            max_rel_err = None
+
+        return Bs, max_abs_err, max_rel_err
 
     @classmethod
     def B_pwc(cls, times, Bs):
