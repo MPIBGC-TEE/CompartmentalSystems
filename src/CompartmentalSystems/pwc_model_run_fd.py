@@ -790,13 +790,13 @@ class PWCModelRunFD(ModelRun):
                 check_success
             )
 
-            print(
-                k, 
-                np.max(np.abs(xs[k+1]-x)),
-                np.max((np.abs(xs[k+1]-x)/xs[k+1])*100),
-                #xs[k+1],
-                #x
-            )
+#            print(
+#                k, 
+#                np.max(np.abs(xs[k+1]-x)),
+#                np.max((np.abs(xs[k+1]-x)/xs[k+1])*100),
+#                #xs[k+1],
+#                #x
+#            )
             if sum(B.sum(0)>0) > 0:
                 msg = "reconstructed matrix is not compartmental in time step %d\n" % k
 #                msg += str(B) + "\n"
