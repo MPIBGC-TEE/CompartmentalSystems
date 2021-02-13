@@ -179,7 +179,7 @@ class PWCModelRunFD(ModelRun):
 #            'reconstructing Bs, using integration_method =',
 #            integration_method
 #        )
-        Bs = cls.reconstruct_Bs(
+        Bs, _, _ = cls.reconstruct_Bs(
             data_times,
             start_values,
             gross_Us,
