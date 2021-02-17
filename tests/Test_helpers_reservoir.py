@@ -7,11 +7,114 @@ import matplotlib
 matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 import numpy as np
-from sympy import Symbol,Matrix, symbols, sin, Piecewise, DiracDelta, Function
-from CompartmentalSystems.helpers_reservoir import factor_out_from_matrix, parse_input_function, melt, MH_sampling, stride, is_compartmental, func_subs, numerical_function_from_expression
+from sympy import (
+    Symbol,
+    Matrix,
+    symbols,
+    sin,
+    Piecewise,
+    DiracDelta,
+    Function,
+    simplify,
+    zeros
+)
+from CompartmentalSystems.helpers_reservoir import (
+    factor_out_from_matrix,
+    parse_input_function,
+    melt,
+    MH_sampling,
+    stride,
+    is_compartmental,
+    func_subs,
+    numerical_function_from_expression,
+    in_fluxes_by_index,
+    internal_fluxes_by_index,
+    out_fluxes_by_index,
+    in_fluxes_by_symbol,
+    internal_fluxes_by_symbol,
+    out_fluxes_by_symbol,
+)
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 class TestHelpers_reservoir(unittest.TestCase):
+    def test_in_fluxes_by_index_and_symbol(self):
+        C_1, C_2, C_3, u_1, u_2, u_3 = symbols('C_1 C_2 C_3 u_1 u_2 u_3')
+        C = Matrix(3, 1, [C_1, C_2, C_3])
+        u = Matrix(3, 1, [u_1, u_2, u_3])
+        self.assertEqual(
+            in_fluxes_by_index(C, u),
+            {0: u_1, 1: u_2, 2: u_3}
+        )
+        self.assertEqual(
+            in_fluxes_by_symbol(C, u),
+            {C_1: u_1, C_2: u_2, C_3: u_3}
+        )
+
+    def test_out_fluxes_by_index_and_symbol(self):
+        t,C_1, C_2, C_3, k_1, k_2, k_3, a_12, a_13, a_21, a_23, a_31, a_32, gamma\
+        = symbols('t,C_1 C_2 C_3 k_1 k_2 k_3 a_12 a_13 a_21 a_23 a_31 a_32 gamma')
+        C = Matrix(3, 1, [C_1, C_2, C_3])
+        B = gamma*Matrix([
+                [-k_1, a_12, a_13],
+                [a_21, -k_2, a_23],
+                [a_31, a_32, -k_3]
+            ])
+
+        ofbi = out_fluxes_by_index(C, B)
+        for key, val in ofbi.items():
+            with self.subTest():
+                ref_val = {
+                    0: C_1*(-a_21*gamma-a_31*gamma+k_1*gamma),
+                    1: C_2*(-a_12*gamma-a_32*gamma+k_2*gamma),
+                    2: C_3*(-a_13*gamma-a_23*gamma+k_3*gamma)
+                }[key]
+                self.assertEqual(simplify(val-ref_val), 0)
+
+        ofbi = out_fluxes_by_symbol(C, B)
+        for key, val in ofbi.items():
+            with self.subTest():
+                ref_val = {
+                    C_1: C_1*(-a_21*gamma-a_31*gamma+k_1*gamma),
+                    C_2: C_2*(-a_12*gamma-a_32*gamma+k_2*gamma),
+                    C_3: C_3*(-a_13*gamma-a_23*gamma+k_3*gamma)
+                }[key]
+                self.assertEqual(simplify(val-ref_val), 0)
+
+    def test_internal_fluxes_by_index_and_symbol(self):
+        t,C_1, C_2, C_3, k_1, k_2, k_3, a_12, a_13, a_21, a_23, a_31, a_32, gamma\
+        = symbols('t,C_1 C_2 C_3 k_1 k_2 k_3 a_12 a_13 a_21 a_23 a_31 a_32 gamma')
+        C = Matrix(3,1, [C_1, C_2, C_3])
+        B = gamma*Matrix([
+            [-k_1, a_12, a_13],
+            [a_21, -k_2, a_23],
+            [a_31, a_32, -k_3]
+        ])
+
+        self.assertEqual(
+            internal_fluxes_by_index(C, B),
+            {
+                (0, 1): gamma*a_21*C_1, (0, 2): gamma*a_31*C_1,
+                (1, 0): gamma*a_12*C_2, (1, 2): gamma*a_32*C_2,
+                (2, 0): gamma*a_13*C_3, (2, 1): gamma*a_23*C_3
+            }
+        )
+        
+        self.assertEqual(
+            internal_fluxes_by_symbol(C, B),
+            {
+                (C_1, C_2): gamma*a_21*C_1, (C_1, C_3): gamma*a_31*C_1,
+                (C_2, C_1): gamma*a_12*C_2, (C_2, C_3): gamma*a_32*C_2,
+                (C_3, C_1): gamma*a_13*C_3, (C_3, C_2): gamma*a_23*C_3
+            }
+        )
+             
+        # ## test backward conversion to compartmental matrix 
+        # B2 = rm.compartmental_matrix
+        # u2 = rm.external_inputs
+        # self.assertEqual(simplify(u-u2), zeros(*u.shape))
+        # self.assertEqual(simplify(B-B2), zeros(*B.shape))
+
+
     def test_numerical_function_from_expression(self):
         C_0, C_1, C_2 = symbols('C_0 C_1 C_2')
         t = Symbol('t')

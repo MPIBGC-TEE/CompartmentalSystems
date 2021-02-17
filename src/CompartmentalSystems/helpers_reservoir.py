@@ -11,7 +11,7 @@ from scipy.interpolate import lagrange
 from scipy.optimize import brentq
 from scipy.stats import norm
 from string import Template
-from sympy import gcd, lambdify, DiracDelta, solve, Matrix, diff
+from sympy import gcd, lambdify, DiracDelta, solve, Matrix, diff, simplify
 from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
@@ -22,6 +22,60 @@ from .myOdeResult import solve_ivp_pwc
 
 ALPHA_14C = 1.18e-12
 DECAY_RATE_14C_DAILY = 0.0001209681
+
+def in_fluxes_by_index(state_vector,u):
+    return {
+        pool_nr: u[pool_nr]
+        for pool_nr in range(state_vector.rows)
+    }
+
+def in_fluxes_by_symbol(state_vector,u):
+    return {
+        state_vector[pool_nr]: u[pool_nr]
+        for pool_nr in range(state_vector.rows)
+        if u[pool_nr] != 0
+    }
+
+def out_fluxes_by_index(state_vector,B):
+    output_fluxes = dict()
+    # calculate outputs
+    for pool in range(state_vector.rows):
+        outp = -sum(B[:, pool]) * state_vector[pool]
+        s_outp = simplify(outp)
+        if s_outp:
+            output_fluxes[pool] = s_outp
+    return output_fluxes
+
+def out_fluxes_by_symbol(state_vector,B):
+    fbi = out_fluxes_by_index(state_vector,B)
+    return {
+        state_vector[pool_nr]: flux
+        for pool_nr, flux in fbi.items()
+    }
+
+def internal_fluxes_by_index(state_vector,B):
+    # calculate internal fluxes
+    internal_fluxes = dict()
+    pipes = [(i,j) for i in range(state_vector.rows) 
+                    for j in range(state_vector.rows) if i != j]
+    for pool_from, pool_to in pipes:
+        flux = B[pool_to, pool_from] * state_vector[pool_from]
+        s_flux = simplify(flux)
+        if s_flux:
+            internal_fluxes[(pool_from, pool_to)] = s_flux
+
+    return internal_fluxes
+
+def internal_fluxes_by_symbol(state_vector,B):
+    fbi = internal_fluxes_by_index(state_vector,B)
+    return {
+        (state_vector[tup[0]],state_vector[tup[1]]): flux 
+        for tup,flux in fbi.items() 
+    }
+
+
+#def fluxes_by_symbol(state_vector, fluxes_by_index):
+#    internal_fluxes, out_fluxes = fluxes_by_index
 
 
 def warning(txt):
