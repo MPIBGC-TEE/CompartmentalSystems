@@ -27,7 +27,15 @@ from sympy.printing import pprint
 import numpy as np
 import multiprocessing
 
-from .helpers_reservoir import factor_out_from_matrix, has_pw, flux_dict_string, jacobian
+from .helpers_reservoir import (
+    factor_out_from_matrix,
+    has_pw,
+    flux_dict_string,
+    jacobian,
+    in_fluxes_by_index,
+    internal_fluxes_by_index,
+    out_fluxes_by_index,
+)
 from .cs_plotter import CSPlotter
 from typing import TypeVar
 
@@ -142,7 +150,7 @@ class SmoothReservoirModel(object):
             self.output_fluxes,
             self.internal_fluxes
         )
-        
+
     @property
     def function_expressions(self):
         """ Returns the superset of the free symbols of the flux expressions.
@@ -157,8 +165,7 @@ class SmoothReservoirModel(object):
             res=set()
         else:
             res=reduce( lambda A,B: A.union(B),fun_sets)
-        return res 
-
+        return res
 
     @property
     def free_symbols(self):
@@ -291,42 +298,20 @@ It gave up for the following expression: ${e}."""
         Returns:
             :class:`SmoothReservoirModel`
         """
-#        if not(u):
-#           # fixme mm:
-#           # make sure that ReservoirModels standard constructor can handle an 
-#           # empty dict and produce the empty matrix only if necessary later
-#           u=zeros(x.rows,1)
-        
+        #  if not(u):
+        #     # fixme mm:
+        #     # make sure that ReservoirModels standard constructor can handle an 
+        #     # empty dict and produce the empty matrix only if necessary later
+        #     u=zeros(x.rows,1)
         # fixme mm:
         # we do not seem to have a check that makes sure 
         # that the argument B is compartmental
         # maybe the fixme belongs rather to the SmoothModelRun class since 
         # we perhaps need parameters 
         
-        input_fluxes = dict()
-        for pool in range(u.rows):
-            inp = u[pool]
-            if inp:
-                input_fluxes[pool] = inp
-    
-        output_fluxes = dict()
-        # calculate outputs
-        for pool in range(state_vector.rows):
-            outp = -sum(B[:, pool]) * state_vector[pool]
-            s_outp = simplify(outp)
-            if s_outp:
-                output_fluxes[pool] = s_outp
-        
-        # calculate internal fluxes
-        internal_fluxes = dict()
-        pipes = [(i,j) for i in range(state_vector.rows) 
-                        for j in range(state_vector.rows) if i != j]
-        for pool_from, pool_to in pipes:
-            flux = B[pool_to, pool_from] * state_vector[pool_from]
-            s_flux = simplify(flux)
-            if s_flux:
-                internal_fluxes[(pool_from, pool_to)] = s_flux
-        
+        input_fluxes = in_fluxes_by_index(state_vector, u)
+        output_fluxes = out_fluxes_by_index(state_vector, B)
+        internal_fluxes = internal_fluxes_by_index(state_vector, B)
         # call the standard constructor 
         srm = SmoothReservoirModel(state_vector, time_symbol,
                   input_fluxes, output_fluxes, internal_fluxes)
