@@ -10,6 +10,7 @@ import numpy as np
 from sympy import (
     Symbol,
     Matrix,
+    diag,
     symbols,
     sin,
     Piecewise,
@@ -18,37 +19,135 @@ from sympy import (
     simplify,
     zeros
 )
-from CompartmentalSystems.helpers_reservoir import (
-    factor_out_from_matrix,
-    parse_input_function,
-    melt,
-    MH_sampling,
-    stride,
-    is_compartmental,
-    func_subs,
-    numerical_function_from_expression,
-    in_fluxes_by_index,
-    internal_fluxes_by_index,
-    out_fluxes_by_index,
-    in_fluxes_by_symbol,
-    internal_fluxes_by_symbol,
-    out_fluxes_by_symbol,
-)
+import CompartmentalSystems.helpers_reservoir as hr 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
+
 class TestHelpers_reservoir(unittest.TestCase):
+    def test_matrices_to_fluxes_and_back(self):
+        # f = xi*T*N*C + u
+        t, C_1, C_2, C_3, gamma, k_1, k_2, k_3, t_12, t_13, t_21, t_23, t_31, t_32, u_1, u_2, u_3, xi \
+            = symbols('t C_1 C_2 C_3 gamma k_1 k_2 k_3 t_12 t_13 t_21 t_23 t_31 t_32 u_1 u_2 u_3 xi')
+        C = Matrix(3,1, [C_1, C_2, C_3])
+        u = Matrix(3,1, [u_1, u_2, u_3])
+        xi = gamma
+        T = Matrix([[  -1, t_12, t_13],
+                    [t_21,   -1, t_23],
+                    [t_31, t_32,   -1]])
+        N = diag(k_1, k_2, k_3)
+        R = gamma*N
+        B = T*R
+        
+        # outfluxes
+        ofbi = hr.out_fluxes_by_index(C, B)
+        for key, val in ofbi.items():
+            with self.subTest():
+                ref_val = {
+                    0: gamma*k_1*(1-t_21-t_31)*C_1,
+                    1: gamma*k_2*(1-t_12-t_32)*C_2,
+                    2: gamma*k_3*(1-t_13-t_23)*C_3
+                }[key]
+                self.assertEqual(simplify(val-ref_val), 0)
+
+        ofbs = hr.out_fluxes_by_symbol(C, B)
+        for key, val in ofbs.items():
+            with self.subTest():
+                ref_val = {
+                    C_1: gamma*k_1*(1-t_21-t_31)*C_1,
+                    C_2: gamma*k_2*(1-t_12-t_32)*C_2,
+                    C_3: gamma*k_3*(1-t_13-t_23)*C_3
+                }[key]
+                self.assertEqual(simplify(val-ref_val), 0)
+
+        # internalfluxes
+        ifbi = hr.internal_fluxes_by_index(C, B)
+        for key, val in ifbi.items():
+            with self.subTest():
+                ref_val = {
+                    (0, 1): gamma*t_21*k_1*C_1, (0, 2): gamma*t_31*k_1*C_1,
+                    (1, 0): gamma*t_12*k_2*C_2, (1, 2): gamma*t_32*k_2*C_2,
+                    (2, 0): gamma*t_13*k_3*C_3, (2, 1): gamma*t_23*k_3*C_3
+                }[key]
+                self.assertEqual(simplify(val-ref_val), 0)
+
+        ifbs = hr.internal_fluxes_by_symbol(C, B)
+        for key, val in ifbs.items():
+            with self.subTest():
+                ref_val = {
+                    (C_1, C_2): gamma*t_21*k_1*C_1, (C_1, C_3): gamma*t_31*k_1*C_1,
+                    (C_2, C_1): gamma*t_12*k_2*C_2, (C_2, C_3): gamma*t_32*k_2*C_2,
+                    (C_3, C_1): gamma*t_13*k_3*C_3, (C_3, C_2): gamma*t_23*k_3*C_3
+                }[key]
+                self.assertEqual(simplify(val-ref_val), 0)
+
+        # ## test backward conversion to compartmental matrix 
+        R2 = hr.release_operator_1(
+            out_fluxes_by_index=ofbi,
+            internal_fluxes_by_index=ifbi,
+            state_vector=C
+        )
+
+        xi2 = hr.factor_out_from_matrix(R2)
+
+        T2 = hr.tranfer_operator_1(
+            out_fluxes_by_index=ofbi,
+            internal_fluxes_by_index=ifbi,
+            state_vector=C
+        )
+        B2= hr.compartmental_matrix_1(
+            out_fluxes_by_index=ofbi,
+            internal_fluxes_by_index=ifbi,
+            state_vector=C
+        )
+
+
+        R3 = hr.release_operator_2(
+            out_fluxes_by_symbol=ofbs,
+            internal_fluxes_by_symbol=ifbs,
+            state_vector=C
+        )
+        xi3 = hr.factor_out_from_matrix(R3)
+
+        T3 = hr.transfer_operator_2(
+            out_fluxes_by_symbol=ofbs,
+            internal_fluxes_by_symbol=ifbs,
+            state_vector=C
+        )
+        B3= hr.compartmental_matrix_2(
+            out_fluxes_by_symbol=ofbs,
+            internal_fluxes_by_symbol=ifbs,
+            state_vector=C
+        )
+        self.assertEqual(simplify(R-R2), zeros(*R.shape))
+        self.assertEqual(simplify(R-R3), zeros(*R.shape))
+        self.assertEqual(simplify(T-T2), zeros(*R.shape))
+        self.assertEqual(simplify(T-T3), zeros(*R.shape))
+        self.assertEqual(simplify(B-B2), zeros(*R.shape))
+        self.assertEqual(simplify(B-B3), zeros(*R.shape))
+
+        self.assertEqual(simplify(B-T2*R2), zeros(*R.shape))
+        self.assertEqual(simplify(N-R2/xi2), zeros(*R.shape))
+
+        self.assertEqual(simplify(T3*R3-B3), zeros(*R.shape))
+        self.assertEqual(simplify(N-R3/xi3), zeros(*R.shape))
+
+
     def test_in_fluxes_by_index_and_symbol(self):
         C_1, C_2, C_3, u_1, u_2, u_3 = symbols('C_1 C_2 C_3 u_1 u_2 u_3')
         C = Matrix(3, 1, [C_1, C_2, C_3])
         u = Matrix(3, 1, [u_1, u_2, u_3])
         self.assertEqual(
-            in_fluxes_by_index(C, u),
+            hr.in_fluxes_by_index(C, u),
             {0: u_1, 1: u_2, 2: u_3}
         )
+        u_by_sym = hr.in_fluxes_by_symbol(C, u)
         self.assertEqual(
-            in_fluxes_by_symbol(C, u),
+            u_by_sym,
             {C_1: u_1, C_2: u_2, C_3: u_3}
         )
+        # test backward conversion to matrix
+        u2 = hr.in_or_out_flux_tuple(state_vector=C, in_or_out_fluxes_by_symbol=u_by_sym)
+        self.assertEqual(simplify(u-u2), zeros(*u.shape))
 
     def test_out_fluxes_by_index_and_symbol(self):
         t,C_1, C_2, C_3, k_1, k_2, k_3, a_12, a_13, a_21, a_23, a_31, a_32, gamma\
@@ -60,7 +159,7 @@ class TestHelpers_reservoir(unittest.TestCase):
                 [a_31, a_32, -k_3]
             ])
 
-        ofbi = out_fluxes_by_index(C, B)
+        ofbi = hr.out_fluxes_by_index(C, B)
         for key, val in ofbi.items():
             with self.subTest():
                 ref_val = {
@@ -70,7 +169,7 @@ class TestHelpers_reservoir(unittest.TestCase):
                 }[key]
                 self.assertEqual(simplify(val-ref_val), 0)
 
-        ofbi = out_fluxes_by_symbol(C, B)
+        ofbi = hr.out_fluxes_by_symbol(C, B)
         for key, val in ofbi.items():
             with self.subTest():
                 ref_val = {
@@ -91,7 +190,7 @@ class TestHelpers_reservoir(unittest.TestCase):
         ])
 
         self.assertEqual(
-            internal_fluxes_by_index(C, B),
+            hr.internal_fluxes_by_index(C, B),
             {
                 (0, 1): gamma*a_21*C_1, (0, 2): gamma*a_31*C_1,
                 (1, 0): gamma*a_12*C_2, (1, 2): gamma*a_32*C_2,
@@ -100,7 +199,7 @@ class TestHelpers_reservoir(unittest.TestCase):
         )
         
         self.assertEqual(
-            internal_fluxes_by_symbol(C, B),
+            hr.internal_fluxes_by_symbol(C, B),
             {
                 (C_1, C_2): gamma*a_21*C_1, (C_1, C_3): gamma*a_31*C_1,
                 (C_2, C_1): gamma*a_12*C_2, (C_2, C_3): gamma*a_32*C_2,
@@ -137,18 +236,18 @@ class TestHelpers_reservoir(unittest.TestCase):
         func_set = {u_0_expr: u0_func, u_2_expr: u2_func}
         
         tup = (C_0,C_1) + (t,)
-        u_0_func = numerical_function_from_expression(u_0_expr,tup,parameter_dict,func_set)
+        u_0_func = hr.numerical_function_from_expression(u_0_expr,tup,parameter_dict,func_set)
         self.assertEqual(u_0_func(1,2,3),1+2+3)
         
         tup = (t,)
-        u_2_func=numerical_function_from_expression(u_2_expr,tup,parameter_dict,func_set)
+        u_2_func=hr.numerical_function_from_expression(u_2_expr,tup,parameter_dict,func_set)
         self.assertEqual(u_2_func(2),2)
         
         # wrong tup: C_1 is not necessary but it does not hurt
         # this behavior is convinient to make everything a variable of 
         # ALL statevariables and time 
         tup = (C_1,t,)
-        u_2_func=numerical_function_from_expression(u_2_expr,tup,parameter_dict,func_set)
+        u_2_func=hr.numerical_function_from_expression(u_2_expr,tup,parameter_dict,func_set)
         # the superflous first argument just does not have any influence
         self.assertEqual(u_2_func(1002103413131,2),2)
         
@@ -156,7 +255,7 @@ class TestHelpers_reservoir(unittest.TestCase):
         # this is a real error
         tup = (C_1,t)
         with self.assertRaises(Exception) as e:
-            u_0_func=numerical_function_from_expression(u_0_expr,tup,parameter_dict,func_set)
+            u_0_func=hr.numerical_function_from_expression(u_0_expr,tup,parameter_dict,func_set)
 
     def test_func_subs(self):
         # t is in the third position
@@ -167,7 +266,7 @@ class TestHelpers_reservoir(unittest.TestCase):
             return (C_0*C_1)**t
 
         ref=u_0_func(1,2,3)
-        u_0_part=func_subs(t,u_0_expr,u_0_func,3)
+        u_0_part=hr.func_subs(t,u_0_expr,u_0_func,3)
         res=u_0_part(1,2)
         self.assertEqual(ref,res)
        
@@ -177,7 +276,7 @@ class TestHelpers_reservoir(unittest.TestCase):
             return (C_0*C_1)**t
 
         ref=u_0_func(1,2,3)
-        u_0_part=func_subs(t,u_0_expr,u_0_func,1)
+        u_0_part=hr.func_subs(t,u_0_expr,u_0_func,1)
         res=u_0_part(2,3)
         self.assertEqual(ref,res)
     
@@ -186,13 +285,13 @@ class TestHelpers_reservoir(unittest.TestCase):
         t = symbols('t')
         u = (1+sin(t) + DiracDelta(2-t) 
             +5*DiracDelta(3-t) + Piecewise((1,t<=1), (2,True)))
-        impulses, jump_times = parse_input_function(u, t)
+        impulses, jump_times = hr.parse_input_function(u, t)
         self.assertEqual(impulses, [{'time': 2, 'intensity': 1}, 
                                     {'time': 3,'intensity': 5}])
         self.assertEqual(jump_times, [1,2,3])
 
         u = 1
-        impulses, jump_times = parse_input_function(u, t)
+        impulses, jump_times = hr.parse_input_function(u, t)
         self.assertEqual(impulses, [])
         self.assertEqual(jump_times, [])
 
@@ -200,7 +299,7 @@ class TestHelpers_reservoir(unittest.TestCase):
     def test_factor_out_from_matrix(self):
         gamma, k_1 = symbols('gamma k_1')
         M = Matrix([[12*gamma*k_1, 0], [3*gamma**2, 15*gamma]])
-        cf = factor_out_from_matrix(M)
+        cf = hr.factor_out_from_matrix(M)
 
         self.assertEqual(cf, 3*gamma)
 
@@ -233,7 +332,7 @@ class TestHelpers_reservoir(unittest.TestCase):
                  [2,  3,  0, 22],
                  [2,  3,  1, 23]]
         ref = np.array(a_ref).reshape((24,4))
-        melted = melt(ndarr)
+        melted = hr.melt(ndarr)
         self.assertTrue(np.all(melted==ref))
 
         ages = np.linspace(0,4,3)
@@ -264,7 +363,7 @@ class TestHelpers_reservoir(unittest.TestCase):
                  [4.,     0.5 ,   1.,    21.  ],
                  [4.,     0.75,   0.,    22.  ],
                  [4.,     0.75,   1.,    23.  ]]
-        melted = melt(ndarr, [ages, times, pools])
+        melted = hr.melt(ndarr, [ages, times, pools])
         ref = np.array(a_ref).reshape((24,4))
         self.assertTrue(np.all(melted==ref))
 
@@ -276,14 +375,14 @@ class TestHelpers_reservoir(unittest.TestCase):
 
         # uniform distribution on [0,1]
         PDF = lambda x: 1 if x>=0 and x<=1 else 0
-        rvs = MH_sampling(200000, PDF)
+        rvs = hr.MH_sampling(200000, PDF)
         self.assertTrue(abs(np.mean(rvs)-0.5) < 0.05)
         self.assertTrue(abs(np.std(rvs, ddof=1)-np.sqrt(1/12)) < 0.05)
 
         # exponential distribution
         l = 2
         PDF = lambda x: l*np.exp(-l*x)
-        rvs = MH_sampling(100000, PDF, start = 1/l)
+        rvs = hr.MH_sampling(100000, PDF, start = 1/l)
         #print(rvs)
         #print(np.mean(rvs))
         #count, bins, ignored = plt.hist(rvs, 100, normed=True)
@@ -296,7 +395,7 @@ class TestHelpers_reservoir(unittest.TestCase):
 
     def test_stride(self):
         data = np.array([i*10+np.linspace(0,9,10) for i in range(20)])
-        strided_data = stride(data, (2,4))
+        strided_data = hr.stride(data, (2,4))
         ref = np.array([[   0.,    4.,    8.,    9.], 
                         [  20.,   24.,   28.,   29.],
                         [  40.,   44.,   48.,   49.],
@@ -311,17 +410,17 @@ class TestHelpers_reservoir(unittest.TestCase):
         self.assertTrue(np.all(strided_data==ref))
 
         times = np.linspace(0,100,101)
-        strided_times = stride(times, 25)
+        strided_times = hr.stride(times, 25)
         self.assertTrue(np.all(strided_times==np.array([0, 25, 50, 75, 100])))
         
-        strided_times = stride(times, 1)
+        strided_times = hr.stride(times, 1)
         self.assertTrue(np.all(strided_times==times))
 
     def test_is_compartmental(self):
         k=Symbol('k',positive=True, real=True)
         l=Symbol('l',positive=True, real=True)
         M=Matrix([[-k,0],[0,-l]])
-        self.assertTrue(is_compartmental(M))
+        self.assertTrue(hr.is_compartmental(M))
 
 
 
