@@ -26,16 +26,7 @@ from sympy import (zeros, Matrix, simplify, diag, eye, gcd, latex, Symbol,
 from sympy.printing import pprint
 import numpy as np
 import multiprocessing
-
-from .helpers_reservoir import (
-    factor_out_from_matrix,
-    has_pw,
-    flux_dict_string,
-    jacobian,
-    in_fluxes_by_index,
-    internal_fluxes_by_index,
-    out_fluxes_by_index,
-)
+from . import helpers_reservoir as hr
 from .cs_plotter import CSPlotter
 from typing import TypeVar
 
@@ -91,11 +82,11 @@ class SmoothReservoirModel(object):
             :class:`SmoothReservoirModel`
         """
         # transform to integer indexed dicts
-        int_input={state_vector.index(k):v for k,v in input_fluxes.items()}
-        int_output={state_vector.index(k):v for k,v in output_fluxes.items()}
-        int_internal={(state_vector.index(k[0]),state_vector.index(k[1])):v for k,v in internal_fluxes.items()}
+        int_input = hr.to_int_keys_1(input_fluxes, state_vector)
+        int_output = hr.to_int_keys_1(output_fluxes, state_vector)
+        int_internal = hr.to_int_keys_2(internal_fluxes, state_vector)
         # call normal init
-        return cls( state_vector, time_symbol, int_input, int_output, int_internal)
+        return cls(state_vector, time_symbol, int_input, int_output, int_internal)
 
     def __init__(self, state_vector, time_symbol, 
                        input_fluxes={}, output_fluxes={}, internal_fluxes={}):
@@ -126,20 +117,6 @@ class SmoothReservoirModel(object):
         self.input_fluxes=input_fluxes
         self.output_fluxes=output_fluxes
         self.internal_fluxes=internal_fluxes
-        # fixme mm:
-        # this is a kind of circular dependency 
-        # or at least a clumsy, duplicating and therefore error prone approach 
-        # at a one-to-many relationship
-        # there is no need to store SmoothModelRun objects in ReservoirModel 
-        # objects since we already have the 
-        # attribute model_run_combinations in class Model
-        #self.model_runs=[]
-
-        # fixme mm:
-        # see the description of the model_runs property
-        # def add_model_run(self,mr):
-        #     self.model_runs.append(mr)
-    
 
     @property
     def no_input_model(self):
@@ -202,16 +179,16 @@ class SmoothReservoirModel(object):
     def __str__(self):
         """ This method is called implicitly by print and gives an returns a string that gives an overview over the fluxes 
         """
-        s="Object of class "+str(self.__class__)
+        s = "Object of class "+str(self.__class__)
         indent=2 
-        s+="\n Input fluxes:\n"
-        s+=flux_dict_string(self.input_fluxes,indent)
+        s += "\n Input fluxes:\n"
+        s += hr.flux_dict_string(self.input_fluxes, indent)
 
-        s+="\n Internal fluxes:\n"
-        s+=flux_dict_string(self.internal_fluxes,indent)
-        
-        s+="\n Output fluxes:\n"
-        s+=flux_dict_string(self.output_fluxes,indent)
+        s += "\n Internal fluxes:\n"
+        s += hr.flux_dict_string(self.internal_fluxes, indent)
+
+        s += "\n Output fluxes:\n"
+        s += hr.flux_dict_string(self.output_fluxes, indent)
 
         return s 
 
@@ -225,7 +202,7 @@ class SmoothReservoirModel(object):
     def jacobian(self):
         state_vec=Matrix(self.state_vector)
         vec=Matrix(self.F)
-        return jacobian(vec,state_vec)
+        return hr.jacobian(vec,state_vec)
 
     
     @property
@@ -309,9 +286,9 @@ It gave up for the following expression: ${e}."""
         # maybe the fixme belongs rather to the SmoothModelRun class since 
         # we perhaps need parameters 
         
-        input_fluxes = in_fluxes_by_index(state_vector, u)
-        output_fluxes = out_fluxes_by_index(state_vector, B)
-        internal_fluxes = internal_fluxes_by_index(state_vector, B)
+        input_fluxes = hr.in_fluxes_by_index(state_vector, u)
+        output_fluxes = hr.out_fluxes_by_index(state_vector, B)
+        internal_fluxes = hr.internal_fluxes_by_index(state_vector, B)
         # call the standard constructor 
         srm = SmoothReservoirModel(state_vector, time_symbol,
                   input_fluxes, output_fluxes, internal_fluxes)
@@ -454,34 +431,26 @@ It gave up for the following expression: ${e}."""
         # convert inputs
         u = self.external_inputs
 
-        # calculate decomposition operators
-        decomp_rates = []
-        for pool in range(nr_pools):
-            if pool in outputs.keys():
-                decomp_flux = outputs[pool]
-            else:
-                decomp_flux = 0
-            decomp_flux += sum([flux for (i,j), flux in internal_fluxes.items() 
-                                        if i == pool])
-            decomp_rates.append(simplify(decomp_flux/C[pool]))
-
-        N = diag(*decomp_rates)
-
+        R = hr.release_operator_1(
+            outputs,
+            internal_fluxes,
+            C
+        )
         # calculate transition operator
-        T = -eye(nr_pools)
-        
-        for (i,j), flux in internal_fluxes.items():
-            T[j,i] = flux/C[i]/N[i,i]
-
+        T = hr.transfer_operator_3(
+            internal_fluxes,
+            R,
+            C
+        )
         # try to extract xi from N and T
         if factor_out_xi:
-            xi_N = factor_out_from_matrix(N)
-            N = N/xi_N
-
-            xi_T = factor_out_from_matrix(T)
-            T = T/xi_T
-
-            xi = xi_N * xi_T
+            xi = hr.factor_out_from_matrix(R)
+            N = R/xi
+            # Note mm 02/17/2021
+            # since T has -1 on the main diagonal
+            # the gcd will be always one so the
+            # factor_out_from_matrix(T) is not
+            # necessarry. 
         else:
             xi = 1
 
@@ -495,11 +464,13 @@ It gave up for the following expression: ${e}."""
         Returns:
             SymPy dxd-matrix: :math:`B = \\xi\\,T\\,N`
         """
-        # could be computed directly from Jaquez
-        # but since we need the xi*T*N decomposition anyway
-        # we can use it
-        xi, T, N, C, u = self.xi_T_N_u_representation(factor_out_xi=False)
-        return(xi*T*N)
+        # we could also use the more expensive 
+        # xi, T, N, C, u = self.xi_T_N_u_representation(factor_out_xi=False))
+        return hr.compartmental_matrix_1(
+            self.output_fluxes,
+            self.internal_fluxes,
+            self.state_vector
+        )
 
     def age_moment_system(self, max_order):
         """Return the age moment system of the model.
@@ -784,7 +755,7 @@ It gave up for the following expression: ${e}."""
         sv = self.state_vector[pool_from]
         flux = self.internal_fluxes[(pool_from, pool_to)]
 
-        if has_pw(flux):
+        if hr.has_pw(flux):
             #print("Piecewise")    
             #print(latex(flux))
             return "nonlinear"
@@ -824,7 +795,7 @@ It gave up for the following expression: ${e}."""
         # (This is a row of the jacobian)  
         u_i=Matrix([self.external_inputs[pool_to]])
         s_v=Matrix(self.state_vector)
-        J_i=jacobian(u_i,s_v)
+        J_i=hr.jacobian(u_i,s_v)
         # an input that does not depend on state variables has a zero derivative with respect 
         # to all state variables
         if all([ j_ij==0 for j_ij in J_i]):

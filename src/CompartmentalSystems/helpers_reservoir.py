@@ -11,7 +11,17 @@ from scipy.interpolate import lagrange
 from scipy.optimize import brentq
 from scipy.stats import norm
 from string import Template
-from sympy import gcd, lambdify, DiracDelta, solve, Matrix, diff, simplify
+from sympy import (
+    gcd,
+	diag,
+	lambdify,
+	DiracDelta,
+	solve,
+	Matrix,
+	diff,
+	simplify,
+    eye
+)
 from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
@@ -23,7 +33,126 @@ from .myOdeResult import solve_ivp_pwc
 ALPHA_14C = 1.18e-12
 DECAY_RATE_14C_DAILY = 0.0001209681
 
-def in_fluxes_by_index(state_vector,u):
+def to_int_keys_1(flux_by_sym, state_vector):
+    return {list(state_vector).index(k):v for k,v in flux_by_sym.items()}
+
+
+def to_int_keys_2(fluxes_by_sym_tup, state_vector):
+    return{
+        (list(state_vector).index(k[0]),list(state_vector).index(k[1])):v 
+        for k,v in fluxes_by_sym_tup.items()
+    }
+
+def in_or_out_flux_tuple(
+        state_vector,
+        in_or_out_fluxes_by_symbol
+):
+    keys = in_or_out_fluxes_by_symbol.keys()
+
+    def f(ind):
+        v = state_vector[ind]
+        return in_or_out_fluxes_by_symbol[v] if v in keys else 0
+
+    return Matrix([f(ind) for ind in range(len(state_vector))])
+
+
+def release_operator_1(
+    out_fluxes_by_index, 
+    internal_fluxes_by_index,
+    state_vector
+):
+    decomp_rates = []
+    for pool in range(len(state_vector)):
+        if pool in out_fluxes_by_index.keys():
+            decomp_flux = out_fluxes_by_index[pool]
+        else:
+            decomp_flux = 0
+        decomp_flux += sum([flux for (i,j), flux in internal_fluxes_by_index.items() 
+                                    if i == pool])
+        decomp_rates.append(simplify(decomp_flux/state_vector[pool]))
+
+    R = diag(*decomp_rates)
+    return R
+
+def release_operator_2(
+    out_fluxes_by_symbol, 
+    internal_fluxes_by_symbol,
+    state_vector
+):  
+    return release_operator_1(
+        to_int_keys_1(out_fluxes_by_symbol, state_vector),
+        to_int_keys_2(internal_fluxes_by_symbol,state_vector),
+        state_vector
+    )
+
+def tranfer_operator_1(
+    out_fluxes_by_index,
+    internal_fluxes_by_index,
+    state_vector
+):
+    R = release_operator_1(
+        out_fluxes_by_index,
+        internal_fluxes_by_index,
+        state_vector
+    )
+    # calculate transition operator
+    return transfer_operator_3(
+        internal_fluxes_by_index,
+        R,
+        state_vector
+    )
+
+def transfer_operator_2(
+    out_fluxes_by_symbol, 
+    internal_fluxes_by_symbol,
+    state_vector
+):  
+    return tranfer_operator_1(
+        to_int_keys_1( out_fluxes_by_symbol, state_vector),
+        to_int_keys_2( internal_fluxes_by_symbol, state_vector),
+        state_vector
+    )
+
+def transfer_operator_3(
+    # this is just a shortcut if we know R already
+    internal_fluxes_by_index,
+    release_operator,
+    state_vector
+):
+    # calculate transition operator
+    T = -eye(len(state_vector))
+    for (i, j), flux in internal_fluxes_by_index.items():
+        T[j, i] = flux/state_vector[i]/release_operator[i, i]
+    return T
+
+
+def compartmental_matrix_1(
+    out_fluxes_by_index,
+    internal_fluxes_by_index,
+    state_vector
+):
+    C = -1*release_operator_1(
+        out_fluxes_by_index,
+        internal_fluxes_by_index,
+        state_vector
+    )
+    for (i, j), flux in internal_fluxes_by_index.items():
+        C[j, i] = flux/state_vector[i]
+    return C
+
+def compartmental_matrix_2(
+    out_fluxes_by_symbol, 
+    internal_fluxes_by_symbol,
+    state_vector
+):  
+    return compartmental_matrix_1(
+        to_int_keys_1( out_fluxes_by_symbol, state_vector),
+        to_int_keys_2( internal_fluxes_by_symbol, state_vector),
+        state_vector
+    )
+
+
+def in_fluxes_by_index(state_vector, u):
     return {
         pool_nr: u[pool_nr]
         for pool_nr in range(state_vector.rows)
