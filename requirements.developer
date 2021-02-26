@@ -5,3 +5,6 @@ scipy>=1.4.1
 # so we do not fetch it
 #-e git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
 sphinx-autodoc-typehints
+networkx
+ipycytoscape
+
