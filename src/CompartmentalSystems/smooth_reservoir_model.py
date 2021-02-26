@@ -14,8 +14,11 @@ total number of pools is :math:`d`.
 """
 
 
+import multiprocessing
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
+import numpy as np
+import networkx as nx
 
 from copy import copy, deepcopy
 from string import Template
@@ -24,8 +27,6 @@ from sympy import (zeros, Matrix, simplify, diag, eye, gcd, latex, Symbol,
                    flatten, Function, solve, limit, oo , ask , Q, assuming
                    ,sympify)
 from sympy.printing import pprint
-import numpy as np
-import multiprocessing
 from . import helpers_reservoir as hr
 from .cs_plotter import CSPlotter
 from typing import TypeVar
@@ -591,7 +592,12 @@ It gave up for the following expression: ${e}."""
         self.plot_pools_and_fluxes(ax,  mutation_scale = mutation_scale, fontsize = fontsize, thumbnail = thumbnail, legend = legend)
 
         return fig
-
+def nxgraph(self):
+    return hr.nxgraph(
+        self.inFluxes,
+        self.internalFluxes,
+        self.outFluxes,
+    )
 
     ##### 14C methods #####
 

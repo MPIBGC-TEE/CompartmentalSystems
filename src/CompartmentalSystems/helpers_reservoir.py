@@ -22,16 +22,60 @@ from sympy import (
 	simplify,
     eye
 )
+
 from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
 from collections.abc import Iterable
+import networkx as nx
+from frozendict import frozendict
 from .BlockOde import BlockOde
 from .myOdeResult import solve_ivp_pwc
 
 
 ALPHA_14C = 1.18e-12
 DECAY_RATE_14C_DAILY = 0.0001209681
+
+
+def nxgraphs(
+    state_vector: Matrix,
+    in_fluxes: frozendict,
+    internal_fluxes: frozendict,
+    out_fluxes: frozendict
+) -> nx.DiGraph:
+    in_flux_targets, out_flux_sources, internal_connections = [
+        [k for k in d.keys()]
+        for d in (in_fluxes, out_fluxes, internal_fluxes)
+    ]                                                                
+    internal_connections
+    virtual_in_flux_sources=["virtual_in_" + str(t) for t in in_flux_targets]
+    GVI = nx.DiGraph()
+    for n in virtual_in_flux_sources:
+        GVI.add_node(n, virtual=True)
+    for n in in_flux_targets:
+        GVI.add_nodes_from(in_flux_targets)
+    for i in range(len(in_flux_targets)):
+        GVI.add_edge(virtual_in_flux_sources[i], in_flux_targets[i])
+
+    GVO = nx.DiGraph()
+    virtual_out_flux_targets = [
+        "virtual_out_" + str(t)
+        for t in out_flux_sources
+    ]
+    for n in virtual_out_flux_targets:
+        GVO.add_node(n, virtual=True)
+    for n in out_flux_sources:
+        GVO.add_nodes_from(out_flux_sources)
+    for i in range(len(out_flux_sources)):
+        GVO.add_edge(out_flux_sources[i], virtual_out_flux_targets[i])
+
+    GINT = nx.DiGraph()
+    for c in internal_connections:
+        GINT.add_edge(c[0], c[1])
+
+    G1 = nx.compose(GVI, GINT)
+    G = nx.compose(G1, GVO)
+    return (G, GVI, GINT, GVO)
 
 def to_int_keys_1(flux_by_sym, state_vector):
     return {list(state_vector).index(k):v for k,v in flux_by_sym.items()}
