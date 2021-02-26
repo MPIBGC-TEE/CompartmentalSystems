@@ -1002,7 +1002,8 @@ class DiscreteModelRun():
             )
             
             if P_sv(int(quantile_ai), ti)[pool_nr] > q * soln[ti, pool_nr]:
-                quantile_ai = quantile_ai - 1
+                if quantile_ai > 0:
+                    quantile_ai = quantile_ai - 1
             res[ti, pool_nr] = int(quantile_ai)
 
         return res * self.dt
@@ -1022,7 +1023,8 @@ class DiscreteModelRun():
             )
             
             if P_sys_sv(int(quantile_ai), ti) > q * soln_sum[ti]:
-                quantile_ai = quantile_ai - 1
+                if quantile_ai > 0:
+                    quantile_ai = quantile_ai - 1
             res[ti] = int(quantile_ai)
 
         return res * self.dt
@@ -1044,7 +1046,8 @@ class DiscreteModelRun():
             )
             
             if P_btt_sv(int(quantile_ai), ti) > q * R[ti, ...].sum():
-                quantile_ai = quantile_ai - 1
+                if quantile_ai > 0:
+                    quantile_ai = quantile_ai - 1
             res[ti] = int(quantile_ai)
 
         return res * self.dt
