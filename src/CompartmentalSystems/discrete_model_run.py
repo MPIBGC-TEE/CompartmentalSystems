@@ -193,9 +193,21 @@ class DiscreteModelRun():
             if x[j] != 0:
                 B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / x[j])
                 if B[j, j] < 0:
+#                    pass
                     raise(DMRError('Diag. val < 0: pool %d, ' % j))
             else:
                 B[j, j] = 1
+
+#        # correct for negative diagonals
+#        neg_diag_idx = np.where(np.diag(B)<0)[0]
+#        for idx in neg_diag_idx:
+#            # scale outfluxes down to empty pool
+#            col = B[:, idx]
+#            d = col[idx]
+#            s = 1-d
+#            B[:, idx] = B[:, idx] / s
+#            r = R[idx] / x[idx] / s
+#            B[idx, idx] = 1 - (sum(B[:, idx]) - B[idx, idx] + r)
 
         return B
 
@@ -1025,6 +1037,7 @@ class DiscreteModelRun():
             if P_sys_sv(int(quantile_ai), ti) > q * soln_sum[ti]:
                 if quantile_ai > 0:
                     quantile_ai = quantile_ai - 1
+
             res[ti] = int(quantile_ai)
 
         return res * self.dt
