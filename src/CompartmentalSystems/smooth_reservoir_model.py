@@ -722,8 +722,10 @@ It gave up for the following expression: ${e}."""
         self.plot_pools_and_fluxes(ax,  mutation_scale = mutation_scale, fontsize = fontsize, thumbnail = thumbnail, legend = legend)
 
         return fig
-def nxgraph(self):
-    return hr.nxgraph(
+
+def nxgraphs(self):
+    return hr.nxgraphs(
+        self.state_vector,
         self.inFluxes,
         self.internalFluxes,
         self.outFluxes,
