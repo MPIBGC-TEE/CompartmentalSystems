@@ -120,6 +120,41 @@ def combine(m1, m2, m1_to_m2, m2_to_m1):
 
     return sv_set, clean_in_fluxes, clean_out_fluxes, clean_internal_fluxes
 
+
+def extract(m, sv_set):
+    m_sv_set, m_in_fluxes, m_out_fluxes, m_internal_fluxes = m
+    assert(sv_set.issubset(m_sv_set))
+
+    in_fluxes = {pool: flux for pool, flux in m_in_fluxes.items() if pool in sv_set}
+    out_fluxes = {pool: flux for pool, flux in m_out_fluxes.items() if pool in sv_set}
+    internal_fluxes = {
+        (pool_from, pool_to): flux 
+        for (pool_from, pool_to), flux in m_internal_fluxes.items() 
+        if (pool_from in sv_set) and (pool_to in sv_set)
+    }
+
+    for (pool_from, pool_to), flux in m_internal_fluxes.items():
+        # internal flux becomes influx
+        if (pool_from not in sv_set) and (pool_to in sv_set):
+            if pool_to in in_fluxes.keys():
+                in_fluxes[pool_to] += flux
+            else:
+                in_fluxes[pool_to] = flux
+        
+        # internal flux becomes outflux
+        if (pool_from in sv_set) and (pool_to not in sv_set):
+            if pool_from in out_fluxes.keys():
+                out_fluxes[pool_from] += flux
+            else:
+                out_fluxes[pool_from] = flux
+    
+    clean_in_fluxes = {k: v for k, v in in_fluxes.items() if v != 0}
+    clean_out_fluxes = {k: v for k, v in out_fluxes.items() if v != 0}
+    clean_internal_fluxes = {k: v for k, v in internal_fluxes.items() if v != 0}
+
+    return sv_set, clean_in_fluxes, clean_out_fluxes, clean_internal_fluxes
+
+
 def nxgraphs(
     state_vector: Matrix,
     in_fluxes: frozendict,

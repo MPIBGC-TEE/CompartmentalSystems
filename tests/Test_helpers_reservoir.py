@@ -209,6 +209,7 @@ class TestHelpers_reservoir(unittest.TestCase):
             hr.extract(combined, sv_set_veg),
             veg
         )
+
         self.assertEqual(
             hr.extract(combined, sv_set_soil),
             soil
