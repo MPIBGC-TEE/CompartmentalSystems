@@ -217,13 +217,13 @@ class TestHelpers_reservoir(unittest.TestCase):
         veg_to_soil = {
            (pool_from, pool_to): flux
            for (pool_from, pool_to), flux in internal_fluxes_comb.items()
-           if (key[0] in sv_set_veg) and (key[1] in sv_set_soil)
+           if (pool_from in sv_set_veg) and (pool_to in sv_set_soil)
         }
 
         soil_to_veg = {
            (pool_from, pool_to): flux
            for (pool_from, pool_to), flux in internal_fluxes_comb.items()
-           if (key[0] in sv_set_soil) and (key[1] in sv_set_veg)
+           if (pool_from in sv_set_soil) and (pool_to in sv_set_veg)
         }
 
         self.assertEqual(
@@ -235,134 +235,135 @@ class TestHelpers_reservoir(unittest.TestCase):
             hr.combine(soil, veg, soil_to_veg, veg_to_soil),
             combined
         )
-        # in case sv_set_veg and sv_set_soil are not disjoint
-        # for this purpose we invent another pool that will be
-        # part of both systems
-        for s in ('C_labile','f_labile2metlit','cr_labile', 'f_labile2stlit'):
-            var(s)
 
-        sv_set_comb2 = sv_set_comb.union([C_foliage])
-        sv_set_veg2 = sv_set_veg.union([C_foliage])
-
-        sv_set_soil2 = sv_set_soil2.union([ C_labile ])
-       
-        in_fluxes_comb = {
-            C_foliage: In_foliage,
-            C_wood: In_wood,
-            C_roots:In_roots
-        }
-
-        in_fluxes_veg= {
-            C_foliage: In_foliage,
-            C_wood: In_wood,
-            C_roots:In_roots
-        }
-
-        in_fluxes_soil= {
-            C_metlit:
-            (
-                C_foliage*f_foliage2metlit +
-			    C_roots*f_fineroots2metlit +
-            ),
-			C_stlit:
-            (
-                C_foliage*f_foliage2stlit +
-			    C_wood*f_wood2stlit +
-			    C_roots*f_fineroots2stlit
-            ),
-        }
-        out_fluxes_comb = {
-            C_foliage: C_foliage*(cr_foliage - f_foliage2metlit - f_foliage2stlit),
-	        C_wood: C_wood*(cr_wood - f_wood2stlit),
-	        C_roots: C_roots*(cr_fineroot - f_fineroots2metlit - f_fineroots2stlit),
-	        C_labile: C_labile*(cr_labile- f_labile2metlit - f_labile2stlit), #new
-	        C_metlit: C_metlit*(cr_metlit - f_metlit2fastsom),
-	        C_stlit: C_stlit*(cr_stlit - f_stlit2fastsom - f_stlit2slowsom),
-	        C_fastsom: C_fastsom*(cr_fastsom - f_fastsom2passsom - f_fastsom2slowsom),
-	        C_slowsom: C_slowsom*(cr_slowsom - f_slowsom2fastsom - f_slowsom2passsom),
-	        C_passsom: C_passsom*(cr_passsom - f_passsom2fastsom),
-        }
-
-        out_fluxes_veg = {
-            C_foliage:
-            (
-                C_foliage*(cr_foliage - f_foliage2metlit - f_foliage2stlit - f_foliage2labile) +
-                C_foliage*f_foliage2metlit +
-			    C_foliage*f_foliage2stlit +
-			    C_foliage*f_foliage2labile #new
-            ),
-	        C_wood:
-            (
-                C_wood*(cr_wood - f_wood2stlit) +
-			    C_wood*f_wood2stlit
-            ),
-	        C_roots:
-            (
-                C_roots*(cr_fineroot - f_fineroots2metlit - f_fineroots2stlit) +
-			    C_roots*f_fineroots2metlit +
-			    C_roots*f_fineroots2stlit
-            ),
-	        C_labile: #new
-            (
-                C_labile*(cr_labile- f_labile2metlit - f_labile2stlit) +
-			    C_labile*f_labile2metlit +
-			    C_labile*f_labile2stlit
-            ),
-        }
-
-        out_fluxes_soil = {
-	        C_labile: #new
-            (
-                C_labile*(cr_labile- f_labile2metlit - f_labile2stlit) +
-			    C_labile*f_labile2metlit +
-			    C_labile*f_labile2stlit
-            ),
-	        C_metlit: C_metlit*(cr_metlit - f_metlit2fastsom),
-	        C_stlit: C_stlit*(cr_stlit - f_stlit2fastsom - f_stlit2slowsom),
-	        C_fastsom: C_fastsom*(cr_fastsom - f_fastsom2passsom - f_fastsom2slowsom),
-	        C_slowsom: C_slowsom*(cr_slowsom - f_slowsom2fastsom - f_slowsom2passsom),
-	        C_passsom: C_passsom*(cr_passsom - f_passsom2fastsom),
-        }
-        internal_fluxes_comb = {
-            (C_foliage, C_metlit): C_foliage*f_foliage2metlit,
-			(C_foliage, C_stlit): C_foliage*f_foliage2stlit,
-			(C_foliage, C_labile): C_foliage*f_foliage2labile, #new
-            (C_labile, C_metlit): C_labile*f_labile2metlit, #new 
-            (C_labile, C_stlit): C_labile*f_labile2stlit, #new 
-			(C_wood, C_stlit): C_wood*f_wood2stlit,
-			(C_roots, C_metlit): C_roots*f_fineroots2metlit,
-			(C_roots, C_stlit): C_roots*f_fineroots2stlit,
-			(C_metlit, C_fastsom): C_metlit*f_metlit2fastsom,
-			(C_stlit, C_fastsom): C_stlit*f_stlit2fastsom,
-			(C_stlit, C_slowsom): C_stlit*f_stlit2slowsom,
-			(C_fastsom, C_slowsom): C_fastsom*f_fastsom2slowsom,
-			(C_fastsom, C_passsom): C_fastsom*f_fastsom2passsom,
-			(C_slowsom, C_fastsom): C_slowsom*f_slowsom2fastsom,
-			(C_slowsom, C_passsom): C_slowsom*f_slowsom2passsom,
-			(C_passsom, C_fastsom): C_passsom*f_passsom2fastsom,
-        }
-
-        internal_fluxes_veg = {}
-
-        internal_fluxes_soil = {
-			(C_labile, C_metlit): C_labile*f_labile2metlit, #new
-			(C_labile, C_stlit): C_labile*f_labile2stlit, #new
-			(C_metlit, C_fastsom): C_metlit*f_metlit2fastsom,
-			(C_stlit, C_fastsom): C_stlit*f_stlit2fastsom,
-			(C_stlit, C_slowsom): C_stlit*f_stlit2slowsom,
-			(C_fastsom, C_slowsom): C_fastsom*f_fastsom2slowsom,
-			(C_fastsom, C_passsom): C_fastsom*f_fastsom2passsom,
-			(C_slowsom, C_fastsom): C_slowsom*f_slowsom2fastsom,
-			(C_slowsom, C_passsom): C_slowsom*f_slowsom2passsom,
-			(C_passsom, C_fastsom): C_passsom*f_passsom2fastsom,
-        }
-
-        combined = (
-            sv_set_comb,
-            in_fluxes_comb,
-            out_fluxes_comb,
-            internal_fluxes_comb
-        )
+#        # in case sv_set_veg and sv_set_soil are not disjoint
+#        # for this purpose we invent another pool that will be
+#        # part of both systems
+#        for s in ('C_labile','f_labile2metlit','cr_labile', 'f_labile2stlit'):
+#            var(s)
+#
+#        sv_set_comb2 = sv_set_comb.union([C_foliage])
+#        sv_set_veg2 = sv_set_veg.union([C_foliage])
+#
+#        sv_set_soil2 = sv_set_soil2.union([ C_labile ])
+#       
+#        in_fluxes_comb = {
+#            C_foliage: In_foliage,
+#            C_wood: In_wood,
+#            C_roots:In_roots
+#        }
+#
+#        in_fluxes_veg= {
+#            C_foliage: In_foliage,
+#            C_wood: In_wood,
+#            C_roots:In_roots
+#        }
+#
+#        in_fluxes_soil= {
+#            C_metlit:
+#            (
+#                C_foliage*f_foliage2metlit +
+#			    C_roots*f_fineroots2metlit
+#            ),
+#			C_stlit:
+#            (
+#                C_foliage*f_foliage2stlit +
+#			    C_wood*f_wood2stlit +
+#			    C_roots*f_fineroots2stlit
+#            ),
+#        }
+#        out_fluxes_comb = {
+#            C_foliage: C_foliage*(cr_foliage - f_foliage2metlit - f_foliage2stlit),
+#	        C_wood: C_wood*(cr_wood - f_wood2stlit),
+#	        C_roots: C_roots*(cr_fineroot - f_fineroots2metlit - f_fineroots2stlit),
+#	        C_labile: C_labile*(cr_labile- f_labile2metlit - f_labile2stlit), #new
+#	        C_metlit: C_metlit*(cr_metlit - f_metlit2fastsom),
+#	        C_stlit: C_stlit*(cr_stlit - f_stlit2fastsom - f_stlit2slowsom),
+#	        C_fastsom: C_fastsom*(cr_fastsom - f_fastsom2passsom - f_fastsom2slowsom),
+#	        C_slowsom: C_slowsom*(cr_slowsom - f_slowsom2fastsom - f_slowsom2passsom),
+#	        C_passsom: C_passsom*(cr_passsom - f_passsom2fastsom),
+#        }
+#
+#        out_fluxes_veg = {
+#            C_foliage:
+#            (
+#                C_foliage*(cr_foliage - f_foliage2metlit - f_foliage2stlit - f_foliage2labile) +
+#                C_foliage*f_foliage2metlit +
+#			    C_foliage*f_foliage2stlit +
+#			    C_foliage*f_foliage2labile #new
+#            ),
+#	        C_wood:
+#            (
+#                C_wood*(cr_wood - f_wood2stlit) +
+#			    C_wood*f_wood2stlit
+#            ),
+#	        C_roots:
+#            (
+#                C_roots*(cr_fineroot - f_fineroots2metlit - f_fineroots2stlit) +
+#			    C_roots*f_fineroots2metlit +
+#			    C_roots*f_fineroots2stlit
+#            ),
+#	        C_labile: #new
+#            (
+#                C_labile*(cr_labile- f_labile2metlit - f_labile2stlit) +
+#			    C_labile*f_labile2metlit +
+#			    C_labile*f_labile2stlit
+#            ),
+#        }
+#
+#        out_fluxes_soil = {
+#	        C_labile: #new
+#            (
+#                C_labile*(cr_labile- f_labile2metlit - f_labile2stlit) +
+#			    C_labile*f_labile2metlit +
+#			    C_labile*f_labile2stlit
+#            ),
+#	        C_metlit: C_metlit*(cr_metlit - f_metlit2fastsom),
+#	        C_stlit: C_stlit*(cr_stlit - f_stlit2fastsom - f_stlit2slowsom),
+#	        C_fastsom: C_fastsom*(cr_fastsom - f_fastsom2passsom - f_fastsom2slowsom),
+#	        C_slowsom: C_slowsom*(cr_slowsom - f_slowsom2fastsom - f_slowsom2passsom),
+#	        C_passsom: C_passsom*(cr_passsom - f_passsom2fastsom),
+#        }
+#        internal_fluxes_comb = {
+#            (C_foliage, C_metlit): C_foliage*f_foliage2metlit,
+#			(C_foliage, C_stlit): C_foliage*f_foliage2stlit,
+#			(C_foliage, C_labile): C_foliage*f_foliage2labile, #new
+#            (C_labile, C_metlit): C_labile*f_labile2metlit, #new 
+#            (C_labile, C_stlit): C_labile*f_labile2stlit, #new 
+#			(C_wood, C_stlit): C_wood*f_wood2stlit,
+#			(C_roots, C_metlit): C_roots*f_fineroots2metlit,
+#			(C_roots, C_stlit): C_roots*f_fineroots2stlit,
+#			(C_metlit, C_fastsom): C_metlit*f_metlit2fastsom,
+#			(C_stlit, C_fastsom): C_stlit*f_stlit2fastsom,
+#			(C_stlit, C_slowsom): C_stlit*f_stlit2slowsom,
+#			(C_fastsom, C_slowsom): C_fastsom*f_fastsom2slowsom,
+#			(C_fastsom, C_passsom): C_fastsom*f_fastsom2passsom,
+#			(C_slowsom, C_fastsom): C_slowsom*f_slowsom2fastsom,
+#			(C_slowsom, C_passsom): C_slowsom*f_slowsom2passsom,
+#			(C_passsom, C_fastsom): C_passsom*f_passsom2fastsom,
+#        }
+#
+#        internal_fluxes_veg = {}
+#
+#        internal_fluxes_soil = {
+#			(C_labile, C_metlit): C_labile*f_labile2metlit, #new
+#			(C_labile, C_stlit): C_labile*f_labile2stlit, #new
+#			(C_metlit, C_fastsom): C_metlit*f_metlit2fastsom,
+#			(C_stlit, C_fastsom): C_stlit*f_stlit2fastsom,
+#			(C_stlit, C_slowsom): C_stlit*f_stlit2slowsom,
+#			(C_fastsom, C_slowsom): C_fastsom*f_fastsom2slowsom,
+#			(C_fastsom, C_passsom): C_fastsom*f_fastsom2passsom,
+#			(C_slowsom, C_fastsom): C_slowsom*f_slowsom2fastsom,
+#			(C_slowsom, C_passsom): C_slowsom*f_slowsom2passsom,
+#			(C_passsom, C_fastsom): C_passsom*f_passsom2fastsom,
+#        }
+#
+#        combined = (
+#            sv_set_comb,
+#            in_fluxes_comb,
+#            out_fluxes_comb,
+#            internal_fluxes_comb
+#        )
 
 
         

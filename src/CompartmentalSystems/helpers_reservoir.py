@@ -37,6 +37,89 @@ ALPHA_14C = 1.18e-12
 DECAY_RATE_14C_DAILY = 0.0001209681
 
 
+def combine(m1, m2, m1_to_m2, m2_to_m1):
+    m1_sv_set, m1_in_fluxes, m1_out_fluxes, m1_internal_fluxes = m1 
+    m2_sv_set, m2_in_fluxes, m2_out_fluxes, m2_internal_fluxes = m2 
+    
+    sv_set = m1_sv_set | m2_sv_set
+
+
+    # create external in_fluxes
+    in_fluxes = dict()
+
+    # add all external in_fluxes of m1
+    for k, v in m1_in_fluxes.items():
+        if k in in_fluxes.keys():
+            in_fluxes[k] += v
+        else:
+            in_fluxes[k] = v
+
+    # remove flux from in_flux if it becomes internal
+    for pool_to in in_fluxes.keys():
+        for (pool_from, a), flux in m2_to_m1.items():
+            if a == pool_to:
+                in_fluxes[pool_to] -= flux
+
+    # add all external in_fluxes of m2
+    for k, v in m2_in_fluxes.items():
+        if k in in_fluxes.keys():
+            in_fluxes[k] += v
+        else:
+            in_fluxes[k] = v
+
+    # remove flux from in_flux if it becomes internal
+    for pool_to in in_fluxes.keys():
+        for (pool_from, a), flux in m1_to_m2.items():
+            if a == pool_to:
+                in_fluxes[pool_to] -= flux
+
+    # create external out_fluxes
+    out_fluxes = dict()
+
+    # add all external out_fluxes from m1
+    for k, v in m1_out_fluxes.items():
+        if k in out_fluxes.keys():
+            out_fluxes[k] += v
+        else:
+            out_fluxes[k] = v
+
+    # remove flux from out_flux if it becomes internal
+    for pool_from in out_fluxes.keys():
+        for (a, pool_to), flux in m1_to_m2.items():
+            if a == pool_from:
+                out_fluxes[pool_from] -= flux
+
+    # add all external out_fluxes from m2
+    for k, v in m2_out_fluxes.items():
+        if k in out_fluxes.keys():
+            out_fluxes[k] += v
+        else:
+            out_fluxes[k] = v
+
+    # remove flux from out_flux if it becomes internal
+    for pool_from in out_fluxes.keys():
+        for (a, pool_to), flux in m2_to_m1.items():
+            if a == pool_from:
+                out_fluxes[pool_from] -= flux
+
+    # create internal fluxes
+    internal_fluxes = dict()
+
+    dicts = [m1_internal_fluxes, m2_internal_fluxes, m1_to_m2, m2_to_m1]
+    for d in dicts:
+        for k, v in d.items():
+            if k in internal_fluxes.keys():
+                internal_fluxes[k] += v
+            else:
+                internal_fluxes[k] = v
+    
+
+    clean_in_fluxes = {k: v for k, v in in_fluxes.items() if v != 0}
+    clean_out_fluxes = {k: v for k, v in out_fluxes.items() if v != 0}
+    clean_internal_fluxes = {k: v for k, v in internal_fluxes.items() if v != 0}
+
+    return sv_set, clean_in_fluxes, clean_out_fluxes, clean_internal_fluxes
+
 def nxgraphs(
     state_vector: Matrix,
     in_fluxes: frozendict,

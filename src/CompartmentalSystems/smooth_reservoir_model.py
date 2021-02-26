@@ -119,6 +119,136 @@ class SmoothReservoirModel(object):
         self.output_fluxes=output_fluxes
         self.internal_fluxes=internal_fluxes
 
+    def is_state_dependent(self,expr):
+        efss=expr.free_symbols
+        svs=set([e for e in self.state_vector])
+        inter=efss.intersection(svs)
+        return not(len(inter)==0)	
+
+    @property
+    def is_linear(self):
+        """Returns True if we can make SURE that the model is linear by checking that the jacobian is not state dependent.
+        Note that external numerical functions of state variables are represented as sympy.Function f(x_1,x_2,...,t)
+        Sympy will consider the derivative of math:`df/dx_i` with respect to state variable math:`x_i` as function math:`g(x_1, x_2,...)` too, since it can not exclude this possibility if we know f only numerically. 
+        In consequence this method will return False even if the numerical implementation of f IS linear in math:`x_1,x_2,...` . 
+        To avoid this situation you can just reformulate linear external functions math:`f(x_1,x_2,...,t)` as linear combinations
+        of state independent external functions math:`f(x_1,x_2,...,t)=g_1(t)x_1+g_2(t)x_2+...` so that sympy can detect the linearity.
+        
+
+        Returns:
+            bool: 'True', 'False'
+
+        """
+        return not(self.is_state_dependent(self.jacobian))
+    def _output_flux_type(self, pool_from):
+        """Return the type of an external output flux.
+
+        Args:
+            pool_from (int): The number of the pool from which the flux starts.
+
+        Returns:
+            str: 'linear', 'nonlinear', 'no state dependence'
+
+        Raises:
+            Error: If unknown flux type is encountered.
+        """
+        sv = self.state_vector[pool_from]
+        flux = self.output_fluxes[pool_from]
+        if gcd(sv, flux) == 1:
+            return 'no state dependence'
+
+        # now test for dependence on further state variables, 
+        # which would lead to nonlinearity
+        if (gcd(sv, flux) == sv) or gcd(sv, flux) == 1.0*sv:
+            flux /= sv
+            free_symbols = flux.free_symbols
+
+            for sv in list(self.state_vector):
+                if sv in free_symbols:
+                    return 'nonlinear'
+
+            return 'linear'
+        else:
+            # probably this can never happen
+            raise(Error('Unknown internal flux type'))
+    
+    # the following two functions are used by the 'figure' method to determine 
+    # the color of the respective arrow 
+
+    def _internal_flux_type(self, pool_from, pool_to):
+        """Return the type of an internal flux.
+
+        Args:
+            pool_from (int): The number of the pool from which the flux starts.
+            pool_to (int): The number of the pool to which the flux goes.
+
+        Returns:
+            str: 'linear', 'nonlinear', 'no state dependence'
+
+        Raises:
+            Error: If unknown flux type is encountered.
+        """
+        sv = self.state_vector[pool_from]
+        flux = self.internal_fluxes[(pool_from, pool_to)]
+
+        if hr.has_pw(flux):
+            #print("Piecewise")    
+            #print(latex(flux))
+            return "nonlinear"
+            
+        if gcd(sv, flux) == 1:
+            return 'no state dependence'
+
+        # now test for dependence on further state variables, 
+        # which would lead to nonlinearity
+        if (gcd(sv, flux) == sv) or gcd(sv, flux) == 1.0*sv:
+            flux /= sv
+            free_symbols = flux.free_symbols
+
+            for sv in list(self.state_vector):
+                if sv in free_symbols:
+                    return 'nonlinear'
+
+            return 'linear'
+        else:
+            # probably this can never happen
+            raise(Error('Unknown internal flux type'))
+    
+    def _input_flux_type(self, pool_to):
+        """Return the type of an external input flux.
+
+        Args:
+            pool_to (int): The number of the pool to which the flux contributes.
+
+        Returns:
+            str: 'linear', 'nonlinear', 'no state dependence'
+
+        Raises:
+            Error: If unknown flux type is encountered.
+        """
+        sv = self.state_vector[pool_to]
+        # we compute the derivative of the appropriate row of the input vector w.r.t. all the state variables
+        # (This is a row of the jacobian)  
+        u_i=Matrix([self.external_inputs[pool_to]])
+        s_v=Matrix(self.state_vector)
+        J_i=hr.jacobian(u_i,s_v)
+        # an input that does not depend on state variables has a zero derivative with respect 
+        # to all state variables
+        if all([ j_ij==0 for j_ij in J_i]):
+            return 'no state dependence'
+        # an input that depends on state variables in a linear way
+        # has a constant derivatives with respect to all state variables 
+        # (the derivative has no state variables in its free symbols)
+        J_ifss=J_i.free_symbols
+        svs=set([e for e in self.state_vector])
+        inter=J_ifss.intersection(svs)
+        if len(inter)==0:
+            return 'linear'
+        else:
+            return 'nonlinear'
+
+
+
     @property
     def no_input_model(self):
         return SmoothReservoirModel(
@@ -717,139 +847,7 @@ def nxgraph(self):
         return formal_steady_states
 
 
-    def is_state_dependent(self,expr):
-        efss=expr.free_symbols
-        svs=set([e for e in self.state_vector])
-        inter=efss.intersection(svs)
-        return not(len(inter)==0)	
-
-    @property
-    def is_linear(self):
-        """Returns True if we can make SURE that the model is linear by checking that the jacobian is not state dependent.
-        Note that external numerical functions of state variables are represented as sympy.Function f(x_1,x_2,...,t)
-        Sympy will consider the derivative of math:`df/dx_i` with respect to state variable math:`x_i` as function math:`g(x_1, x_2,...)` too, since it can not exclude this possibility if we know f only numerically. 
-        In consequence this method will return False even if the numerical implementation of f IS linear in math:`x_1,x_2,...` . 
-        To avoid this situation you can just reformulate linear external functions math:`f(x_1,x_2,...,t)` as linear combinations
-        of state independent external functions math:`f(x_1,x_2,...,t)=g_1(t)x_1+g_2(t)x_2+...` so that sympy can detect the linearity.
-        
-
-        Returns:
-            bool: 'True', 'False'
-
-        """
-        return not(self.is_state_dependent(self.jacobian))
 
     ##### functions for internal use only #####
-
-
-    # the following two functions are used by the 'figure' method to determine 
-    # the color of the respective arrow 
-
-    def _internal_flux_type(self, pool_from, pool_to):
-        """Return the type of an internal flux.
-
-        Args:
-            pool_from (int): The number of the pool from which the flux starts.
-            pool_to (int): The number of the pool to which the flux goes.
-
-        Returns:
-            str: 'linear', 'nonlinear', 'no state dependence'
-
-        Raises:
-            Error: If unknown flux type is encountered.
-        """
-        sv = self.state_vector[pool_from]
-        flux = self.internal_fluxes[(pool_from, pool_to)]
-
-        if hr.has_pw(flux):
-            #print("Piecewise")    
-            #print(latex(flux))
-            return "nonlinear"
-            
-        if gcd(sv, flux) == 1:
-            return 'no state dependence'
-
-        # now test for dependence on further state variables, 
-        # which would lead to nonlinearity
-        if (gcd(sv, flux) == sv) or gcd(sv, flux) == 1.0*sv:
-            flux /= sv
-            free_symbols = flux.free_symbols
-
-            for sv in list(self.state_vector):
-                if sv in free_symbols:
-                    return 'nonlinear'
-
-            return 'linear'
-        else:
-            # probably this can never happen
-            raise(Error('Unknown internal flux type'))
-    
-    def _input_flux_type(self, pool_to):
-        """Return the type of an external input flux.
-
-        Args:
-            pool_to (int): The number of the pool to which the flux contributes.
-
-        Returns:
-            str: 'linear', 'nonlinear', 'no state dependence'
-
-        Raises:
-            Error: If unknown flux type is encountered.
-        """
-        sv = self.state_vector[pool_to]
-        # we compute the derivative of the appropriate row of the input vector w.r.t. all the state variables
-        # (This is a row of the jacobian)  
-        u_i=Matrix([self.external_inputs[pool_to]])
-        s_v=Matrix(self.state_vector)
-        J_i=hr.jacobian(u_i,s_v)
-        # an input that does not depend on state variables has a zero derivative with respect 
-        # to all state variables
-        if all([ j_ij==0 for j_ij in J_i]):
-            return 'no state dependence'
-        # an input that depends on state variables in a linear way
-        # has a constant derivatives with respect to all state variables 
-        # (the derivative has no state variables in its free symbols)
-        J_ifss=J_i.free_symbols
-        svs=set([e for e in self.state_vector])
-        inter=J_ifss.intersection(svs)
-        if len(inter)==0:
-            return 'linear'
-        else:
-            return 'nonlinear'
-
-
-
-    def _output_flux_type(self, pool_from):
-        """Return the type of an external output flux.
-
-        Args:
-            pool_from (int): The number of the pool from which the flux starts.
-
-        Returns:
-            str: 'linear', 'nonlinear', 'no state dependence'
-
-        Raises:
-            Error: If unknown flux type is encountered.
-        """
-        sv = self.state_vector[pool_from]
-        flux = self.output_fluxes[pool_from]
-        if gcd(sv, flux) == 1:
-            return 'no state dependence'
-
-        # now test for dependence on further state variables, 
-        # which would lead to nonlinearity
-        if (gcd(sv, flux) == sv) or gcd(sv, flux) == 1.0*sv:
-            flux /= sv
-            free_symbols = flux.free_symbols
-
-            for sv in list(self.state_vector):
-                if sv in free_symbols:
-                    return 'nonlinear'
-
-            return 'linear'
-        else:
-            # probably this can never happen
-            raise(Error('Unknown internal flux type'))
-    
 
 
