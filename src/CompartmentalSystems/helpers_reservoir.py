@@ -37,12 +37,15 @@ ALPHA_14C = 1.18e-12
 DECAY_RATE_14C_DAILY = 0.0001209681
 
 
-def combine(m1, m2, m1_to_m2, m2_to_m1):
+def combine(m1, m2, m1_to_m2, m2_to_m1, intersect=False):
     m1_sv_set, m1_in_fluxes, m1_out_fluxes, m1_internal_fluxes = m1 
     m2_sv_set, m2_in_fluxes, m2_out_fluxes, m2_internal_fluxes = m2 
     
-    sv_set = m1_sv_set | m2_sv_set
+    intersect_sv_set = m1_sv_set & m2_sv_set
+    if intersect_sv_set and not intersect:
+        raise(ValueError("How to handle pools %s?" % str(intersect_sv_set)))
 
+    sv_set = m1_sv_set | m2_sv_set
 
     # create external in_fluxes
     in_fluxes = dict()
@@ -113,6 +116,10 @@ def combine(m1, m2, m1_to_m2, m2_to_m1):
             else:
                 internal_fluxes[k] = v
     
+    # overwrite in_fluxes and out_fluxes for intersection pools
+    for sv in intersect_sv_set:
+        in_fluxes[sv] = intersect[0][sv]
+        out_fluxes[sv] = intersect[1][sv]
 
     clean_in_fluxes = {k: v for k, v in in_fluxes.items() if v != 0}
     clean_out_fluxes = {k: v for k, v in out_fluxes.items() if v != 0}
@@ -121,7 +128,7 @@ def combine(m1, m2, m1_to_m2, m2_to_m1):
     return sv_set, clean_in_fluxes, clean_out_fluxes, clean_internal_fluxes
 
 
-def extract(m, sv_set):
+def extract(m, sv_set, ignore_other_pools=False, supersede=False):
     m_sv_set, m_in_fluxes, m_out_fluxes, m_internal_fluxes = m
     assert(sv_set.issubset(m_sv_set))
 
@@ -134,20 +141,31 @@ def extract(m, sv_set):
     }
 
     for (pool_from, pool_to), flux in m_internal_fluxes.items():
-        # internal flux becomes influx
-        if (pool_from not in sv_set) and (pool_to in sv_set):
-            if pool_to in in_fluxes.keys():
-                in_fluxes[pool_to] += flux
-            else:
-                in_fluxes[pool_to] = flux
+        # internal flux becomes influx if not ignored
+        if not ignore_other_pools:
+            if (pool_from not in sv_set) and (pool_to in sv_set):
+                if pool_to in in_fluxes.keys():
+                    in_fluxes[pool_to] += flux
+                else:
+                    in_fluxes[pool_to] = flux
         
-        # internal flux becomes outflux
-        if (pool_from in sv_set) and (pool_to not in sv_set):
-            if pool_from in out_fluxes.keys():
-                out_fluxes[pool_from] += flux
-            else:
-                out_fluxes[pool_from] = flux
-    
+        # internal flux becomes outflux if not ignored
+        if not ignore_other_pools:
+            if (pool_from in sv_set) and (pool_to not in sv_set):
+                if pool_from in out_fluxes.keys():
+                    out_fluxes[pool_from] += flux
+                else:
+                    out_fluxes[pool_from] = flux
+
+    # overwrite in_fluxes and out_fluxes if desired
+    if supersede:
+        for sv, flux in supersede[0].items():
+            in_fluxes[sv] = flux
+        for sv, flux in supersede[1].items():
+            out_fluxes[sv] = flux
+        for (pool_from, pool_to), flux in supersede[2].items():
+            internal_fluxes[pool_from, pool_to] = flux
+
     clean_in_fluxes = {k: v for k, v in in_fluxes.items() if v != 0}
     clean_out_fluxes = {k: v for k, v in out_fluxes.items() if v != 0}
     clean_internal_fluxes = {k: v for k, v in internal_fluxes.items() if v != 0}

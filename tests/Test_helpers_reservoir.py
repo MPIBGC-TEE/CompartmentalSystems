@@ -237,6 +237,496 @@ class TestHelpers_reservoir(unittest.TestCase):
             combined
         )
 
+        # the single models overlap now when combined to a big model
+
+        t = symbols("t")
+        E = symbols("E")
+        B_L, C_L = symbols("B_L C_L")
+        C_R, B_R = symbols("C_R B_R")
+        C_S = symbols("C_S")
+        B_OS, B_OH = symbols("B_OS B_OH")
+        B_TS, B_TH = symbols("B_TS B_TH")
+        
+        combined_sv_set = set([
+            E,
+            B_L, C_L,
+            C_R, B_R,
+#            C_S,
+#            B_OS, B_OH,
+#            B_TS, B_TH
+        ])
+        
+        leaves_sv_set = set([
+            E,
+            B_L, C_L,
+        ])
+
+        roots_sv_set = set([
+            E,
+            B_R, C_R,
+        ])
+
+        GPP = symbols("GPP")
+        input_fluxes = {
+            E: GPP,
+        }
+
+        combined_in_fluxes = {E: GPP}
+        leaves_in_fluxes = {E: GPP}
+        roots_in_fluxes = {E: GPP}
+        
+        zeta, zeta_gluc, zeta_dw = symbols("zeta, zeta_gluc zeta_dw")
+        C_gL, delta_L, R_mL, S_L = symbols("C_gL delta_L R_mL S_L")
+        C_gR, delta_R, R_mR, S_R = symbols("C_gR delta_R R_mR S_R")
+#        C_gW, delta_W, delta_S, R_mS, S_O = symbols("C_gW delta_W delta_S R_mS S_O")
+        
+        # dynamic carbon allocation coefficients to leaves, coarse roots,
+        # fine roots + branches, and trunk
+        f_L = symbols("f_L")
+        f_R = symbols("f_R")
+#        f_O = symbols("f_O")
+#        f_T = symbols("f_T")
+        
+        # CUEs in production of leaves, roots, wood
+        eta_L = zeta_dw / (zeta_gluc * C_gL)
+        eta_R = zeta_dw / (zeta_gluc * C_gR)
+#        eta_W = zeta_dw / (zeta_gluc * C_gW)
+        
+        # maintenance respiration fluxes for leaves, roots, sapwood
+        ML = zeta_gluc/zeta_dw * R_mL * B_L
+        MR = zeta_gluc/zeta_dw * R_mR * B_R
+#        B_S_star = symbols("B_S_star")
+#        MS = R_mS * B_S_star
+        
+        # growth respiration fluxes for leaves, roots, sapwood
+        GL = f_L * C_gL/(C_gL+delta_L) * (1-eta_L) * E
+        GR = f_R * C_gR/(C_gR+delta_R) * (1-eta_R) * E
+#        GS = (f_O+f_T) * C_gW/(C_gW+delta_W) * (1-eta_W) * E
+        
+        combined_out_fluxes = {
+            E: ML + GL + MR + GR,# + MS + GS,
+            B_L: S_L * B_L,
+            B_R: S_R * B_R,
+#            B_OS: S_O * B_OS,
+#            B_OH: S_O * B_OH
+        }
+        
+        leaves_out_fluxes = {
+            E: ML + GL,
+            B_L: S_L * B_L,
+        }
+
+        roots_out_fluxes = {
+            E: MR + GR,
+            B_R: S_R * B_R,
+        }
+
+#        # heartwood production rates from sapwood
+#        v_O, v_T = symbols("v_O v_T") 
+        
+        combined_internal_fluxes = {
+            # leaves
+            (E, B_L): f_L * C_gL/(C_gL+delta_L) * eta_L * E,
+            (E, C_L): f_L * delta_L/(C_gL+delta_L) * E,
+            (C_L, E): S_L * C_L,
+        
+            # fine roots
+            (E, B_R): f_R * C_gR/(C_gR+delta_R) * eta_R *E,
+            (E, C_R): f_R * delta_R/(C_gR+delta_R) * E,
+            (C_R, E): S_R * C_R,
+        
+#            # sapwood production and senesence
+#            (E, C_S): (f_O+f_T) * delta_W/(C_gW+delta_W) * E,
+#            (C_S, E): S_O * B_OS/(B_OS+B_TS) * C_S,
+#            (E, B_OS): f_O * C_gW/(C_gW+delta_W) * eta_W * E,
+#            (E, B_TS): f_T * C_gW/(C_gW+delta_W) * eta_W * E,
+#        
+#            # coarse roots and branches heartwood production
+#            (B_OS, B_OH): v_O * B_OS,
+#            (C_S, B_OH): v_O * 1/zeta * B_OS/(B_OS+B_TS) * zeta_dw/zeta_gluc * C_S,
+#        
+#            # trunk heartwood production
+#            (B_TS, B_TH): v_T * B_TS,
+#            (C_S, B_TH): v_T * 1/zeta * B_TS/(B_OS+B_TS) * zeta_dw/zeta_gluc * C_S
+        }
+        
+        leaves_internal_fluxes = {
+            (E, B_L): f_L * C_gL/(C_gL+delta_L) * eta_L * E,
+            (E, C_L): f_L * delta_L/(C_gL+delta_L) * E,
+            (C_L, E): S_L * C_L,
+        }
+
+        roots_internal_fluxes = {
+            # fine roots
+            (E, B_R): f_R * C_gR/(C_gR+delta_R) * eta_R *E,
+            (E, C_R): f_R * delta_R/(C_gR+delta_R) * E,
+            (C_R, E): S_R * C_R,
+        }
+
+        combined = (
+            combined_sv_set,
+            combined_in_fluxes,
+            combined_out_fluxes,
+            combined_internal_fluxes
+        )
+        
+        leaves = (
+            leaves_sv_set,
+            leaves_in_fluxes,
+            leaves_out_fluxes,
+            leaves_internal_fluxes
+        )
+
+        roots = (
+            roots_sv_set,
+            roots_in_fluxes,
+            roots_out_fluxes,
+            roots_internal_fluxes
+        )
+   
+        with self.assertRaises(ValueError):
+            hr.combine(leaves, roots, {}, {})
+
+        intersect = (
+            {E: GPP},
+            {E: leaves[2][E] + roots[2][E]}
+        )
+
+        self.assertEqual(
+            combined,
+            hr.combine(leaves, roots, {}, {}, intersect)
+        )
+
+        supersede = (
+            {},
+            {E: leaves[2][E]},
+            {}
+        )
+        self.assertEqual(
+            hr.extract(
+                combined,
+                leaves_sv_set,
+                ignore_other_pools=True,
+                supersede=supersede
+            ),
+            leaves
+        )
+        
+        supersede = (
+            {},
+            {E: roots[2][E]},
+            {}
+        )
+        self.assertEqual(
+            hr.extract(
+                combined,
+                roots_sv_set,
+                ignore_other_pools=True,
+                supersede=supersede
+            ),
+            roots
+        )
+
+        # more than one pool overlapping
+
+        combined_sv_set = set([
+            E,
+            C_S,
+            B_OS, B_OH,
+            B_TS, B_TH
+        ])
+        
+        # "other" means branches + coarse roots
+        other_sv_set = set([
+            E,
+            C_S,
+            B_OS, B_OH,
+        ])
+
+        trunk_sv_set = set([
+            E,
+            C_S,
+            B_TS, B_TH
+        ])
+
+        GPP = symbols("GPP")
+        input_fluxes = {
+            E: GPP,
+        }
+
+        combined_in_fluxes = {E: GPP}
+        other_in_fluxes = {E: GPP}
+        trunk_in_fluxes = {E: GPP}
+        
+        zeta, zeta_gluc, zeta_dw = symbols("zeta, zeta_gluc zeta_dw")
+        C_gW, delta_W, delta_S, R_mS, S_O = symbols("C_gW delta_W delta_S R_mS S_O")
+        
+        # dynamic carbon allocation coefficients to leaves, coarse roots,
+        # fine roots + branches, and trunk
+        f_O = symbols("f_O")
+        f_T = symbols("f_T")
+        
+        # CUEs in production of leaves, roots, wood
+        eta_W = zeta_dw / (zeta_gluc * C_gW)
+        
+        # maintenance respiration fluxes for leaves, roots, sapwood
+        B_S_star = symbols("B_S_star")
+        MS = R_mS * B_S_star
+        
+        # growth respiration fluxes for leaves, roots, sapwood
+        GS_O = f_O * C_gW/(C_gW+delta_W) * (1-eta_W) * E
+        GS_T = f_T * C_gW/(C_gW+delta_W) * (1-eta_W) * E
+        
+        combined_out_fluxes = {
+            E: MS + GS_O + GS_T,
+            B_OS: S_O * B_OS,
+            B_OH: S_O * B_OH
+        }
+        
+        other_out_fluxes = {
+            E: MS + GS_O,
+            B_OS: S_O * B_OS,
+            B_OH: S_O * B_OH
+        }
+
+        trunk_out_fluxes = {
+            E: MS + GS_T
+        }
+
+        # heartwood production rates from sapwood
+        v_O, v_T = symbols("v_O v_T") 
+        
+        combined_internal_fluxes = {
+            # sapwood production and senesence
+            (E, C_S): (f_O+f_T) * delta_W/(C_gW+delta_W) * E,
+            (C_S, E): S_O * B_OS/(B_OS+B_TS) * C_S,
+            (E, B_OS): f_O * C_gW/(C_gW+delta_W) * eta_W * E,
+            (E, B_TS): f_T * C_gW/(C_gW+delta_W) * eta_W * E,
+        
+            # coarse roots and branches heartwood production
+            (B_OS, B_OH): v_O * B_OS,
+            (C_S, B_OH): v_O * 1/zeta * B_OS/(B_OS+B_TS) * zeta_dw/zeta_gluc * C_S,
+        
+            # trunk heartwood production
+            (B_TS, B_TH): v_T * B_TS,
+            (C_S, B_TH): v_T * 1/zeta * B_TS/(B_OS+B_TS) * zeta_dw/zeta_gluc * C_S
+        }
+        
+        other_internal_fluxes = {
+            # sapwood production and senesence
+            (E, C_S): f_O * delta_W/(C_gW+delta_W) * E,
+            (C_S, E): S_O * B_OS/(B_OS+B_TS) * C_S,
+            (E, B_OS): f_O * C_gW/(C_gW+delta_W) * eta_W * E,
+        
+            # coarse roots and branches heartwood production
+            (B_OS, B_OH): v_O * B_OS,
+            (C_S, B_OH): v_O * 1/zeta * B_OS/(B_OS+B_TS) * zeta_dw/zeta_gluc * C_S,
+        }
+
+        trunk_internal_fluxes = {
+            # sapwood production and senesence
+            (E, C_S): f_T * delta_W/(C_gW+delta_W) * E,
+            (E, B_TS): f_T * C_gW/(C_gW+delta_W) * eta_W * E,
+            
+            # trunk heartwood production
+            (B_TS, B_TH): v_T * B_TS,
+            (C_S, B_TH): v_T * 1/zeta * B_TS/(B_OS+B_TS) * zeta_dw/zeta_gluc * C_S
+        }
+
+        combined = (
+            combined_sv_set,
+            combined_in_fluxes,
+            combined_out_fluxes,
+            combined_internal_fluxes
+        )
+        
+        other = (
+            other_sv_set,
+            other_in_fluxes,
+            other_out_fluxes,
+            other_internal_fluxes
+        )
+
+        trunk = (
+            trunk_sv_set,
+            trunk_in_fluxes,
+            trunk_out_fluxes,
+            trunk_internal_fluxes
+        )
+
+        # test combine
+   
+        with self.assertRaises(ValueError):
+            hr.combine(other, trunk, {}, {})
+
+        intersect = (
+            {E: GPP, C_S: 0},
+            {E: MS + GS_O + GS_T, C_S: 0}
+        )
+
+        res = hr.combine(other, trunk, {}, {}, intersect)
+        self.assertEqual(combined[0], res[0])
+        self.assertEqual(combined[1], res[1])
+        self.assertEqual(combined[2], res[2])
+        for pool_from, pool_to in res[3].keys():
+            c = combined[3][pool_from, pool_to]
+            r = res[3][pool_from, pool_to]
+            self.assertEqual(simplify(c-r), 0)
+
+        for pool_from, pool_to in combined[3].keys():
+            c = combined[3][pool_from, pool_to]
+            r = res[3][pool_from, pool_to]
+            self.assertEqual(simplify(c-r), 0)
+
+        # test extract
+
+        supersede = (
+            {},
+            {E: MS + GS_O},
+            {(E, C_S): delta_W*f_O/(C_gW+delta_W) * E}
+        )
+
+        res = hr.extract(
+           combined,
+           other_sv_set,
+           ignore_other_pools=True,
+           supersede=supersede
+       )
+        self.assertEqual(other[0], res[0])
+        self.assertEqual(other[1], res[1])
+        self.assertEqual(other[2], res[2])
+        for pool_from, pool_to in res[3].keys():
+            o = other[3][pool_from, pool_to]
+            r = res[3][pool_from, pool_to]
+            self.assertEqual(simplify(o-r), 0)
+
+        for pool_from, pool_to in other[3].keys():
+            o = other[3][pool_from, pool_to]
+            r = res[3][pool_from, pool_to]
+            self.assertEqual(simplify(o-r), 0)
+
+        supersede = (
+            {},
+            {E: MS + GS_T},
+            {
+                (E, C_S): delta_W*f_T/(C_gW+delta_W) * E,
+                (C_S, E): 0
+            }
+        )
+
+        res = hr.extract(
+           combined,
+           trunk_sv_set,
+           ignore_other_pools=True,
+           supersede=supersede
+       )
+        self.assertEqual(trunk[0], res[0])
+        self.assertEqual(trunk[1], res[1])
+        self.assertEqual(trunk[2], res[2])
+        for pool_from, pool_to in res[3].keys():
+            t = trunk[3][pool_from, pool_to]
+            r = res[3][pool_from, pool_to]
+            self.assertEqual(simplify(t-r), 0)
+
+        for pool_from, pool_to in trunk[3].keys():
+            t = trunk[3][pool_from, pool_to]
+            r = res[3][pool_from, pool_to]
+            self.assertEqual(simplify(t-r), 0)
+        
+        # test entire four-part model
+
+        combined_sv_set = set([
+            E,
+            B_L, C_L,
+            C_R, B_R,
+            C_S,
+            B_OS, B_OH,
+            B_TS, B_TH
+        ])
+
+        combined_out_fluxes = {
+            E: ML + GL + MR + GR,# + MS + GS,
+            B_L: S_L * B_L,
+            B_R: S_R * B_R,
+            B_OS: S_O * B_OS,
+            B_OH: S_O * B_OH
+        }
+
+        combined_in_fluxes = {E: GPP}
+
+        combined_out_fluxes = {
+            E: ML + GL + MR + GR + MS + GS_O + GS_T,
+            B_L: S_L * B_L,
+            B_R: S_R * B_R,
+            B_OS: S_O * B_OS,
+            B_OH: S_O * B_OH
+        }
+        
+        combined_internal_fluxes = {
+            # leaves
+            (E, B_L): f_L * C_gL/(C_gL+delta_L) * eta_L * E,
+            (E, C_L): f_L * delta_L/(C_gL+delta_L) * E,
+            (C_L, E): S_L * C_L,
+        
+            # fine roots
+            (E, B_R): f_R * C_gR/(C_gR+delta_R) * eta_R *E,
+            (E, C_R): f_R * delta_R/(C_gR+delta_R) * E,
+            (C_R, E): S_R * C_R,
+        
+            # sapwood production and senesence
+            (E, C_S): (f_O+f_T) * delta_W/(C_gW+delta_W) * E,
+            (C_S, E): S_O * B_OS/(B_OS+B_TS) * C_S,
+            (E, B_OS): f_O * C_gW/(C_gW+delta_W) * eta_W * E,
+            (E, B_TS): f_T * C_gW/(C_gW+delta_W) * eta_W * E,
+        
+            # coarse roots and branches heartwood production
+            (B_OS, B_OH): v_O * B_OS,
+            (C_S, B_OH): v_O * 1/zeta * B_OS/(B_OS+B_TS) * zeta_dw/zeta_gluc * C_S,
+        
+            # trunk heartwood production
+            (B_TS, B_TH): v_T * B_TS,
+            (C_S, B_TH): v_T * 1/zeta * B_TS/(B_OS+B_TS) * zeta_dw/zeta_gluc * C_S
+        }
+
+        combined = (
+            combined_sv_set,
+            combined_in_fluxes,
+            combined_out_fluxes,
+            combined_internal_fluxes
+        )
+
+        intersect = (
+            {E: GPP},
+            {E: ML + GL + MR + GR}
+        )
+        LR = hr.combine(leaves, roots, {}, {}, intersect)
+        intersect = (
+            {E: GPP},
+            {E: ML + GL + MR + GR + MS + GS_O}
+        )
+        LRO = hr.combine(LR, other, {}, {}, intersect)
+        intersect = (
+            {E: GPP, C_S: 0},
+            {E: ML + GL + MR + GR + MS + GS_O + GS_T, C_S: 0}
+        )
+        LROT = hr.combine(LRO, trunk, {}, {}, intersect)
+        self.assertEqual(combined[0], LROT[0])
+        self.assertEqual(combined[1], LROT[1])
+        self.assertEqual(combined[2], LROT[2])
+
+        for pool_from, pool_to in LROT[3].keys():
+            c = combined[3][pool_from, pool_to]
+            r = LROT[3][pool_from, pool_to]
+            self.assertEqual(simplify(c-r), 0)
+
+        for pool_from, pool_to in combined[3].keys():
+            c = combined[3][pool_from, pool_to]
+            r = LROT[3][pool_from, pool_to]
+            self.assertEqual(simplify(c-r), 0)
+
+
+
+
 #        # in case sv_set_veg and sv_set_soil are not disjoint
 #        # for this purpose we invent another pool that will be
 #        # part of both systems
