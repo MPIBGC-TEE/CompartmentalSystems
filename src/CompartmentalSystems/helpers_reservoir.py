@@ -28,7 +28,7 @@ from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
 from collections.abc import Iterable
 import networkx as nx
-import igraph as ig
+import jgraph as ig
 from frozendict import frozendict
 from .BlockOde import BlockOde
 from .myOdeResult import solve_ivp_pwc
