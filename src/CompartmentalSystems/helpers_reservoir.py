@@ -28,6 +28,7 @@ from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
 from collections.abc import Iterable
 import networkx as nx
+import igraph as ig
 from frozendict import frozendict
 from .BlockOde import BlockOde
 from .myOdeResult import solve_ivp_pwc
@@ -179,19 +180,27 @@ def nxgraphs(
     internal_fluxes: frozendict,
     out_fluxes: frozendict
 ) -> nx.DiGraph:
-    in_flux_targets, out_flux_sources, internal_connections = [
-        [k for k in d.keys()]
-        for d in (in_fluxes, out_fluxes, internal_fluxes)
-    ]                                                                
-    internal_connections
-    virtual_in_flux_sources=["virtual_in_" + str(t) for t in in_flux_targets]
+    G = nx.DiGraph()
+    node_names = [str(sv) for sv in state_vector]
+    G.add_nodes_from(node_names)
+    in_flux_targets, out_flux_sources = [
+        [str(k) for k in d.keys()]
+        for d in (in_fluxes, out_fluxes)
+    ]
+
+    internal_connections = [
+        (str(s), str(t)) for s, t in internal_fluxes.keys()
+    ]
+    virtual_in_flux_sources = ["virtual_in_" + str(t) for t in in_flux_targets]
     GVI = nx.DiGraph()
     for n in virtual_in_flux_sources:
         GVI.add_node(n, virtual=True)
+        G.add_node(n, virtual=True)
     for n in in_flux_targets:
         GVI.add_nodes_from(in_flux_targets)
     for i in range(len(in_flux_targets)):
         GVI.add_edge(virtual_in_flux_sources[i], in_flux_targets[i])
+        G.add_edge(virtual_in_flux_sources[i], in_flux_targets[i],type='in')
 
     GVO = nx.DiGraph()
     virtual_out_flux_targets = [
@@ -200,18 +209,52 @@ def nxgraphs(
     ]
     for n in virtual_out_flux_targets:
         GVO.add_node(n, virtual=True)
+        G.add_node(n, virtual=True)
     for n in out_flux_sources:
         GVO.add_nodes_from(out_flux_sources)
     for i in range(len(out_flux_sources)):
         GVO.add_edge(out_flux_sources[i], virtual_out_flux_targets[i])
+        G.add_edge(out_flux_sources[i], virtual_out_flux_targets[i],type='out')
 
     GINT = nx.DiGraph()
     for c in internal_connections:
         GINT.add_edge(c[0], c[1])
+        G.add_edge(c[0], c[1],type='internal')
 
-    G1 = nx.compose(GVI, GINT)
-    G = nx.compose(G1, GVO)
+
     return (G, GVI, GINT, GVO)
+
+
+def igraph_plot(
+    state_vector: Matrix,
+    in_fluxes: frozendict,
+    internal_fluxes: frozendict,
+    out_fluxes: frozendict
+) -> ig.drawing.Plot:
+    Gnx, GVI, GINT, GVO = nxgraphs(state_vector, in_fluxes, internal_fluxes, out_fluxes)
+    virtual_in_flux_sources=[n for n in GVI.nodes if GVI.in_degree(n)==0]
+    virtual_out_flux_targets=[n for n in GVO.nodes if GVO.out_degree(n)==0]
+    # import networkx
+    G = ig.Graph.from_networkx(Gnx)
+    vertex_size = [1 if v['virtual'] else 50 for v in G.vs]
+    labels = [v['_nx_name'] if not v['virtual'] else '' for v in G.vs]
+
+    edge_color_dict = {'in': 'blue', 'internal': 'black', 'out': 'red'}
+    edge_colors = [edge_color_dict[e['type']] for e in G.es]
+    layout = G.layout('sugiyama')
+
+    # layout = G.layout('grid')
+    # layout = G.layout('kk')
+
+    pl = ig.plot(
+        G,
+        layout=layout,
+        vertex_size=vertex_size,
+        vertex_label=labels,
+        edge_color=edge_colors    
+    )
+    return pl
+
 
 def to_int_keys_1(flux_by_sym, state_vector):
     return {list(state_vector).index(k):v for k,v in flux_by_sym.items()}
