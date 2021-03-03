@@ -358,6 +358,7 @@ class PWCModelRunFD(ModelRun):
             lru_stats,
             size
         )
+        self._state_transition_operator_cache = self.pwc_mr._state_transition_operator_cache
 
     def pool_age_distributions_quantiles(
         self,
