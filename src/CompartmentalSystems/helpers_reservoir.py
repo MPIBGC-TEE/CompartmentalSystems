@@ -22,16 +22,239 @@ from sympy import (
 	simplify,
     eye
 )
+
 from sympy.polys.polyerrors import PolynomialError
 from sympy.core.function import UndefinedFunction, Function, sympify
 from sympy import Symbol
 from collections.abc import Iterable
+import networkx as nx
+import igraph as ig
+from frozendict import frozendict
 from .BlockOde import BlockOde
 from .myOdeResult import solve_ivp_pwc
 
 
 ALPHA_14C = 1.18e-12
 DECAY_RATE_14C_DAILY = 0.0001209681
+
+
+def combine(m1, m2, m1_to_m2, m2_to_m1, intersect=False):
+    m1_sv_set, m1_in_fluxes, m1_out_fluxes, m1_internal_fluxes = m1 
+    m2_sv_set, m2_in_fluxes, m2_out_fluxes, m2_internal_fluxes = m2 
+    
+    intersect_sv_set = m1_sv_set & m2_sv_set
+    if intersect_sv_set and not intersect:
+        raise(ValueError("How to handle pools %s?" % str(intersect_sv_set)))
+
+    sv_set = m1_sv_set | m2_sv_set
+
+    # create external in_fluxes
+    in_fluxes = dict()
+
+    # add all external in_fluxes of m1
+    for k, v in m1_in_fluxes.items():
+        if k in in_fluxes.keys():
+            in_fluxes[k] += v
+        else:
+            in_fluxes[k] = v
+
+    # remove flux from in_flux if it becomes internal
+    for pool_to in in_fluxes.keys():
+        for (pool_from, a), flux in m2_to_m1.items():
+            if a == pool_to:
+                in_fluxes[pool_to] -= flux
+
+    # add all external in_fluxes of m2
+    for k, v in m2_in_fluxes.items():
+        if k in in_fluxes.keys():
+            in_fluxes[k] += v
+        else:
+            in_fluxes[k] = v
+
+    # remove flux from in_flux if it becomes internal
+    for pool_to in in_fluxes.keys():
+        for (pool_from, a), flux in m1_to_m2.items():
+            if a == pool_to:
+                in_fluxes[pool_to] -= flux
+
+    # create external out_fluxes
+    out_fluxes = dict()
+
+    # add all external out_fluxes from m1
+    for k, v in m1_out_fluxes.items():
+        if k in out_fluxes.keys():
+            out_fluxes[k] += v
+        else:
+            out_fluxes[k] = v
+
+    # remove flux from out_flux if it becomes internal
+    for pool_from in out_fluxes.keys():
+        for (a, pool_to), flux in m1_to_m2.items():
+            if a == pool_from:
+                out_fluxes[pool_from] -= flux
+
+    # add all external out_fluxes from m2
+    for k, v in m2_out_fluxes.items():
+        if k in out_fluxes.keys():
+            out_fluxes[k] += v
+        else:
+            out_fluxes[k] = v
+
+    # remove flux from out_flux if it becomes internal
+    for pool_from in out_fluxes.keys():
+        for (a, pool_to), flux in m2_to_m1.items():
+            if a == pool_from:
+                out_fluxes[pool_from] -= flux
+
+    # create internal fluxes
+    internal_fluxes = dict()
+
+    dicts = [m1_internal_fluxes, m2_internal_fluxes, m1_to_m2, m2_to_m1]
+    for d in dicts:
+        for k, v in d.items():
+            if k in internal_fluxes.keys():
+                internal_fluxes[k] += v
+            else:
+                internal_fluxes[k] = v
+    
+    # overwrite in_fluxes and out_fluxes for intersection pools
+    for sv in intersect_sv_set:
+        in_fluxes[sv] = intersect[0][sv]
+        out_fluxes[sv] = intersect[1][sv]
+
+    clean_in_fluxes = {k: v for k, v in in_fluxes.items() if v != 0}
+    clean_out_fluxes = {k: v for k, v in out_fluxes.items() if v != 0}
+    clean_internal_fluxes = {k: v for k, v in internal_fluxes.items() if v != 0}
+
+    return sv_set, clean_in_fluxes, clean_out_fluxes, clean_internal_fluxes
+
+
+def extract(m, sv_set, ignore_other_pools=False, supersede=False):
+    m_sv_set, m_in_fluxes, m_out_fluxes, m_internal_fluxes = m
+    assert(sv_set.issubset(m_sv_set))
+
+    in_fluxes = {pool: flux for pool, flux in m_in_fluxes.items() if pool in sv_set}
+    out_fluxes = {pool: flux for pool, flux in m_out_fluxes.items() if pool in sv_set}
+    internal_fluxes = {
+        (pool_from, pool_to): flux 
+        for (pool_from, pool_to), flux in m_internal_fluxes.items() 
+        if (pool_from in sv_set) and (pool_to in sv_set)
+    }
+
+    for (pool_from, pool_to), flux in m_internal_fluxes.items():
+        # internal flux becomes influx if not ignored
+        if not ignore_other_pools:
+            if (pool_from not in sv_set) and (pool_to in sv_set):
+                if pool_to in in_fluxes.keys():
+                    in_fluxes[pool_to] += flux
+                else:
+                    in_fluxes[pool_to] = flux
+        
+        # internal flux becomes outflux if not ignored
+        if not ignore_other_pools:
+            if (pool_from in sv_set) and (pool_to not in sv_set):
+                if pool_from in out_fluxes.keys():
+                    out_fluxes[pool_from] += flux
+                else:
+                    out_fluxes[pool_from] = flux
+
+    # overwrite in_fluxes and out_fluxes if desired
+    if supersede:
+        for sv, flux in supersede[0].items():
+            in_fluxes[sv] = flux
+        for sv, flux in supersede[1].items():
+            out_fluxes[sv] = flux
+        for (pool_from, pool_to), flux in supersede[2].items():
+            internal_fluxes[pool_from, pool_to] = flux
+
+    clean_in_fluxes = {k: v for k, v in in_fluxes.items() if v != 0}
+    clean_out_fluxes = {k: v for k, v in out_fluxes.items() if v != 0}
+    clean_internal_fluxes = {k: v for k, v in internal_fluxes.items() if v != 0}
+
+    return sv_set, clean_in_fluxes, clean_out_fluxes, clean_internal_fluxes
+
+
+def nxgraphs(
+    state_vector: Matrix,
+    in_fluxes: frozendict,
+    internal_fluxes: frozendict,
+    out_fluxes: frozendict
+) -> nx.DiGraph:
+    G = nx.DiGraph()
+    node_names = [str(sv) for sv in state_vector]
+    G.add_nodes_from(node_names)
+    in_flux_targets, out_flux_sources = [
+        [str(k) for k in d.keys()]
+        for d in (in_fluxes, out_fluxes)
+    ]
+
+    internal_connections = [
+        (str(s), str(t)) for s, t in internal_fluxes.keys()
+    ]
+    virtual_in_flux_sources = ["virtual_in_" + str(t) for t in in_flux_targets]
+    GVI = nx.DiGraph()
+    for n in virtual_in_flux_sources:
+        GVI.add_node(n, virtual=True)
+        G.add_node(n, virtual=True)
+    for n in in_flux_targets:
+        GVI.add_nodes_from(in_flux_targets)
+    for i in range(len(in_flux_targets)):
+        GVI.add_edge(virtual_in_flux_sources[i], in_flux_targets[i])
+        G.add_edge(virtual_in_flux_sources[i], in_flux_targets[i],type='in')
+
+    GVO = nx.DiGraph()
+    virtual_out_flux_targets = [
+        "virtual_out_" + str(t)
+        for t in out_flux_sources
+    ]
+    for n in virtual_out_flux_targets:
+        GVO.add_node(n, virtual=True)
+        G.add_node(n, virtual=True)
+    for n in out_flux_sources:
+        GVO.add_nodes_from(out_flux_sources)
+    for i in range(len(out_flux_sources)):
+        GVO.add_edge(out_flux_sources[i], virtual_out_flux_targets[i])
+        G.add_edge(out_flux_sources[i], virtual_out_flux_targets[i],type='out')
+
+    GINT = nx.DiGraph()
+    for c in internal_connections:
+        GINT.add_edge(c[0], c[1])
+        G.add_edge(c[0], c[1],type='internal')
+
+
+    return (G, GVI, GINT, GVO)
+
+
+def igraph_plot(
+    state_vector: Matrix,
+    in_fluxes: frozendict,
+    internal_fluxes: frozendict,
+    out_fluxes: frozendict
+) -> ig.drawing.Plot:
+    Gnx, GVI, GINT, GVO = nxgraphs(state_vector, in_fluxes, internal_fluxes, out_fluxes)
+    virtual_in_flux_sources=[n for n in GVI.nodes if GVI.in_degree(n)==0]
+    virtual_out_flux_targets=[n for n in GVO.nodes if GVO.out_degree(n)==0]
+    # import networkx
+    G = ig.Graph.from_networkx(Gnx)
+    vertex_size = [1 if v['virtual'] else 50 for v in G.vs]
+    labels = [v['_nx_name'] if not v['virtual'] else '' for v in G.vs]
+
+    edge_color_dict = {'in': 'blue', 'internal': 'black', 'out': 'red'}
+    edge_colors = [edge_color_dict[e['type']] for e in G.es]
+    layout = G.layout('sugiyama')
+
+    # layout = G.layout('grid')
+    # layout = G.layout('kk')
+
+    pl = ig.plot(
+        G,
+        layout=layout,
+        vertex_size=vertex_size,
+        vertex_label=labels,
+        edge_color=edge_colors    
+    )
+    return pl
+
 
 def to_int_keys_1(flux_by_sym, state_vector):
     return {list(state_vector).index(k):v for k,v in flux_by_sym.items()}
