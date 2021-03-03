@@ -1,5 +1,7 @@
 sympy
 mypy
+networkx
+igraph
 scipy>=1.2.1
 -e git+https://git@github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
 -e git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
