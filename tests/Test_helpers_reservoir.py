@@ -67,52 +67,52 @@ class TestHelpers_reservoir(unittest.TestCase):
 
         sv_set_comb = set([
             C_foliage,
-			C_wood,
-			C_roots,
-			C_metlit,
-			C_stlit,
-			C_fastsom,
-			C_slowsom,
-		    C_passsom
+            C_wood,
+            C_roots,
+            C_metlit,
+            C_stlit,
+            C_fastsom,
+            C_slowsom,
+            C_passsom
         ])
 
         sv_set_veg = set([
             C_foliage,
-			C_wood,
-			C_roots
+            C_wood,
+            C_roots
         ])
 
         sv_set_soil = set([
-		    C_metlit,
-		    C_stlit,
-		    C_fastsom,
-		    C_slowsom,
-		    C_passsom
+            C_metlit,
+            C_stlit,
+            C_fastsom,
+            C_slowsom,
+            C_passsom
         ])
 
         in_fluxes_comb = {
             C_foliage: In_foliage,
             C_wood: In_wood,
-            C_roots:In_roots
+            C_roots: In_roots
         }
 
-        in_fluxes_veg= {
+        in_fluxes_veg = {
             C_foliage: In_foliage,
             C_wood: In_wood,
-            C_roots:In_roots
+            C_roots: In_roots
         }
 
-        in_fluxes_soil= {
+        in_fluxes_soil = {
             C_metlit:
             (
                 C_foliage*f_foliage2metlit +
-			    C_roots*f_fineroots2metlit
+                C_roots*f_fineroots2metlit
             ),
-			C_stlit:
+            C_stlit:
             (
                 C_foliage*f_foliage2stlit +
-			    C_wood*f_wood2stlit +
-			    C_roots*f_fineroots2stlit
+                C_wood*f_wood2stlit +
+                C_roots*f_fineroots2stlit
             ),
         }
 

@@ -1,5 +1,5 @@
 # vim:set ff=unix expandtab ts=4 sw=4:
-from typing import Callable, Tuple, Sequence
+from typing import Callable, Tuple, Sequence, Set, Dict
 from functools import lru_cache, _CacheInfo, _lru_cache_wrapper
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,6 +18,8 @@ from sympy import (
 	DiracDelta,
 	solve,
 	Matrix,
+    Symbol,
+    Expr,
 	diff,
 	simplify,
     eye
@@ -175,10 +177,10 @@ def extract(m, sv_set, ignore_other_pools=False, supersede=False):
 
 
 def nxgraphs(
-    state_vector: Matrix,
-    in_fluxes: frozendict,
-    internal_fluxes: frozendict,
-    out_fluxes: frozendict
+    state_vector: Tuple[Symbol],
+    in_fluxes: Dict[Symbol, Expr],
+    internal_fluxes: Dict[Tuple[Symbol, Symbol], Expr],
+    out_fluxes: Dict[Symbol, Expr],
 ) -> nx.DiGraph:
     G = nx.DiGraph()
     node_names = [str(sv) for sv in state_vector]
@@ -188,42 +190,66 @@ def nxgraphs(
         for d in (in_fluxes, out_fluxes)
     ]
 
-    internal_connections = [
-        (str(s), str(t)) for s, t in internal_fluxes.keys()
-    ]
     virtual_in_flux_sources = ["virtual_in_" + str(t) for t in in_flux_targets]
-    GVI = nx.DiGraph()
     for n in virtual_in_flux_sources:
-        GVI.add_node(n, virtual=True)
         G.add_node(n, virtual=True)
-    for n in in_flux_targets:
-        GVI.add_nodes_from(in_flux_targets)
     for i in range(len(in_flux_targets)):
-        GVI.add_edge(virtual_in_flux_sources[i], in_flux_targets[i])
-        G.add_edge(virtual_in_flux_sources[i], in_flux_targets[i],type='in')
+        G.add_edge(
+            virtual_in_flux_sources[i],
+            in_flux_targets[i],
+            expr=in_fluxes[Symbol(in_flux_targets[i])]
+        )
 
-    GVO = nx.DiGraph()
     virtual_out_flux_targets = [
         "virtual_out_" + str(t)
         for t in out_flux_sources
     ]
     for n in virtual_out_flux_targets:
-        GVO.add_node(n, virtual=True)
         G.add_node(n, virtual=True)
-    for n in out_flux_sources:
-        GVO.add_nodes_from(out_flux_sources)
     for i in range(len(out_flux_sources)):
-        GVO.add_edge(out_flux_sources[i], virtual_out_flux_targets[i])
-        G.add_edge(out_flux_sources[i], virtual_out_flux_targets[i],type='out')
+        G.add_edge(
+            out_flux_sources[i], 
+            virtual_out_flux_targets[i],
+            expr=out_fluxes[Symbol(out_flux_sources[i])]
+        )
 
-    GINT = nx.DiGraph()
-    for c in internal_connections:
-        GINT.add_edge(c[0], c[1])
-        G.add_edge(c[0], c[1],type='internal')
+    #for c in internal_connections:
+    for c in internal_fluxes.keys():
+        G.add_edge(str(c[0]), str(c[1]),expr=internal_fluxes[c])
 
 
-    return (G, GVI, GINT, GVO)
+    return G
 
+
+def igraph_func_plot(
+    Gnx: nx.DiGraph, # note that Gnx has to have a 'virtual' attribute on some verteces 
+    node_color_func: Callable[[nx.DiGraph,str],str],
+    edge_color_func: Callable[[nx.DiGraph,str,str],str],
+) -> ig.drawing.Plot:
+
+    G = ig.Graph.from_networkx(Gnx)
+
+    vertex_size = [1 if v['virtual'] else 50 for v in G.vs]
+    vertex_color= [node_color_func(Gnx,v) for v in Gnx.nodes]
+    vertex_label = [v['_nx_name'] if not v['virtual'] else '' for v in G.vs]
+
+    edge_color = [edge_color_func(Gnx,s,t) for s, t in Gnx.edges]
+    edge_label= [Gnx.get_edge_data(s,t)['expr'] for s, t in Gnx.edges]
+
+
+    layout = G.layout('sugiyama')
+    pl = ig.plot(
+        G,
+        layout=layout,
+        vertex_size=vertex_size,
+        vertex_label=vertex_label,
+        vertex_color=vertex_color,
+        vertex_label_size=9,
+        edge_color=edge_color,
+        edge_label=edge_label,
+        edge_label_size=4,
+    )
+    return pl
 
 def igraph_plot(
     state_vector: Matrix,
@@ -231,29 +257,65 @@ def igraph_plot(
     internal_fluxes: frozendict,
     out_fluxes: frozendict
 ) -> ig.drawing.Plot:
-    Gnx, GVI, GINT, GVO = nxgraphs(state_vector, in_fluxes, internal_fluxes, out_fluxes)
-    virtual_in_flux_sources=[n for n in GVI.nodes if GVI.in_degree(n)==0]
-    virtual_out_flux_targets=[n for n in GVO.nodes if GVO.out_degree(n)==0]
-    # import networkx
-    G = ig.Graph.from_networkx(Gnx)
-    vertex_size = [1 if v['virtual'] else 50 for v in G.vs]
-    labels = [v['_nx_name'] if not v['virtual'] else '' for v in G.vs]
+    Gnx = nxgraphs(state_vector, in_fluxes, internal_fluxes, out_fluxes)
+   
+    def n_color(
+            G: nx.DiGraph,
+            node_name: str
+    ) -> str:
+        return 'grey' 
 
-    edge_color_dict = {'in': 'blue', 'internal': 'black', 'out': 'red'}
-    edge_colors = [edge_color_dict[e['type']] for e in G.es]
-    layout = G.layout('sugiyama')
 
-    # layout = G.layout('grid')
-    # layout = G.layout('kk')
+    def e_color(
+            G: nx.DiGraph,
+            s: str,
+            t: str
+    ) -> str:
+        return "blue" if G.in_degree(s) ==0  else (
+                'red' if G.out_degree(t) == 0 else 'black'
+        )
 
-    pl = ig.plot(
-        G,
-        layout=layout,
-        vertex_size=vertex_size,
-        vertex_label=labels,
-        edge_color=edge_colors    
+    return igraph_func_plot(
+        Gnx,
+        node_color_func=n_color,
+        edge_color_func=e_color
     )
-    return pl
+
+def igraph_part_plot(
+    state_vector: Tuple[Symbol],
+    in_fluxes: Dict[Symbol, Expr],
+    internal_fluxes: Dict[Tuple[Symbol, Symbol], Expr],
+    out_fluxes: Dict[Symbol, Expr],
+    part_dict: Dict[Set[str], str]
+) -> ig.drawing.Plot:
+    Gnx = nxgraphs(state_vector, in_fluxes, internal_fluxes, out_fluxes)
+   
+    
+    def n_color(G,node_name):
+        cs=set({})
+        for var_set, color in part_dict.items():
+            var_set_str = frozenset({str(v) for v in var_set})
+            # we could have multicolored nodes if the variable set overlap 
+            # but igraph does not support it
+            cs = cs.union(set({color})) if node_name in var_set_str else cs
+        return 'grey' if len(cs) == 0 else list(cs)[0] 
+
+    
+    def e_color(
+            G: nx.DiGraph,
+            s: str,
+            t: str
+    ) -> str:
+        return "blue" if G.in_degree(s) ==0  else (
+                'red' if G.out_degree(t) == 0 else 'black'
+        )
+
+    return igraph_func_plot(
+        Gnx,
+        node_color_func=n_color,
+        edge_color_func=e_color
+    )
+
 
 
 def to_int_keys_1(flux_by_sym, state_vector):
