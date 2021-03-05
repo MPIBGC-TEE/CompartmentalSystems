@@ -65,7 +65,7 @@ class Pool():
                 (x1,y1),
                 connectionstyle=self.connectionstyle,
                 arrowstyle=self.arrowstyle,
-                mutation_scale=self.mutation_scale,
+                mutation_scale=0.5*self.mutation_scale,
                 alpha=self.pipe_alpha,
                 color=color
             )
@@ -90,7 +90,7 @@ class Pool():
                 (x2,y2),
                 arrowstyle=self.arrowstyle,
                 connectionstyle=self.connectionstyle,
-                mutation_scale=self.mutation_scale,
+                mutation_scale=0.5*self.mutation_scale,
                 alpha=self.pipe_alpha,
                 color=color
             )
@@ -119,7 +119,7 @@ class Pool():
                 (x2,y2),
                 connectionstyle=self.connectionstyle,
                 arrowstyle=self.arrowstyle,
-                mutation_scale=self.mutation_scale,
+                mutation_scale=0.5*self.mutation_scale,
                 alpha=self.pipe_alpha,
                 color=color
             )
@@ -168,6 +168,8 @@ class CSPlotter():
         outputs =  self.output_fluxes
         internal_fluxes = self.internal_fluxes
         base_r = 0.1 + (0.5-0.1)/10*nr_pools
+        base_r = min(base_r, 0.4)
+
         if nr_pools > 1:
             r = base_r * (1-np.exp(1j*2*np.pi/nr_pools))
             r = abs(r) / 2 * 0.6
@@ -177,6 +179,7 @@ class CSPlotter():
 
         r = abs(r)
         r = r * self.pool_size_scale_factor
+        r = max(r, 0.05)
 
         pools = []
         for i in range(nr_pools):
