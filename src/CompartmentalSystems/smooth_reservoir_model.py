@@ -642,9 +642,6 @@ It gave up for the following expression: ${e}."""
 
         return (extended_state, extended_rhs)
 
-
-
-
     def plot_pools_and_fluxes(self, ax, mutation_scale = 50, fontsize = 24, thumbnail = False, legend=True):
         ax.set_axis_off()
         arrowstyle = "simple"
