@@ -482,7 +482,7 @@ class PWCModelRunFD(ModelRun):
         def x_trapz(tr_times, B):
             def x_of_tau(tau):
                 M = expm(tau*B)
-                if np.linalg.det(B) != 0:
+                if np.abs(np.linalg.det(B)) > 1e-16:
                     return M @ x0 + np.linalg.inv(B) @ (-np.identity(nr_pools)+M) @ gross_u
                 else:
 #                    tr_sub_times = np.linspace(0, tau, nr_nodes)
