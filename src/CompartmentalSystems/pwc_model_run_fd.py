@@ -507,7 +507,7 @@ class PWCModelRunFD(ModelRun):
             return np.trapz(x_vals, tr_times, axis=0), x1
 
         def x_tau(tau, B):
-            if np.linalg.det(B) != 0:
+            if np.abs(np.linalg.det(B)) > 1e-16:
                 M = expm(tau*B)
                 return M @ x0 + np.linalg.inv(B) @ (-np.identity(nr_pools)+M) @ gross_u
             else:
