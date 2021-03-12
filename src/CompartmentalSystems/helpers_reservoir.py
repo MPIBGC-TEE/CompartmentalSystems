@@ -37,7 +37,8 @@ from .myOdeResult import solve_ivp_pwc
 
 
 ALPHA_14C = 1.18e-12
-DECAY_RATE_14C_DAILY = 0.0001209681
+DECAY_RATE_14C_YEARLY = np.log(2) / 5730
+DECAY_RATE_14C_DAILY = DECAY_RATE_14C_YEARLY / 365.25
 
 
 def combine(m1, m2, m1_to_m2, m2_to_m1, intersect=False):
