@@ -1,11 +1,12 @@
 import numpy as np
 
-from scipy.integrate import solve_ivp
+from scipy.integrate import solve_ivp, quad
 from scipy.linalg import expm
 from scipy.optimize import root, least_squares
 from sympy import Matrix, symbols, zeros, Symbol
 from tqdm import tqdm
 
+from .helpers_reservoir import ALPHA_14C
 from .model_run import ModelRun
 from .pwc_model_run import PWCModelRun
 from .smooth_reservoir_model import SmoothReservoirModel
@@ -272,6 +273,26 @@ class PWCModelRunFD(ModelRun):
             force_numerical=True
         )
         return eq_model
+
+    def fake_eq_14C(self, nr_time_steps, F_atm, decay_rate, alpha=None, lim=np.inf):
+        if alpha is None:
+            alpha = ALPHA_14C
+
+        eq_model = self.fake_eq_model(nr_time_steps)
+        t0 = self.times[0]
+
+        def p0(a, pool):
+            res = eq_model.a_density(a)[pool] * eq_model.u[pool] if a >= 0  else np.nan
+            return np.float(res)
+
+        eq_14C = np.nan * np.ones((self.nr_pools, ))
+        for pool in range(self.nr_pools):
+            p0_pool = lambda a: p0(a, pool)
+            p0_pool_14C = lambda a: (F_atm(t0-a)/1000.0 + 1) * p0_pool(a) * alpha
+            eq_14C[pool] = quad(p0_pool_14C, 0, lim)[0]
+
+        return eq_14C
+
 
     def fake_start_age_moments(self, nr_time_steps, up_to_order):
         eq_model = self.fake_eq_model(nr_time_steps)
