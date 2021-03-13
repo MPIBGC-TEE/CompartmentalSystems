@@ -274,23 +274,51 @@ class PWCModelRunFD(ModelRun):
         )
         return eq_model
 
-    def fake_eq_14C(self, nr_time_steps, F_atm, decay_rate, alpha=None, lim=np.inf):
+    def fake_eq_14C(
+        self,
+        nr_time_steps,
+        F_atm,
+        decay_rate,
+        lim=np.inf,
+        alpha=None
+    ):
         if alpha is None:
             alpha = ALPHA_14C
 
         eq_model = self.fake_eq_model(nr_time_steps)
-        t0 = self.times[0]
-
-        def p0(a, pool):
-            res = eq_model.a_density(a)[pool] * eq_model.u[pool] if a >= 0  else np.nan
-            return np.float(res)
+#        E_a = np.array(eq_model.a_expected_value).reshape(-1)
+#        for i in range(len(E_a)):
+#            print(E_a[i], E_a[i]/365.25, F_atm(np.float(E_a[i])))
+        f0_normalized = lambda a: np.array(
+            eq_model.a_density(a),
+            dtype=np.float64).reshape((-1,)
+        )
+        f0 = lambda a: f0_normalized(a) * self.start_values
 
         eq_14C = np.nan * np.ones((self.nr_pools, ))
         for pool in range(self.nr_pools):
-            p0_pool = lambda a: p0(a, pool)
-            p0_pool_14C = lambda a: (F_atm(t0-a)/1000.0 + 1) * p0_pool(a) * alpha
-            eq_14C[pool] = quad(p0_pool_14C, 0, lim)[0]
+            f0_pool = lambda a: f0(a)[pool]
+            def f0_pool_14C(a):
+                res = (
+                    (F_atm(a)/1000.0 + 1) * 
+                    f0_pool(a)
+#                    * alpha # makes integration imprecise
+                     * np.exp(-decay_rate*a)
+                )
+                return res
 
+            # integration via solve_ivp is fast and successful
+            res = solve_ivp(
+                lambda a, y: f0_pool_14C(a),
+                (0, lim),
+                np.array([0])
+            )
+#            print("c", res.y.reshape(-1)[-1])
+#            print(E_a[pool]/365.25, F_atm(np.float(E_a[pool])))
+
+            eq_14C[pool] = res.y.reshape(-1)[-1] * alpha
+        
+#        print(eq_14C/self.start_values/alpha)
         return eq_14C
 
 

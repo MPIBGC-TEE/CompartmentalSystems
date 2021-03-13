@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.linalg import matrix_power, pinv
+from scipy.integrate import quad, solve_ivp
 from scipy.linalg import inv
 from scipy.special import factorial, binom
 from tqdm import tqdm
@@ -12,7 +13,8 @@ from .helpers_reservoir import (
     net_Rs_from_discrete_Bs_and_xs,
     p0_maker,
     custom_lru_cache_wrapper,
-    generalized_inverse_CDF
+    generalized_inverse_CDF,
+    ALPHA_14C
 )
 from . import picklegzip
 
@@ -311,13 +313,77 @@ class DiscreteModelRun():
 
         if np.all(self.net_Us == 0):
             raise(DMRError("Cannot fake xss, because there are no inputs to the systems"))
-        mean_u = self.net_Us[:nr_time_steps, ...].mean(axis=0)
+        mean_U = self.net_Us[:nr_time_steps, ...].mean(axis=0)
         mean_B = self.Bs[:nr_time_steps, ...].mean(axis=0)
 
-        # fake equilibrium
-        fake_xss = pinv(Id-mean_B) @ mean_u
+        # fake equilibriumU
+        fake_xss = pinv(Id-mean_B) @ mean_U
 
         return fake_xss
+
+    def fake_eq_14C(self, nr_time_steps, F_atm, decay_rate, lim_ai, alpha=None):
+        if alpha is None:
+            alpha = ALPHA_14C
+
+        p0 = self.fake_start_age_masses(nr_time_steps)
+#        import matplotlib.pyplot as plt
+#        fig, axes = plt.subplots(ncols=2, nrows=3, figsize=(18, 18))
+#        times = np.linspace(0, 1000, 50)
+#        z = np.array([p0_ai(int(t)) for t in times])
+#        y = np.array([p0(t) for t in times])
+#        for k, ax in zip(range(self.nr_pools), axes.flatten()):
+#            ax.plot(times, y[:, k], label="c")
+#            ax.plot(times, z[:, k])
+#            ax.legend()
+#        fig.show()
+
+#        E_a = self.fake_start_age_moments(nr_time_steps, 1).reshape(-1)
+
+        eq_14C = np.nan * np.ones((self.nr_pools, ))
+        for pool in range(self.nr_pools):
+#            print(np.float(E_a[pool])/365.25, F_atm(np.float(E_a[pool])))
+
+            p0_pool = lambda ai: p0(ai)[pool]
+#            def p0_pool_14C(ai):
+#                res = (
+##                    (F_atm(ai)/1000.0 + 1) *
+#                    ai *  p0_pool(ai)
+##                    * np.exp(-decay_rate*ai)
+#                    )
+#                return res
+
+            def p0_pool_14C_quad(a):
+                res = (
+                    (F_atm(a)/1000.0 + 1) * 
+                    p0_pool(int(a))
+#                    * alpha # makes integration imprecise
+                    * np.exp(-decay_rate*int(a))
+                    )
+#                print(a, res)
+                return res
+
+            # integration via solve_ivp is fast and successful
+            res_quad = solve_ivp(
+                lambda a, y: p0_pool_14C_quad(a),
+                (0, lim_ai),
+                np.array([0])
+            )
+#            print("quad", res_quad.y.reshape(-1)[-1])#/365.25/self.start_values[pool])
+            res = res_quad.y.reshape(-1)[-1]
+##            res = res_quad[0]
+#            ai = 0
+#            res = 0
+#            res2 = 0
+#            while ai <= 2*lim_ai:
+#                res += p0_pool_14C(ai)
+#                res2 += p0_pool(ai)
+##                print(res, res2)
+#                ai += 1
+#            print(res, res2)
+            eq_14C[pool] = res * alpha
+
+        return eq_14C
+
 
     # return value in unit "time steps"
     def fake_start_m_factorial_moment(self, order, nr_time_steps):
