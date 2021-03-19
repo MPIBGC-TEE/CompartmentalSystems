@@ -105,7 +105,7 @@ class PWCModelRunFD(ModelRun):
         self.us = us
 
     @classmethod
-    def from_Bs_and_us(cls, time_symbol, data_times, start_values, Bs, us):
+    def from_Bs_and_us(cls, time_symbol, data_times, start_values, Bs, us, state_variables=None):
         isnan = np.isnan(start_values).sum() + np.isnan(Bs).sum() + np.isnan(us).sum()
         if isnan > 0:
             raise(PWCModelRunFDError("Nans detected"))
@@ -123,7 +123,8 @@ class PWCModelRunFD(ModelRun):
         srm_generic = cls.create_srm_generic(
             time_symbol,
             Bs,
-            us
+            us,
+            state_variables
         )
 
         par_dicts = []
@@ -169,7 +170,8 @@ class PWCModelRunFD(ModelRun):
         xs=None,
         integration_method='solve_ivp',
         nr_nodes=None,
-        check_success=True
+        check_success=True,
+        state_variables=None
     ):
         us = cls.reconstruct_us(
             data_times,
@@ -197,7 +199,8 @@ class PWCModelRunFD(ModelRun):
             data_times,
             start_values,
             Bs,
-            us
+            us,
+            state_variables
         )
 
     @property
@@ -289,11 +292,12 @@ class PWCModelRunFD(ModelRun):
 #        E_a = np.array(eq_model.a_expected_value).reshape(-1)
 #        for i in range(len(E_a)):
 #            print(E_a[i], E_a[i]/365.25, F_atm(np.float(E_a[i])))
-        f0_normalized = lambda a: np.array(
-            eq_model.a_density(a),
-            dtype=np.float64).reshape((-1,)
-        )
-        f0 = lambda a: f0_normalized(a) * self.start_values
+#        f0_normalized = lambda a: np.array(
+#            eq_model.a_density(a),
+#            dtype=np.float64).reshape((-1,)
+#        )
+#        f0 = lambda a: f0_normalized(a) * self.start_values
+        f0 = self.fake_start_age_densities(nr_time_steps)
 
         eq_14C = np.nan * np.ones((self.nr_pools, ))
         for pool in range(self.nr_pools):
@@ -333,6 +337,18 @@ class PWCModelRunFD(ModelRun):
             axis=0
         )
         return start_age_moments
+
+    def fake_start_age_densities(self, nr_time_steps):
+        eq_model = self.fake_eq_model(nr_time_steps)
+ 
+        f0_normalized = lambda a: np.array(
+            eq_model.a_density(a),
+            dtype=np.float64
+        ).reshape((-1,))
+
+        p0 = lambda a: f0_normalized(a) * self.start_values
+
+        return p0
 
     def fake_cumulative_start_age_distribution(self, nr_time_steps):
         eq_model = self.fake_eq_model(nr_time_steps)
@@ -975,18 +991,24 @@ class PWCModelRunFD(ModelRun):
         return u_generic
 
     @classmethod
-    def create_srm_generic(cls, time_symbol, Bs, us):
+    def create_srm_generic(cls, time_symbol, Bs, us, state_variables=None):
         nr_pools = Bs.shape[1]
         strlen = len(str(nr_pools))
 
-        def pool_str(i): return ("{:0"+str(strlen)+"d}").format(i)
-
-        state_vector_generic = Matrix(
-            nr_pools,
-            1,
-            [symbols('x_'+pool_str(i)) for i in range(nr_pools)]
-        )
-
+        if state_variables is None:
+            def pool_str(i): return ("{:0"+str(strlen)+"d}").format(i)
+    
+            state_vector_generic = Matrix(
+                nr_pools,
+                1,
+                [symbols('x_'+pool_str(i)) for i in range(nr_pools)]
+            )
+        else:
+            state_vector_generic = Matrix(
+                nr_pools,
+                1,
+                [symbols(pool_str.replace(" ", "")) for pool_str in state_variables]
+            )
 #        B_generic = cls.create_B_generic(Bs, time_symbol)
 #        u_generic = cls.create_u_generic(us, time_symbol)
         B_generic = cls.create_B_generic(Bs)

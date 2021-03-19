@@ -316,15 +316,16 @@ class DiscreteModelRun():
         mean_U = self.net_Us[:nr_time_steps, ...].mean(axis=0)
         mean_B = self.Bs[:nr_time_steps, ...].mean(axis=0)
 
-        # fake equilibriumU
+        # fake equilibrium
         fake_xss = pinv(Id-mean_B) @ mean_U
 
         return fake_xss
 
-    def fake_eq_14C(self, nr_time_steps, F_atm, decay_rate, lim_ai, alpha=None):
+    def fake_eq_14C(self, nr_time_steps, F_atm, decay_rate, lim, alpha=None):
         if alpha is None:
             alpha = ALPHA_14C
 
+        # input in age steps ai
         p0 = self.fake_start_age_masses(nr_time_steps)
 #        import matplotlib.pyplot as plt
 #        fig, axes = plt.subplots(ncols=2, nrows=3, figsize=(18, 18))
@@ -343,6 +344,7 @@ class DiscreteModelRun():
         for pool in range(self.nr_pools):
 #            print(np.float(E_a[pool])/365.25, F_atm(np.float(E_a[pool])))
 
+            # input in age steps ai, output as mass, not density
             p0_pool = lambda ai: p0(ai)[pool]
 #            def p0_pool_14C(ai):
 #                res = (
@@ -352,10 +354,11 @@ class DiscreteModelRun():
 #                    )
 #                return res
 
+            # input in age (not age indices)
             def p0_pool_14C_quad(a):
                 res = (
                     (F_atm(a)/1000.0 + 1) * 
-                    p0_pool(int(a))
+                    p0_pool(int(a/self.dt)) / self.dt # make masses to density
 #                    * alpha # makes integration imprecise
                     * np.exp(-decay_rate*int(a))
                     )
@@ -365,7 +368,7 @@ class DiscreteModelRun():
             # integration via solve_ivp is fast and successful
             res_quad = solve_ivp(
                 lambda a, y: p0_pool_14C_quad(a),
-                (0, lim_ai),
+                (0, lim),
                 np.array([0])
             )
 #            print("quad", res_quad.y.reshape(-1)[-1])#/365.25/self.start_values[pool])
