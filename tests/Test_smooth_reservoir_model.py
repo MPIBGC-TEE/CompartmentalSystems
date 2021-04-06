@@ -1,5 +1,5 @@
 # vim:set ff=unix expandtab ts=4 sw=4:
-from concurrencytest import ConcurrentTestSuite, fork_for_tests
+#from concurrencytest import ConcurrentTestSuite, fork_for_tests
 import sys
 import unittest
 import numpy as np
