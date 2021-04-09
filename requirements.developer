@@ -6,5 +6,5 @@ scipy>=1.4.1
 #-e git+https://git@github.com/mamueller/testinfrastructure.git#egg=testinfrastructure 
 sphinx-autodoc-typehints
 networkx
-igraph
+python-igraph
 
