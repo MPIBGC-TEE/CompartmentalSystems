@@ -656,12 +656,20 @@ It gave up for the following expression: ${e}."""
             arrowstyle = "-"
             visible_pool_names = False
 
-
         csp = CSPlotter(
             self.state_vector,
-            {k:self._input_flux_type(k) for k in self.input_fluxes.keys()},
-            {k:self._output_flux_type(k) for k in self.output_fluxes.keys()},
-            {k:self._internal_flux_type(*k) for k in self.internal_fluxes.keys()},
+            {
+                k: self._input_flux_type(k) for k in self.input_fluxes
+                if self.input_fluxes[k] != 0
+            },
+            {
+                k: self._output_flux_type(k) for k in self.output_fluxes
+                if self.output_fluxes[k] != 0
+            },
+            {
+                k: self._internal_flux_type(*k) for k in self.internal_fluxes
+                if self.internal_fluxes[k] != 0
+            },
             pipe_colors, 
             visible_pool_names = visible_pool_names, 
             arrowstyle = arrowstyle, 
