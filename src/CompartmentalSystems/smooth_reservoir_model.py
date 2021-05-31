@@ -642,15 +642,24 @@ It gave up for the following expression: ${e}."""
 
         return (extended_state, extended_rhs)
 
-    def plot_pools_and_fluxes(self, ax, mutation_scale = 50, fontsize = 24, thumbnail = False, legend=True):
+    def plot_pools_and_fluxes(self, ax, mutation_scale = 50, fontsize = 24, thumbnail = False, legend=True, color_fluxes=True):
         ax.set_axis_off()
         arrowstyle = "simple"
         visible_pool_names = True
 
-        pipe_colors = {
-             'linear': 'blue',
-             'nonlinear': 'green',
-             'no state dependence': 'red'}
+        if color_fluxes:
+            pipe_colors = {
+                 'linear': 'blue',
+                 'nonlinear': 'green',
+                 'no state dependence': 'red'
+            }
+        else:
+            pipe_colors = {
+                 'linear': 'blue',
+                 'nonlinear': 'blue',
+                 'no state dependence': 'blue'
+            }
+
 
         if thumbnail:
             arrowstyle = "-"
