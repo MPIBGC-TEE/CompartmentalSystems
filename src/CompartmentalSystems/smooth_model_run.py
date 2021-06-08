@@ -2719,6 +2719,8 @@ class SmoothModelRun(ModelRun):
         computed, this can take quite some time.
 
         Args:
+            mr: The model run itself. This is necessary because for obscure
+                parallelization reasons the method needs to be static.
             quantile (between 0 and 1): The relative share of mass that is 
                 considered to be left of the computed value. A value of ``0.5`` 
                 leads to the computation of the median of the distribution.
