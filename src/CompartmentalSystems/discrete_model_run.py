@@ -87,6 +87,12 @@ class DiscreteModelRun():
             net_Us
         )
 
+    @classmethod
+    def from_fluxes_and_solution(cls, data_times, xs, net_Fs, net_Rs):
+        Bs = cls.reconstruct_Bs(xs, net_Fs, net_Rs)
+        dmr = cls(data_times, Bs, xs)
+        return dmr
+
     @property
     @lru_cache()
     def net_Us(self):
@@ -140,12 +146,6 @@ class DiscreteModelRun():
         )
 
     @classmethod
-    def reconstruct_from_fluxes_and_solution(cls, data_times, xs, Fs, Rs):
-        Bs = cls.reconstruct_Bs(xs, Fs, Rs)
-        dmr = cls(data_times, Bs, xs)
-        return dmr
-
-    @classmethod
     def reconstruct_Bs(cls, xs, Fs, Rs):
         Bs = np.nan * np.ones_like(Fs)
         for k in range(len(Rs)):
@@ -196,6 +196,7 @@ class DiscreteModelRun():
                 B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / x[j])
                 if B[j, j] < 0:
 #                    pass
+                    print(x[j], R[j], F[:, j].sum(), F[j, :].sum()) 
                     raise(DMRError('Diag. val < 0: pool %d, ' % j))
             else:
                 B[j, j] = 1
