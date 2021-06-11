@@ -97,7 +97,7 @@ class TestModelRun(InDirTest):
             = self.smr.fake_net_discretized_output(times_fine)
         xs_fine, gross_Us_fine, gross_Fs_fine, gross_Rs_fine \
             = self.smr.fake_gross_discretized_output(times_fine)
-        dmr_wrong_fine = DMRWGF.reconstruct_from_fluxes_and_solution(
+        dmr_wrong_fine = DMRWGF.from_fluxes_and_solution(
            times_fine,
            xs_fine,
 #           net_Us=gross_Us_fine,
@@ -128,7 +128,7 @@ class TestModelRun(InDirTest):
         xs, gross_Us, gross_Fs, gross_Rs \
             = self.smr.fake_gross_discretized_output(times)
 
-        dmr = DMRWGF.reconstruct_from_fluxes_and_solution(
+        dmr = DMRWGF.from_fluxes_and_solution(
            times,
            xs,
 #           net_Us,
