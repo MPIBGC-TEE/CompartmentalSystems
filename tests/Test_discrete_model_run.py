@@ -63,14 +63,14 @@ class TestDiscreteModelRun(InDirTest):
             = smr_fine.fake_gross_discretized_output(times_fine)
 
         dmr_from_pwc = DMR.from_SmoothModelRun(smr, nr_bins)
-        dmr_from_fake_net_data = DMR.reconstruct_from_fluxes_and_solution(
+        dmr_from_fake_net_data = DMR.from_fluxes_and_solution(
             times,
             xs,
             net_Fs,
             net_Rs
         )
         dmr_from_fake_gross_data_ffas \
-            = DMR.reconstruct_from_fluxes_and_solution(
+            = DMR.from_fluxes_and_solution(
                 times,
                 xs,
                 gross_Fs,
