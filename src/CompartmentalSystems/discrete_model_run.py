@@ -146,6 +146,19 @@ class DiscreteModelRun():
         )
 
     @classmethod
+    def reconstruct_Fs_and_Rs(cls, xs, Bs):
+        Fs = np.nan * np.ones_like(Bs)
+        Rs = np.nan * np.ones(Bs.shape[:-1])
+        for k in range(Bs.shape[0]):
+            for j in range(Bs.shape[2]):
+                Fs[k, :, j] = Bs[k, :, j] * xs[k, j]
+                Rs[k, j] = (1 - Bs[k, :, j].sum()) * xs[k,j]
+            for j in range(Bs.shape[2]):
+                Fs[k, j, j] = 0
+
+        return Fs, Rs
+
+    @classmethod
     def reconstruct_Bs(cls, xs, Fs, Rs):
         Bs = np.nan * np.ones_like(Fs)
         for k in range(len(Rs)):
@@ -392,7 +405,6 @@ class DiscreteModelRun():
     # return value in unit "time steps"
     def fake_start_m_factorial_moment(self, order, nr_time_steps):
         Id = np.identity(self.nr_pools)
-
 
         # fake equilibrium
         fake_xss = self.fake_xss(nr_time_steps)
