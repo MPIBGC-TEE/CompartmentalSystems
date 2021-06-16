@@ -208,22 +208,23 @@ class DiscreteModelRun():
             if x[j] != 0:
                 B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / x[j])
                 if B[j, j] < 0:
-#                    pass
-                    print(x[j], R[j], F[:, j].sum(), F[j, :].sum()) 
-                    raise(DMRError('Diag. val < 0: pool %d, ' % j))
+                    pass
+#                    print(x[j], R[j], F[:, j].sum(), F[j, :].sum()) 
+#                    raise(DMRError('Diag. val < 0: pool %d, ' % j))
             else:
                 B[j, j] = 1
 
-#        # correct for negative diagonals
-#        neg_diag_idx = np.where(np.diag(B)<0)[0]
-#        for idx in neg_diag_idx:
-#            # scale outfluxes down to empty pool
-#            col = B[:, idx]
-#            d = col[idx]
-#            s = 1-d
-#            B[:, idx] = B[:, idx] / s
-#            r = R[idx] / x[idx] / s
-#            B[idx, idx] = 1 - (sum(B[:, idx]) - B[idx, idx] + r)
+        # correct for negative diagonals
+        neg_diag_idx = np.where(np.diag(B)<0)[0]
+        for idx in neg_diag_idx:
+            print("'repairing' neg diag in pool", idx)
+            # scale outfluxes down to empty pool
+            col = B[:, idx]
+            d = col[idx]
+            s = 1-d
+            B[:, idx] = B[:, idx] / s
+            r = R[idx] / x[idx] / s
+            B[idx, idx] = 1 - (sum(B[:, idx]) - B[idx, idx] + r)
 
         return B
 
