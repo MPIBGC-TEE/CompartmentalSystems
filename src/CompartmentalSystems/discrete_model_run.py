@@ -462,7 +462,7 @@ class DiscreteModelRun():
 
         return np.array(start_age_moments)
 
-    def age_moment_vector_up_to(self, up_to_order, start_age_moments=None):
+    def age_moment_vector_up_to(self, up_to_order, start_age_moments):
         soln = self.solve()
         ams = self._solve_age_moment_system(up_to_order, start_age_moments)
 
@@ -497,8 +497,19 @@ class DiscreteModelRun():
         soln = self.solve()
         dts = self.dts
 
+        def diag_inv_with_zeros(A):
+            res = np.zeros_like(A)
+            for k in range(A.shape[0]):
+                if A[k, k] != 0:
+                    res[k, k] = 1/A[k, k]
+                else:
+#                    res[k, k] = np.nan
+                    res[k, k] = 0
+
+            return res
+
         age_moments = [start_age_moments]
-        for i in range(len(self.times)-1):
+        for i in tqdm(range(len(self.times)-1)):
             vec = np.zeros((max_order, n))
             X_np1 = soln[i+1] * Id
             X_n = soln[i] * Id
@@ -509,7 +520,8 @@ class DiscreteModelRun():
                     moment_sum += age_moments[-1][j-1, :].reshape((n,)) \
                                   * binom(k, j) * dts[i]**(k-j)
 
-                vec[k-1, :] = inv(X_np1) @ B @\
+#                vec[k-1, :] = inv(X_np1) @ B @\
+                vec[k-1, :] = diag_inv_with_zeros(X_np1) @ B @\
                         X_n @ (moment_sum + ones*dts[i]**k)
 
             age_moments.append(vec)
@@ -1059,7 +1071,6 @@ class DiscreteModelRun():
 
         return P_sv
 
-    # return value in unit "time steps x dt[0]"
     def fake_cumulative_start_age_masses(self, nr_time_steps):
         Id = np.identity(self.nr_pools)
 
