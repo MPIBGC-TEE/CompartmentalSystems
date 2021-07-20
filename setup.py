@@ -33,8 +33,6 @@ setup(name='CompartmentalSystems',
         # setuptools should not be bothered with explicit versions, those will be specified in
         # for pip in  requirements.txt
         install_requires=[
-            "concurrencytest",
-            "jupyter",
             "matplotlib",
             "mpmath",
             "numpy",
