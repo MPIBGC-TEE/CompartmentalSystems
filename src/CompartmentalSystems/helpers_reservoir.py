@@ -683,11 +683,6 @@ def numerical_rhs(
     # 2.) Write a wrapper that transformes Matrices to numpy.ndarrays and
     # accepts array instead of the separate arguments for the states)
     def num_rhs(t, X):
-        # we need the arguments to be numpy arrays to be able to catch 0/0
-        # Holger: I made 0/0 being caught by a subfunction in 
-        # numerical_function_from_expression
-#        Y = (np.array([x]) for x in X) # Markus' version, lead to 
-#       deprecation warnings, so I rewrote it to (Holger):
         Y = np.array([x for x in X]) # 
 
         Fval = FL(t, *Y)
@@ -695,6 +690,30 @@ def numerical_rhs(
 
     return num_rhs
 
+def numerical_array_func(
+    state_vector,
+    time_symbol,
+    expr,
+    parameter_dict,
+    func_dict
+):
+
+    FL = numerical_function_from_expression(
+        expr,
+        (time_symbol,)+tuple(state_vector),
+        parameter_dict,
+        func_dict
+    )
+
+    # 2.) Write a wrapper that transformes Matrices to numpy.ndarrays and
+    # accepts array instead of the separate arguments for the states)
+    def num_arr_fun(t, X):
+        Y = np.array([x for x in X]) # 
+
+        Fval = FL(t, *Y)
+        return Fval.reshape(expr.shape,)
+
+    return num_arr_fun
 
 def numerical_rhs_old(
     state_vector,
