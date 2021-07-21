@@ -175,7 +175,7 @@ class DiscreteModelRun():
     def reconstruct_Bs_without_xs(cls, start_values, Us, Fs, Rs):
         x = start_values
         Bs = np.nan * np.ones_like(Fs)
-        for k in range(len(Rs)):
+        for k in tqdm(range(len(Rs))):
             try:
                 B = cls.reconstruct_B(x, Fs[k], Rs[k])
                 Bs[k, :, :] = B
