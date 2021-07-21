@@ -10,8 +10,9 @@ try:
 except ImportError:
     pass
 
+
 def total_size(o, handlers={}, verbose=False):
-    """ Returns the approximate memory footprint of an object and all of its contents.
+    """Returns the approximate memory footprint of an object and all of its contents.
 
     Automatically finds the contents of the following builtin containers and
     their subclasses:  tuple, list, deque, dict, set and frozenset.
@@ -22,19 +23,20 @@ def total_size(o, handlers={}, verbose=False):
 
     """
     dict_handler = lambda d: chain.from_iterable(d.items())
-    all_handlers = {tuple: iter,
-                    list: iter,
-                    deque: iter,
-                    dict: dict_handler,
-                    set: iter,
-                    frozenset: iter,
-                   }
-    all_handlers.update(handlers)     # user handlers take precedence
-    seen = set()                      # track which object id's have already been seen
-    default_size = getsizeof(0)       # estimate sizeof object without __sizeof__
+    all_handlers = {
+        tuple: iter,
+        list: iter,
+        deque: iter,
+        dict: dict_handler,
+        set: iter,
+        frozenset: iter,
+    }
+    all_handlers.update(handlers)  # user handlers take precedence
+    seen = set()  # track which object id's have already been seen
+    default_size = getsizeof(0)  # estimate sizeof object without __sizeof__
 
     def sizeof(o):
-        if id(o) in seen:       # do not double count the same object
+        if id(o) in seen:  # do not double count the same object
             return 0
         seen.add(id(o))
         s = getsizeof(o, default_size)
@@ -53,8 +55,6 @@ def total_size(o, handlers={}, verbose=False):
 
 ##### Example call #####
 
-if __name__ == '__main__':
-    d = dict(a=1, b=2, c=3, d=[4,5,6,7], e='a string of chars')
-    print(total_size(d, verbose=True)/1024/1024)
-    
-
+if __name__ == "__main__":
+    d = dict(a=1, b=2, c=3, d=[4, 5, 6, 7], e="a string of chars")
+    print(total_size(d, verbose=True) / 1024 / 1024)
