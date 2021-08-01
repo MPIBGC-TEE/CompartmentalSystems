@@ -3921,7 +3921,10 @@ class SmoothModelRun(ModelRun):
 
     ## plot helper methods ##
 
-    #fixme: unit treatment disabled
+    # fixme: unit treatment disabled
+    # fixme mm 7-28-2021 units do not have a place in SmothModelRun since 
+    # we do not have them for all the instances. If units are required they should life in a different class
+    
     def _add_time_unit(self, label):
         #if self.model.time_unit:
         #    label += r"$\quad(\mathrm{" + latex(self.model.time_unit) + "})$"

@@ -6,14 +6,15 @@ import numpy as np
 """
 Disclaimer:
     not a real test yet, no real assertions just an end to end
-    example probably full of bugs 
+    example probably full of bugs
     the parts have to be tested to trust the result
 """
 
+
 class TimeStep:
     """
-    Just a collection of values per time step which are necessarry 
-    to compute the next one. 
+    Just a collection of values per time step which are necessarry
+    to compute the next one.
     """
     def __init__(
         self,
@@ -56,12 +57,12 @@ class TimeStepIterator:
         if self.i == self.number_of_steps:
             raise StopIteration
         ts = copy(self.ts)
-        # fixme mm 7-20-2021 
+        # fixme mm 7-20-2021
         # possibly B and u one index lower than x ...
         B =ts.B
-        u =ts.u 
+        u =ts.u
         x =ts.x
-        
+
         it = self.i
         B_func = self.B_func
         u_func = self.u_func
@@ -76,7 +77,7 @@ class TimeStepIterator:
 
 class TestDiscreteReservoirModel(InDirTest):
     def test_iterator(self):
-        B_0=np.array([ 
+        B_0=np.array([
             [ -1, 0.5],
             [0.5,  -1]
         ])
@@ -95,9 +96,9 @@ class TestDiscreteReservoirModel(InDirTest):
         steps=[ts for ts in tsit]
         #print(steps)
         # we could also choose to remember only the xs
-        xs = [ts.x for ts in tsit] 
+        xs = [ts.x for ts in tsit]
         print(xs)
-        
+
 
 
 
@@ -164,8 +165,8 @@ class TestDiscreteReservoirModel(InDirTest):
         print('u')
         print(u)
         #rhs = u(it,x)+B(it,x)*x
-       
-        # num_rhs 
+
+        # num_rhs
         par_dict = {
                 k_leaf_out: 1,
                 k_wood_out: 1,
@@ -185,7 +186,7 @@ class TestDiscreteReservoirModel(InDirTest):
         func_dict = {
                 I_leaf(it): my_func
         }
-        num_B, num_u  = map(
+        num_B, num_u = map(
             lambda expr: hr.numerical_array_func(
                 state_variable_tuple,
                 it,
@@ -211,5 +212,5 @@ class TestDiscreteReservoirModel(InDirTest):
         #steps=[ts for ts in tsit]
         #print(steps)
         # we could also choose to remember only the xs
-        xs = [ts.x for ts in tsit] 
+        xs = [ts.x for ts in tsit]
         print(xs)
