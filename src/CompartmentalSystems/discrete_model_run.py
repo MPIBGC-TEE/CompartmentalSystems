@@ -6,6 +6,7 @@ from scipy.special import factorial, binom
 from tqdm import tqdm
 from functools import lru_cache
 from typing import List, Callable, Union, Tuple
+from copy import copy
 
 from .helpers_reservoir import (
     net_Us_from_discrete_Bs_and_xs,
@@ -19,6 +20,77 @@ from .helpers_reservoir import (
 from . import picklegzip
 
 ##############################################################################
+
+class TimeStep:
+    """
+    Just a collection of values per time step which are necessarry
+    to compute the next one.
+    """
+    def __init__(
+        self,
+        B,
+        u,
+        x,
+        t
+    ):
+        self.B = B
+        self.u = u
+        self.x = x
+        self.t = t
+
+    def __repr__(self):
+        return str(self.B) + str(self.u) + str(self.x) + str(self.t)
+
+class TimeStepIterator:
+    """iterator for looping over the results of a difference equation"""
+
+    def __init__(
+        self,
+        initial_ts,
+        B_func,
+        u_func,
+        number_of_steps,
+        delta_t
+    ):
+        self.initial_ts = initial_ts
+        self.B_func = B_func
+        self.u_func = u_func
+        self.number_of_steps = number_of_steps
+        self.delta_t = delta_t
+        self.reset()
+
+    def reset(self):
+        self.i = 0
+        self.ts = self.initial_ts
+
+    def __iter__(self):
+        self.reset()
+        return(self)
+
+    def __next__(self):
+        if self.i == self.number_of_steps:
+            raise StopIteration
+        ts = copy(self.ts)
+        # fixme mm 7-20-2021
+        # possibly B and u one index lower than x ...
+        B =ts.B
+        u =ts.u
+        x =ts.x
+        t = ts.t
+
+        it = self.i
+        B_func = self.B_func
+        u_func = self.u_func
+        delta_t = self.delta_t
+        # compute x_i+1
+        B_new = B_func(it,ts.x)
+        u_new = u_func(it,ts.x)
+        x_new = u + np.matmul(B,x)
+        t_new = t + delta_t
+        self.ts = TimeStep(B_new, u_new, x_new, t_new)
+        self.i += 1
+        return ts
+
 
 
 class DMRError(Exception):
@@ -92,6 +164,54 @@ class DiscreteModelRun():
         Bs = cls.reconstruct_Bs(xs, net_Fs, net_Rs)
         dmr = cls(data_times, Bs, xs)
         return dmr
+
+    @classmethod
+    def from_B_and_u_funcs(
+        cls,
+        x_0,
+        B_func,
+        u_func, 
+        number_of_steps,
+        delta_t
+    ):
+        i_min = 0
+        u_0 = u_func(i_min, x_0)
+        B_0 = B_func(i_min, x_0)
+
+        tsit = TimeStepIterator(
+            initial_ts= TimeStep(B=B_0,u=u_0,x=x_0,t=0),
+            B_func=B_func,
+            u_func=u_func,
+            number_of_steps = number_of_steps,
+            delta_t=delta_t
+        )
+
+        # "unzipping" the tupels  
+        Bs, net_Us, times = zip(*((ts.B, ts.u.reshape(-1), ts.t)  for ts in tsit))
+        print("times=",times)
+        #input()
+        
+        # Note 
+        # 1.)   that the time steps also contain 
+        #       the solution xs (as it is necessarry to compute
+        #       B_s and us for a nonlinear model) and that we do
+        #       not use it but recompute it.  
+        # 2.)   that we compute an artificial time series
+        #       from the iterator, whereas we actually  
+        #       want to avoid a times argument since we want to 
+        #       remove non equidistant time grids anyway.
+        #
+        # Both things are a bit backward and actually signal that
+        # The iterator is the more fundamental description of a
+        # discrete dynamic system.  x_{i+1} = f(x_i,i) (what a
+        # surprise ;-)) 
+        # It seams advisable to put the/an iterator
+        # at the heart of the class.  
+        # In case the lists (of Bs us xs # Fs...) are 
+        # available they can be used to 
+        # build special iterators.
+        return cls.from_Bs_and_net_Us(x_0.transpose(), times, Bs, net_Us)
+
 
     @property
     @lru_cache()
@@ -249,7 +369,8 @@ class DiscreteModelRun():
         xs = np.nan*np.ones((len(Bs)+1, len(start_values)))
         xs[0, :] = start_values
         for k in range(0, len(net_Us)):
-            xs[k+1] = Bs[k] @ xs[k] + net_Us[k]
+            #xs[k+1] = Bs[k] @ xs[k] + net_Us[k]
+            xs[k+1] = np.matmul(Bs[k], xs[k]) + net_Us[k]
 
         return xs
 

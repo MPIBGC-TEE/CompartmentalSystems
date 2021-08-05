@@ -1,7 +1,7 @@
 from testinfrastructure.InDirTest import InDirTest
 from sympy import Symbol, symbols, Function
-from copy import copy
 from CompartmentalSystems import helpers_reservoir as hr
+from CompartmentalSystems.discrete_model_run import DiscreteModelRun, TimeStep, TimeStepIterator
 import numpy as np
 """
 Disclaimer:
@@ -9,70 +9,6 @@ Disclaimer:
     example probably full of bugs
     the parts have to be tested to trust the result
 """
-
-
-class TimeStep:
-    """
-    Just a collection of values per time step which are necessarry
-    to compute the next one.
-    """
-    def __init__(
-        self,
-        B,
-        u,
-        x
-    ):
-        self.B = B
-        self.u = u
-        self.x = x
-
-    def __repr__(self):
-        return str(self.B)+str(self.u)+str(self.x)
-
-class TimeStepIterator:
-    """iterator for looping over the results of a difference equation"""
-
-    def __init__(
-        self,
-        initial_ts,
-        B_func,
-        u_func,
-        number_of_steps
-    ):
-        self.initial_ts = initial_ts
-        self.B_func = B_func
-        self.u_func = u_func
-        self.number_of_steps = number_of_steps
-        self.reset()
-
-    def reset(self):
-        self.i = 0
-        self.ts = self.initial_ts
-
-    def __iter__(self):
-        self.reset()
-        return(self)
-
-    def __next__(self):
-        if self.i == self.number_of_steps:
-            raise StopIteration
-        ts = copy(self.ts)
-        # fixme mm 7-20-2021
-        # possibly B and u one index lower than x ...
-        B =ts.B
-        u =ts.u
-        x =ts.x
-
-        it = self.i
-        B_func = self.B_func
-        u_func = self.u_func
-        # compute x_i+1
-        B_new = B_func(it,ts.x)
-        u_new = u_func(it,ts.x)
-        x_new = u + np.matmul(B,x)
-        self.ts = TimeStep(B_new,u_new,x_new)
-        self.i += 1
-        return ts
 
 
 class TestDiscreteReservoirModel(InDirTest):
@@ -88,10 +24,11 @@ class TestDiscreteReservoirModel(InDirTest):
         u_func = lambda it, x: u_0 #fake
         tsit=TimeStepIterator(
             # fake matrix
-            initial_ts= TimeStep(B=B_0,u=u_0,x=x_0),
-            B_func = B_func,
-            u_func = u_func,
-            number_of_steps=10
+            initial_ts= TimeStep(B=B_0,u=u_0,x=x_0,t=0),
+            B_func=B_func,
+            u_func=u_func,
+            number_of_steps=10,
+            delta_t=2
         )
         steps=[ts for ts in tsit]
         #print(steps)
@@ -204,13 +141,24 @@ class TestDiscreteReservoirModel(InDirTest):
 
         tsit=TimeStepIterator(
             # fake matrix
-            initial_ts= TimeStep(B=B_0,u=u_0,x=x_0),
-            B_func = num_B,
-            u_func = num_u,
-            number_of_steps = i_max - i_min
+            initial_ts=TimeStep(B=B_0,u=u_0,x=x_0,t=0),
+            B_func=num_B,
+            u_func=num_u,
+            number_of_steps=i_max - i_min,
+            delta_t=2
         )
         #steps=[ts for ts in tsit]
         #print(steps)
         # we could also choose to remember only the xs
         xs = [ts.x for ts in tsit]
         print(xs)
+
+        dmr = DiscreteModelRun.from_B_and_u_funcs(
+            x_0=x_0,
+            B_func=num_B,
+            u_func=num_u,
+            number_of_steps=i_max - i_min,
+            delta_t=2
+        )
+        print(dmr.solve())
+
