@@ -73,6 +73,14 @@ class DiscreteModelRun():
         return cls(times, Bs, xs)
 
     @classmethod
+    def from_Bs_and_net_Us_2(cls, start_values, times, Bs, net_Us):
+        """
+        Bs State transition operators for one time step
+        """
+        xs = cls._solve_2(start_values, Bs, net_Us)
+        return cls(times, Bs, xs)
+
+    @classmethod
     def from_fluxes(cls, start_values, times, net_Us, net_Fs, net_Rs):
         Bs = cls.reconstruct_Bs_without_xs(
             start_values,
@@ -81,6 +89,21 @@ class DiscreteModelRun():
             net_Rs
         )
         return cls.from_Bs_and_net_Us(
+            start_values,
+            times,
+            Bs,
+            net_Us
+        )
+
+    @classmethod
+    def from_fluxes_2(cls, start_values, times, net_Us, net_Fs, net_Rs):
+        Bs = cls.reconstruct_Bs_without_xs_2(
+            start_values,
+            net_Us,
+            net_Fs,
+            net_Rs
+        )
+        return cls.from_Bs_and_net_Us_2(
             start_values,
             times,
             Bs,
@@ -187,6 +210,21 @@ class DiscreteModelRun():
         return Bs
 
     @classmethod
+    def reconstruct_Bs_without_xs_2(cls, start_values, Us, Fs, Rs):
+        x = start_values
+        Bs = np.nan * np.ones_like(Fs)
+        for k in range(len(Rs)):
+            try:
+                B = cls.reconstruct_B_2(x, Fs[k], Rs[k], Us[k])
+                Bs[k, :, :] = B
+                x = B @ (x + Us[k])
+            except DMRError as e:
+                msg = str(e) + 'time step %d' % k
+                raise(DMRError(msg))
+
+        return Bs
+
+    @classmethod
     def reconstruct_B(cls, x, F, R):
         nr_pools = len(x)
 
@@ -208,23 +246,60 @@ class DiscreteModelRun():
             if x[j] != 0:
                 B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / x[j])
                 if B[j, j] < 0:
-                    pass
-#                    print(x[j], R[j], F[:, j].sum(), F[j, :].sum()) 
-#                    raise(DMRError('Diag. val < 0: pool %d, ' % j))
+                    if np.abs(B[j, j]) < 1e-08:
+                        B[j, j] = 0
+                    else:
+                        pass                     
+                        print(B[j, j])
+                        print(x[j], R[j], F[:, j].sum(), F[j, :].sum()) 
+                        raise(DMRError('Diag. val < 0: pool %d, ' % j))
             else:
                 B[j, j] = 1
 
-        # correct for negative diagonals
-        neg_diag_idx = np.where(np.diag(B)<0)[0]
-        for idx in neg_diag_idx:
-            print("'repairing' neg diag in pool", idx)
-            # scale outfluxes down to empty pool
-            col = B[:, idx]
-            d = col[idx]
-            s = 1-d
-            B[:, idx] = B[:, idx] / s
-            r = R[idx] / x[idx] / s
-            B[idx, idx] = 1 - (sum(B[:, idx]) - B[idx, idx] + r)
+#        # correct for negative diagonals
+#        neg_diag_idx = np.where(np.diag(B)<0)[0]
+#        for idx in neg_diag_idx:
+#            print("'repairing' neg diag in pool", idx)
+#            # scale outfluxes down to empty pool
+#            col = B[:, idx]
+#            d = col[idx]
+#            s = 1-d
+#            B[:, idx] = B[:, idx] / s
+#            r = R[idx] / x[idx] / s
+#            B[idx, idx] = 1 - (sum(B[:, idx]) - B[idx, idx] + r)
+
+        return B
+
+    @classmethod
+    def reconstruct_B_2(cls, x, F, R, U):
+        nr_pools = len(x)
+
+        B = np.identity(nr_pools)
+        if len(np.where(F < 0)[0]) > 0:
+            raise(DMRError('Negative flux: '))
+
+        # construct off-diagonals
+        for j in range(nr_pools):
+            if x[j] < 0:
+                raise(DMRError('Content negative: pool %d, ' % j))
+            if x[j] + U[j] != 0:
+                B[:, j] = F[:, j] / (x[j] + U[j])
+            else:
+                B[:, j] = 0
+
+        # construct diagonals
+        for j in range(nr_pools):
+            if x[j] + U[j] != 0:
+                B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / (x[j] + U[j]))
+                if B[j, j] < 0:
+                    if np.abs(B[j, j]) < 1e-08:
+                        B[j, j] = 0.0
+                    else:
+#                        pass
+                        print(x[j], U[j], R[j], F[:, j].sum(), F[j, :].sum()) 
+                        raise(DMRError('Diag. val < 0: pool %d, ' % j))
+            else:
+                B[j, j] = 1
 
         return B
 
@@ -250,6 +325,15 @@ class DiscreteModelRun():
         xs[0, :] = start_values
         for k in range(0, len(net_Us)):
             xs[k+1] = Bs[k] @ xs[k] + net_Us[k]
+
+        return xs
+
+    @classmethod
+    def _solve_2(cls, start_values, Bs, net_Us):
+        xs = np.nan*np.ones((len(Bs)+1, len(start_values)))
+        xs[0, :] = start_values
+        for k in range(0, len(net_Us)):
+            xs[k+1] = Bs[k] @ (xs[k] + net_Us[k])
 
         return xs
 
