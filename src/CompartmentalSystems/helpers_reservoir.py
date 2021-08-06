@@ -1583,3 +1583,10 @@ def p0_maker(
         else:
             return np.zeros_like(res)
     return p0
+
+def euler_forward_net_B_sym(B_sym, delta_t):
+    return (B_sym + ImmutableMatrix.eye(*B_sym.shape) * delta_t
+
+def euler_forward_net_u_sym(u_sym, delta_t):
+    return u_sym * delta_t
+

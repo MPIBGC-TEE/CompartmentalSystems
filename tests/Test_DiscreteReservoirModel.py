@@ -1,5 +1,7 @@
+from CompartmentalSystems.src.CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from testinfrastructure.InDirTest import InDirTest
-from sympy import Symbol, symbols, Function
+from testinfrastructure.helpers import pp, pe
+from sympy import Symbol, symbols, Function, ImmutableMatrix
 from CompartmentalSystems import helpers_reservoir as hr
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun, TimeStep, TimeStepIterator
 import numpy as np
@@ -12,7 +14,7 @@ Disclaimer:
 
 
 class TestDiscreteReservoirModel(InDirTest):
-    def test_iterator(self):
+    def test_constructors(self):
         B_0=np.array([
             [ -1, 0.5],
             [0.5,  -1]
@@ -20,22 +22,43 @@ class TestDiscreteReservoirModel(InDirTest):
         # fake input
         u_0=np.array([1, 1])
         x_0=np.array([0, 0])
-        B_func = lambda it, x: B_0 #fake
-        u_func = lambda it, x: u_0 #fake
+        B_func = lambda it, x: B_0 # linear nonautonmous
+        u_func = lambda it, x: u_0 # constant
+        number_of_steps = 10
         tsit=TimeStepIterator(
             # fake matrix
             initial_ts= TimeStep(B=B_0,u=u_0,x=x_0,t=0),
             B_func=B_func,
             u_func=u_func,
-            number_of_steps=10,
+            number_of_steps=number_of_steps,
             delta_t=2
         )
-        steps=[ts for ts in tsit]
-        #print(steps)
+        # steps=[ts for ts in tsit]
+        # print(steps)
         # we could also choose to remember only the xs
-        xs = [ts.x for ts in tsit]
-        print(xs)
+        sol_1 = np.stack([ts.x for ts in tsit],axis=0) 
 
+        # now we construct a dmr from the iterater
+
+        dmr_2 = DiscreteModelRun.from_iterator(tsit)
+        sol_2 = dmr_2.solve()
+        pp('x_0',locals()) 
+        pp('sol_1',locals()) 
+        pp('sol_2',locals()) 
+        #input()
+        self.assertTrue((sol_1 == sol_2).all())
+
+        #self.assertEqual(sol_1, sol_2)
+        
+        dmr_3= DiscreteModelRun.from_B_and_u_funcs(
+            x_0=x_0,
+            B_func=B_func,
+            u_func=u_func,
+            number_of_steps=number_of_steps,
+            delta_t=2
+        )
+        sol_3 = dmr_3.solve()
+    
 
 
 
@@ -161,4 +184,75 @@ class TestDiscreteReservoirModel(InDirTest):
             delta_t=2
         )
         print(dmr.solve())
+
+def test_discrete_symbolic_from_continious_symbolic(self):
+    k_leaf, k_root = symbols('k_leaf, k_root')
+    beta_leaf, beta_root = symbols('beta_leaf, beta_root')
+    delta_t = Symbol('delta_t')
+    
+    B_cont_sym = ImmutableMatrix([
+        [-k_leaf,  0 ],
+        [ 0, -k_root ]
+    ])
+
+    beta = ImmutableMatrix([
+        beta_leaf,
+        beta_root
+    ])
+     
+    u_cont_sym = Npp*beta
+
+    netB_disc_sym = hr.euler_forward_net_B_sym(B_cont_sym,delta_t)
+    netu_disc_sym = hr.euler_forward_net_u_sym(u_cont_sym,delta_t)
+
+def test_discrete_model_run_from_smooth_reservoir_model(self):
+    x_leaf, x_root = symbols('x_leaf, x_root')
+    k_leaf, k_root = symbols('k_leaf, k_root')
+    beta_leaf, beta_root = symbols('beta_leaf, beta_root')
+    
+    B_cont_sym = ImmutableMatrix([
+        [-k_leaf,  0 ],
+        [ 0, -k_root ]
+    ])
+
+    beta = ImmutableMatrix([
+        beta_leaf,
+        beta_root
+    ])
+    NPP = Function("NPP") 
+    u_cont_sym = Npp(t)*beta
+
+    netB_disc_sym = hr.euler_forward_net_B_sym(B_cont_sym,delta_t)
+    netu_disc_sym = hr.euler_forward_net_u_sym(u_cont_sym,delta_t)
+    
+    srm = SmoothReservoirModel.from_B_u(
+        state_vector=ImmutableMatrix([x_leaf,x_root]),
+        time_symbol=Symbol('t'),
+        B=B_cont_sym,
+        u=u_cont_sym
+    )
+    delta_t = Symbol('delta_t')
+    par_dict = {
+            k_leaf: 1,
+            k_wood: 1,
+            delta_t: 1
+    }
+    i_min = 0
+    i_max = 5
+    
+    def my_func(ind):
+        data_leaf = [
+            5*(np.sin(2 * np.pi/12 * i) + 1.1)
+            for i in range(i_min, i_max)
+        ]
+        return data_leaf[ind]
+
+    func_dict = {
+            NPP(t): my_func
+    }
+    dmr = DiscreteModelRun.from_euler_forward_smooth_reservoir_model(
+        smr,
+        par_dict=par_dict,
+        func_dict=func_dict
+    )     
 
