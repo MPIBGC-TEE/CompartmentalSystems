@@ -246,7 +246,7 @@ class DiscreteModelRun():
             if x[j] != 0:
                 B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / x[j])
                 if B[j, j] < 0:
-                    if np.abs(B[j, j]) < 1e-08:
+                    if np.abs(B[j, j]) < 1e-03: # TODO: arbitrary value
                         B[j, j] = 0
                     else:
                         pass                     
@@ -1244,6 +1244,10 @@ class DiscreteModelRun():
             res[ti] = int(quantile_ai)
 
         return res * self.dt
+
+    def CS(self, k0, n):
+        Phi = self._state_transition_operator_matrix
+        return sum([(Phi(n, k) @ self.net_Us[k]).sum() for k in range(k0, n+1, 1)])
 
 #    # return value in unit "time steps x dt[0]"
 #    def backward_transit_time_quantiles_from_masses(self, q, start_age_masses_at_age_bin):
