@@ -73,12 +73,15 @@ class DiscreteModelRun():
         return cls(times, Bs, xs)
 
     @classmethod
-    def from_Bs_and_net_Us_2(cls, start_values, times, Bs, net_Us):
+    def from_Bs_and_Us_2(cls, start_values, times, Bs, Us):
         """
         Bs State transition operators for one time step
         """
-        xs = cls._solve_2(start_values, Bs, net_Us)
-        return cls(times, Bs, xs)
+        xs = cls._solve_2(start_values, Bs, Us)
+        dmr = cls(times, Bs, xs)
+        dmr.Us = Us
+
+        return dmr
 
     @classmethod
     def from_fluxes(cls, start_values, times, net_Us, net_Fs, net_Rs):
@@ -96,18 +99,18 @@ class DiscreteModelRun():
         )
 
     @classmethod
-    def from_fluxes_2(cls, start_values, times, net_Us, net_Fs, net_Rs):
+    def from_fluxes_2(cls, start_values, times, Us, Fs, Rs):
         Bs = cls.reconstruct_Bs_without_xs_2(
             start_values,
-            net_Us,
-            net_Fs,
-            net_Rs
+            Us,
+            Fs,
+            Rs
         )
-        return cls.from_Bs_and_net_Us_2(
+        return cls.from_Bs_and_Us_2(
             start_values,
             times,
             Bs,
-            net_Us
+            Us
         )
 
     @classmethod
@@ -342,6 +345,14 @@ class DiscreteModelRun():
         rho = np.array([1-B.sum(0).reshape((n,)) for B in self.Bs])
         soln = self.solve()[:-1]
         r = rho * soln
+
+        return r
+
+    def acc_external_output_vector_2(self):
+        n = self.nr_pools
+        rho = np.array([1-B.sum(0).reshape((n,)) for B in self.Bs])
+        soln = self.solve()
+        r = rho * (soln[:-1] + self.Us)
 
         return r
 
