@@ -11,6 +11,7 @@ from testinfrastructure.InDirTest import InDirTest
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
+from CompartmentalSystems.discrete_model_run import TimeStep, TimeStepIterator
 from CompartmentalSystems.model_run import plot_stocks_and_fluxes
 import CompartmentalSystems.helpers_reservoir as hr
 
@@ -162,6 +163,53 @@ class TestDiscreteModelRun(InDirTest):
 #            ],
 #            'stocks_and_gross_fluxes.pdf'
 #        )
+
+    def test_interator_related_constructors(self):
+        # fake matrix
+        B_0=np.array([
+            [ -1, 0.5],
+            [0.5,  -1]
+        ])
+        # fake input
+        u_0=np.array([1, 1])
+        x_0=np.array([0, 0])
+        B_func = lambda it, x: B_0 # linear nonautonmous
+        u_func = lambda it, x: u_0 # constant
+        number_of_steps = 10
+        tsit=TimeStepIterator(
+            # fake matrix
+            initial_ts= TimeStep(B=B_0,u=u_0,x=x_0,t=0),
+            B_func=B_func,
+            u_func=u_func,
+            number_of_steps=number_of_steps,
+            delta_t=2
+        )
+        # steps=[ts for ts in tsit]
+        # print(steps)
+        # we could also choose to remember only the xs
+        sol_1 = np.stack([ts.x for ts in tsit],axis=0) 
+
+        # now we construct a dmr from the iterater
+
+        dmr_2 = DMR.from_iterator(tsit)
+        sol_2 = dmr_2.solve()
+        #input()
+        self.assertTrue((sol_1 == sol_2).all())
+
+        #self.assertEqual(sol_1, sol_2)
+        
+        dmr_3= DMR.from_B_and_u_funcs(
+            x_0=x_0,
+            B_func=B_func,
+            u_func=u_func,
+            number_of_steps=number_of_steps,
+            delta_t=2
+        )
+        sol_3 = dmr_3.solve()
+        self.assertTrue((sol_1 == sol_3).all())
+    
+
+
 
 #    @unittest.skip
     def test_start_value_format(self):

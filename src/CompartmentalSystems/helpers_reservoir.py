@@ -13,16 +13,17 @@ from scipy.stats import norm
 from string import Template
 from sympy import (
     gcd,
-	diag,
-	lambdify,
-	DiracDelta,
-	solve,
-	Matrix,
+    diag,
+    lambdify,
+    DiracDelta,
+    solve,
+    Matrix,
     Symbol,
     Expr,
-	diff,
-	simplify,
-    eye
+    diff,
+    simplify,
+    eye,
+    ImmutableMatrix
 )
 
 from sympy.polys.polyerrors import PolynomialError
@@ -1584,9 +1585,42 @@ def p0_maker(
             return np.zeros_like(res)
     return p0
 
-def euler_forward_net_B_sym(B_sym, delta_t):
-    return (B_sym + ImmutableMatrix.eye(*B_sym.shape) * delta_t
+def discrete_time_dict(
+        cont_time: Symbol,
+        delta_t: Symbol,
+        iteration: Symbol
+    )->Dict:
+    return {cont_time: delta_t*iteration}
+    
 
-def euler_forward_net_u_sym(u_sym, delta_t):
-    return u_sym * delta_t
+def euler_forward_net_B_sym(
+        B_sym_cont: Expr, 
+        cont_time: Symbol, 
+        delta_t: Symbol, 
+        iteration: Symbol
+    )-> Expr:
+    B_sym_discrete = B_sym_cont.subs(
+        discrete_time_dict(
+            cont_time,
+            delta_t,
+            iteration
+        )
+    )
+    return (B_sym_discrete * delta_t + ImmutableMatrix.eye(*B_sym_discrete.shape)) 
+
+
+def euler_forward_net_u_sym(
+        u_sym_cont: Expr, 
+        cont_time: Symbol, 
+        delta_t: Symbol, 
+        iteration: Symbol
+    )-> Expr:
+    u_sym_discrete = u_sym_cont.subs(
+       discrete_time_dict(
+           cont_time,
+           delta_t,
+           iteration
+       )
+    )
+    return u_sym_discrete * delta_t
 

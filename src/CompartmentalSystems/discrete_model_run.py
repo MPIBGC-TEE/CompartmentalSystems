@@ -7,16 +7,9 @@ from tqdm import tqdm
 from functools import lru_cache
 from typing import List, Callable, Union, Tuple
 from copy import copy
+from sympy import Symbol
 
-from .helpers_reservoir import (
-    net_Us_from_discrete_Bs_and_xs,
-    net_Fs_from_discrete_Bs_and_xs,
-    net_Rs_from_discrete_Bs_and_xs,
-    p0_maker,
-    custom_lru_cache_wrapper,
-    generalized_inverse_CDF,
-    ALPHA_14C
-)
+from . import helpers_reservoir as hr
 from . import picklegzip
 
 ##############################################################################
@@ -114,19 +107,19 @@ class DiscreteModelRun():
         Bs = self.Bs
         xs = self.xs
 
-        return net_Fs_from_discrete_Bs_and_xs(Bs, xs)
+        return hr.net_Fs_from_discrete_Bs_and_xs(Bs, xs)
 
     def acc_net_external_output_vector(self):
         xs = self.xs
         Bs = self.Bs
 
-        return net_Rs_from_discrete_Bs_and_xs(Bs, xs)
+        return hr.net_Rs_from_discrete_Bs_and_xs(Bs, xs)
 
     def acc_net_external_input_vector(self):
         xs = self.xs
         Bs = self.Bs
 
-        return net_Us_from_discrete_Bs_and_xs(Bs, xs)
+        return hr.net_Us_from_discrete_Bs_and_xs(Bs, xs)
 
     @property
     def start_values(self):
@@ -204,14 +197,50 @@ class DiscreteModelRun():
             cls,
             srm,
             par_dict,
-            func_dict
+            func_dict,
+            delta_t,
+            number_of_steps,
+            start_values    
         ):
-        delta_t = Symbol('delta_t')
-        return dmr
+        # define some symbols to replace
+        # the time symbol with t=delta_t*it
+        it = Symbol('it')
+        t = srm.time_symbol 
+
+        tup = srm.xi_T_N_u_representation()
+        xi,T,N,x,u = srm.xi_T_N_u_representation()
+
+        B = xi*T*N
+        sym_B = hr.euler_forward_net_B_sym(
+                B,
+                t,
+                delta_t,
+                it
+        )
+        sym_u = hr.euler_forward_net_u_sym(
+                u,
+                t,
+                delta_t,
+                it
+        )
         
-        netB_disc_sym = hr.euler_forward_net_B_sym(B_cont_sym,delta_t)
-        netu_disc_sym = hr.euler_forward_net_u_sym(u_cont_sym,delta_t)
-        
+        num_B, num_u = map(
+            lambda expr: hr.numerical_array_func(
+                x,
+                it,
+                expr,
+                par_dict,
+                func_dict
+            ),
+            (sym_B, sym_u)
+        )
+        return cls.from_B_and_u_funcs(
+                start_values,
+                B_func=num_B,
+                u_func=num_u,
+                number_of_steps=number_of_steps,
+                delta_t=par_dict[delta_t]
+        ) 
 
     @classmethod
     def from_B_and_u_funcs(
@@ -483,7 +512,7 @@ class DiscreteModelRun():
 
     def fake_eq_14C(self, nr_time_steps, F_atm, decay_rate, lim, alpha=None):
         if alpha is None:
-            alpha = ALPHA_14C
+            alpha = hr.ALPHA_14C
 
         # input in age steps ai
         p0 = self.fake_start_age_masses(nr_time_steps)
@@ -733,7 +762,7 @@ class DiscreteModelRun():
         lru_maxsize,
         lru_stats=False,
     ):
-        custom_lru_cache = custom_lru_cache_wrapper(
+        custom_lru_cache = hr.custom_lru_cache_wrapper(
             maxsize=lru_maxsize,  # variable maxsize now for lru cache
             typed=False,
             stats=lru_stats  # use custom statistics feature
@@ -847,7 +876,7 @@ class DiscreteModelRun():
         #        return start_age_densities_of_bin(ai)
         #    else:
         #        return np.zeros((self.nr_pools,))
-        p0 = p0_maker(start_age_densities_of_bin)
+        p0 = hr.p0_maker(start_age_densities_of_bin)
 
         Phi = self._state_transition_operator
 
@@ -887,7 +916,7 @@ class DiscreteModelRun():
 
         #return p1
 
-        p0 = p0_maker(start_age_densities_of_bin_index)
+        p0 = hr.p0_maker(start_age_densities_of_bin_index)
 
         def p1(age_bin_indices):
             nt = len(self.times[:-1])
@@ -1246,7 +1275,7 @@ class DiscreteModelRun():
             print('Pool:', pool_nr)
             quantile_ai = 0
             for ti in tqdm(range(len(self.times))):
-                quantile_ai = generalized_inverse_CDF(
+                quantile_ai = hr.generalized_inverse_CDF(
                     lambda ai: P_sv(int(ai), ti)[pool_nr],
                     q * soln[ti, pool_nr],
                     x1=quantile_ai
@@ -1268,7 +1297,7 @@ class DiscreteModelRun():
         res = np.nan * np.ones(len(self.times))
         quantile_ai = 0
         for ti in tqdm(range(len(self.times))):
-            quantile_ai = generalized_inverse_CDF(
+            quantile_ai = hr.generalized_inverse_CDF(
                 lambda ai: P_sys_sv(int(ai), ti),
                 q * soln_sum[ti],
                 x1=quantile_ai
@@ -1292,7 +1321,7 @@ class DiscreteModelRun():
 
         quantile_ai = 0
         for ti in tqdm(range(len(self.times[:-1]))):
-            quantile_ai = generalized_inverse_CDF(
+            quantile_ai = hr.generalized_inverse_CDF(
                 lambda ai: P_btt_sv(int(ai), ti),
                 q * R[ti, ...].sum(),
                 x1=quantile_ai
