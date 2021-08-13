@@ -872,8 +872,9 @@ class DiscreteModelRun():
                 return np.zeros((self.nr_pools,))
             #k = np.where(times == t-a)[0][0]
             #kt = np.where(np.abs(times - (t-a)) < 1e-09)[0][0]
-            U = self.net_Us[kt]
-            res = Phi(kt, kt-ia, U)  # age 0 just arrived
+#            U = self.net_Us[kt] # wrong!
+            U = self.net_Us[kt-ia-1]
+            res = Phi(kt, kt-ia, U)  # age arrived at end of last time step
 
             # the density returned by the smooth model run has
             # dimension mass*time^-1 for every point in the age,time plane
@@ -1129,27 +1130,31 @@ class DiscreteModelRun():
 
         return p0
 
-    def cumulative_pool_age_masses_single_value(self, P0):
+    def _G_sv(self, P0):
         nr_pools = self.nr_pools
-        soln = self.solve()
-        times = self.times
-        ti0 = 0
-
         Phi = self._state_transition_operator_matrix
-        def G_sv(ai, ti):
+
+        def g(ai, ti):
             if ai < ti: 
                 return np.zeros((nr_pools,))
             res = np.matmul(Phi(ti, 0), P0(ai-ti)).reshape((self.nr_pools,))
             return res
 
-        def H_sv(ai, ti):
+        return g
+
+    def _H_sv(self):
+        nr_pools = self.nr_pools
+        Phi = self._state_transition_operator_matrix
+        soln = self.solve()
+    
+        def h(ai, ti):
             # count everything from beginning?
             if ai >= ti:
                 ai = ti-1
-
+    
             if ai < 0:
                 return np.zeros((nr_pools,))
-
+    
             # mass at time index ti
             x_ti = soln[ti]
             # mass at time index ti-(ai+1)
@@ -1161,6 +1166,11 @@ class DiscreteModelRun():
             # cut off accidental negative values
             return np.maximum(res, np.zeros(res.shape))
 
+        return h
+
+    def cumulative_pool_age_masses_single_value(self, P0):
+        G_sv = self._G_sv(P0)
+        H_sv = self._H_sv()
         def P_sv(ai, ti):
             res = G_sv(ai, ti) + H_sv(ai, ti)
             return res
@@ -1249,6 +1259,31 @@ class DiscreteModelRun():
             )
             
             if P_btt_sv(int(quantile_ai), ti) > q * R[ti, ...].sum():
+                if quantile_ai > 0:
+                    quantile_ai = quantile_ai - 1
+
+            res[ti] = int(quantile_ai)
+
+        return res * self.dt
+
+    def backward_transit_time_quantiles_inputs_only(self, q):
+        H_sv = self._H_sv()
+        rho = 1 - self.Bs.sum(1)
+        H_btt_sv = lambda ai, ti: (rho[ti] * H_sv(ai, ti)).sum() 
+        
+        R = rho * np.array([H_sv(ti, ti) for ti in self.times[:-1]])
+
+        res = np.nan * np.ones(len(self.times[:-1]))
+
+        quantile_ai = 0
+        for ti in tqdm(range(len(self.times[:-1]))):
+            quantile_ai = generalized_inverse_CDF(
+                lambda ai: H_btt_sv(int(ai), ti),
+                q * R[ti, ...].sum(),
+                x1=quantile_ai
+            )
+            
+            if H_btt_sv(int(quantile_ai), ti) > q * R[ti, ...].sum():
                 if quantile_ai > 0:
                     quantile_ai = quantile_ai - 1
 
