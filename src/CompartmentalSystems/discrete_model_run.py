@@ -11,78 +11,7 @@ from sympy import Symbol
 
 from . import helpers_reservoir as hr
 from . import picklegzip
-
-##############################################################################
-
-class TimeStep:
-    """
-    Just a collection of values per time step which are necessarry
-    to compute the next one.
-    """
-    def __init__(
-        self,
-        B,
-        u,
-        x,
-        t
-    ):
-        self.B = B
-        self.u = u
-        self.x = x
-        self.t = t
-
-    def __repr__(self):
-        return str(self.B) + str(self.u) + str(self.x) + str(self.t)
-
-class TimeStepIterator:
-    """iterator for looping over the results of a difference equation"""
-
-    def __init__(
-        self,
-        initial_ts,
-        B_func,
-        u_func,
-        number_of_steps,
-        delta_t
-    ):
-        self.initial_ts = initial_ts
-        self.B_func = B_func
-        self.u_func = u_func
-        self.number_of_steps = number_of_steps
-        self.delta_t = delta_t
-        self.reset()
-
-    def reset(self):
-        self.i = 0
-        self.ts = self.initial_ts
-
-    def __iter__(self):
-        self.reset()
-        return(self)
-
-    def __next__(self):
-        if self.i == self.number_of_steps:
-            raise StopIteration
-        ts = copy(self.ts)
-        # fixme mm 7-20-2021
-        # possibly B and u one index lower than x ...
-        B =ts.B
-        u =ts.u
-        x =ts.x
-        t = ts.t
-
-        it = self.i
-        B_func = self.B_func
-        u_func = self.u_func
-        delta_t = self.delta_t
-        # compute x_i+1
-        B_new = B_func(it,ts.x)
-        u_new = u_func(it,ts.x)
-        x_new = u + np.matmul(B,x)
-        t_new = t + delta_t
-        self.ts = TimeStep(B_new, u_new, x_new, t_new)
-        self.i += 1
-        return ts
+from . TimeStepIterator import TimeStep, TimeStepIterator
 
 
 
