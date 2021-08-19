@@ -253,8 +253,8 @@ class DiscreteModelRun():
                         B[j, j] = 0
                     else:
                         pass                     
-                        print(B[j, j])
-                        print(x[j], R[j], F[:, j].sum(), F[j, :].sum()) 
+#                        print(B[j, j])
+#                        print(x[j], R[j], F[:, j].sum(), F[j, :].sum()) 
                         raise(DMRError('Diag. val < 0: pool %d, ' % j))
             else:
                 B[j, j] = 1
@@ -293,16 +293,47 @@ class DiscreteModelRun():
         # construct diagonals
         for j in range(nr_pools):
             if x[j] + U[j] != 0:
-                B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / (x[j] + U[j]))
+#                B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / (x[j] + U[j]))
+                B[j, j] =  ((x[j] + U[j]) * (1 - sum(B[:, j]) + B[j, j]) - R[j]) / (x[j] + U[j])
                 if B[j, j] < 0:
+#                    B[j, j] = 0
+#                    y = np.array([B[i, j] * (x[j] + U[j]) for i in range(nr_pools)])
+#                    print(y)
+#                    print()
+#                    print(F[:, j])
+#                    print(y - F[:, j])
+#                    print(sum(B[:, j]))
+#                    print((1-sum(B[:, j])) * (x[j] + U[j]), R[j])
+#                    print(x[j] + U[j], (sum(F[:, j]) + R[j]) / 0.15)
+#                    raise
                     if np.abs(B[j, j]) < 1e-08:
                         B[j, j] = 0.0
                     else:
 #                        pass
+                        print(B[j, j])
                         print(x[j], U[j], R[j], F[:, j].sum(), F[j, :].sum()) 
+                        print(U[j] - R[j] - F[:, j].sum() + F[j, :].sum())
+                        print(B[:, j]) 
                         raise(DMRError('Diag. val < 0: pool %d, ' % j))
             else:
                 B[j, j] = 1
+
+#        # correct for negative diagonals
+#        neg_diag_idx = np.where(np.diag(B)<0)[0]
+#        for idx in neg_diag_idx:
+##            print("'repairing' neg diag in pool", idx)
+#            # scale outfluxes down to empty pool
+#            col = B[:, idx]
+#            d = col[idx].sum()
+#            s = 1-d
+##            print(s)
+#            B[:, idx] = B[:, idx] / s
+#            r = R[idx] / (x[idx] + U[idx]) / s
+#            B[idx, idx] = 1 - (sum(B[:, idx]) - B[idx, idx] + r)
+#            if np.abs(B[idx, idx]) < 1e-08:
+#                B[idx, idx] = 0
+#
+#            print(B[idx, idx], (B @ (x + U)))
 
         return B
 
@@ -591,12 +622,13 @@ class DiscreteModelRun():
         Id = np.identity(n)
         ones = np.ones(n)
         soln = self.solve()
-        dts = self.dts
+        soln[soln < 1e-12] = 0
+#        dts = self.dts
 
         def diag_inv_with_zeros(A):
             res = np.zeros_like(A)
             for k in range(A.shape[0]):
-                if A[k, k] != 0:
+                if np.abs(A[k, k]) != 0:
                     res[k, k] = 1/A[k, k]
                 else:
 #                    res[k, k] = np.nan
@@ -614,11 +646,11 @@ class DiscreteModelRun():
                 moment_sum = np.zeros(n)
                 for j in range(1, k+1):
                     moment_sum += age_moments[-1][j-1, :].reshape((n,)) \
-                                  * binom(k, j) * dts[i]**(k-j)
+                                  * binom(k, j) #* dts[i]**(k-j)
 
 #                vec[k-1, :] = inv(X_np1) @ B @\
                 vec[k-1, :] = diag_inv_with_zeros(X_np1) @ B @\
-                        X_n @ (moment_sum + ones*dts[i]**k)
+                        X_n @ (moment_sum + ones)#*dts[i]**k)
 
             age_moments.append(vec)
 
