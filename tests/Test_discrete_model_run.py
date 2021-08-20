@@ -662,3 +662,52 @@ class TestDiscreteModelRun(InDirTest):
     def test_backward_transit_time_quantile_from_density(self):
         raise
 
+    @unittest.skip("stub")
+    def test_age_densities_vs_mean_age_vector(self):
+        # this is some piece of code that can be reused to test the age densities
+        # versus the mean age system
+
+        def p2_sv(ai, ti):
+            Phi = dmr._state_transition_operator
+        
+            if (ai < 0) or (ti <= ai):
+                return np.zeros((dmr.nr_pools,))
+
+            U = dmr.net_Us[ti-ai-1]
+            res = Phi(ti, ti-ai, U)  # age 0 just arrived
+    
+            return res # dt=1
+
+        def p1_sv(ai, ti):
+            Phi = dmr._state_transition_operator
+    
+            if (ai < 0) or (ai < ti):
+                return np.zeros((dmr.nr_pools,))
+
+            return Phi(ti, 0, p0(ai-ti))
+    
+        p_sv = lambda ai, ti: p1_sv(ai, ti) + p2_sv(ai, ti)
+    
+        mean_system_age_sv = lambda ti: sum([k * p_sv(k, ti).sum() for k in range(ti+1)]) / dmr.solve()[ti].sum()
+
+        print(mean_system_age)
+        print([mean_system_age_sv(ti) for ti in dmr.times])
+
+        dmr_p1_sv = dmr.age_densities_1_single_value_func(p0)
+        dmr_p2_sv = dmr.age_densities_2_single_value_func()
+        dmr_p_sv = dmr.age_densities_single_value_func(p0)
+
+        print(p_sv(3, 7) - dmr_p_sv(3, 7))
+
+    @unittest.skip("stub")
+    def test_CS(self):
+        self.assertEqual(dmr.Cs(0, 0), 0)
+        self.assertEqual(dmr.Cs(0, 1), dmr.net_Us[0].sum())
+        self.assertEqual(
+            dmr.Cs(0, 2), 
+            (self.Bs[0] @ dmr.net_Us[0] + dmr.net_Us[1]).sum()
+        )
+
+
+
+

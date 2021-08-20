@@ -1324,8 +1324,14 @@ class DiscreteModelRun():
         return res * self.dt
 
     def CS(self, k0, n):
+        """Carbon sequestration from ``k0`` to ``n``."""
         Phi = self._state_transition_operator_matrix
-        return sum([(Phi(n, k) @ self.net_Us[k]).sum() for k in range(k0, n+1, 1)])
+        return sum([(Phi(n, k+1) @ self.net_Us[k]).sum() for k in range(k0, n, 1)])
+
+    def CS_through_time(self):
+        Phi = self._state_transition_operator_matrix
+        return np.array([self.CS(0, n) for n in self.times])
+
 
 #    # return value in unit "time steps x dt[0]"
 #    def backward_transit_time_quantiles_from_masses(self, q, start_age_masses_at_age_bin):
