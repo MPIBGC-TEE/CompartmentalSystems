@@ -1593,7 +1593,7 @@ def discrete_time_dict(
     return {cont_time: delta_t*iteration}
     
 
-def euler_forward_net_B_sym(
+def euler_forward_B_sym(
         B_sym_cont: Expr, 
         cont_time: Symbol, 
         delta_t: Symbol, 
@@ -1606,7 +1606,7 @@ def euler_forward_net_B_sym(
             iteration
         )
     )
-    return (B_sym_discrete * delta_t + ImmutableMatrix.eye(*B_sym_discrete.shape)) 
+    return (B_sym_discrete * delta_t) 
 
 
 def euler_forward_net_u_sym(

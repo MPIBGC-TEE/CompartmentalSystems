@@ -7,7 +7,7 @@ from tqdm import tqdm
 from functools import lru_cache
 from typing import List, Callable, Union, Tuple
 from copy import copy
-from sympy import Symbol
+from sympy import Symbol, ImmutableMatrix
 
 from . import helpers_reservoir as hr
 from . import picklegzip
@@ -143,7 +143,7 @@ class DiscreteModelRun():
         # But this is not implemented yet since the first aim is 
         # to establish the connection
 
-        # the interator yields a new B and u for the last timeste
+        # the interator yields a new B and u for the last timestep
         # which is a different convention (dmr has one more x than us or Bs )
         return cls.from_Bs_and_net_Us(x_0, times, Bs[:-1], net_Us[:-1])
 
@@ -162,16 +162,16 @@ class DiscreteModelRun():
         it = Symbol('it')
         t = srm.time_symbol 
 
-        tup = srm.xi_T_N_u_representation()
-        xi,T,N,x,u = srm.xi_T_N_u_representation()
+        xi,T,N,x,u = srm.xi_T_N_u_representation(factor_out_xi=False)
 
         B = xi*T*N
-        sym_B = hr.euler_forward_net_B_sym(
+        sym_B = hr.euler_forward_B_sym(
                 B,
                 t,
                 delta_t,
                 it
         )
+        sym_B_net= sym_B + ImmutableMatrix.eye(*sym_B.shape)
         sym_u = hr.euler_forward_net_u_sym(
                 u,
                 t,
@@ -187,7 +187,7 @@ class DiscreteModelRun():
                 par_dict,
                 func_dict
             ),
-            (sym_B, sym_u)
+            (sym_B_net, sym_u)
         )
         return cls.from_B_and_u_funcs(
                 start_values,

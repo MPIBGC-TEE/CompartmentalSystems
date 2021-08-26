@@ -576,7 +576,6 @@ It gave up for the following expression: ${e}."""
         # try to extract xi from N and T
         if factor_out_xi:
             xi = hr.factor_out_from_matrix(R)
-            N = R/xi
             # Note mm 02/17/2021
             # since T has -1 on the main diagonal
             # the gcd will be always one so the
@@ -585,6 +584,7 @@ It gave up for the following expression: ${e}."""
         else:
             xi = 1
 
+        N = R/xi
         return (xi, T, N, C, u)
 
     @property

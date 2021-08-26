@@ -30,13 +30,13 @@ class TimeStepIterator:
     def __init__(
         self,
         initial_ts,
-        Net_B_func,
+        B_func,
         u_func,
         number_of_steps,
         delta_t
     ):
         self.initial_ts = initial_ts
-        self.Net_B_func = Net_B_func
+        self.B_func = B_func
         self.u_func = u_func
         self.number_of_steps = number_of_steps
         self.delta_t = delta_t
@@ -62,13 +62,13 @@ class TimeStepIterator:
         t = ts.t
 
         it = self.i
-        Net_B_func = self.Net_B_func
+        B_func = self.B_func
         u_func = self.u_func
         delta_t = self.delta_t
         # compute x_i+1
-        B_new = Net_B_func(it,ts.x)
+        B_new = B_func(it,ts.x)
         u_new = u_func(it,ts.x)
-        x_new = u + np.matmul(B,x)
+        x_new = x + u + np.matmul(B,x)
         t_new = t + delta_t
         self.ts = TimeStep(B_new, u_new, x_new, t_new)
         self.i += 1

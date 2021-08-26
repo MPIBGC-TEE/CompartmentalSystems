@@ -109,7 +109,7 @@ class TestDiscreteReservoirModel(InDirTest):
         tsi=TimeStepIterator(
             # fake matrix
             initial_ts=TimeStep(B=B_0,u=u_0,x=x_0,t=0),
-            Net_B_func=num_Net_B,
+            B_func=num_Net_B,
             u_func=num_u,
             number_of_steps=i_max - i_min,
             delta_t=2
@@ -275,21 +275,21 @@ class TestDiscreteReservoirModel(InDirTest):
          
         u_cont_sym = Npp(t)*beta
     
-        netB_disc_sym = hr.euler_forward_net_B_sym(
+        B_disc_sym = hr.euler_forward_B_sym(
             B_cont_sym,
             t,
             delta_t,
             it
         )
         
-        netu_disc_sym = hr.euler_forward_net_u_sym(
+        u_disc_sym = hr.euler_forward_net_u_sym(
             u_cont_sym,
             t,
             delta_t,
             it
         )
-        pretty_print(netB_disc_sym) 
-        pretty_print(netu_disc_sym) 
+        pretty_print(B_disc_sym) 
+        pretty_print(u_disc_sym) 
 
     def test_discrete_model_run_from_smooth_reservoir_model(self):
         x_leaf, x_root = symbols('x_leaf, x_root')
