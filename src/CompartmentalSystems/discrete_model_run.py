@@ -67,6 +67,17 @@ class DiscreteModelRun():
         return cls(times, Bs, xs)
 
     @classmethod
+    def from_Bs_and_Us_2(cls, start_values, times, Bs, Us):
+        """
+        Bs State transition operators for one time step
+        """
+        xs = cls._solve_2(start_values, Bs, Us)
+        dmr = cls(times, Bs, xs)
+        dmr.Us = Us
+
+        return dmr
+
+    @classmethod
     def from_fluxes(cls, start_values, times, net_Us, net_Fs, net_Rs):
         Bs = cls.reconstruct_Bs_without_xs(
             start_values,
@@ -79,6 +90,21 @@ class DiscreteModelRun():
             times,
             Bs,
             net_Us
+        )
+
+    @classmethod
+    def from_fluxes_2(cls, start_values, times, Us, Fs, Rs):
+        Bs = cls.reconstruct_Bs_without_xs_2(
+            start_values,
+            Us,
+            Fs,
+            Rs
+        )
+        return cls.from_Bs_and_Us_2(
+            start_values,
+            times,
+            Bs,
+            Us
         )
 
     @classmethod
@@ -277,11 +303,26 @@ class DiscreteModelRun():
     def reconstruct_Bs_without_xs(cls, start_values, Us, Fs, Rs):
         x = start_values
         Bs = np.nan * np.ones_like(Fs)
-        for k in range(len(Rs)):
+        for k in tqdm(range(len(Rs))):
             try:
                 B = cls.reconstruct_B(x, Fs[k], Rs[k])
                 Bs[k, :, :] = B
                 x = B @ x + Us[k]
+            except DMRError as e:
+                msg = str(e) + 'time step %d' % k
+                raise(DMRError(msg))
+
+        return Bs
+
+    @classmethod
+    def reconstruct_Bs_without_xs_2(cls, start_values, Us, Fs, Rs):
+        x = start_values
+        Bs = np.nan * np.ones_like(Fs)
+        for k in range(len(Rs)):
+            try:
+                B = cls.reconstruct_B_2(x, Fs[k], Rs[k], Us[k])
+                Bs[k, :, :] = B
+                x = B @ (x + Us[k])
             except DMRError as e:
                 msg = str(e) + 'time step %d' % k
                 raise(DMRError(msg))
@@ -310,23 +351,91 @@ class DiscreteModelRun():
             if x[j] != 0:
                 B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / x[j])
                 if B[j, j] < 0:
-                    pass
-#                    print(x[j], R[j], F[:, j].sum(), F[j, :].sum()) 
-#                    raise(DMRError('Diag. val < 0: pool %d, ' % j))
+                    if np.abs(B[j, j]) < 1e-03: # TODO: arbitrary value
+                        B[j, j] = 0
+                    else:
+                        pass                     
+#                        print(B[j, j])
+#                        print(x[j], R[j], F[:, j].sum(), F[j, :].sum()) 
+                        raise(DMRError('Diag. val < 0: pool %d, ' % j))
             else:
                 B[j, j] = 1
 
-        # correct for negative diagonals
-        neg_diag_idx = np.where(np.diag(B)<0)[0]
-        for idx in neg_diag_idx:
-            print("'repairing' neg diag in pool", idx)
-            # scale outfluxes down to empty pool
-            col = B[:, idx]
-            d = col[idx]
-            s = 1-d
-            B[:, idx] = B[:, idx] / s
-            r = R[idx] / x[idx] / s
-            B[idx, idx] = 1 - (sum(B[:, idx]) - B[idx, idx] + r)
+#        # correct for negative diagonals
+#        neg_diag_idx = np.where(np.diag(B)<0)[0]
+#        for idx in neg_diag_idx:
+#            print("'repairing' neg diag in pool", idx)
+#            # scale outfluxes down to empty pool
+#            col = B[:, idx]
+#            d = col[idx]
+#            s = 1-d
+#            B[:, idx] = B[:, idx] / s
+#            r = R[idx] / x[idx] / s
+#            B[idx, idx] = 1 - (sum(B[:, idx]) - B[idx, idx] + r)
+
+        return B
+
+    @classmethod
+    def reconstruct_B_2(cls, x, F, R, U):
+        nr_pools = len(x)
+
+        B = np.identity(nr_pools)
+        if len(np.where(F < 0)[0]) > 0:
+            raise(DMRError('Negative flux: '))
+
+        # construct off-diagonals
+        for j in range(nr_pools):
+            if x[j] < 0:
+                raise(DMRError('Content negative: pool %d, ' % j))
+            if x[j] + U[j] != 0:
+                B[:, j] = F[:, j] / (x[j] + U[j])
+            else:
+                B[:, j] = 0
+
+        # construct diagonals
+        for j in range(nr_pools):
+            if x[j] + U[j] != 0:
+#                B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / (x[j] + U[j]))
+                B[j, j] =  ((x[j] + U[j]) * (1 - sum(B[:, j]) + B[j, j]) - R[j]) / (x[j] + U[j])
+                if B[j, j] < 0:
+#                    B[j, j] = 0
+#                    y = np.array([B[i, j] * (x[j] + U[j]) for i in range(nr_pools)])
+#                    print(y)
+#                    print()
+#                    print(F[:, j])
+#                    print(y - F[:, j])
+#                    print(sum(B[:, j]))
+#                    print((1-sum(B[:, j])) * (x[j] + U[j]), R[j])
+#                    print(x[j] + U[j], (sum(F[:, j]) + R[j]) / 0.15)
+#                    raise
+                    if np.abs(B[j, j]) < 1e-08:
+                        B[j, j] = 0.0
+                    else:
+#                        pass
+                        print(B[j, j])
+                        print(x[j], U[j], R[j], F[:, j].sum(), F[j, :].sum()) 
+                        print(U[j] - R[j] - F[:, j].sum() + F[j, :].sum())
+                        print(B[:, j]) 
+                        raise(DMRError('Diag. val < 0: pool %d, ' % j))
+            else:
+                B[j, j] = 1
+
+#        # correct for negative diagonals
+#        neg_diag_idx = np.where(np.diag(B)<0)[0]
+#        for idx in neg_diag_idx:
+##            print("'repairing' neg diag in pool", idx)
+#            # scale outfluxes down to empty pool
+#            col = B[:, idx]
+#            d = col[idx].sum()
+#            s = 1-d
+##            print(s)
+#            B[:, idx] = B[:, idx] / s
+#            r = R[idx] / (x[idx] + U[idx]) / s
+#            B[idx, idx] = 1 - (sum(B[:, idx]) - B[idx, idx] + r)
+#            if np.abs(B[idx, idx]) < 1e-08:
+#                B[idx, idx] = 0
+#
+#            print(B[idx, idx], (B @ (x + U)))
 
         return B
 
@@ -356,11 +465,28 @@ class DiscreteModelRun():
 
         return xs
 
+    @classmethod
+    def _solve_2(cls, start_values, Bs, net_Us):
+        xs = np.nan*np.ones((len(Bs)+1, len(start_values)))
+        xs[0, :] = start_values
+        for k in range(0, len(net_Us)):
+            xs[k+1] = Bs[k] @ (xs[k] + net_Us[k])
+
+        return xs
+
     def acc_external_output_vector(self):
         n = self.nr_pools
         rho = np.array([1-B.sum(0).reshape((n,)) for B in self.Bs])
         soln = self.solve()[:-1]
         r = rho * soln
+
+        return r
+
+    def acc_external_output_vector_2(self):
+        n = self.nr_pools
+        rho = np.array([1-B.sum(0).reshape((n,)) for B in self.Bs])
+        soln = self.solve()
+        r = rho * (soln[:-1] + self.Us)
 
         return r
 
@@ -599,12 +725,13 @@ class DiscreteModelRun():
         Id = np.identity(n)
         ones = np.ones(n)
         soln = self.solve()
-        dts = self.dts
+        soln[soln < 1e-12] = 0
+#        dts = self.dts
 
         def diag_inv_with_zeros(A):
             res = np.zeros_like(A)
             for k in range(A.shape[0]):
-                if A[k, k] != 0:
+                if np.abs(A[k, k]) != 0:
                     res[k, k] = 1/A[k, k]
                 else:
 #                    res[k, k] = np.nan
@@ -622,11 +749,11 @@ class DiscreteModelRun():
                 moment_sum = np.zeros(n)
                 for j in range(1, k+1):
                     moment_sum += age_moments[-1][j-1, :].reshape((n,)) \
-                                  * binom(k, j) * dts[i]**(k-j)
+                                  * binom(k, j) #* dts[i]**(k-j)
 
 #                vec[k-1, :] = inv(X_np1) @ B @\
                 vec[k-1, :] = diag_inv_with_zeros(X_np1) @ B @\
-                        X_n @ (moment_sum + ones*dts[i]**k)
+                        X_n @ (moment_sum + ones)#*dts[i]**k)
 
             age_moments.append(vec)
 
@@ -880,8 +1007,9 @@ class DiscreteModelRun():
                 return np.zeros((self.nr_pools,))
             #k = np.where(times == t-a)[0][0]
             #kt = np.where(np.abs(times - (t-a)) < 1e-09)[0][0]
-            U = self.net_Us[kt]
-            res = Phi(kt, kt-ia, U)  # age 0 just arrived
+#            U = self.net_Us[kt] # wrong!
+            U = self.net_Us[kt-ia-1]
+            res = Phi(kt, kt-ia, U)  # age arrived at end of last time step
 
             # the density returned by the smooth model run has
             # dimension mass*time^-1 for every point in the age,time plane
@@ -1137,27 +1265,31 @@ class DiscreteModelRun():
 
         return p0
 
-    def cumulative_pool_age_masses_single_value(self, P0):
+    def _G_sv(self, P0):
         nr_pools = self.nr_pools
-        soln = self.solve()
-        times = self.times
-        ti0 = 0
-
         Phi = self._state_transition_operator_matrix
-        def G_sv(ai, ti):
+
+        def g(ai, ti):
             if ai < ti: 
                 return np.zeros((nr_pools,))
             res = np.matmul(Phi(ti, 0), P0(ai-ti)).reshape((self.nr_pools,))
             return res
 
-        def H_sv(ai, ti):
+        return g
+
+    def _H_sv(self):
+        nr_pools = self.nr_pools
+        Phi = self._state_transition_operator_matrix
+        soln = self.solve()
+    
+        def h(ai, ti):
             # count everything from beginning?
             if ai >= ti:
                 ai = ti-1
-
+    
             if ai < 0:
                 return np.zeros((nr_pools,))
-
+    
             # mass at time index ti
             x_ti = soln[ti]
             # mass at time index ti-(ai+1)
@@ -1169,6 +1301,11 @@ class DiscreteModelRun():
             # cut off accidental negative values
             return np.maximum(res, np.zeros(res.shape))
 
+        return h
+
+    def cumulative_pool_age_masses_single_value(self, P0):
+        G_sv = self._G_sv(P0)
+        H_sv = self._H_sv()
         def P_sv(ai, ti):
             res = G_sv(ai, ti) + H_sv(ai, ti)
             return res
@@ -1263,6 +1400,41 @@ class DiscreteModelRun():
             res[ti] = int(quantile_ai)
 
         return res * self.dt
+
+    def backward_transit_time_quantiles_inputs_only(self, q):
+        H_sv = self._H_sv()
+        rho = 1 - self.Bs.sum(1)
+        H_btt_sv = lambda ai, ti: (rho[ti] * H_sv(ai, ti)).sum() 
+        
+        R = rho * np.array([H_sv(ti, ti) for ti in self.times[:-1]])
+
+        res = np.nan * np.ones(len(self.times[:-1]))
+
+        quantile_ai = 0
+        for ti in tqdm(range(len(self.times[:-1]))):
+            quantile_ai = generalized_inverse_CDF(
+                lambda ai: H_btt_sv(int(ai), ti),
+                q * R[ti, ...].sum(),
+                x1=quantile_ai
+            )
+            
+            if H_btt_sv(int(quantile_ai), ti) > q * R[ti, ...].sum():
+                if quantile_ai > 0:
+                    quantile_ai = quantile_ai - 1
+
+            res[ti] = int(quantile_ai)
+
+        return res * self.dt
+
+    def CS(self, k0, n):
+        """Carbon sequestration from ``k0`` to ``n``."""
+        Phi = self._state_transition_operator_matrix
+        return sum([(Phi(n, k+1) @ self.net_Us[k]).sum() for k in range(k0, n, 1)])
+
+    def CS_through_time(self):
+        Phi = self._state_transition_operator_matrix
+        return np.array([self.CS(0, n) for n in self.times])
+
 
 #    # return value in unit "time steps x dt[0]"
 #    def backward_transit_time_quantiles_from_masses(self, q, start_age_masses_at_age_bin):
