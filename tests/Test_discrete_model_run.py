@@ -438,7 +438,7 @@ class TestDiscreteModelRun(InDirTest):
         max_bin_nr = 1000
         times=np.linspace(0, (max_bin_nr)*dt, max_bin_nr+1)
         smr = SmoothModelRun(srm, {}, start_values, times=times)
-        print('smr.times',smr.times)
+#        print('smr.times',smr.times)
         start_age_densities = lambda a: np.exp(-a) * start_values
         max_order = 1
         start_age_moments = smr.moments_from_densities(max_order, start_age_densities)
@@ -451,12 +451,12 @@ class TestDiscreteModelRun(InDirTest):
         # build startage_moment_vector samv
         res_dmr = dmr.age_moment_vector(max_order,start_age_moments)
 
-        #print(
-        #       res_smr[...], '\n',
-        #       res_dmr[...], '\n',
-        #       #res_smr[...] - \
-        #       #res_dmr[...]
-        #)
+#        print(
+#               res_smr[...], '\n',
+#               res_dmr[...], '\n',
+#               #res_smr[...] - \
+#               #res_dmr[...]
+#        )
         self.assertTrue(
             np.allclose(
                 res_dmr,
