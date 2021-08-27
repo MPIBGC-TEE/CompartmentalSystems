@@ -1,4 +1,5 @@
-[![Travis-CI Build Status](https://travis-ci.org/MPIBGC-TEE/CompartmentalSystems.svg?branch=master)](https://travis-ci.org/MPIBGC-TEE/CompartmentalSystems)
+
+[![Python package](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/pythonpackage.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/pythonpackage.yml)
 # CompartmentalSystems: A Python3 package for the analysis of compartmental systems
 
 These systems can be both nonlinear and nonautonomous. Consequently, CompartmentalSystems can be seen
