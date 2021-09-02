@@ -740,6 +740,7 @@ class DiscreteModelRun():
             return res
 
         age_moments = [start_age_moments]
+        dts = self.dts
         for i in tqdm(range(len(self.times)-1)):
             vec = np.zeros((max_order, n))
             X_np1 = soln[i+1] * Id
@@ -749,11 +750,11 @@ class DiscreteModelRun():
                 moment_sum = np.zeros(n)
                 for j in range(1, k+1):
                     moment_sum += age_moments[-1][j-1, :].reshape((n,)) \
-                                  * binom(k, j) #* dts[i]**(k-j)
+                                  * binom(k, j) * dts[i]**(k-j)
 
 #                vec[k-1, :] = inv(X_np1) @ B @\
                 vec[k-1, :] = diag_inv_with_zeros(X_np1) @ B @\
-                        X_n @ (moment_sum + ones)#*dts[i]**k)
+                        X_n @ (moment_sum + ones *dts[i]**k)
 
             age_moments.append(vec)
 
