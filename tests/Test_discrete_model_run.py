@@ -164,7 +164,7 @@ class TestDiscreteModelRun(InDirTest):
 #            'stocks_and_gross_fluxes.pdf'
 #        )
 
-    def test_interator_related_constructors(self):
+    def test_iterator_related_constructors(self):
         # fake matrix
         B_0=np.array([
             [ -1, 0.5],
@@ -193,7 +193,7 @@ class TestDiscreteModelRun(InDirTest):
 
         dmr_2 = DMR.from_iterator(tsit)
         sol_2 = dmr_2.solve()
-        #input()
+        #from IPython import embed; embed()        
         self.assertTrue((sol_1 == sol_2).all())
 
         #self.assertEqual(sol_1, sol_2)

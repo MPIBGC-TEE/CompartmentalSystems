@@ -120,18 +120,23 @@ class DiscreteModelRun():
         ):
         # "unzipping" the tupels  
         x_0 = tsit.initial_ts.x
-        Bs, net_Us, times = zip(*((ts.B, ts.u.reshape(-1), ts.t)  for ts in tsit))
+        n_pools = len(x_0)
+        Bs, net_Us, times = zip(*((ts.B+np.eye(n_pools), ts.u.reshape(-1), ts.t)  for ts in tsit))
         # Note: 
-        # 1.)   that the time steps also contain 
+        # 1.)   that the Bs of the iterator are momentary Bs whereas
+        #       the Bs of the DiscreteModelRun are net Bs with 
+        #       net_B = B+I 
+        #       
+        # 2.)   that the time steps also contain 
         #       the solution xs (as it is necessarry to compute
         #       the next B and/or u for a nonlinear model) and that we do
         #       not use it but recompute it later in _solve.  
-        # 2.)   that we compute an artificial time series
+        # 3.)   that we compute an artificial time series
         #       from the iterator, whereas we actually  
         #       want to avoid a times argument since we want to 
         #       remove non equidistant time grids anyway.
         #
-        # Both things are moving backwards and actually signal that
+        # Points 2 and 3 are moving backwards and actually signal that
         # an iterator is the more general description of a
         # discrete dynamic system.  x_{i+1} = f(x_i,i) (what a
         # surprise ;-)) 
