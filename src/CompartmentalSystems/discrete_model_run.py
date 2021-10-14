@@ -399,10 +399,14 @@ class DiscreteModelRun():
 
         # construct diagonals
         for j in range(nr_pools):
+            B[j, j] = 0
+#            print(B[:, j].sum())
+#            print(R[j] / (x[j] + U[j]))
             if x[j] + U[j] != 0:
-#                B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / (x[j] + U[j]))
-                B[j, j] =  ((x[j] + U[j]) * (1 - sum(B[:, j]) + B[j, j]) - R[j]) / (x[j] + U[j])
+                B[j, j] = 1 - (sum(B[:, j]) + R[j] / (x[j] + U[j]))
+#                B[j, j] =  ((x[j] + U[j]) * (1 - sum(B[:, j])) - R[j]) / (x[j] + U[j])
                 if B[j, j] < 0:
+#                    print(409, B[:, j].sum())
 #                    B[j, j] = 0
 #                    y = np.array([B[i, j] * (x[j] + U[j]) for i in range(nr_pools)])
 #                    print(y)
@@ -419,7 +423,7 @@ class DiscreteModelRun():
 #                        pass
                         print(B[j, j])
                         print(x[j], U[j], R[j], F[:, j].sum(), F[j, :].sum()) 
-                        print(U[j] - R[j] - F[:, j].sum() + F[j, :].sum())
+                        print(x[j] + U[j] - R[j] - F[:, j].sum() + F[j, :].sum())
                         print(B[:, j]) 
                         raise(DMRError('Diag. val < 0: pool %d, ' % j))
             else:
