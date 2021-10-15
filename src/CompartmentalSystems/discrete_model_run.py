@@ -717,17 +717,27 @@ class DiscreteModelRun():
 
         return amv
 
-    def system_age_moment(self, order, start_age_moments):
+    def system_age_moment(self, order, start_age_moments, mask=False):
+        if not isinstance(mask, bool):
+            mask_over_time = np.repeat(
+                mask.reshape(1, -1),
+                len(self.times),
+                axis=0
+            )
+        else:
+            mask_over_time = mask
+
         age_moment_vector = self.age_moment_vector(order, start_age_moments)
         age_moment_vector[np.isnan(age_moment_vector)] = 0
         soln = self.solve()
+        soln = np.ma.masked_array(soln, mask_over_time)
 
         total_mass = soln.sum(1)  # row sum
         total_mass[total_mass == 0] = np.nan
 
         system_age_moment = (age_moment_vector*soln).sum(1)/total_mass
 
-        return system_age_moment
+        return np.array(system_age_moment)
 
     def _solve_age_moment_system(self, max_order, start_age_moments):
         n = self.nr_pools
@@ -763,7 +773,7 @@ class DiscreteModelRun():
 
 #                vec[k-1, :] = inv(X_np1) @ B @\
                 vec[k-1, :] = diag_inv_with_zeros(X_np1) @ B @\
-                        X_n @ (moment_sum + ones *dts[i]**k)
+                        X_n @ (moment_sum + ones * dts[i]**k)
 
             age_moments.append(vec)
 
@@ -772,7 +782,8 @@ class DiscreteModelRun():
     def backward_transit_time_moment(
             self,
             order: int,
-            start_age_moments: np.ndarray
+            start_age_moments: np.ndarray,
+            mask: np.ndarray = False
         )-> np.ndarray:
         """Compute the ``order`` th backward transit time moment based on the 
         This is done by computing a weighted sum of of the pool wise 
@@ -788,14 +799,24 @@ class DiscreteModelRun():
                 Given initial age moments up to the order of interest. 
                 Can possibly be computed by :func:`moments_from_densities`. 
                 Defaults to None assuming zero initial ages.
+            mask (nr_pools): pools with True value will be ignored
 
         Returns:
             numpy.array: shape (nr_bins,nr_pools) 
             The ``order`` th backward transit time moment over the time grid.
-        """ 
+        """
+        if not isinstance(mask, bool):
+            mask_over_time = np.repeat(
+                mask.reshape(1, -1),
+                len(self.times)-1,
+                axis=0
+            )
+        else:
+            mask_over_time = mask
 
         # the shape of the age moment vector is (nr_bins,nr_pools)
-        r=self.acc_net_external_output_vector()
+        r = self.acc_net_external_output_vector()
+        r = np.ma.masked_array(r, mask_over_time)
 
         # the shape of the age moment vector is (nr_bins+1,nr_pools)
         # so we have to cut it
@@ -803,11 +824,11 @@ class DiscreteModelRun():
                 order,
                 start_age_moments
         )[:-1,:] 
-        pool_axis=1
-        return (
-                    (r*age_moment_vector).sum(axis=pool_axis)/
-                    r.sum(axis=pool_axis)
-               )
+        pool_axis = 1
+        return np.array(
+            (r*age_moment_vector).sum(axis=pool_axis) / r.sum(axis=pool_axis)
+        )
+               
 
     def start_age_densities_func(self):
         B = self.Bs[0]
@@ -1304,7 +1325,7 @@ class DiscreteModelRun():
             x_ti = soln[ti]
             # mass at time index ti-(ai+1)
             x_ti_minus_ai_plus_1 = soln[ti-(ai+1)]
-            # what remains from x_ti_minus_ai_plus1 at time index ti
+            # what remains from x_ti_minus_ai_plus_1 at time index ti
             m = np.matmul(Phi(ti, ti-(ai+1)), x_ti_minus_ai_plus_1).reshape((self.nr_pools,))
             # difference is not older than ti-ai
             res = x_ti-m
@@ -1365,10 +1386,25 @@ class DiscreteModelRun():
 
         return res * self.dt
         
-    def system_age_quantiles(self, q, P0):
-        P_sv = self.cumulative_pool_age_masses_single_value(P0)
+    def system_age_quantiles(self, q, P0, mask=False):
+        if not isinstance(mask, bool):
+            mask_over_time = np.repeat(
+                np.array(mask).reshape(1, -1),
+                len(self.times),
+                axis=0
+            )
+        else:
+            mask_over_time = mask
+
+        def P0_masked(ai):
+            return np.ma.masked_array(P0(ai), mask)
+
+        P_sv = self.cumulative_pool_age_masses_single_value(P0_masked)
         P_sys_sv = lambda ai, ti: P_sv(ai, ti).sum()
-        soln_sum = self.solve().sum(axis=1)
+
+        soln = self.solve()
+        soln = np.ma.masked_array(soln, mask_over_time)
+        soln_sum = soln.sum(axis=1)
 
         res = np.nan * np.ones(len(self.times))
         quantile_ai = 0
@@ -1387,11 +1423,24 @@ class DiscreteModelRun():
 
         return res * self.dt
         
-    def backward_transit_time_quantiles(self, q, P0):
+    def backward_transit_time_quantiles(self, q, P0, mask=False):
+        if not isinstance(mask, bool):
+            mask_over_time = np.repeat(
+                mask.reshape(1, -1),
+                len(self.times)-1,
+                axis=0
+            )
+        else:
+            mask_over_time = mask
+
         P_sv = self.cumulative_pool_age_masses_single_value(P0)
         rho = 1 - self.Bs.sum(1)
+        rho = np.ma.masked_array(rho, mask_over_time)
+
         P_btt_sv = lambda ai, ti: (rho[ti] * P_sv(ai, ti)).sum() 
+
         R = self.acc_net_external_output_vector()
+        R = np.ma.masked_array(R, mask_over_time)
 
         res = np.nan * np.ones(len(self.times[:-1]))
 
@@ -1411,30 +1460,45 @@ class DiscreteModelRun():
 
         return res * self.dt
 
-    def backward_transit_time_quantiles_inputs_only(self, q):
-        H_sv = self._H_sv()
-        rho = 1 - self.Bs.sum(1)
-        H_btt_sv = lambda ai, ti: (rho[ti] * H_sv(ai, ti)).sum() 
-        
-        R = rho * np.array([H_sv(ti, ti) for ti in self.times[:-1]])
-
-        res = np.nan * np.ones(len(self.times[:-1]))
-
-        quantile_ai = 0
-        for ti in tqdm(range(len(self.times[:-1]))):
-            quantile_ai = generalized_inverse_CDF(
-                lambda ai: H_btt_sv(int(ai), ti),
-                q * R[ti, ...].sum(),
-                x1=quantile_ai
-            )
-            
-            if H_btt_sv(int(quantile_ai), ti) > q * R[ti, ...].sum():
-                if quantile_ai > 0:
-                    quantile_ai = quantile_ai - 1
-
-            res[ti] = int(quantile_ai)
-
-        return res * self.dt
+#    instead construct a complete inputs-only dmr:
+#    dmr_inputs_only = DMR.from_Bs_and_net_us with zeros start_values
+#
+#    def backward_transit_time_quantiles_inputs_only(self, q, mask=False):
+#        if not isinstance(mask, bool):
+#            mask_over_time = np.repeat(
+#                mask.reshape(1, -1),
+#                len(self.times)-1,
+#                axis=0
+#            )
+#        else:
+#            mask_over_time = mask
+#
+#        H_sv = self._H_sv()
+#        rho = 1 - self.Bs.sum(1)
+#        rho = np.ma.masked_array(rho, mask_over_time)
+#
+#        H_btt_sv = lambda ai, ti: (rho[ti] * H_sv(ai, ti)).sum() 
+#        
+#        R = rho * np.array([H_sv(ti, ti) for ti in self.times[:-1]])
+#        R = np.ma.masked_array(R, mask_over_time)
+#
+#        res = np.nan * np.ones(len(self.times[:-1]))
+#
+#        quantile_ai = 0
+#        for ti in tqdm(range(len(self.times[:-1]))):
+#            quantile_ai = hr.generalized_inverse_CDF(
+#                lambda ai: H_btt_sv(int(ai), ti),
+#                q * R[ti, ...].sum(),
+#                x1=quantile_ai
+#            )
+#            
+#            if H_btt_sv(int(quantile_ai), ti) > q * R[ti, ...].sum():
+#                if quantile_ai > 0:
+#                    quantile_ai = quantile_ai - 1
+#
+#            res[ti] = int(quantile_ai)
+#
+#        return res * self.dt
 
     def CS(self, k0, n):
         """Carbon sequestration from ``k0`` to ``n``."""
