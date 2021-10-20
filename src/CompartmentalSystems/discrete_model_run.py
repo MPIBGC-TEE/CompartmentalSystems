@@ -14,7 +14,6 @@ from . import picklegzip
 from . TimeStepIterator import TimeStep, TimeStepIterator
 
 
-
 class DMRError(Exception):
     """Generic error occurring in this module."""
     pass
@@ -1500,15 +1499,40 @@ class DiscreteModelRun():
 #
 #        return res * self.dt
 
-    def CS(self, k0, n):
-        """Carbon sequestration from ``k0`` to ``n``."""
+    def CS_pulse(self, n0, N, mask=False):
+        """Carbon sequestration from ``n0`` to ``N``of the input pulse ``U[n0]``."""
         Phi = self._state_transition_operator_matrix
-        return sum([(Phi(n, k+1) @ self.net_Us[k]).sum() for k in range(k0, n, 1)])
+        U0 = self.net_Us[n0]
+        U0 = np.ma.masked_array(U0, mask)
 
-    def CS_through_time(self):
+        return sum([(Phi(n, n0+1) @ U0).sum() for n in range(n0+1, N+1, 1)])
+
+    def CS_pulse_through_time(self, n0, mask=False):
+        return np.array(
+            [self.CS_pulse(n0, N, mask) for N in range(len(self.times))]
+        )
+
+    def CS(self, n0, N, mask=False):
         Phi = self._state_transition_operator_matrix
-        return np.array([self.CS(0, n) for n in self.times])
+        Us = self.net_Us
+        if not isinstance(mask, bool):
+            mask_over_time = np.repeat(
+                mask.reshape(1, -1),
+                len(Us),
+                axis=0
+            )
+        else:
+            mask_over_time = mask
+        Ms = lambda n: sum(
+            [
+                np.ma.masked_array((Phi(n, k+1) @ Us[k]), mask).sum()
+                for k in range(n0, n, 1)
+            ]
+        )
+        return sum([Ms(n) for n in range(n0, N+1, 1)])
 
+    def CS_through_time(self, n0, mask=False):
+        return np.array([self.CS(n0, N, mask) for N in range(len(self.times))])
 
 #    # return value in unit "time steps x dt[0]"
 #    def backward_transit_time_quantiles_from_masses(self, q, start_age_masses_at_age_bin):
