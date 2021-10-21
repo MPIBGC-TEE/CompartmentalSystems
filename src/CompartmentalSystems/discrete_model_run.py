@@ -1573,8 +1573,8 @@ class DiscreteModelRun():
         
     @classmethod
     def load_from_file(cls, filename):
-        cmr = picklegzip.load(filename)
-        return cmr
+        dmr = picklegzip.load(filename)
+        return dmr
 
     def save_to_file(self, filename):
         picklegzip.dump(self, filename)
