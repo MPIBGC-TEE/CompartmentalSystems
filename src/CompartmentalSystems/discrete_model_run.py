@@ -93,6 +93,9 @@ class DiscreteModelRun():
 
     @classmethod
     def from_fluxes_2(cls, start_values, times, Us, Fs, Rs):
+        Us[np.abs(Us) < 1e-12] = 0.0
+        Fs[np.abs(Fs) < 1e-12] = 0.0
+        Rs[np.abs(Rs) < 1e-12] = 0.0
         Bs = cls.reconstruct_Bs_without_xs_2(
             start_values,
             Us,
