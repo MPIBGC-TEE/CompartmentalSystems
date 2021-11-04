@@ -1535,7 +1535,18 @@ class DiscreteModelRun():
         return sum([Ms(n) for n in range(n0, N+1, 1)])
 
     def CS_through_time(self, n0, mask=False):
-        return np.array([self.CS(n0, N, mask) for N in range(len(self.times))])
+        from tqdm import trange
+        return np.array(
+            [self.CS(n0, N, mask) for N in trange(len(self.times))]
+        )
+
+#        nr_times = len(self.times)
+#        CS = np.nan * np.ones(nr_times)
+#        for N in tqdm(range(nr_times)):
+#            CS[N] = self.CS(n0, N, mask)
+#
+#        return CS
+
 
 #    # return value in unit "time steps x dt[0]"
 #    def backward_transit_time_quantiles_from_masses(self, q, start_age_masses_at_age_bin):
@@ -1580,6 +1591,9 @@ class DiscreteModelRun():
         return dmr
 
     def save_to_file(self, filename):
+        if hasattr(self, "_state_transition_operator_matrix_cache"):
+            print("Removing cache to be able to pickle dmr.")
+            del self._state_transition_operator_matrix_cache
         picklegzip.dump(self, filename)
 
 #    ########## 14C methods #########
