@@ -151,3 +151,37 @@ class ImplicitTimeStepIterator:
         self.i += 1
         return ts
 
+class TimeStepIterator2():
+    """iterator for looping forward over the results of a difference equation
+    X_{i+1}=f(X_{i},i)"""
+
+    def __init__(
+        self,
+        initial_values, # a tupel of values that will be
+        f, # the function to compute the next ts
+        max_it=False
+    ):
+        self.initial_values = initial_values
+        self.f= f
+        self.reset()
+        self.max_it = max_it
+
+    def reset(self):
+        self.i = 0
+        self.ts = self.initial_values
+
+    def __iter__(self):
+        self.reset()
+        return(self)
+
+    def __next__(self):
+        if self.max_it:
+            if self.i == self.max_it:
+                raise StopIteration
+
+        ts = copy(self.ts)
+        ts_new = self.f(self.i, ts)
+        self.ts = ts_new
+        self.i += 1
+        return ts
+

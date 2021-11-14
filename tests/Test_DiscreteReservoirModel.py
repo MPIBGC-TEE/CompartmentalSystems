@@ -324,7 +324,7 @@ class TestDiscreteReservoirModel(InDirTest):
             beta_leaf: 0.3,
             beta_root: 0.7
         }
-        par_dict_disc = {** par_dict_cont, **{delta_t: 1}} 
+        par_dict_disc = {** par_dict_cont, delta_t: 1} 
         i_min = 0
         i_max = 50
         n = i_max - i_min - 1 
@@ -345,7 +345,7 @@ class TestDiscreteReservoirModel(InDirTest):
         dmr = DiscreteModelRun.from_euler_forward_smooth_reservoir_model(
             srm,
             par_dict=par_dict_disc,
-            func_dict={Npp(delta_t * it): my_cont_func},
+            func_dict={Npp: my_cont_func}, #={Npp(delta_t * it): my_cont_func},
             delta_t=delta_t,
             number_of_steps=n,
             start_values=start_values
