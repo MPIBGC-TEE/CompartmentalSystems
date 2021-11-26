@@ -386,12 +386,14 @@ class DiscreteModelRun():
             if x[j] != 0:
                 B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / x[j])
                 if B[j, j] < 0:
-                    if np.abs(B[j, j]) < 1e-03: # TODO: arbitrary value
+                    if np.abs(x[j] - R[j] - F[:, j].sum()) < 1e-10:
+#                    if np.abs(B[j, j]) < 1e-03: # TODO: arbitrary value
                         B[j, j] = 0
                     else:
                         pass                     
-#                        print(B[j, j])
-#                        print(x[j], R[j], F[:, j].sum(), F[j, :].sum()) 
+                        print(B[j, j])
+                        print(x[j], R[j], F[:, j].sum(), F[j, :].sum()) 
+                        print(x[j] - R[j] - F[:, j].sum()) 
                         raise(DMRError('Diag. val < 0: pool %d, ' % j))
             else:
                 B[j, j] = 1
