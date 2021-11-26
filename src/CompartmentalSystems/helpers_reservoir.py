@@ -641,16 +641,18 @@ def numerical_function_from_expression(expr, tup, parameter_dict, func_set):
     # To avoid this case here we check this.
     expr_par = expr.subs(parameter_dict)
     ss_expr = expr_par.free_symbols
-    ss_tup = set([s for s in tup])
-
-    if not(ss_expr.issubset(ss_tup)):
-        raise Exception(
-            """The free symbols of the expression: ${0} are not a subset of
-               the symbols in the tuple argument:${1}
-            """.format(ss_expr, ss_tup))
 
     cut_func_set = make_cut_func_set(func_set)
-#    expr_par=expr.subs(parameter_dict)
+    ss_allowed = set(
+            [s for s in tup]
+    )
+    if not(ss_expr.issubset(ss_allowed)):
+        raise Exception(
+            """The following free symbols: {1} of the expression: {0} 
+            are not arguments.
+            """.format(ss_expr, ss_expr.difference(ss_allowed))
+        )
+
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
     def expr_func_safe_0_over_0(*val):
         with np.errstate(invalid='raise'):
@@ -693,7 +695,7 @@ def numerical_rhs(
 
 def numerical_array_func(
     state_vector,
-    time_symbol,
+    time_symbol, # could also be the iteration symbol
     expr,
     parameter_dict,
     func_dict
