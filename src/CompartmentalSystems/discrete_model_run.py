@@ -228,11 +228,7 @@ class DiscreteModelRun():
         return cls.from_iterator(tsit)
 
 
-    def restrict_to_pools(
-        self,
-        pool_nrs: np.ndarray,
-        check_row_sums: bool=True
-    ) -> '__class__':
+    def restrict_to_pools(self, pool_nrs: np.ndarray) -> '__class__':
         """Restrict the discrete model run to a subset of pools.
 
         Args:
