@@ -228,6 +228,38 @@ class DiscreteModelRun():
         return cls.from_iterator(tsit)
 
 
+    def restrict_to_pools(
+        self,
+        pool_nrs: np.ndarray,
+        check_row_sums: bool=True
+    ) -> '__class__':
+        """Restrict the discrete model run to a subset of pools.
+
+        Args:
+            pool_nrs: array of pool numbers INSIDE the resctricted model,
+                all other pools will be considered as OUSTIDE
+
+        Returns:
+            a DMR with ``len(pool_nrs)`` pools
+        """
+        nr_pools = len(pool_nrs)
+        nr_times = len(self.times)
+        start_values_restricted = self.start_values[pool_nrs]
+
+        net_Us_restricted = np.nan * np.ones((nr_times-1, nr_pools))
+        net_Us_restricted[:] = self.net_Us[:, pool_nrs]
+
+        Bs_restricted = np.nan * np.ones((nr_times-1, nr_pools, nr_pools))
+        Bs_restricted = self.Bs[:, :, pool_nrs][:, pool_nrs, :]
+
+        dmr_restricted = self.__class__.from_Bs_and_net_Us(
+            start_values_restricted,
+            self.times,
+            Bs_restricted,
+            net_Us_restricted
+        )
+        return dmr_restricted
+
     @property
     @lru_cache()
     def net_Us(self):
