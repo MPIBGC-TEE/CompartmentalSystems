@@ -136,7 +136,9 @@ class CSPlotter():
             pipe_colors = {
                 'linear': 'blue',
                 'nonlinear': 'green',
-                'no state dependence': 'red' },
+                'no state dependence': 'red',
+                'undetermined': 'grey'
+            },
             visible_pool_names = True, 
             pool_size_scale_factor  = 1, 
             pool_color = 'blue',
