@@ -652,8 +652,8 @@ It gave up for the following expression: ${e}."""
             arrowstyle = "-"
             visible_pool_names = False
 
-        # the current implementation of *_flux_type does not work with Piecewise expressions
-        # and has other issues (see the test). To avoid errors stopping the plotting 
+        # the former implementation of *_flux_type did not work with Piecewise expressions
+        # and had other issues (see the test). To avoid errors stopping the plotting 
         # we create a forgiving version of the functions
         def save_maker(func):
             def resilient_func(*args,**kwargs):
