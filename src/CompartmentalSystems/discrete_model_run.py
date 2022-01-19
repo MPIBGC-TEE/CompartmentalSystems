@@ -228,6 +228,34 @@ class DiscreteModelRun():
         return cls.from_iterator(tsit)
 
 
+    def restrict_to_pools(self, pool_nrs: np.ndarray) -> '__class__':
+        """Restrict the discrete model run to a subset of pools.
+
+        Args:
+            pool_nrs: array of pool numbers INSIDE the resctricted model,
+                all other pools will be considered as OUSTIDE
+
+        Returns:
+            a DMR with ``len(pool_nrs)`` pools
+        """
+        nr_pools = len(pool_nrs)
+        nr_times = len(self.times)
+        start_values_restricted = self.start_values[pool_nrs]
+
+        net_Us_restricted = np.nan * np.ones((nr_times-1, nr_pools))
+        net_Us_restricted[:] = self.net_Us[:, pool_nrs]
+
+        Bs_restricted = np.nan * np.ones((nr_times-1, nr_pools, nr_pools))
+        Bs_restricted = self.Bs[:, :, pool_nrs][:, pool_nrs, :]
+
+        dmr_restricted = self.__class__.from_Bs_and_net_Us(
+            start_values_restricted,
+            self.times,
+            Bs_restricted,
+            net_Us_restricted
+        )
+        return dmr_restricted
+
     @property
     @lru_cache()
     def net_Us(self):
@@ -358,12 +386,14 @@ class DiscreteModelRun():
             if x[j] != 0:
                 B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / x[j])
                 if B[j, j] < 0:
-                    if np.abs(B[j, j]) < 1e-03: # TODO: arbitrary value
+                    if np.abs(x[j] - R[j] - F[:, j].sum()) < 1e-10:
+#                    if np.abs(B[j, j]) < 1e-03: # TODO: arbitrary value
                         B[j, j] = 0
                     else:
                         pass                     
-#                        print(B[j, j])
-#                        print(x[j], R[j], F[:, j].sum(), F[j, :].sum()) 
+                        print(B[j, j])
+                        print(x[j], R[j], F[:, j].sum(), F[j, :].sum()) 
+                        print(x[j] - R[j] - F[:, j].sum()) 
                         raise(DMRError('Diag. val < 0: pool %d, ' % j))
             else:
                 B[j, j] = 1
@@ -1535,7 +1565,18 @@ class DiscreteModelRun():
         return sum([Ms(n) for n in range(n0, N+1, 1)])
 
     def CS_through_time(self, n0, mask=False):
-        return np.array([self.CS(n0, N, mask) for N in range(len(self.times))])
+        from tqdm import trange
+        return np.array(
+            [self.CS(n0, N, mask) for N in trange(len(self.times))]
+        )
+
+#        nr_times = len(self.times)
+#        CS = np.nan * np.ones(nr_times)
+#        for N in tqdm(range(nr_times)):
+#            CS[N] = self.CS(n0, N, mask)
+#
+#        return CS
+
 
 #    # return value in unit "time steps x dt[0]"
 #    def backward_transit_time_quantiles_from_masses(self, q, start_age_masses_at_age_bin):
@@ -1580,6 +1621,9 @@ class DiscreteModelRun():
         return dmr
 
     def save_to_file(self, filename):
+        if hasattr(self, "_state_transition_operator_matrix_cache"):
+            print("Removing cache to be able to pickle dmr.")
+            del self._state_transition_operator_matrix_cache
         picklegzip.dump(self, filename)
 
 #    ########## 14C methods #########
