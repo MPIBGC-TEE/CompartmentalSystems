@@ -3,7 +3,7 @@
 import sys
 import unittest
 import numpy as np
-from sympy import Symbol, Matrix, symbols, diag, zeros, simplify, Function
+from sympy import Symbol, Matrix, symbols, diag, zeros, simplify, Function, sqrt, Piecewise
 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from testinfrastructure.InDirTest import InDirTest
@@ -173,23 +173,23 @@ class TestSmoothReservoirModel(InDirTest):
         self.assertEqual(rm._internal_flux_type(1,0), 'nonlinear')
 
         # (1,0): 4 is considered to be nonlinear : in B the corresponding entry is 4/C_1
-        internal_fluxes = {(0,1): C_0+5, (1,0): C_1/C_0}
+        internal_fluxes = {(0,1): 5, (1,0): C_1/C_0}
 
         rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
 
         self.assertEqual(rm._internal_flux_type(0,1), 'no state dependence')
         self.assertEqual(rm._internal_flux_type(1,0), 'nonlinear')
 
-    def test_output_flux_type(self):
+    def test_output_flux_type_0(self):
         # test simple cases
         C_0, C_1  = symbols('C_0 C_1')
         state_vector = [C_0, C_1]
-        time_symbol = Symbol('t')
+        t = Symbol('t')
         input_fluxes = {}
         internal_fluxes = {}
         
         output_fluxes = {0: C_0, 1: C_1*(5+C_0)}
-        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        rm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
 
         self.assertEqual(rm._output_flux_type(0), 'linear')
         self.assertEqual(rm._output_flux_type(1), 'nonlinear')
@@ -197,10 +197,40 @@ class TestSmoothReservoirModel(InDirTest):
         # (1,0): 4 is considered to be nonlinear : in B the corresponding entry is 4/C_1
         output_fluxes = {0: 5, 1: C_1/C_0}
 
-        rm = SmoothReservoirModel(state_vector, time_symbol, input_fluxes, output_fluxes, internal_fluxes)
+        rm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
 
         self.assertEqual(rm._output_flux_type(0), 'no state dependence')
         self.assertEqual(rm._output_flux_type(1), 'nonlinear')
+
+    def test_output_flux_type_1(self):
+        C_0 = symbols('C_0')
+        state_vector = [C_0]
+        t = Symbol('t')
+        input_fluxes = {}
+        internal_fluxes = {}
+        # sqrt(C_1) should be considered nonlinear
+        output_fluxes = {0: sqrt(C_0)}
+
+        rm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+
+        self.assertEqual(rm._output_flux_type(0), 'nonlinear')
+
+    def test_output_flux_type_2(self):
+        C_0 = symbols('C_0')
+        state_vector = [C_0]
+        t = Symbol('t')
+        input_fluxes = {}
+        internal_fluxes = {}
+        # piecewise expressions in time should be treated with repsect to the role of the state variable 
+        output_fluxes = {0: Piecewise((t,t<1),(t**2,t>=1))*C_0}
+        rm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+
+        self.assertEqual(rm._output_flux_type(0), 'linear')
+
+        output_fluxes = {0: Piecewise((t,t<1),(t**2,t>=1))*C_0**2}
+        rm = SmoothReservoirModel(state_vector, t, input_fluxes, output_fluxes, internal_fluxes)
+
+        self.assertEqual(rm._output_flux_type(0), 'nonlinear')
 
     def test_port_controlled_Hamiltonian_representation(self):
         # for the test the two pool microbial model is used

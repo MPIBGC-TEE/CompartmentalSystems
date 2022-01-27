@@ -140,6 +140,39 @@ class SmoothReservoirModel(object):
 
         """
         return not(self.is_state_dependent(self.jacobian))
+    
+    # the following functions are used by the 'figure' method to determine 
+    # the color of the respective arrow 
+
+    
+    # mm 1-17-2022
+    # The old implementation using gcd had several issues:
+    # 1.) The following code lead to  wrong results
+    #     if gcd(sv, flux) == 1:
+    #        return 'no state dependence'
+    #     gcd(x,sqrt(x))==1 (according to sympy!) 
+    #     but the flux is obviously nonlinear and state dependent
+    # 2.) Furthermore gcd chokes at Piecewise expression 
+    #     although perfectly sensible (e.g.piecewise in time)
+
+    # a little helper
+    def _linear__state_dependent__nonlinear(self, flux, sv):
+        # sympify converts constant fluxes (e.g. integers) 
+        # to sympy expressions that have a free_symbols method
+        flux = sympify(flux) 
+
+        rate = simplify(flux / sv)
+        if all([sv not in rate.free_symbols for sv in list(self.state_vector)]):
+            return "linear"
+        else:
+            # note that no state dependence is a subcase of nonlinear
+            if len({sv}.intersection(flux.free_symbols))==0: 
+                return 'no state dependence'
+            
+            else:  #if any([sv in rate.free_symbols for sv in list(state_vector)]):
+                return 'nonlinear'
+
+
     def _output_flux_type(self, pool_from):
         """Return the type of an external output flux.
 
@@ -148,33 +181,14 @@ class SmoothReservoirModel(object):
 
         Returns:
             str: 'linear', 'nonlinear', 'no state dependence'
-
-        Raises:
-            Error: If unknown flux type is encountered.
         """
         sv = self.state_vector[pool_from]
-        flux = self.output_fluxes[pool_from]
-        if gcd(sv, flux) == 1:
-            return 'no state dependence'
+        
+        flux = sympify(self.output_fluxes[pool_from]) 
+        
+        return self._linear__state_dependent__nonlinear(flux, sv)
 
-        # now test for dependence on further state variables, 
-        # which would lead to nonlinearity
-        if (gcd(sv, flux) == sv) or gcd(sv, flux) == 1.0*sv:
-            flux /= sv
-            free_symbols = flux.free_symbols
-
-            for sv in list(self.state_vector):
-                if sv in free_symbols:
-                    return 'nonlinear'
-
-            return 'linear'
-        else:
-            # probably this can never happen
-            raise(Error('Unknown internal flux type'))
     
-    # the following two functions are used by the 'figure' method to determine 
-    # the color of the respective arrow 
-
     def _internal_flux_type(self, pool_from, pool_to):
         """Return the type of an internal flux.
 
@@ -184,35 +198,11 @@ class SmoothReservoirModel(object):
 
         Returns:
             str: 'linear', 'nonlinear', 'no state dependence'
-
-        Raises:
-            Error: If unknown flux type is encountered.
         """
         sv = self.state_vector[pool_from]
         flux = self.internal_fluxes[(pool_from, pool_to)]
+        return self._linear__state_dependent__nonlinear(flux, sv)
 
-        if hr.has_pw(flux):
-            #print("Piecewise")    
-            #print(latex(flux))
-            return "nonlinear"
-            
-        if gcd(sv, flux) == 1:
-            return 'no state dependence'
-
-        # now test for dependence on further state variables, 
-        # which would lead to nonlinearity
-        if (gcd(sv, flux) == sv) or gcd(sv, flux) == 1.0*sv:
-            flux /= sv
-            free_symbols = flux.free_symbols
-
-            for sv in list(self.state_vector):
-                if sv in free_symbols:
-                    return 'nonlinear'
-
-            return 'linear'
-        else:
-            # probably this can never happen
-            raise(Error('Unknown internal flux type'))
     
     def _input_flux_type(self, pool_to):
         """Return the type of an external input flux.
@@ -222,9 +212,6 @@ class SmoothReservoirModel(object):
 
         Returns:
             str: 'linear', 'nonlinear', 'no state dependence'
-
-        Raises:
-            Error: If unknown flux type is encountered.
         """
         sv = self.state_vector[pool_to]
         # we compute the derivative of the appropriate row of the input vector w.r.t. all the state variables
@@ -246,8 +233,6 @@ class SmoothReservoirModel(object):
             return 'linear'
         else:
             return 'nonlinear'
-
-
 
     @property
     def no_input_model(self):
@@ -651,13 +636,15 @@ It gave up for the following expression: ${e}."""
             pipe_colors = {
                  'linear': 'blue',
                  'nonlinear': 'green',
-                 'no state dependence': 'red'
+                 'no state dependence': 'red',
+                 'undetermined': 'grey'
             }
         else:
             pipe_colors = {
                  'linear': 'blue',
                  'nonlinear': 'blue',
-                 'no state dependence': 'blue'
+                 'no state dependence': 'blue',
+                 'undetermined': 'blue'
             }
 
 
@@ -665,18 +652,35 @@ It gave up for the following expression: ${e}."""
             arrowstyle = "-"
             visible_pool_names = False
 
+        # the former implementation of *_flux_type did not work with Piecewise expressions
+        # and had other issues (see the test). To avoid errors stopping the plotting 
+        # we create a forgiving version of the functions
+        def save_maker(func):
+            def resilient_func(*args,**kwargs):
+                try: 
+                    res=func(*args,**kwargs)
+                except Exception as e: 
+                    res='undetermined'
+                    print(e)
+                return res
+            return resilient_func
+        
+        _res_input_flux_type = save_maker(self._input_flux_type)
+        _res_output_flux_type = save_maker(self._output_flux_type)
+        _res_internal_flux_type = save_maker(self._internal_flux_type)
+            
         csp = CSPlotter(
             self.state_vector,
             {
-                k: self._input_flux_type(k) for k in self.input_fluxes
+                k: _res_input_flux_type(k) for k in self.input_fluxes
                 if self.input_fluxes[k] != 0
             },
             {
-                k: self._output_flux_type(k) for k in self.output_fluxes
+                k: _res_output_flux_type(k) for k in self.output_fluxes
                 if self.output_fluxes[k] != 0
             },
             {
-                k: self._internal_flux_type(*k) for k in self.internal_fluxes
+                k: _res_internal_flux_type(*k) for k in self.internal_fluxes
                 if self.internal_fluxes[k] != 0
             },
             pipe_colors, 
