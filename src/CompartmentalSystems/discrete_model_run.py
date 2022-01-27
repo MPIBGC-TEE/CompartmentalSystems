@@ -1455,11 +1455,14 @@ class DiscreteModelRun():
 
         return res * self.dt
         
-    def backward_transit_time_quantiles(self, q, P0, mask=False):
+    def backward_transit_time_quantiles(self, q, P0, times=None, mask=False):
+        if times is None:
+            times = self.times[:-1]
+
         if not isinstance(mask, bool):
             mask_over_time = np.repeat(
                 mask.reshape(1, -1),
-                len(self.times)-1,
+                len(times)-1,
                 axis=0
             )
         else:
@@ -1474,10 +1477,10 @@ class DiscreteModelRun():
         R = self.acc_net_external_output_vector()
         R = np.ma.masked_array(R, mask_over_time)
 
-        res = np.nan * np.ones(len(self.times[:-1]))
+        res = np.nan * np.ones(len(times[:-1]))
 
         quantile_ai = 0
-        for ti in tqdm(range(len(self.times[:-1]))):
+        for ti in tqdm(range(len(times[:-1]))):
             quantile_ai = hr.generalized_inverse_CDF(
                 lambda ai: P_btt_sv(int(ai), ti),
                 q * R[ti, ...].sum(),
