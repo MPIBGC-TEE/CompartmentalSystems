@@ -1611,6 +1611,24 @@ def euler_forward_B_sym(
     return (B_sym_discrete * delta_t) 
 
 
+def euler_forward_net_flux_sym(
+        flux_sym_cont: Expr, 
+        cont_time: Symbol, 
+        delta_t: Symbol, 
+        iteration: Symbol
+    )-> Expr:
+    flux_sym_discrete = flux_sym_cont.subs(
+       discrete_time_dict(
+           cont_time,
+           delta_t,
+           iteration
+       )
+    )
+    return flux_sym_discrete * delta_t
+
+# fixme mm 2-11-2022
+# this function is identical to euler_forward_net_flux_sym and should
+# be replaced wherever it is called
 def euler_forward_net_u_sym(
         u_sym_cont: Expr, 
         cont_time: Symbol, 
