@@ -386,7 +386,7 @@ class DiscreteModelRun():
             if x[j] != 0:
                 B[j, j] = 1 - (sum(B[:, j]) - B[j, j] + R[j] / x[j])
                 if B[j, j] < 0:
-                    if np.abs(x[j] - R[j] - F[:, j].sum()) < 1e-10:
+                    if np.abs(x[j] - R[j] - F[:, j].sum()) < 1e-07:
 #                    if np.abs(B[j, j]) < 1e-03: # TODO: arbitrary value
                         B[j, j] = 0
                     else:
@@ -1471,7 +1471,7 @@ class DiscreteModelRun():
         P_sv = self.cumulative_pool_age_masses_single_value(P0)
         rho = 1 - self.Bs.sum(1)
         rho = np.ma.masked_array(rho, mask_over_time)
-
+        
         P_btt_sv = lambda ai, ti: (rho[ti] * P_sv(ai, ti)).sum() 
 
         R = self.acc_net_external_output_vector()
@@ -1486,7 +1486,6 @@ class DiscreteModelRun():
                 q * R[ti, ...].sum(),
                 x1=quantile_ai
             )
-            
             if P_btt_sv(int(quantile_ai), ti) > q * R[ti, ...].sum():
                 if quantile_ai > 0:
                     quantile_ai = quantile_ai - 1
