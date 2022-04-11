@@ -1455,6 +1455,22 @@ class DiscreteModelRun():
 
         return res * self.dt
         
+    def backward_transit_time_masses(self, p0):
+        p_sv = self.age_densities_single_value_func(p0)
+        rho = 1 - self.Bs.sum(1)
+#        rho = np.ma.masked_array(rho, mask_over_time)
+        
+        p_btt_sv = lambda ai, ti: (rho[ti] * p_sv(ai, ti)).sum()
+        return p_btt_sv 
+
+    def cumulative_backward_transit_time_masses(self, P0):
+        P_sv = self.cumulative_pool_age_masses_single_value(P0)
+        rho = 1 - self.Bs.sum(1)
+#        rho = np.ma.masked_array(rho, mask_over_time)
+        
+        P_btt_sv = lambda ai, ti: (rho[ti] * P_sv(ai, ti)).sum()
+        return P_btt_sv 
+
     def backward_transit_time_quantiles(self, q, P0, times=None, mask=False):
         if times is None:
             times = self.times[:-1]
