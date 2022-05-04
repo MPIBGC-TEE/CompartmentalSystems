@@ -627,7 +627,7 @@ It gave up for the following expression: ${e}."""
 
         return (extended_state, extended_rhs)
 
-    def plot_pools_and_fluxes(self, ax, mutation_scale = 50, fontsize = 24, thumbnail = False, legend=True, color_fluxes=True):
+    def plot_pools_and_fluxes(self, ax, mutation_scale = 50, fontsize = 24, thumbnail = False, legend=True, color_fluxes=True, black_and_white=False):
         ax.set_axis_off()
         arrowstyle = "simple"
         visible_pool_names = True
@@ -688,7 +688,7 @@ It gave up for the following expression: ${e}."""
             arrowstyle = arrowstyle, 
             fontsize = fontsize
         )
-        csp.plot_pools_and_fluxes(ax)
+        csp.plot_pools_and_fluxes(ax, black_and_white)
 
         if legend:
             csp.legend(ax)
