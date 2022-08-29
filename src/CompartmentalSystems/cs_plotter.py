@@ -26,15 +26,27 @@ class Pool():
         self.arrowstyle = arrowstyle
         self.mutation_scale = mutation_scale
 
-    def plot(self, ax):
-        ax.add_patch(
-            mpatches.Circle(
-                (self.x, self.y),
-                self.size,
-                alpha=self.pool_alpha,
-                color=self.pool_color
+    def plot(self, ax, black_and_white):
+        if not black_and_white:
+            ax.add_patch(
+                mpatches.Circle(
+                    (self.x, self.y),
+                    self.size,
+                    alpha=self.pool_alpha,
+                    color=self.pool_color
+                )
             )
-        )
+        else:
+            ax.add_patch(
+                mpatches.Circle(
+                    (self.x, self.y),
+                    self.size,
+                    edgecolor="black",
+                    facecolor="white",
+                    alpha=1.0
+                )
+            )
+
 
     def plot_name(self, ax, name, fontsize):
         ax.text(
@@ -46,7 +58,7 @@ class Pool():
             verticalalignment='center'
         )
 
-    def plot_input_flux(self, ax, color):
+    def plot_input_flux(self, ax, color, black_and_white):
         z1 = self.x-0.5 + (self.y-0.5)*1j
         arg1 = np.angle(z1) - np.pi/6
 
@@ -59,19 +71,34 @@ class Pool():
         x2 = 0.5+z2.real
         y2 = 0.5+z2.imag
 
-        ax.add_patch(
-            mpatches.FancyArrowPatch(
-                (x2,y2),
-                (x1,y1),
-                connectionstyle=self.connectionstyle,
-                arrowstyle=self.arrowstyle,
-                mutation_scale=0.5*self.mutation_scale,
-                alpha=self.pipe_alpha,
-                color=color
+        if not black_and_white:
+            ax.add_patch(
+                mpatches.FancyArrowPatch(
+                    (x2,y2),
+                    (x1,y1),
+                    connectionstyle=self.connectionstyle,
+                    arrowstyle=self.arrowstyle,
+                    mutation_scale=0.5*self.mutation_scale,
+                    alpha=self.pipe_alpha,
+                    color=color
+                )
             )
-        )
+        else:
+            ax.add_patch(
+                mpatches.FancyArrowPatch(
+                    (x2,y2),
+                    (x1,y1),
+                    connectionstyle=self.connectionstyle,
+                    arrowstyle="simple",
+                    mutation_scale=0.5*self.mutation_scale,
+                    alpha=1.0,
+                    fill=False,
+                    color="black"
+                )
+            )
 
-    def plot_output_flux(self, ax, color):
+
+    def plot_output_flux(self, ax, color, black_and_white):
         z1 = self.x-0.5 + (self.y-0.5)*1j
         arg1 = np.angle(z1) + np.pi/6
 
@@ -84,19 +111,34 @@ class Pool():
         x2 = 0.5+z2.real
         y2 = 0.5+z2.imag
 
-        ax.add_patch(
-            mpatches.FancyArrowPatch(
-                (x1,y1),
-                (x2,y2),
-                arrowstyle=self.arrowstyle,
-                connectionstyle=self.connectionstyle,
-                mutation_scale=0.5*self.mutation_scale,
-                alpha=self.pipe_alpha,
-                color=color
+        if not black_and_white:
+            ax.add_patch(
+                mpatches.FancyArrowPatch(
+                    (x1,y1),
+                    (x2,y2),
+                    arrowstyle=self.arrowstyle,
+                    connectionstyle=self.connectionstyle,
+                    mutation_scale=0.5*self.mutation_scale,
+                    alpha=self.pipe_alpha,
+                    color=color
+                )
             )
-        )
+        else:
+            ax.add_patch(
+                mpatches.FancyArrowPatch(
+                    (x1,y1),
+                    (x2,y2),
+                    arrowstyle="simple",
+                    connectionstyle=self.connectionstyle,
+                    mutation_scale=0.5*self.mutation_scale,
+                    alpha=1.0,
+                    fill=False,
+                    color="black"
+                )
+            )
 
-    def plot_internal_flux_to(self, ax, pool_to, color):
+
+    def plot_internal_flux_to(self, ax, pool_to, color, black_and_white):
         r=self.size
         z1 = (self.x-0.5) + (self.y-0.5) * 1j
         z2 = (pool_to.x-0.5) + (pool_to.y-0.5) * 1j
@@ -113,18 +155,31 @@ class Pool():
         x2 = 0.5+z2.real
         y2 = 0.5+z2.imag
 
-        ax.add_patch(
-            mpatches.FancyArrowPatch(
-                (x1,y1),
-                (x2,y2),
-                connectionstyle=self.connectionstyle,
-                arrowstyle=self.arrowstyle,
-                mutation_scale=0.5*self.mutation_scale,
-                alpha=self.pipe_alpha,
-                color=color
+        if not black_and_white:
+            ax.add_patch(
+                mpatches.FancyArrowPatch(
+                    (x1,y1),
+                    (x2,y2),
+                    connectionstyle=self.connectionstyle,
+                    arrowstyle=self.arrowstyle,
+                    mutation_scale=0.5*self.mutation_scale,
+                    alpha=self.pipe_alpha,
+                    color=color
+                )
             )
-        )
-
+        else:
+            ax.add_patch(
+                mpatches.FancyArrowPatch(
+                    (x1,y1),
+                    (x2,y2),
+                    connectionstyle=self.connectionstyle,
+                    arrowstyle="simple",
+                    mutation_scale=0.5*self.mutation_scale,
+                    alpha=1.0,
+                    fill=False,
+                    color="black"
+                )
+            )
 
 class CSPlotter(): 
     def __init__(
@@ -164,7 +219,7 @@ class CSPlotter():
         self.mutation_scale = mutation_scale
         self.fontsize = fontsize
 
-    def plot_pools_and_fluxes(self, ax):
+    def plot_pools_and_fluxes(self, ax, black_and_white=False):
         nr_pools = len(self.state_vector)
         inputs = self.input_fluxes
         outputs =  self.output_fluxes
@@ -200,7 +255,7 @@ class CSPlotter():
                 self.arrowstyle,
                 self.mutation_scale
             )
-            pool.plot(ax)
+            pool.plot(ax, black_and_white)
 
             if self.visible_pool_names:
                 pool_name = Symbol(str(self.state_vector[i]))
@@ -210,14 +265,16 @@ class CSPlotter():
             if i in inputs.keys():
                 pool.plot_input_flux(
                     ax,
-                    self.pipe_colors[inputs[i]]
+                    self.pipe_colors[inputs[i]],
+                    black_and_white
                 )
 
             # plot outflux
             if i in outputs.keys():
                 pool.plot_output_flux(
                     ax,
-                    self.pipe_colors[outputs[i]]
+                    self.pipe_colors[outputs[i]],
+                    black_and_white
                 )
 
             pools.append(pool)
@@ -228,7 +285,8 @@ class CSPlotter():
             pools[i].plot_internal_flux_to(
                 ax,
                 pools[j],
-                self.pipe_colors[internal_fluxes[key]]
+                self.pipe_colors[internal_fluxes[key]],
+                black_and_white
             )
         
 

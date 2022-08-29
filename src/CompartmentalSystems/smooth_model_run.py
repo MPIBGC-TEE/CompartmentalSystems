@@ -2760,35 +2760,18 @@ class SmoothModelRun(ModelRun):
         if norm_consts is None:
             norm_consts = np.ones((len(times),))
 
-        def quantile_at_ti(ti):
-            #print('ti', ti)
-            if norm_consts[ti] == 0: return np.nan
-
-            def g(a):
-                if np.isnan(a): return np.nan
-                res =  quantile*norm_consts[ti] - F_sv(a, times[ti])
-                #print('a:', a,'t', times[ti], 'g(a):', res, 'nc', 
-                #           norm_consts[ti], 'F_sv', F_sv(a, times[ti]))
-                return res
-
-            start_age = start_values[ti]
-            
-            if method == 'newton': 
-                a_star = newton(g, start_age, maxiter=500, tol=tol)
-            if method == 'brentq': 
-                a_star = generalized_inverse_CDF(lambda a: F_sv(a, times[ti]), 
-                                                 quantile*norm_consts[ti], 
-#                                                 start_dist=start_age, 
-                                                 tol=tol)
-
-            return a_star
-
-        m = len(times)
-        #q_lst = [quantile_at_ti(ti) for ti in range(len(times))]
-
         q_lst = []
         for ti in tqdm(range(len(times))):
-            q_lst.append(quantile_at_ti(ti))
+            q_lst.append(
+                mr.distribution_quantile(
+                    quantile,
+                    lambda a: F_sv(a, times[ti]), 
+                    norm_const=norm_consts[ti],
+                    start_value=None,
+                    method=method,
+                    tol=tol
+                )
+            )
 
         return np.array(q_lst)
 
