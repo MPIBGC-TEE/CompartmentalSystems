@@ -654,6 +654,7 @@ def numerical_function_from_expression(expr, tup, parameter_dict, func_set):
         )
 
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
+
     def expr_func_safe_0_over_0(*val):
         with np.errstate(invalid='raise'):
             try:
@@ -1611,7 +1612,7 @@ def euler_forward_B_sym(
     return (B_sym_discrete * delta_t) 
 
 
-def euler_forward_net_flux_sym(
+def discrete_time_sym(
         flux_sym_cont: Expr, 
         cont_time: Symbol, 
         delta_t: Symbol, 
@@ -1627,7 +1628,7 @@ def euler_forward_net_flux_sym(
     return flux_sym_discrete * delta_t
 
 # fixme mm 2-11-2022
-# this function is identical to euler_forward_net_flux_sym and should
+# this function is identical to discrete_time_sym and should
 # be replaced wherever it is called
 def euler_forward_net_u_sym(
         u_sym_cont: Expr, 

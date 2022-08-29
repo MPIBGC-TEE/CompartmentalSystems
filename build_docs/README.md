@@ -11,6 +11,10 @@ At the moment the CARDAMON model is excluded since sphinx cannot import it.
 
 To update the documentation run 
 ```bash
+make html
+``` 
+or 
+```bash
 sphinx-build -b html source/ build/
 ```
 here.
