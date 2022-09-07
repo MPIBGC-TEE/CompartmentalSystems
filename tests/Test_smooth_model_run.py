@@ -3248,4 +3248,5 @@ class TestSmoothModelRun(InDirTest):
         #print(result)
         #self.assertTrue(np.allclose(result, np.array([1]*10)))
 
-
+if __name__ == "__main__":
+    unittest.main()
