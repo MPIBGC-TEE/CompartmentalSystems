@@ -2767,7 +2767,7 @@ class SmoothModelRun(ModelRun):
                     quantile,
                     lambda a: F_sv(a, times[ti]), 
                     norm_const=norm_consts[ti],
-                    start_value=None,
+                    start_value=start_values[ti],
                     method=method,
                     tol=tol
                 )
