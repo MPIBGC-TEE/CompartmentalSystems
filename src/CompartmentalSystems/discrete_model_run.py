@@ -173,19 +173,18 @@ class DiscreteModelRun():
 
         B = xi*T*N
         sym_B = hr.euler_forward_B_sym(
-                B,
-                t,
-                delta_t,
-                it
-        )
-        sym_B_net= sym_B + ImmutableMatrix.eye(*sym_B.shape)
-        sym_u = hr.euler_forward_net_u_sym(
+            B,
+            t,
+            delta_t,
+            it
+        ) * delta_t
+        sym_B_dt =  sym_B
+        sym_u_dt = hr.discrete_time_sym(
                 u,
                 t,
                 delta_t,
                 it
-        )
-        
+        ) * delta_t
         num_B, num_u = map(
             lambda expr: hr.numerical_array_func(
                 x,
@@ -194,7 +193,7 @@ class DiscreteModelRun():
                 par_dict,
                 func_dict
             ),
-            (sym_B_net, sym_u)
+            (sym_B_dt, sym_u_dt)
         )
         return cls.from_B_and_u_funcs(
                 start_values,

@@ -68,7 +68,7 @@ class TimeStepIterator:
         # compute x_i+1
         B_new = B_func(it,ts.x)
         u_new = u_func(it,ts.x)
-        x_new = x + u + np.matmul(B,x)
+        x_new = u + np.matmul(B,x) # B already has the identiyt matrix in it (so no +x is neceessarry)
         t_new = t + delta_t
         self.ts = TimeStep(B_new, u_new, x_new, t_new)
         self.i += 1

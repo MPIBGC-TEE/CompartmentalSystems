@@ -2131,7 +2131,8 @@ class SmoothModelRun(ModelRun):
 
     # age #
 
-    
+    # fixme mm 10-31-2022
+    # this method needs a test (does not throw an interpretable error if data is more than one-dimensional)
     def add_line_to_density_plot_plotly(self, fig, data, color, name, 
             time_stride=1, width=5, on_surface=True, bottom=True, 
             legend_on_surface=False, legend_bottom=False):
@@ -2252,7 +2253,7 @@ class SmoothModelRun(ModelRun):
             )
 
     def plot_3d_density_plotly(self, title, density_data, ages, 
-            age_stride=1, time_stride=1):
+            age_stride=1, time_stride=1, y_label="Age", z_label="Mass"):
         """Create a 3-dimendional density plot with Plotly.
 
         The colors are created such that they are constant along the age-time 
@@ -2263,6 +2264,8 @@ class SmoothModelRun(ModelRun):
             title (str): The title of the new figure.
             density_data (numpy.ndarray len(ages) x len(times)): 
                 The density data to be plotted.
+            ages (numpy.ndarray):
+                ages (or transit times) 
             age_stride (int, optional): Coarsity of the plot in the age 
                 direction to save memory. 
                 Defaults to 1 meaning that all times are plotted and no memory
@@ -2276,7 +2279,7 @@ class SmoothModelRun(ModelRun):
             Plotly figure.
         """
         data, layout = self._density_plot_plotly(
-                                density_data, ages, age_stride, time_stride)
+                                density_data, ages, age_stride, time_stride, y_label, z_label)
         layout['title'] = title
         fig = go.Figure(data=data, layout=layout)
         
@@ -3853,8 +3856,7 @@ class SmoothModelRun(ModelRun):
 
     ##### plotting methods #####
     
-    
-    def _density_plot_plotly(self, field, ages, age_stride=1, time_stride=1):
+    def _density_plot_plotly(self, field, ages, age_stride=1, time_stride=1, y_label="Age", z_label="Mass"):
         times = self.times
 
         strided_field = stride(field, (age_stride, time_stride))
@@ -3889,11 +3891,11 @@ class SmoothModelRun(ModelRun):
                     #range = [-times[0], -times[-1]]
                 ),
                 yaxis = dict(
-                    title = 'Age',
+                    title = y_label,
                     range = [ages[0], ages[-1]]
                 ),
                 zaxis = dict(
-                    title = 'Mass',
+                    title = z_label,
                     range = [0, np.amax(strided_field)]
                 )
             )

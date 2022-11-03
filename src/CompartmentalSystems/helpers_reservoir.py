@@ -1602,6 +1602,7 @@ def euler_forward_B_sym(
         delta_t: Symbol, 
         iteration: Symbol
     )-> Expr:
+    """ attention: creates a timestep specific matrix"""
     B_sym_discrete = B_sym_cont.subs(
         discrete_time_dict(
             cont_time,
@@ -1609,7 +1610,7 @@ def euler_forward_B_sym(
             iteration
         )
     )
-    return (B_sym_discrete * delta_t) 
+    return B_sym_discrete #* delta_t 
 
 
 def discrete_time_sym(
@@ -1625,7 +1626,7 @@ def discrete_time_sym(
            iteration
        )
     )
-    return flux_sym_discrete * delta_t
+    return flux_sym_discrete #* delta_t
 
 # fixme mm 2-11-2022
 # this function is identical to discrete_time_sym and should
@@ -1643,5 +1644,5 @@ def euler_forward_net_u_sym(
            iteration
        )
     )
-    return u_sym_discrete * delta_t
+    return u_sym_discrete #* delta_t
 

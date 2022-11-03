@@ -324,9 +324,9 @@ class TestDiscreteReservoirModel(InDirTest):
             beta_leaf: 0.3,
             beta_root: 0.7
         }
-        par_dict_disc = {** par_dict_cont, delta_t: 1} 
+        par_dict_disc = {** par_dict_cont, delta_t: 0.05} 
         i_min = 0
-        i_max = 50
+        i_max = 250
         n = i_max - i_min - 1 
         
         def my_cont_func(t):
@@ -353,6 +353,7 @@ class TestDiscreteReservoirModel(InDirTest):
         fig=plt.figure()
         ax = fig.subplots()
         ax.plot(smr.solve()[:,0],color='b')
-        ax.plot(dmr.solve()[:,0],'+',color='r')
+        #ax.plot(dmr.solve()[:,0],'+',color='r')
+        ax.plot(dmr.solve()[:,0],color='r')
         fig.savefig('test.pdf')
     
