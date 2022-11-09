@@ -41,6 +41,7 @@ class TimeStepIterator:
         self.number_of_steps = number_of_steps
         self.delta_t = delta_t
         self.reset()
+        
 
     def reset(self):
         self.i = 0
@@ -68,8 +69,10 @@ class TimeStepIterator:
         # compute x_i+1
         B_new = B_func(it,ts.x)
         u_new = u_func(it,ts.x)
-        x_new = u + np.matmul(B,x) # B already has the identiyt matrix in it (so no +x is neceessarry)
+        #from IPython import embed; embed()
+        x_new = x+ u + np.matmul(B,x) 
         t_new = t + delta_t
+        #from IPython import embed; embed()
         self.ts = TimeStep(B_new, u_new, x_new, t_new)
         self.i += 1
         return ts

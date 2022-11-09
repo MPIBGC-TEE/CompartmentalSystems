@@ -712,12 +712,29 @@ def numerical_array_func(
     # 2.) Write a wrapper that transformes Matrices to numpy.ndarrays and
     # accepts array instead of the separate arguments for the states)
     def num_arr_fun(t, X):
-        Y = np.array([x for x in X]) # 
-
+        assert (X.ndim < 2 ) or ( X.shape[1]==1), """
+        X represents the numeric state vector and can not have more that one
+        dimension. 
+        This could be caused by adding an array of shape(n,) 
+        and one of shape (n,1)
+        The numpy broadcasting laws will create a result of shape (n,n)
+        """ 
+        
+        #Y = np.array([x for x in X]) # 
+        Y = np.array(X).flatten()
         Fval = FL(t, *Y)
         return Fval.reshape(expr.shape,)
 
     return num_arr_fun
+
+def numerical_1d_vector_func(*args, **kwargs):
+    
+    arr_func=numerical_array_func(*args,**kwargs)
+    def flat_func(t,X):
+        return arr_func(t,X).flatten()
+
+    return flat_func
+
 
 def numerical_rhs_old(
     state_vector,
@@ -1441,6 +1458,7 @@ def net_Rs_from_discrete_Bs_and_xs(Bs, xs, decay_corr=None):
         decay_corr = np.ones((nt,))
 
     net_Rs = np.zeros((nt, nr_pools))
+
     for k in range(nt):
         for j in range(nr_pools):
             net_Rs[k, j] = (1-sum(Bs[k, :, j])*decay_corr[k]) * xs[k, j]
@@ -1610,7 +1628,7 @@ def euler_forward_B_sym(
             iteration
         )
     )
-    return B_sym_discrete #* delta_t 
+    return B_sym_discrete 
 
 
 def discrete_time_sym(

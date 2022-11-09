@@ -5,7 +5,7 @@ from .myOdeResult import solve_ivp_pwc
 from .BlockRhs import BlockRhs
 
 
-class PiecewiseBlockIvps:
+class PiecewiseBlockIvp:
     """
     Helper class for initial value systems 
     with piecewise defined rhs (BlockRhs) 

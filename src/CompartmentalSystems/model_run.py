@@ -42,11 +42,12 @@ def plot_attributes(mrs, file_name):
     fig.savefig(file_name)#, tight_layout=True)
 
 
+
 def plot_stocks_and_fluxes(mrs, file_name, labels=None):
-    colors = ['red', 'blue', 'orange', 'green', 'yellow', 'black']
+    colors = ['red', 'blue', 'orange', 'green', 'yellow', 'black','magenta']
     if labels is None:
-        labels = ['mr_ref', 'mr_1', 'mr_2', 'mr_3', 'mr_4', 'mr_5']
-    markersizes = [8, 6, 4, 2, 1, 0.5]
+        labels = ['mr_ref'] + [f'mr_{i}' for i in range(1,len(mrs))]
+    markersizes = [10,8, 6, 4, 2, 1, 0.5]
     lc = len(colors)
     if len(mrs) > lc:
         raise(Exception("only "+str(lc)+" different modelruns supported."))
@@ -56,88 +57,103 @@ def plot_stocks_and_fluxes(mrs, file_name, labels=None):
             nrows=nr_pools+1,
             ncols=nr_pools+1,
             gridspec_kw={'hspace': 0.3, 'wspace': 0.1},
-            figsize=(11.69, 11.69)
+            figsize=(21.69, 21.69)
         )
 
-        # solutions
-        meth = 'solve'
+        def plot_cutter(ts, xs):
+            # since  the results
+            # differ with respect to the relative length of solutions and times
+            # we cut both arrays to the maximal common length
+            nt = ts.shape[0]
+            nxs = xs.shape[0]
+            limit = min(nt, nxs)
+            print(nt, nxs)
+            sl = slice(0, limit)
+            return ts[sl], xs[sl]
+
+        def f(X, Y): 
+            cX,cY=plot_cutter(X,Y)
+            return (cX / cY)
+
+    # solutions
+    meth = 'solve'
+    for i in range(nr_pools):
+        ax = axs[i, i+1]
+        ax.set_title(meth + ", " + str(i))
+        for k, mr in enumerate(mrs):
+            y = getattr(mr, meth)()[:, i]
+            ax.plot(
+                mr.times[:len(y)],
+                y,
+                color=colors[k],
+                label=labels[k],
+                markersize=markersizes[k]
+            )
+            ax.legend()
+
+    for symb, net_or_gross in zip(["o", "*-"], ["gross", "net"]):
+        # influxes
+        tit = 'acc external input vector'
+        meth = 'acc_'+net_or_gross+'_external_input_vector'
         for i in range(nr_pools):
-            ax = axs[i, i+1]
-            ax.set_title(meth + ", " + str(i))
+            ax = axs[i, 0]
+            ax.set_title(tit + ", " + str(i))
             for k, mr in enumerate(mrs):
-                y = getattr(mr, meth)()[:, i]
-                ax.plot(
-                    mr.times[:len(y)],
-                    y,
-                    '*',
-                    color=colors[k],
-                    label=labels[k],
-                    markersize=markersizes[k]
-                )
-                ax.legend()
+                if hasattr(mr, meth):
+                    y = f(getattr(mr, meth)()[:, i], mr.dts)
+                    ax.plot(
+                        mr.times[:len(y)],
+                        y,
+                        symb,
+                        color=colors[k],
+                        label=labels[k]+'_'+net_or_gross,
+                        markersize=markersizes[k]
+                    )
+                    ax.legend()
 
-        def f(X, Y): return X / Y[:len(X)]
-        for symb, net_or_gross in zip(["o", "*-"], ["gross", "net"]):
-            # influxes
-            tit = 'acc external input vector'
-            meth = 'acc_'+net_or_gross+'_external_input_vector'
-            for i in range(nr_pools):
-                ax = axs[i, 0]
-                ax.set_title(tit + ", " + str(i))
-                for k, mr in enumerate(mrs):
-                    if hasattr(mr, meth):
-                        y = f(getattr(mr, meth)()[:, i], mr.dts)
-                        ax.plot(
-                            mr.times[:len(y)],
-                            y,
-                            symb,
-                            color=colors[k],
-                            label=labels[k]+'_'+net_or_gross,
-                            markersize=markersizes[k]
-                        )
-                ax.legend()
+        # outfluxes
+        tit = 'acc external output vector'
+        meth = 'acc_'+net_or_gross+'_external_output_vector'
+        for j in range(nr_pools):
+            ax = axs[-1, j+1]
+            ax.set_title(tit + ", " + str(j))
+            for k, mr in enumerate(mrs):
+                if hasattr(mr, meth):
+                    y = f(getattr(mr, meth)()[:, j], mr.dts)
+                    ax.plot(
+                        mr.times[:len(y)],
+                        y,
+                        symb,
+                        color=colors[k],
+                        label=labels[k]+'_'+net_or_gross,
+                        markersize=markersizes[k]
+                    )
+            ax.legend()
 
-            # outfluxes
-            tit = 'acc external output vector'
-            meth = 'acc_'+net_or_gross+'_external_output_vector'
+
+        #for symb, net_or_gross in zip(["o", "*-"], ["gross", "net"]):
+        # internal fluxes
+        meth = 'acc_'+net_or_gross+'_internal_flux_matrix'
+        for i in range(nr_pools):
             for j in range(nr_pools):
-                ax = axs[-1, j+1]
-                ax.set_title(tit + ", " + str(j))
-                for k, mr in enumerate(mrs):
-                    if hasattr(mr, meth):
-                        y = f(getattr(mr, meth)()[:, j], mr.dts)
-                        ax.plot(
-                            mr.times[:len(y)],
-                            y,
-                            symb,
-                            color=colors[k],
-                            label=labels[k]+'_'+net_or_gross,
-                            markersize=markersizes[k]
-                        )
-                ax.legend()
-
-            # internal fluxes
-            meth = 'acc_'+net_or_gross+'_internal_flux_matrix'
-            for i in range(nr_pools):
-                for j in range(nr_pools):
-                    if i != j:
-                        ax = axs[i, j+1]
-                        ax.set_title(
-                            'F({0},{1}) = acc flux from {1} to {0}'
-                            .format(i, j)
-                        )
-                        for k, mr in enumerate(mrs):
-                            if hasattr(mr, meth):
-                                y = f(getattr(mr, meth)()[:, i, j], mr.dts)
-                                ax.plot(
-                                    mr.times[:len(y)],
-                                    y,
-                                    symb,
-                                    color=colors[k],
-                                    label=labels[k]+'_'+net_or_gross,
-                                    markersize=markersizes[k]
-                                )
-                        ax.legend()
+                if i != j:
+                    ax = axs[i, j+1]
+                    ax.set_title(
+                        'F({0},{1}) = acc flux from {1} to {0}'
+                        .format(i, j)
+                    )
+                    for k, mr in enumerate(mrs):
+                        if hasattr(mr, meth):
+                            y = f(getattr(mr, meth)()[:, i, j], mr.dts)
+                            ax.plot(
+                                mr.times[:len(y)],
+                                y,
+                                symb,
+                                color=colors[k],
+                                label=labels[k]+'_'+net_or_gross,
+                                markersize=markersizes[k]
+                            )
+                    ax.legend()
 
         axs[nr_pools, 0].set_visible(False)
         fig.savefig(file_name)#, tight_layout=True)

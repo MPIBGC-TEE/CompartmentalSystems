@@ -7,7 +7,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from CompartmentalSystems.PiecewiseBlockIvps import PiecewiseBlockIvps
+from CompartmentalSystems.PiecewiseBlockIvp import PiecewiseBlockIvp
 from CompartmentalSystems.BlockRhs import BlockRhs
 
 
@@ -19,7 +19,7 @@ class TestPiecewiseBlockIvps(InDirTest):
         start_blocks =[("x1", np.ones(x1_shape)), ("x2", np.ones(x2_shape))]
         block_shapes = [(n, a.shape) for (n, a) in start_blocks] 
         time_str="t"
-        pwbivps = PiecewiseBlockIvps(
+        pwbivps = PiecewiseBlockIvp(
             start_blocks=start_blocks,
             block_rhss=[
                 BlockRhs(
@@ -95,7 +95,7 @@ class TestPiecewiseBlockIvps(InDirTest):
                 ((lambda t, x2: -2 * t * x2), ["t", "x2"]),
             ]
         )
-        pwbivps = PiecewiseBlockIvps(
+        pwbivps = PiecewiseBlockIvp(
             start_blocks=start_blocks,
             block_rhss=[
                 brhs,

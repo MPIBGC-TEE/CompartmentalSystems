@@ -90,7 +90,7 @@ class TestDiscreteReservoirModel(InDirTest):
         func_dict = {
                 I_leaf(it*delta_t): my_cont_func
         }
-        num_B, num_Net_B, num_u = map(
+        num_B, num_Net_B = map(
             lambda expr: hr.numerical_array_func(
                 state_variable_tuple,
                 it,
@@ -98,7 +98,14 @@ class TestDiscreteReservoirModel(InDirTest):
                 par_dict,
                 func_dict
             ),
-            (B, Net_B, u)
+            (B, Net_B)
+        )
+        num_u = hr.numerical_1d_vector_func(
+            state_variable_tuple,
+            it,
+            u,
+            par_dict,
+            func_dict
         )
         print(num_u(0,np.array([0,0])))
         print(num_u(0,np.array([1,1])))
@@ -229,15 +236,19 @@ class TestDiscreteReservoirModel(InDirTest):
         func_dict = {
                 I_leaf(it): my_func
         }
-        num_B, num_u = map(
-            lambda expr: hr.numerical_array_func(
-                state_variable_tuple,
-                it,
-                expr,
-                par_dict,
-                func_dict
-            ),
-            (B, u)
+        num_B= hr.numerical_array_func(
+            state_variable_tuple,
+            it,
+            B,
+            par_dict,
+            func_dict
+        )
+        num_u=  hr.numerical_1d_vector_func(
+            state_variable_tuple,
+            it,
+            u,
+            par_dict,
+            func_dict
         )
         print(num_u(0,np.array([0,0])))
         print(num_u(0,np.array([1,1])))

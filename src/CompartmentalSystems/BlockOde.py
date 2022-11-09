@@ -1,6 +1,7 @@
 from typing import Callable, List, Tuple
 import numpy as np
-from .BlockIvp import BlockIvp
+from .PiecewiseBlockIvp import PiecewiseBlockIvp
+from .BlockRhs import BlockRhs
 
 
 class BlockOde:
@@ -28,19 +29,28 @@ class BlockOde:
     def blockIvp(
         self,
         start_blocks: List[Tuple[str, np.ndarray]]
-    ) -> BlockIvp:
+    ) -> PiecewiseBlockIvp:
         """
         Extends the system to an initial value problem by adding startvalues
         for the blocks.
         It checks that the names of the names of the blocks coincide.
         """
+        
         for ind, tup in enumerate(self.block_names_and_shapes):
             name, shape = tup
             assert(name == start_blocks[ind][0])
             assert(shape == start_blocks[ind][1].shape)
-        return BlockIvp(
-            self.time_str,
+
+        block_rhss = [
+            BlockRhs(
+                self.time_str,
+                func_tups
+            )
+            for func_tups in self.functionss
+        ]
+
+        return PiecewiseBlockIvp(
             start_blocks,
-            self.functionss,
+            block_rhss,
             self.disc_times
         )

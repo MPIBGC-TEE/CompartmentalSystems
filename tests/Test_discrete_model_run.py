@@ -4,39 +4,46 @@
 import sys
 import unittest
 import numpy as np
-from typing import List
-from sympy import sin, exp, symbols, Matrix, Symbol, solve, Eq, log
-from scipy.integrate import quad
+from matplotlib import pyplot as plt
 from testinfrastructure.InDirTest import InDirTest
+from collections import OrderedDict
+from sympy import Symbol, symbols, Function, ImmutableMatrix, Matrix, log, sin 
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 from CompartmentalSystems.discrete_model_run import TimeStep, TimeStepIterator
-from CompartmentalSystems.model_run import plot_stocks_and_fluxes
+from CompartmentalSystems.BlockDictIterator import BlockDictIterator
+from CompartmentalSystems.model_run import (
+    plot_stocks_and_fluxes,
+    plot_attributes,
+    #plot_stocks_and_gross_fluxes
+)
 import CompartmentalSystems.helpers_reservoir as hr
 
 
 class TestDiscreteModelRun(InDirTest):
-    def test_from_SmoothModelRun(self):
-        x_0, x_1, t, k, u = symbols("x_0 x_1 k t u")
+    def test_from_SmoothModelRun_and_output(self):
+        # this is a comprehensive test of 
+        x_0, x_1, t, k, u = symbols("x_0, x_1, t, k, u")
         inputs = {
             0: u*(2-2*sin(2*t)),
             1: u
         }
         outputs = {
             0: x_0*k,
-            1: x_1**2*k
+            1: k*x_1**2
         }
         internal_fluxes = {
             (0, 1): x_0,
             (1, 0): 0.5*x_1
         }
         srm = SmoothReservoirModel(
-            [x_0, x_1],
-            t,
-            inputs,
-            outputs,
-            internal_fluxes
+            #state_vector=ImmutableMatrix([x_0, x_1]),
+            state_vector=[x_0, x_1],
+            time_symbol=t,
+            input_fluxes=inputs,
+            output_fluxes=outputs,
+            internal_fluxes=internal_fluxes
         )
         nr_bins = 20
         nr_bins_fine = 80
@@ -47,8 +54,11 @@ class TestDiscreteModelRun(InDirTest):
         start_values = np.array([x0, x0])
         parameter_dict = {
             k: 0.012,
-            u: 10.7}
+            u: 10.7
+        }
 
+        # We create a continuous reference model run from which we can compute
+        # the fluxes accumulated over a time step 
         smr = SmoothModelRun(srm, parameter_dict, start_values, times)
         smr_fine = SmoothModelRun(
             srm,
@@ -56,6 +66,7 @@ class TestDiscreteModelRun(InDirTest):
             start_values,
             times_fine
         )
+        sol=smr_fine.solve()
 
         xs, net_Us, net_Fs, net_Rs = smr.fake_net_discretized_output(times)
         xs, gross_Us, gross_Fs, gross_Rs \
@@ -63,7 +74,7 @@ class TestDiscreteModelRun(InDirTest):
         xs_fine, gross_Us_fine, gross_Fs_fine, gross_Rs_fine \
             = smr_fine.fake_gross_discretized_output(times_fine)
 
-        dmr_from_pwc = DMR.from_SmoothModelRun(smr, nr_bins)
+        dmr_from_fake_net_fluxes_and_solution = DMR.from_SmoothModelRun(smr, nr_bins)
         dmr_from_fake_net_data = DMR.from_fluxes_and_solution(
             times,
             xs,
@@ -95,7 +106,7 @@ class TestDiscreteModelRun(InDirTest):
         self.assertTrue(
             np.allclose(
                 smr.solve(),
-                dmr_from_pwc.solve()
+                dmr_from_fake_net_fluxes_and_solution.solve()
             )
         )
 
@@ -135,34 +146,63 @@ class TestDiscreteModelRun(InDirTest):
                 dmr_from_fake_gross_data_ffas.net_Us
             )
         )
-#        plot_attributes(
-#            [
-#                smr,
-#                dmr_from_fake_net_data,
-#                dmr_from_fake_gross_data_ff,
-#                dmr_from_fake_gross_data_ffas
-#            ],
-#            'plot.pdf'
-#        )
-#        plot_stocks_and_fluxes(
-#            [
-#                smr,
-#                # dmr_from_fake_net_data,
-#                # dmr_from_pwc,
-#                dmr_from_fake_gross_data_ff,
-#                dmr_from_fake_gross_data_ff_fine
-#            ],
-#            'stocks_and_fluxes.pdf'
-#        )
-#        plot_stocks_and_gross_fluxes(
-#            [
-#                smr,
-#                dmr_from_fake_net_data,
-#                dmr_from_fake_gross_data_ff,
-#                dmr_from_fake_gross_data_ffas
-#            ],
-#            'stocks_and_gross_fluxes.pdf'
-#        )
+        # at last we construct a discrete model from the 
+        delta_t = Symbol('delta_t')
+        dmr_euler = DMR.from_euler_forward_smooth_reservoir_model(
+            srm,
+            par_dict={**parameter_dict, delta_t:(t_max - 0)/nr_bins},
+            func_dict={}, 
+            delta_t=delta_t,
+            number_of_steps=nr_bins,#_fine,
+            start_values=start_values
+        )     
+        dmr_euler_fine = DMR.from_euler_forward_smooth_reservoir_model(
+            srm,
+            par_dict={**parameter_dict, delta_t:(t_max - 0)/nr_bins_fine},
+            func_dict={}, 
+            delta_t=delta_t,
+            number_of_steps=nr_bins_fine,
+            start_values=start_values
+        )     
+        #dmr_euler.solve()
+
+        #plot_attributes(
+        #    [
+        #        smr,
+        #        dmr_from_fake_net_data,
+        #        #dmr_from_fake_gross_data_ff,
+        #        #dmr_from_fake_gross_data_ffas,
+        #        #dmr_euler
+        #    ],
+        #    'plot.pdf'
+        #)
+        names = [
+            'smr',
+            #'dmr_from_fake_net_data',
+            'dmr_from_fake_net_fluxes_and_solution',
+            'dmr_from_fake_gross_data_ff',
+            'dmr_from_fake_gross_data_ff_fine',
+            #'dmr_euler',
+            'dmr_euler_fine'
+        ]
+        ls=locals()
+        #from IPython import embed; embed()
+        dmrs=[ls[n] for n in names]
+        plot_stocks_and_fluxes(
+            dmrs,
+            'stocks_and_fluxes.pdf',
+            labels=names
+        )
+        #plot_stocks_and_gross_fluxes(
+        #    [
+        #        smr,
+        #        dmr_from_fake_net_data,
+        #        dmr_from_fake_gross_data_ff,
+        #        dmr_from_fake_gross_data_ffas,
+        #        dmr_euler
+        #    ],
+        #    'stocks_and_gross_fluxes.pdf'
+        #)
 
     def test_iterator_related_constructors(self):
         # fake matrix
@@ -173,39 +213,76 @@ class TestDiscreteModelRun(InDirTest):
         # fake input
         u_0=np.array([1, 1])
         x_0=np.array([0, 0])
+        t_0 = 0
+        delta_t = 2
         B_func = lambda it, x: B_0 # linear nonautonmous
         u_func = lambda it, x: u_0 # constant
         number_of_steps = 10
+        
+        bit=BlockDictIterator(
+            iteration_str = "it",
+            start_seed_dict={"x": x_0},
+            present_step_funcs=OrderedDict({
+                # these are functions that are  applied in order
+                # on the start_seed_dict
+                # they might compute variables to 
+                "t": lambda it: t_0 + delta_t*it, #time
+                "B": lambda it, x: B_func(it, x), 
+                "u": lambda it, x: u_func(it,x), 
+            }),
+            next_step_funcs=OrderedDict({
+                # these functions have to compute the seed for the next timestep
+                "x": lambda x,B,u : x + B @ x + u, 
+            })
+        )
+        vals = bit[0:number_of_steps]
+        times_0 =np.stack([res["t"] for res in vals],axis=0) 
+        sol_0 = np.stack([res["x"] for res in vals],axis=0) 
+
         tsit=TimeStepIterator(
             # fake matrix
-            initial_ts= TimeStep(B=B_0,u=u_0,x=x_0,t=0),
+            initial_ts= TimeStep(B=B_0,u=u_0,x=x_0,t=t_0),
             B_func=B_func,
             u_func=u_func,
             number_of_steps=number_of_steps,
-            delta_t=2
+            delta_t=delta_t
         )
         # steps=[ts for ts in tsit]
         # print(steps)
         # we could also choose to remember only the xs
         sol_1 = np.stack([ts.x for ts in tsit],axis=0) 
 
+
         # now we construct a dmr from the iterater
 
         dmr_2 = DMR.from_iterator(tsit)
         sol_2 = dmr_2.solve()
-        #from IPython import embed; embed()        
-        self.assertTrue((sol_1 == sol_2).all())
-
-        #self.assertEqual(sol_1, sol_2)
         
-        dmr_3= DMR.from_B_and_u_funcs(
+
+        
+        dmr_3 = DMR.from_B_and_u_funcs(
             x_0=x_0,
             B_func=B_func,
             u_func=u_func,
             number_of_steps=number_of_steps,
-            delta_t=2
+            delta_t=delta_t
         )
+        
         sol_3 = dmr_3.solve()
+        #from IPython import embed; embed()        
+        
+        fig = plt.figure()
+        axs=fig.subplots(2,1)
+        times = np.arange(0, number_of_steps)
+        for i in range(len(x_0)):
+            axs[i].plot(times, sol_0[:,i], "*", label="bit")
+            axs[i].plot(times, sol_1[:,i], "x", label="tsit")
+            axs[i].plot(times, sol_2[:,i], "+", label="dmr_from_iterator")
+            axs[i].plot(times, sol_3[:,i], "-", label="dmr_from_B_and_u_funcs")
+            axs[i].legend()
+        fig.savefig("fig.pdf")
+        
+        self.assertTrue((sol_1 == sol_2).all())
         self.assertTrue((sol_1 == sol_3).all())
     
 

@@ -41,6 +41,39 @@ class TestBlockIvp(InDirTest):
         res = bivp.block_solve(t_span=(0, t_max))
         self.assertTrue(np.allclose(res["x1"][-1], ref["x1"], rtol=1e-2))
         self.assertTrue(np.allclose(res["x2"][-1], ref["x2"], rtol=1e-2))
+        
+        # try the function output
+        f_dict = bivp.block_solve_functions(t_span=(0, t_max))
+        times=np.linspace(0,t_max,100)
+        
+        ref_x1_vals = np.stack(
+            [
+                val * np.ones(x1_shape) 
+                for val in np.exp(-times)
+            ]
+        )
+        self.assertTrue(
+            np.allclose(
+                f_dict['x1'](times),
+                ref_x1_vals,
+                atol=1e-2
+            )    
+        )    
+
+
+        ref_x2_vals = np.stack(
+           [
+               val * np.ones(x2_shape) 
+               for val in np.exp(-(times ** 2))
+           ]
+        )
+        self.assertTrue(
+            np.allclose(
+                f_dict['x2'](times),
+                ref_x2_vals,
+                atol=1e-2
+            )    
+        )    
 
 
     def test_solution_no_explicit_time(self):

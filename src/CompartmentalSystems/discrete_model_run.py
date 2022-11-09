@@ -1,3 +1,4 @@
+from numbers import Number
 import numpy as np
 from numpy.linalg import matrix_power, pinv
 from scipy.integrate import quad, solve_ivp
@@ -40,8 +41,7 @@ class DiscreteModelRun():
     def acc_net_external_output_vector(self):
         xs = self.xs
         Bs = self.Bs
-
-        return hr.net_Rs_from_discrete_Bs_and_xs(Bs, xs)
+        return hr.net_Rs_from_discrete_Bs_and_xs(Bs, xs) 
 
     def acc_net_external_input_vector(self):
         xs = self.xs
@@ -118,12 +118,8 @@ class DiscreteModelRun():
     @classmethod
     def from_iterator(
         cls,
-        tsit
+        tsit 
         ):
-        # "unzipping" the tupels  
-        x_0 = tsit.initial_ts.x
-        n_pools = len(x_0)
-        Bs, net_Us, times = zip(*((ts.B+np.eye(n_pools), ts.u.reshape(-1), ts.t)  for ts in tsit))
         # Note: 
         # 1.)   that the Bs of the iterator are momentary Bs whereas
         #       the Bs of the DiscreteModelRun are net Bs with 
@@ -152,7 +148,53 @@ class DiscreteModelRun():
 
         # the interator yields a new B and u for the last timestep
         # which is a different convention (dmr has one more x than us or Bs )
-        return cls.from_Bs_and_net_Us(x_0, times, Bs[:-1], net_Us[:-1])
+        # "unzipping" the tupels  
+        x_0 = tsit.initial_ts.x
+        n_pools = len(x_0)
+        net_Bs, net_Us, times = zip(*((ts.B+np.eye(n_pools), ts.u.reshape(-1), ts.t)  for ts in tsit))
+
+        # creating big arrays instead of a tuple of small ones
+
+        # fixme mm 11-9-2022:
+        # we could do this with the newer BlockArrayIterator and 
+        # espcecially its [] method which yields a dictionary of arrays
+        # that already have the iteration as the first dimension
+        nt=len(times)
+        def make_arr(first,tups):
+            if isinstance(first,np.ndarray):
+                sh = first.shape
+
+            elif isinstance(first,Number):
+                sh = ()
+
+            else:
+                # maybe implement something for object datatype
+                #sh = (1,)
+                raise
+
+            #initialize,
+            length=len(tups)
+            nt_tup=(length,)
+            arr=np.ones(
+                nt_tup + sh
+            )    
+
+            for i,tup in enumerate(tups):
+                arr[i]=tup
+            
+            return arr
+
+        net_Us_arr = make_arr(net_Us[0],net_Us)    
+        net_Bs_arr = make_arr(net_Bs[0],net_Bs)    
+        times_arr =make_arr(times[0],times)
+        mr = cls.from_Bs_and_net_Us(
+            x_0, 
+            times_arr,
+            net_Bs_arr[:-1],
+            net_Us_arr[:-1]
+        )
+        #from IPython import embed;embed() 
+        return mr 
 
     @classmethod
     def from_euler_forward_smooth_reservoir_model(
@@ -185,15 +227,20 @@ class DiscreteModelRun():
                 delta_t,
                 it
         ) * delta_t
-        num_B, num_u = map(
-            lambda expr: hr.numerical_array_func(
-                x,
-                it,
-                expr,
-                par_dict,
-                func_dict
-            ),
-            (sym_B_dt, sym_u_dt)
+        num_B = hr.numerical_array_func(
+            x,
+            it,
+            sym_B_dt,
+            par_dict,
+            func_dict
+        )
+        num_u = hr.numerical_1d_vector_func(
+             x,
+             it,
+             sym_u_dt,
+             par_dict,
+             func_dict
+            
         )
         return cls.from_B_and_u_funcs(
                 start_values,
