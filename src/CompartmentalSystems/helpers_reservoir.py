@@ -43,9 +43,9 @@ DECAY_RATE_14C_DAILY = DECAY_RATE_14C_YEARLY / 365.25
 
 
 def combine(m1, m2, m1_to_m2, m2_to_m1, intersect=False):
-    m1_sv_set, m1_in_fluxes, m1_out_fluxes, m1_internal_fluxes = m1 
-    m2_sv_set, m2_in_fluxes, m2_out_fluxes, m2_internal_fluxes = m2 
-    
+    m1_sv_set, m1_in_fluxes, m1_out_fluxes, m1_internal_fluxes = m1
+    m2_sv_set, m2_in_fluxes, m2_out_fluxes, m2_internal_fluxes = m2
+
     intersect_sv_set = m1_sv_set & m2_sv_set
     if intersect_sv_set and not intersect:
         raise(ValueError("How to handle pools %s?" % str(intersect_sv_set)))
@@ -1458,7 +1458,11 @@ def net_Rs_from_discrete_Bs_and_xs(Bs, xs, decay_corr=None):
         decay_corr = np.ones((nt,))
 
     net_Rs = np.zeros((nt, nr_pools))
+    # sum(Bs_k[:,j]) is the  column sum of column j of B_k
+    # which multiplied by the j component of x_k, x_[k,j] should give
+    # the mass leaving pool j towards the outsice
 
+    I=np.eye(nr_pools)
     for k in range(nt):
         for j in range(nr_pools):
             net_Rs[k, j] = (1-sum(Bs[k, :, j])*decay_corr[k]) * xs[k, j]

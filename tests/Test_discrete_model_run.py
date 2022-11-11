@@ -22,20 +22,114 @@ import CompartmentalSystems.helpers_reservoir as hr
 
 
 class TestDiscreteModelRun(InDirTest):
-    def test_from_SmoothModelRun_and_output(self):
-        # this is a comprehensive test of 
+    def test_reconstruction_from_output_and_SmoothReservoirModel(self):
+
+        # This is a comprehensive test of methods of creating a
+        # DiscreteModelRun instance from model output as well as via a
+        # discretization of the continuous equations (euler) 
+        #
+        # Please do not remove these comments, because the plots and
+        # assertions are very difficult to understand without them:
+        #
+        # 1.) The ambiguity of the reconstruction problem:
+        # 
+        # Given complete information about a continuous model 
+        # we could  reproduce the EXACT solution x by slightly 
+        # different discrete models, that will: 
+        # a.) represent the correct state transition operators or 
+        # b.) be able to predict the correct accumulated fluxes over 
+        #     a timestep.
+
+        # To show both variants we create a continuous reference model run 
+        # from which we can compute both the correct discrete state
+        # transition operators and the accumulated fluxes over the time
+        # step.
+        # 
+        # We start with the attempt 
+        # a.)
+        #   If we want to reconstruct the state transition operator for
+        #   certain discrete times perfectly we would need 
+        #
+        #   'net'_accumulated fluxes 
+        #   
+        #   as input.  
+        #   
+        #   These 'net' fluxes are a defined via state transition operators between
+        #   for the timesteps and are the only flux output our discretized
+        #   model can produce.
+        #
+        #   It will become clear that 
+        #   1.) we most likely do not have access to them 
+        #       if we have to do a reconstruction the model at all)
+        #   2.) They do not perfectly represent the real 
+        #       accumulated  fluxes in a time step.
+        #
+        #   To see this consider that the B_ks of the discrete_model run
+        #   are defined  as Phi_{k+1},k (The state transition operator
+        #   that moves a state from time t_k to t_{k+1}i).
+        #   From our the smooth model run we can compute the correct Phi_{k+1},k  
+        #   with arbitrary precision by solving the Phi-ode for the interval
+        #   t_k, t_{k+1} 
+        #    
+        #   with these exact B_k we can compute accumulated fluxes which we 
+        #   call 'net' fluxes:
+        #   - influxes: net_U_{k} = x_{k+1} - B_k @ x_k
+        #     The second term is what is left of x_k at the end of the timestep
+        #     The difference must be material flowing in during the timestep
+        #     AND having remained there. 
+        #     The new material would in reality also be subject to leaving the 
+        #     pool immidiately even DURING the time step.
+        #     Our net_U_{k} is therefore in fact a lower limit for the amount
+        #     that came in. (In case it came in at the last second of the timestep
+        #     it would not have had time to leave yet but material that had 
+        #     come in at the beginning would already have partially left.
+        #     
+        #     As an upper limit we could assume that everything had entered 
+        #     at the beginning (if the net_U_{k} remained at the end of the 
+        #     timestep B^{-1} net_U_{k} would have had to be there to start
+        #     with.
+        #     So accumulated net influxes should always be smaller than
+        #     the real flux
+        #     For our synthetic example we can also compute the accumulated
+        #     influx 'gross influx' and show that this is the case in the plot
+        
+        #   - internal fluxes  
+        #     net_Fs[k, i, j] = Bs[k, i, j] * xs[k, j] (for i != j )
+        #     ....
+
+        # b.)
+        #   If we pretend that the ' gross fluxes' 
+        #   (gross fluxes are the real integrated fluxes)
+        #   are identical to the net fluxes our model would produce,
+        #   the Bs will not represent the Phi s of the underlying model
+        #   if this assumption is wrong.
+        #   (We could plot the B components for both cases)
+
+        # the plots show 
+        # - For the continuous problem the  gross and net fluxes are different
+        #   (srm_gross vs srm_net) 
+        #   (so that the assumption of equating them is clearly wrong)
+        # - the ensuing dilemma that 
+        #   - with the correct Bs (from the in practice usually unavailable 'net' 
+        #     fluxes the (usually available''gross' fluxes are not reproduced;
+        #   - the Euler forward method produces Bs very close to those
+        #     gained by reconstructing them under the assumptions that
+        #     the gross and 'net' fluxes are identical. 
+
+
         x_0, x_1, t, k, u = symbols("x_0, x_1, t, k, u")
         inputs = {
             0: u*(2-2*sin(2*t)),
+            #0: u,
             1: u
         }
         outputs = {
             0: x_0*k,
-            1: k*x_1**2
+            1: 0.1*k*x_1**2
         }
         internal_fluxes = {
-            (0, 1): x_0,
-            (1, 0): 0.5*x_1
+            (0, 1): k*x_0,
+            (1, 0): k*0.5*x_1
         }
         srm = SmoothReservoirModel(
             #state_vector=ImmutableMatrix([x_0, x_1]),
@@ -46,19 +140,19 @@ class TestDiscreteModelRun(InDirTest):
             internal_fluxes=internal_fluxes
         )
         nr_bins = 20
-        nr_bins_fine = 80
+        nr_bins_fine = 200
         t_max = 2*np.pi
         times = np.linspace(0, t_max, nr_bins + 1)
         times_fine = np.linspace(0, t_max, nr_bins_fine + 1)
-        x0 = np.float(10)
+        x0 = np.float(50)
         start_values = np.array([x0, x0])
         parameter_dict = {
-            k: 0.012,
-            u: 10.7
+            #k: 0.012,
+            k: .1,
+            u: 10.0
         }
 
-        # We create a continuous reference model run from which we can compute
-        # the fluxes accumulated over a time step 
+        # the momentary fluxes accumulated over a time step 
         smr = SmoothModelRun(srm, parameter_dict, start_values, times)
         smr_fine = SmoothModelRun(
             srm,
@@ -103,49 +197,6 @@ class TestDiscreteModelRun(InDirTest):
             gross_Rs_fine
         )
 
-        self.assertTrue(
-            np.allclose(
-                smr.solve(),
-                dmr_from_fake_net_fluxes_and_solution.solve()
-            )
-        )
-
-        self.assertTrue(
-            np.allclose(
-                smr.solve(),
-                dmr_from_fake_net_data.solve()
-            )
-        )
-
-        # very unexpectedly the solution
-        # can be reconstructed from the right start_value
-        # the WRONG inputs WRONG internal fluxes and
-        # WRONG outputs
-        self.assertTrue(
-            np.allclose(
-                smr.solve(),
-                dmr_from_fake_gross_data_ff.solve(),
-                rtol=1e-3
-            )
-        )
-
-        # Here we also expect different results.
-        # We again abuse the DiscreteModelRun class
-        # but this time we give it the right solution
-        # which will be reproduced
-        self.assertTrue(
-            np.allclose(
-                smr.solve(),
-                dmr_from_fake_gross_data_ffas.solve()
-            )
-        )
-        # but the net influxes will be wrong
-        self.assertFalse(
-            np.allclose(
-                smr.acc_net_external_input_vector(),
-                dmr_from_fake_gross_data_ffas.net_Us
-            )
-        )
         # at last we construct a discrete model from the 
         delta_t = Symbol('delta_t')
         dmr_euler = DMR.from_euler_forward_smooth_reservoir_model(
@@ -164,7 +215,6 @@ class TestDiscreteModelRun(InDirTest):
             number_of_steps=nr_bins_fine,
             start_values=start_values
         )     
-        #dmr_euler.solve()
 
         #plot_attributes(
         #    [
@@ -193,16 +243,54 @@ class TestDiscreteModelRun(InDirTest):
             'stocks_and_fluxes.pdf',
             labels=names
         )
-        #plot_stocks_and_gross_fluxes(
-        #    [
-        #        smr,
-        #        dmr_from_fake_net_data,
-        #        dmr_from_fake_gross_data_ff,
-        #        dmr_from_fake_gross_data_ffas,
-        #        dmr_euler
-        #    ],
-        #    'stocks_and_gross_fluxes.pdf'
-        #)
+      # To do:
+      # - use Bs from the already implemented Euler backwards method
+      # - Plot the B components directly
+      # 
+
+      #  # very unexpectedly the solution
+      #  # can be reconstructed from the right start_value
+      #  # the WRONG inputs WRONG internal fluxes and
+      #  # WRONG outputs
+      #  self.assertTrue(
+      #      np.allclose(
+      #          smr.solve(),
+      #          dmr_from_fake_gross_data_ff.solve(),
+      #          rtol=1e-3
+      #      )
+      #  )
+
+      #  # Here we also expect different results.
+      #  # We again abuse the DiscreteModelRun class
+      #  # but this time we give it the right solution
+      #  # which will be reproduced
+      #  self.assertTrue(
+      #      np.allclose(
+      #          smr.solve(),
+      #          dmr_from_fake_gross_data_ffas.solve()
+      #      )
+      #  )
+      #  # but the net influxes will be wrong
+      #  self.assertFalse(
+      #      np.allclose(
+      #          smr.acc_net_external_input_vector(),
+      #          dmr_from_fake_gross_data_ffas.net_Us
+      #      )
+      #  )
+      #  self.assertTrue(
+      #      np.allclose(
+      #          smr.solve(),
+      #          dmr_from_fake_net_fluxes_and_solution.solve()
+      #      )
+      #  )
+
+      #  self.assertTrue(
+      #      np.allclose(
+      #          smr.solve(),
+      #          dmr_from_fake_net_data.solve()
+      #      )
+      #  )
+
 
     def test_iterator_related_constructors(self):
         # fake matrix
