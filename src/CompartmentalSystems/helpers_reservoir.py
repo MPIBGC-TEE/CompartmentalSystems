@@ -14,6 +14,7 @@ from string import Template
 from sympy import (
     gcd,
     diag,
+    sympify,
     lambdify,
     DiracDelta,
     solve,
@@ -639,7 +640,7 @@ def numerical_function_from_expression(expr, tup, parameter_dict, func_set):
     # results if the tuple argument to lambdify does not contain all free
     # symbols of the lambdified expression.
     # To avoid this case here we check this.
-    expr_par = expr.subs(parameter_dict)
+    expr_par = sympify(expr).subs(parameter_dict)
     ss_expr = expr_par.free_symbols
 
     cut_func_set = make_cut_func_set(func_set)
@@ -694,14 +695,13 @@ def numerical_rhs(
 
     return num_rhs
 
-def numerical_array_func(
+def numerical_func_of_t_and_Xvec(
     state_vector,
     time_symbol, # could also be the iteration symbol
     expr,
     parameter_dict,
     func_dict
 ):
-
     FL = numerical_function_from_expression(
         expr,
         (time_symbol,)+tuple(state_vector),
@@ -710,28 +710,61 @@ def numerical_array_func(
     )
 
     # 2.) Write a wrapper that transformes Matrices to numpy.ndarrays and
-    # accepts array instead of the separate arguments for the states)
-    def num_arr_fun(t, X):
-        assert (X.ndim < 2 ) or ( X.shape[1]==1), """
-        X represents the numeric state vector and can not have more that one
-        dimension. 
-        This could be caused by adding an array of shape(n,) 
-        and one of shape (n,1)
-        The numpy broadcasting laws will create a result of shape (n,n)
-        """ 
+    # accepts array instead of the separate arguments for the state variables)
+    def  f_of_t_and_Xvec(t, X):
+
+        if (X.ndim > 1 ) :
+            # fixme mm 11-16-2022
+            # this is evaluated each time the function is called
+            if X.shape[1]!=1:
+                print( f"""
+                X={0},
+                X.shape={1},
+                X represents the numeric state vector and can not have more that one
+                dimension. 
+                This could be caused by adding an array of shape(n,) 
+                and one of shape (n,1)
+                The numpy broadcasting rules will create a result of shape (n,n)
+                """.format(X,X.shape))
+                raise
+            else:
+                X=X.reshape(-1)
         
         #Y = np.array([x for x in X]) # 
         Y = np.array(X).flatten()
         Fval = FL(t, *Y)
-        return Fval.reshape(expr.shape,)
+        return Fval
+
+    return f_of_t_and_Xvec
+    
+
+def numerical_array_func(
+    state_vector,
+    time_symbol, # could also be the iteration symbol
+    expr,
+    parameter_dict,
+    func_dict
+):
+
+    FL = numerical_func_of_t_and_Xvec(
+        state_vector,
+        time_symbol, # could also be the iteration symbol
+        expr,
+        parameter_dict,
+        func_dict
+    )
+
+    def num_arr_fun(t, X):
+        Fval = FL(t, X)
+        return Fval.reshape(expr.shape)
 
     return num_arr_fun
 
 def numerical_1d_vector_func(*args, **kwargs):
     
-    arr_func=numerical_array_func(*args,**kwargs)
+    FL = numerical_func_of_t_and_Xvec(*args,**kwargs)
     def flat_func(t,X):
-        return arr_func(t,X).flatten()
+        return FL(t,X).flatten()
 
     return flat_func
 
@@ -1618,53 +1651,52 @@ def discrete_time_dict(
     return {cont_time: delta_t*iteration}
     
 
-def euler_forward_B_sym(
-        B_sym_cont: Expr, 
-        cont_time: Symbol, 
-        delta_t: Symbol, 
-        iteration: Symbol
-    )-> Expr:
-    """ attention: creates a timestep specific matrix"""
-    B_sym_discrete = B_sym_cont.subs(
-        discrete_time_dict(
-            cont_time,
-            delta_t,
-            iteration
-        )
-    )
-    return B_sym_discrete 
-
 
 def discrete_time_sym(
-        flux_sym_cont: Expr, 
+        sym_cont: Expr, 
         cont_time: Symbol, 
         delta_t: Symbol, 
         iteration: Symbol
     )-> Expr:
-    flux_sym_discrete = flux_sym_cont.subs(
+    flux_sym_discrete = sym_cont.subs(
        discrete_time_dict(
            cont_time,
            delta_t,
            iteration
        )
     )
-    return flux_sym_discrete #* delta_t
+    return flux_sym_discrete
 
 # fixme mm 2-11-2022
 # this function is identical to discrete_time_sym and should
 # be replaced wherever it is called
+# this is a wrapper until all calls are removed
 def euler_forward_net_u_sym(
         u_sym_cont: Expr, 
         cont_time: Symbol, 
         delta_t: Symbol, 
         iteration: Symbol
     )-> Expr:
-    u_sym_discrete = u_sym_cont.subs(
-       discrete_time_dict(
-           cont_time,
-           delta_t,
-           iteration
-       )
+    return discrete_time_sym(
+        u_sym_cont, 
+        cont_time, 
+        delta_t, 
+        iteration
     )
-    return u_sym_discrete #* delta_t
 
+# fixme mm 2-11-2022
+# this function is identical to discrete_time_sym and should
+# be replaced wherever it is called
+# this is a wrapper until all calls are removed
+def euler_forward_B_sym(
+        B_sym_cont: Expr, 
+        cont_time: Symbol, 
+        delta_t: Symbol, 
+        iteration: Symbol
+    )-> Expr:
+    return discrete_time_sym(
+        B_sym_cont, 
+        cont_time, 
+        delta_t, 
+        iteration
+    )

@@ -40,19 +40,11 @@ class InfiniteIterator:
     def __next__(self):
         # print(self.pos, self.cur)
         val = self.cur 
-        self.cur = self.func(self.pos, val) 
         self.pos += 1
+        self.cur = self.func(self.pos, val) 
         return val
         # raise StopIteration()
 
-    # @lru_cache
-    def value_at(self, it_max):
-        I = self.__iter__()
-
-        def f_i(acc, i):
-            return I.__next__()
-
-        return reduce(f_i, range(it_max), I.start_value)
 
     def __getitem__(self, arg):
         # this functions implements the python index notation itr[start:stop:step]
@@ -71,8 +63,7 @@ class InfiniteIterator:
             return tuple(islice(self, start, stop, step))
 
         elif isinstance(arg, int):
-            #return (self.value_at(it_max=arg),)
-            return (self.value_at(it_max=arg))
+            return tuple(islice(self, arg, arg+1, 1))[0]
         else:
             raise IndexError(
                 """arguments to __getitem__ have to be either

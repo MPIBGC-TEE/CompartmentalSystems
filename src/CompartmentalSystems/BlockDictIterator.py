@@ -43,6 +43,7 @@ class BlockDictIterator(InfiniteIterator):
             present_val_dict[iteration_str]=i
             new_dict = reduce(apply, next_step_funcs.keys(), present_val_dict) 
             # compute the extended values from the new seed 
+            #@from IPython import embed; embed()
             return complete(new_dict)
 
         super().__init__(

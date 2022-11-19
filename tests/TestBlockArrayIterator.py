@@ -49,6 +49,7 @@ class TestBlockArrayIterator(InDirTest):
        
         # for a slice we now get an ArrayDict (Dictionary of Arrays back)
         ft = bit[0:10]
+        #from IPython import embed; embed()
         self.assertTrue(isinstance(ft, ArrayDict))
         self.assertTrue(np.all(ft['x'][0] == x_0))
         self.assertTrue(np.all(ft['t'][0] == t_0))

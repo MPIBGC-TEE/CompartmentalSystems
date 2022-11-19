@@ -14,7 +14,7 @@ from CompartmentalSystems.InfiniteIterator import InfiniteIterator
 class TestInfiniteIterator(InDirTest):
 
     def test__getitem__(self):
-        v_0 = 1
+        v_0 = 0
 
         def f(i, n):
             return n+1
@@ -26,14 +26,16 @@ class TestInfiniteIterator(InDirTest):
         # integer index
         self.assertTrue(itr[0] == v_0)
         # 
-        # (1,2,3)[0:0] = ()
+        self.assertTrue(itr[1] == v_0+1)
+
+        # (0,1,2,3)[0:0] = ()
         self.assertTrue(itr[0:0] == ())
         
-        # (1,2,3)[0:1] = (1,) ## tuple
+        # (0,1,2,3)[0:1] = (0,) ## tuple
         self.assertTrue(itr[0: 1] == (v_0,))
 
-        # (1,2,3)[1:3] = (2,3)
-        self.assertTrue(itr[1: 3] == (2, 3))
+        # (0,1,2,3)[1:3] = (1,2)
+        self.assertTrue(itr[1: 3] == (1, 2))
 
 
     def test_dict(self):

@@ -12,6 +12,44 @@ from CompartmentalSystems.BlockDictIterator import BlockDictIterator
 
 
 class TestBlockDictIterator(InDirTest):
+    def test_solution_1(self):
+        t_0 = 0
+        delta_t = 1
+        x_0 = 0
+        sd = {"x": 0}
+        bit = BlockDictIterator(
+            iteration_str = "it",
+            start_seed_dict=sd,
+            present_step_funcs=OrderedDict({
+                # these are functions that are  applied in order
+                # on the start_seed_dict
+                # they might compute variables that are purely  
+                # diagnostic or those that are necessary for the
+                # next step values
+                "t": lambda it: t_0 + delta_t*it, #time
+            }),
+            next_step_funcs=OrderedDict({
+                # these functions have to compute the seed for the next timestep
+                "x": lambda x: x + 1, 
+            })
+        )
+        
+        #from IPython import embed; embed()
+        self.assertTrue(bit[0]['t'] == t_0)
+        self.assertTrue(bit[0]['x'] == x_0)
+        # the iterator should already have moved one step
+        self.assertTrue(bit[0]['it'] == 1) 
+
+        self.assertTrue(bit[1]['t'] == t_0 + delta_t)
+        self.assertTrue(bit[1]['x'] == 1)
+        # the iterator should have alreay moved two steps
+        self.assertTrue(bit[1]['it'] == 2)
+        
+        self.assertTrue(bit[2]['t'] == t_0 + 2 * delta_t)
+        self.assertTrue(bit[2]['x'] == 2)
+        # the iterator should have alreay moved three steps
+        self.assertTrue(bit[2]['it'] == 3)
+        
     def test_solution(self):
         B_0 = np.array(
             [
