@@ -3,7 +3,7 @@
 import unittest
 from plotly.offline import plot
 import numpy as np
-from sympy import Symbol, symbols, sin, Function
+from sympy import Symbol, symbols, sin, Function, diag, zeros, ones, sympify
 from CompartmentalSystems.helpers_reservoir import (
     numerical_function_from_expression
 )
@@ -458,6 +458,46 @@ class TestStartDistributions(InDirTest):
         self.assertTrue(np.allclose(F_res, ref))
         self.assertTupleEqual(res.shape, ref.shape)
 
+    def test_compute_start_age_moments_from_steady_state_against_Ramussen2016(self):
+        # two-dimensional linear non-autonomous
+        C_0, C_1 = symbols('C_0 C_1')
+        state_vector = [C_0, C_1]
+        t = Symbol('t')
+        input_fluxes = {0: 1*(sin(t)+1), 1: 2}
+        output_fluxes = {0: C_0, 1: C_1}
+        internal_fluxes = {(0,1): C_0}
+        srm = SmoothReservoirModel(
+            state_vector,
+            t,
+            input_fluxes,
+            output_fluxes,
+            internal_fluxes
+        )
+        age_moment_vector = start_age_moments_from_steady_state(
+            srm,
+            t0=0,
+            parameter_dict={},
+            func_set={},
+            max_order=1
+        )
+        # to produce the reference we use Lemma 1 in Rasmussen 2016
+        M0=srm.compartmental_matrix
+        n=srm.nr_pools
+        t=srm.time_symbol
+        I_vec=zeros(n,1)
+        for k,v in srm.input_fluxes.items():
+            I_vec[k] = sympify(v).subs({t:0})
+        X_fix = M0.inv() @ I_vec
+        X_fix_mat=diag(X_fix.tolist(),unpack=True)
+        ref = - X_fix_mat.inv() @ M0.inv() @ X_fix_mat @ ones(n,1)
+        self.assertTrue(
+            np.allclose(
+                age_moment_vector.transpose(),
+                np.array(ref,dtype=np.float64)
+            )
+        )
+
+
     def test_compute_start_age_moments_from_steady_state(self):
         # two-dimensional linear autonomous
         C_0, C_1 = symbols('C_0 C_1')
@@ -511,6 +551,7 @@ class TestStartDistributions(InDirTest):
         self.assertEqual(age_moment_vector.shape, (2, 2))
         # we only check the expectation values since B is the identity
         # the number are the same as in the input fluxes
+
         ref_ex = np.array([1, 2])
         for pool in range(srm.nr_pools):
             self.assertTrue(np.allclose(age_moment_vector[:, pool], ref_ex))
