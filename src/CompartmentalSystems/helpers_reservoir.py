@@ -1,6 +1,6 @@
 # vim:set ff=unix expandtab ts=4 sw=4:
-from typing import Callable, Tuple, Sequence, Set, Dict
-from functools import lru_cache, _CacheInfo, _lru_cache_wrapper
+from typing import Callable, Tuple, Sequence, Set, Dict, Iterator
+from functools import reduce, lru_cache, _CacheInfo, _lru_cache_wrapper
 import numpy as np
 import matplotlib.pyplot as plt
 import inspect
@@ -33,6 +33,7 @@ from sympy import Symbol
 from collections.abc import Iterable
 import networkx as nx
 import igraph as ig
+import itertools as it
 from frozendict import frozendict
 from .BlockOde import BlockOde
 from .myOdeResult import solve_ivp_pwc
@@ -1700,3 +1701,57 @@ def euler_forward_B_sym(
         delta_t, 
         iteration
     )
+
+def partitions(start, stop, step=1):
+    # little helper to partition an iterable e.g. to then compute averages
+    # of the partitions (avoids fence post errors)
+    diff = stop - start
+    number_of_steps = int(diff / step)
+    last_start = start + number_of_steps * step
+    last_tup_l = [(last_start, stop)] if last_start < stop else []
+    return [
+        (start + step * i, start + step * (i + 1)) for i in range(number_of_steps)
+    ] + last_tup_l
+
+def average_iterator(
+    iterator, # an iterator whose results support addition
+    step: int
+    ):
+    # this is a generatorwhich takes an iterator
+    # and returns a new iterator that yields the averages of iterator
+    # over step steps
+    
+    
+    myit,old=it.tee(iterator) 
+    while True:
+        sl_it = it.islice(myit,step)
+        # test,sl_it = it.tee(sl_it)
+        # print([v.x for v in test])
+        sl_sum = reduce(lambda acc,el: acc+el, sl_it) 
+        # this will also advance myit by step steps
+        # but this is what we want
+        yield sl_sum/step
+
+
+def average_iterator_from_partitions(
+    iterator, # an iterator whose results support addition
+    partitions: Iterator[Tuple[int]] # typically a list [(0,5),(5,10),...(100,101)]
+    ):
+    # the partitions can have uneven length (mostly used to compute the average
+    # over the last remaining part if it is smaller than the normal stepsize)
+    
+    myit, old = it.tee(iterator) #don't consume the original but a copy.. 
+    mypart, old = it.tee(partitions) #don't consume the original but a copy.. 
+    while True:
+        try:
+            start, stop = next(mypart)
+            step = stop - start
+            sl_it = it.islice(myit,step)
+            # test,sl_it = it.tee(sl_it)
+            # print([v for v in test])
+            sl_sum = reduce(lambda acc,el: acc+el, sl_it) 
+            # this will also advance myit by step steps
+            # but this is what we want
+            yield sl_sum/step
+        except(StopIteration):
+            break # one of the iterators has been exhausted usually the finite partitions

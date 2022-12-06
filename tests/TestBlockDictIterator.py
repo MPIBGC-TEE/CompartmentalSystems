@@ -34,21 +34,19 @@ class TestBlockDictIterator(InDirTest):
             })
         )
         
+        first = next(bit)
+        second = next(bit)
         #from IPython import embed; embed()
-        self.assertTrue(bit[0]['t'] == t_0)
-        self.assertTrue(bit[0]['x'] == x_0)
-        # the iterator should already have moved one step
-        self.assertTrue(bit[0]['it'] == 1) 
+        self.assertTrue(first['t'] == t_0)
+        self.assertTrue(first['x'] == x_0)
+        # the iterator sfistalready have moved one step
+        self.assertTrue(first['it'] == 1) 
 
-        self.assertTrue(bit[1]['t'] == t_0 + delta_t)
-        self.assertTrue(bit[1]['x'] == 1)
+        self.assertTrue(second['t'] == t_0 + delta_t)
+        self.assertTrue(second['x'] == 1)
         # the iterator should have alreay moved two steps
-        self.assertTrue(bit[1]['it'] == 2)
+        self.assertTrue(second['it'] == 2)
         
-        self.assertTrue(bit[2]['t'] == t_0 + 2 * delta_t)
-        self.assertTrue(bit[2]['x'] == 2)
-        # the iterator should have alreay moved three steps
-        self.assertTrue(bit[2]['it'] == 3)
         
     def test_solution(self):
         B_0 = np.array(
@@ -80,17 +78,13 @@ class TestBlockDictIterator(InDirTest):
                 "x": lambda x,B,u : B*x +u, 
             })
         )
-        first=bit[0]
+        first = next(bit)
+        second = next(bit)
         self.assertTrue(isinstance(first,type(sd)))
         self.assertEqual(set(first.keys()),{"it","x","t","B","u"})
         self.assertTrue(np.all(first['t'] == t_0))
         self.assertTrue(np.all(first['x'] == x_0))
        
-        # for a slice we get a tuple back
-        first_ten = bit[0:10]
-        self.assertTrue(isinstance(first_ten,tuple))
-        self.assertTrue(np.all(first_ten[0]['x'] == x_0))
-        self.assertTrue(np.all(first_ten[0]['t'] == t_0))
 
 
 ################################################################################

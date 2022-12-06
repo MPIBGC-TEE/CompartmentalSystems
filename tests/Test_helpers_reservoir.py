@@ -24,7 +24,7 @@ import CompartmentalSystems.helpers_reservoir as hr
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 
-class TestHelpers_reservoir(unittest.TestCase):
+class Test_helpers_reservoir(unittest.TestCase):
 
     def test_compartmental_model_split_and_merge(self):
         sym_list = [
@@ -1256,7 +1256,53 @@ class TestHelpers_reservoir(unittest.TestCase):
         M=Matrix([[-k,0],[0,-l]])
         self.assertTrue(hr.is_compartmental(M))
 
+    
+    def test_average_iterator(self):
+        # make an iterator 
+        def natural_numbers():
+            i=1
+            while True:
+                val=i
+                i+=1
+                yield val
 
+        nit=natural_numbers()
+
+        av_it=hr.average_iterator(nit,2)
+
+        res = [next(av_it) for i in range(4)]
+        self.assertEqual( 
+            res, [1.5, 3.5, 5.5, 7.5]
+        )
+
+    def test_average_iterator_from_partitions(self):
+        # make an iterator 
+        def natural_numbers():
+            i=1
+            while True:
+                val=i
+                i+=1
+                yield val
+
+        nit=natural_numbers()
+        
+        start = 0
+        stop = 10
+        step = 4
+        parts = hr.partitions(start, stop,  step)
+        # for visibility in this test 
+        self.assertEqual(
+            parts,
+            [(0, 4), (4, 8), (8, 10)]
+        )
+        av_it=hr.average_iterator_from_partitions(nit,parts)
+        res = [i for i in av_it]
+        print(res)
+
+        #from IPython import embed; embed() 
+        self.assertEqual( 
+            res, [(1+2+3+4)/4, (5+6+7+8)/4, (9+10)/2]
+        )
 
 ################################################################################
 
@@ -1272,4 +1318,5 @@ if __name__ == '__main__':
     # error occurs
     if (len(res.errors)+len(res.failures))>0:
         sys.exit(1)
+
 

@@ -8,14 +8,7 @@ import inspect
 from .InfiniteIterator import InfiniteIterator
 
 
-class BlockDictIterator(InfiniteIterator):
-    def __init__(
-            self, #: Self,
-            iteration_str: str,
-            start_seed_dict: Dict,
-            present_step_funcs: Dict[str,Callable],
-            next_step_funcs: Dict[str,Callable]
-    ):#-> Self:
+def prepare(iteration_str,start_seed_dict, present_step_funcs, next_step_funcs):
         func_dict = {**present_step_funcs, **next_step_funcs}
         arglists  = {
             target_var: inspect.getfullargspec(fun).args
@@ -45,9 +38,40 @@ class BlockDictIterator(InfiniteIterator):
             # compute the extended values from the new seed 
             #@from IPython import embed; embed()
             return complete(new_dict)
+        
+        start_value=complete(seed_value_dict_0)
+        return start_value, f
+
+class BlockDictIterator(InfiniteIterator):
+    def __init__(
+            self, #: Self,
+            iteration_str: str,
+            start_seed_dict: Dict,
+            present_step_funcs: Dict[str,Callable],
+            next_step_funcs: Dict[str,Callable],
+            max_iter=None
+    ):#-> Self:
+        self.iteration_str = iteration_str
+        self.start_seed_dict = start_seed_dict
+        self.present_step_funcs = present_step_funcs
+        self.next_step_funcs = next_step_funcs
+        start_value,f = prepare(iteration_str, start_seed_dict, present_step_funcs, next_step_funcs)
 
         super().__init__(
-            start_value=complete(seed_value_dict_0),
-            func=f
+            start_value=start_value,
+            func=f,
+            max_iter=max_iter
         )
-        
+
+
+
+    def add_present_step_funcs(self, present_step_funcs):
+        self.present_step_funcs.update(present_step_funcs)
+        self.start_value, self.func = prepare(
+            self.iteration_str, 
+            self.start_seed_dict, 
+            self.present_step_funcs,
+            self.next_step_funcs
+        )
+        self.reset()
+

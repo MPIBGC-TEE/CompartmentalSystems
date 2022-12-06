@@ -7,17 +7,24 @@ import inspect
 T=TypeVar('T')
 class InfiniteIterator:
     """the equivalent to an InitialValueProblem for a discrete dynamical system
+    If max_iter is not set the Iterator will never stop, which is useful to 
+    represent an autonomous dynamical system.
+    In case that some of the fucntions rely on data that are only
+    available for a limited number of iterations  (typically a timeline)
+    max_iter can be set to avoid indexing errors.
     """
     def __init__(
         self,
         start_value,
-        func: Callable[[int,T],T]
+        func: Callable[[int,T],T],
+        max_iter=None 
     ):  # ,n):
         self.start_value = start_value
         self.func = func
 
         self.cur = start_value
         self.pos = 0
+        self.max_iter = max_iter
 
     def reset(self):
         self.cur = self.start_value
@@ -39,33 +46,13 @@ class InfiniteIterator:
 
     def __next__(self):
         # print(self.pos, self.cur)
-        val = self.cur 
-        self.pos += 1
-        self.cur = self.func(self.pos, val) 
-        return val
-        # raise StopIteration()
-
-
-    def __getitem__(self, arg):
-        # this functions implements the python index notation itr[start:stop:step]
-        # fixme mm 4-26-2022
-        # we could use the cache for value_at if we dont use isslice
-        # it behaves like the [] on a tuple 
-        # (1,2,3)[0:0] = ()
-        # (1,2,3)[0:1] = (1)
-        # (1,2,3)[1:3] = (2,3)
-        # 
-        # but it will not allow negative indices since not max_iter is given
-        if isinstance(arg, slice):
-            start = arg.start
-            stop = arg.stop
-            step = arg.step
-            return tuple(islice(self, start, stop, step))
-
-        elif isinstance(arg, int):
-            return tuple(islice(self, arg, arg+1, 1))[0]
+        if self.max_iter is None or self.pos < self.max_iter: 
+            val = self.cur 
+            self.pos += 1
+            self.cur = self.func(self.pos, val) 
+            return val
         else:
-            raise IndexError(
-                """arguments to __getitem__ have to be either
-                indeces or slices."""
-            )
+            raise StopIteration()
+
+
+

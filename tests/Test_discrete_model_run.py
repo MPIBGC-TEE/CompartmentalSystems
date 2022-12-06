@@ -13,6 +13,7 @@ from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from CompartmentalSystems.discrete_model_run import DiscreteModelRun as DMR
 from CompartmentalSystems.discrete_model_run import TimeStep, TimeStepIterator
 from CompartmentalSystems.BlockDictIterator import BlockDictIterator
+from CompartmentalSystems.ArrayDictResult import ArrayDictResult
 from CompartmentalSystems.model_run import (
     plot_stocks_and_fluxes,
     plot_attributes,
@@ -323,9 +324,11 @@ class TestDiscreteModelRun(InDirTest):
                 "x": lambda x,B,u : x + B @ x + u, 
             })
         )
-        vals = bit[0:number_of_steps]
-        times_0 =np.stack([res["t"] for res in vals],axis=0) 
-        sol_0 = np.stack([res["x"] for res in vals],axis=0) 
+        r = ArrayDictResult(bit)
+        vals = r[0:number_of_steps]
+        #from IPython import embed; embed()
+        times_0 = vals["t"]
+        sol_0 = vals["x"] 
 
         tsit=TimeStepIterator(
             # fake matrix

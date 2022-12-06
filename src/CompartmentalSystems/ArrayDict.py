@@ -1,6 +1,18 @@
 import numpy as np
 from collections import OrderedDict
 
+def averaged_1d_array(arr, partitions):
+    """this function also works for multidimensional arrays
+    It assumes that the first dimension is time/iteration
+    """
+    def f(p):
+        start, stop = p
+        sub_arr = arr[start : stop]
+        #from IPython import embed; embed()
+        return sub_arr.sum(axis=0)/(stop - start)
+
+    return np.array([f(p) for p in partitions])
+
 
 class ArrayDict(OrderedDict):
 
@@ -11,11 +23,11 @@ class ArrayDict(OrderedDict):
         except KeyError:
             return super().__getattribute__(name)
 
-    @property     
+    @property
     def _fields(self):
         return self.keys()
 
-    def averages(self, partitions):
+    def averaged_values(self, partitions):
         return self.__class__(
             {
                 name:
@@ -27,7 +39,7 @@ class ArrayDict(OrderedDict):
     def __add__(self, other):
         """overload + which is useful for averaging"""
         return self.__class__(
-            {   
+            {
                 name:
                 self.__getattribute__(name) + other.__getattribute__(name)
                 for name in self._fields
@@ -47,7 +59,7 @@ class ArrayDict(OrderedDict):
 
     def __eq__(self, other):
         """overload == which is useful for tests"""
-        return np.all(
+        return np.all([
             self.__getattribute__(name) == other.__getattribute__(name)
             for name in self._fields
-        )
+        ])
