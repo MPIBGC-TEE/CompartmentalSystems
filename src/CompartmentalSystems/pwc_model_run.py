@@ -632,7 +632,7 @@ class PWCModelRun(ModelRun):
             #x_t_old = np.array([sol_funcs[pool](t) for pool in range(n)])
             x_t = sol_funcs_array(t)
             # mass at time t-a
-            #x_tma_old = [np.float(sol_funcs[pool](t-a)) for pool in range(n)]
+            #x_tma_old = [float(sol_funcs[pool](t-a)) for pool in range(n)]
             x_tma = sol_funcs_array(t-a)
             # what remains from x_tma at time t
             m = np.matmul(self.Phi(t, t-a), x_tma).reshape((self.nr_pools,))

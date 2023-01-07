@@ -145,7 +145,7 @@ class TestDiscreteModelRun(InDirTest):
         t_max = 2*np.pi
         times = np.linspace(0, t_max, nr_bins + 1)
         times_fine = np.linspace(0, t_max, nr_bins_fine + 1)
-        x0 = np.float(50)
+        x0 = float(50)
         start_values = np.array([x0, x0])
         parameter_dict = {
             #k: 0.012,

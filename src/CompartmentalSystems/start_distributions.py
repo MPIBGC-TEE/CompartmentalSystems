@@ -249,7 +249,7 @@ def start_age_distributions_from_steady_state(
         # we have to transform it to a numpy array and
         # then multiply it with the start values (x_fix)
         mat = mat_func(age)
-        arr = np.array(mat).astype(np.float).reshape(srm.nr_pools)
+        arr = np.array(mat).astype(float).reshape(srm.nr_pools)
         return x_fix*arr
 
     return a_dist_function, x_fix
@@ -609,7 +609,7 @@ def start_age_moments_from_steady_state(
     for n in range(1, max_order+1):
         start_age_moment_sym = lapm.a_nth_moment(n)
         start_age_moment = np.array(start_age_moment_sym)\
-            .astype(np.float)\
+            .astype(float)\
             .reshape(srm.nr_pools)
 
         start_age_moments.append(start_age_moment)
