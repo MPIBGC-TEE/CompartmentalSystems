@@ -1557,7 +1557,7 @@ def densities_to_distributions(
         nr_pools: int
     )->Callable[[float],np.ndarray]:
         
-        def distributions(A: float ->np.ndarray: 
+        def distributions(A: float )->np.ndarray: 
             return np.array(
                 [
                     quad(
