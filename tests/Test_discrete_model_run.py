@@ -145,7 +145,7 @@ class TestDiscreteModelRun(InDirTest):
         t_max = 2*np.pi
         times = np.linspace(0, t_max, nr_bins + 1)
         times_fine = np.linspace(0, t_max, nr_bins_fine + 1)
-        x0 = np.float(50)
+        x0 = float(50)
         start_values = np.array([x0, x0])
         parameter_dict = {
             #k: 0.012,
@@ -744,7 +744,7 @@ class TestDiscreteModelRun(InDirTest):
         #ref_sym = solve(Eq(1/2*(1-exp(-t)), 1 - exp(-a)), a)[0]
         #ref = np.array(
         #    [ref_sym.subs({t: time}) for time in times],
-        #    dtype=np.float
+        #    dtype=float
         #)
         #ref[0] = np.nan
 
@@ -855,12 +855,12 @@ class TestDiscreteModelRun(InDirTest):
         #ref_sym = solve(Eq(1/2*(1-exp(-t)), 1 - exp(-a)), a)[0]
         #ref = np.array(
         #    [ref_sym.subs({t: time}) for time in times[ts]],
-        #    dtype=np.float
+        #    dtype=float
         #)
 
         ref = np.array(
             [-log(0.5) for time in times[ts]],
-            dtype=np.float
+            dtype=float
         )
         print('ref',ref)
         #ref[0] = np.nan

@@ -591,7 +591,7 @@ class SmoothModelRun(ModelRun):
                     input_fluxes.append(lambda t: 0)
         
             u = lambda t: (np.array([f(t) for f in input_fluxes], 
-                            dtype=np.float) 
+                            dtype=float) 
                                 if t_valid(t) else np.zeros((self.nr_pools,)))
             
             self._external_input_vector_func = u
@@ -873,7 +873,7 @@ class SmoothModelRun(ModelRun):
 
         am_arr = np.array([age_moment_at_time_index(ti) 
                             for ti in range(len(times))]) 
-        am = np.ndarray((len(times), n), np.float, am_arr)
+        am = np.ndarray((len(times), n), float, am_arr)
 
         return am
 
@@ -1207,8 +1207,8 @@ class SmoothModelRun(ModelRun):
             my_B_func=cached_B_func
         )
 
-        pp = lambda a: np.array([p_sv(a,t) for t in times], np.float)
-        #p = lambda ages: np.array([pp(a) for a in ages], np.float)
+        pp = lambda a: np.array([p_sv(a,t) for t in times], float)
+        #p = lambda ages: np.array([pp(a) for a in ages], float)
         def p(ages):
             field_list = []
             for a in tqdm(ages):
@@ -2070,7 +2070,7 @@ class SmoothModelRun(ModelRun):
         times = self.times
         n = self.nr_pools
         start_age_moments = np.ndarray(
-                                (1,n), np.float, np.array(start_mean_ages))
+                                (1,n), float, np.array(start_mean_ages))
         time_symbol = self.model.time_symbol
         states = self.model.state_variables
 
@@ -2113,7 +2113,7 @@ class SmoothModelRun(ModelRun):
         times = self.times
         n = self.nr_pools
         start_age_moments = np.ndarray(
-                                (1,n), np.float, np.array(start_mean_ages))
+                                (1,n), float, np.array(start_mean_ages))
         time_symbol = self.model.time_symbol
         tr_val = self.backward_transit_time_moment(1, start_age_moments)
         ax.plot(times, tr_val)
@@ -2413,7 +2413,7 @@ class SmoothModelRun(ModelRun):
             #x_t_old = np.array([sol_funcs[pool](t) for pool in range(n)])
             x_t = sol_funcs_array(t)
             # mass at time t-a
-            #x_tma_old = [np.float(sol_funcs[pool](t-a)) for pool in range(n)]
+            #x_tma_old = [float(sol_funcs[pool](t-a)) for pool in range(n)]
             x_tma = sol_funcs_array(t-a)
             # what remains from x_tma at time t
             m = Phi(t, t-a, x_tma)
@@ -3006,7 +3006,7 @@ class SmoothModelRun(ModelRun):
         last_res = -1.0
 
         def rhs(y, t_val):
-            y = np.float(y)
+            y = float(y)
             global last_t, last_res
             
             t_val = min(t_val, t_max)
@@ -3186,7 +3186,7 @@ class SmoothModelRun(ModelRun):
         last_res = -1.0
 
         def rhs(y, t_val):
-            y = np.float(y)
+            y = float(y)
             global last_t, last_res
             
             t_val = min(t_val, t_max)
@@ -3815,8 +3815,8 @@ class SmoothModelRun(ModelRun):
         # for part that comes from initial value
 
         ppp = self._age_densities_1_single_value(start_age_densities)
-        pp = lambda a: np.array([ppp(a,t) for t in self.times], np.float)
-        p1 = lambda ages: np.array([pp(a) for a in ages], np.float)
+        pp = lambda a: np.array([ppp(a,t) for t in self.times], float)
+        p1 = lambda ages: np.array([pp(a) for a in ages], float)
         
         return p1
         
@@ -3848,8 +3848,8 @@ class SmoothModelRun(ModelRun):
     def _age_densities_2(self):
         # for part that comes from the input function u
         ppp = self._age_densities_2_single_value()
-        pp = lambda a: np.array([ppp(a,t) for t in self.times], np.float)
-        p2 = lambda ages: np.array([pp(a) for a in ages], np.float)
+        pp = lambda a: np.array([ppp(a,t) for t in self.times], float)
+        p2 = lambda ages: np.array([pp(a) for a in ages], float)
 
         return p2
 

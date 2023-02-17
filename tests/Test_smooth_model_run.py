@@ -285,7 +285,7 @@ class TestSmoothModelRun(InDirTest):
             ]
         )
 
-        ref = np.ndarray((10,2), np.float, a_ref)
+        ref = np.ndarray((10,2), float, a_ref)
         soln = smr.solve()
         self.assertTrue(np.allclose(soln, ref))
 
@@ -435,7 +435,7 @@ class TestSmoothModelRun(InDirTest):
              [ 1.,          0.95644224],
              [ 1.,          0.90979601]]
         )
-        ref = np.ndarray((10, 2), np.float, ref_a)
+        ref = np.ndarray((10, 2), float, ref_a)
         self.assertTrue(np.allclose(
             smr.external_input_vector[1:],
             ref
@@ -470,7 +470,7 @@ class TestSmoothModelRun(InDirTest):
              [0.40655558],
              [0.36788092]]
         )
-        ref = np.ndarray((11, 1), np.float, ref_a)
+        ref = np.ndarray((11, 1), float, ref_a)
         self.assertTrue(np.allclose(smr.external_output_vector, ref))
 
         # two-dimensional case
@@ -500,7 +500,7 @@ class TestSmoothModelRun(InDirTest):
              [0.40655558, 1.21966675],
              [0.36788092, 1.10364277]]
         )
-        ref = np.ndarray((11, 2), np.float, ref_a)
+        ref = np.ndarray((11, 2), float, ref_a)
         self.assertTrue(np.allclose(smr.external_output_vector, ref))
 
 
@@ -594,7 +594,7 @@ class TestSmoothModelRun(InDirTest):
 #                  [  0.36788825, 0.73576626000000010         ]]])
 
         a_ref = a1_ref + a2_ref
-        ref = np.ndarray((3,6,2), np.float, a_ref)
+        ref = np.ndarray((3,6,2), float, a_ref)
         y = p_sv(0,0)
         res_l = [[p_sv(a, t) for t in times] for a in ages]
         res = np.array(res_l)
@@ -650,7 +650,7 @@ class TestSmoothModelRun(InDirTest):
               [ 1.8393973 ,  1.10363838,  2.94303568],
               [ 1.83939729,  1.10363837,  2.94303566]]])
 
-        ref = np.ndarray((3,6,3), np.float, a_ref)
+        ref = np.ndarray((3,6,3), float, a_ref)
         self.assertTrue(np.allclose(age_densities, ref,rtol=1e-3))
         
         ## two-dimensional nonlinear with a noninvertable matrix at C_0 =1 point
@@ -728,7 +728,7 @@ class TestSmoothModelRun(InDirTest):
                   [ 0         ,  0         ]]])
 
         a_ref = a1_ref + a2_ref
-        ref = np.sum(np.ndarray((3,6,2), np.float, a_ref), axis=2)
+        ref = np.sum(np.ndarray((3,6,2), float, a_ref), axis=2)
         res_l = [[p_sv(a, t) for t in times] for a in ages]
         res = np.array(res_l)
         self.assertTrue(np.allclose(res, ref,rtol=1e-3))
@@ -801,7 +801,7 @@ class TestSmoothModelRun(InDirTest):
                   [ 0         ,  0         ]]])
 
         a_ref = a1_ref + a2_ref
-        ref = np.sum(np.ndarray((3,6,2), np.float, a_ref), axis=2)
+        ref = np.sum(np.ndarray((3,6,2), float, a_ref), axis=2)
 #        pe('system_age_density',locals())
 #        pe('ref',locals())
 #        pe('ref-system_age_density',locals())
@@ -834,7 +834,7 @@ class TestSmoothModelRun(InDirTest):
         # test against solution from mean age system
         start_mean_ages = [0.5,0.5]
         n = srm.nr_pools
-        start_age_moments = np.ndarray((1,n), np.float, np.array(start_mean_ages))
+        start_age_moments = np.ndarray((1,n), float, np.array(start_mean_ages))
 
         ref_ma = smr.age_moment_vector(1, start_age_moments)
 
@@ -932,7 +932,7 @@ class TestSmoothModelRun(InDirTest):
              [0.41613677, 0.77309118],
              [0.45338235, 0.7384063 ]]
         )        
-        ref = np.ndarray((10,2), np.float, a_ref)
+        ref = np.ndarray((10,2), float, a_ref)
         self.assertTrue(np.allclose(ma_vec, ref)) 
 
         # test empty initial pool, pool remains empty
@@ -965,7 +965,7 @@ class TestSmoothModelRun(InDirTest):
                           [ 0.41612361, np.nan],
                           [ 0.45337059, np.nan]])
 
-        ref = np.ndarray((10,2), np.float, a_ref)
+        ref = np.ndarray((10,2), float, a_ref)
         self.assertTrue(np.allclose(ma_vec, ref, equal_nan=True,rtol=1e-3))
 
         # test empty initial pool, pool receives input
@@ -1000,7 +1000,7 @@ class TestSmoothModelRun(InDirTest):
              [0.39316946, 0.15850235],
              [0.42081205, 0.18696148]]
         )
-        ref = np.ndarray((10,2), np.float, a_ref)
+        ref = np.ndarray((10,2), float, a_ref)
         self.assertTrue(np.allclose(ma_vec, ref, equal_nan=True))
 
 
@@ -1147,7 +1147,7 @@ class TestSmoothModelRun(InDirTest):
                  [[ 0.        ,  0.        ,  0.       ,   0.        ,  0.        ,  0.        ],
                   [ 8.        ,  3.        ,  3.       ,   3.        ,  3.        ,  3.        ],
                   [ 2.94303553,  2.94303558,  2.9430356,   2.94303559,  2.94303566,  2.94303564]])
-        tt_ref = np.ndarray((3,6), np.float, tt_a_ref)
+        tt_ref = np.ndarray((3,6), float, tt_a_ref)
 
         p = smr.pool_age_densities_func(start_age_densities)
         age_densities = p(ages)
@@ -1759,7 +1759,7 @@ class TestSmoothModelRun(InDirTest):
         ref_sym = solve(Eq(1/2*(1-exp(-t)), 1 - exp(-a)), a)[0]
         ref = np.array(
             [ref_sym.subs({t: time}) for time in times],
-            dtype=np.float
+            dtype=float
         )
         ref[0] = np.nan
         
@@ -1825,7 +1825,7 @@ class TestSmoothModelRun(InDirTest):
 
         a, t = symbols('a t')
         ref_sym = solve(Eq(1/2*(1-exp(-t)), 1 - exp(-a)), a)[0]
-        ref = np.array([ref_sym.subs({t: time}) for time in times], dtype=np.float)
+        ref = np.array([ref_sym.subs({t: time}) for time in times], dtype=float)
         ref[0] = np.nan
        
         self.assertTrue(
@@ -2107,7 +2107,7 @@ class TestSmoothModelRun(InDirTest):
                           [ 0.37683963,  0.80984058],
                           [ 0.41612357,  0.77309132],
                           [ 0.45337056,  0.73840585]])
-        ref = np.ndarray((10,2), np.float, a_ref)
+        ref = np.ndarray((10,2), float, a_ref)
         self.assertTrue(np.allclose(ma, ref)) 
 
         # test missing start_age_moments
@@ -2181,7 +2181,7 @@ class TestSmoothModelRun(InDirTest):
                           [0.37684872, 0.80984795],
                           [0.41613677, 0.77309118],
                           [0.45338235, 0.7384063 ]])
-        ref = np.ndarray((10,nr_pools), np.float, a_ref)
+        ref = np.ndarray((10,nr_pools), float, a_ref)
         self.assertTrue(np.allclose(ma, ref)) 
 
 
@@ -2313,7 +2313,7 @@ class TestSmoothModelRun(InDirTest):
                            [ 1.83939729],
                            [ 1.83939727]]])
                  
-        ref = np.ndarray((3,6,1), np.float, a_ref)
+        ref = np.ndarray((3,6,1), float, a_ref)
         res_l = [[p1_sv(a, t) for t in times] for a in ages]
         res = np.array(res_l)
 #        pe('(res-ref)/res',locals())
@@ -2341,7 +2341,7 @@ class TestSmoothModelRun(InDirTest):
                            [ 0         ],
                            [ 1.83939727]]])
         
-        ref = np.ndarray((3,6,1), np.float, a_ref)
+        ref = np.ndarray((3,6,1), float, a_ref)
         p1_sv = smr._age_densities_1_single_value()
         res_l = [[p1_sv(a,t) for t in times] for a in ages]
         res = np.array(res_l)
@@ -2388,7 +2388,7 @@ class TestSmoothModelRun(InDirTest):
                   [ 1.83939729,  1.10363837],
                   [ 1.83939727,  1.10363836]]])
 
-        ref = np.ndarray((3,6,2), np.float, a_ref)
+        ref = np.ndarray((3,6,2), float, a_ref)
         res_l = [[p1_sv(a,t) for t in times] for a in ages]
         res = np.array(res_l)
         self.assertTrue(np.allclose(res, ref,rtol=1e-3))
@@ -2416,7 +2416,7 @@ class TestSmoothModelRun(InDirTest):
                   [ 0         ,  0         ],
                   [ 1.83939727,  1.10363836]]])
 
-        ref = np.ndarray((3,6,2), np.float, a_ref)
+        ref = np.ndarray((3,6,2), float, a_ref)
         p1_sv = smr._age_densities_1_single_value()
         res_l = [[p1_sv(a,t) for t in times] for a in ages]
         res = np.array(res_l)
@@ -2464,7 +2464,7 @@ class TestSmoothModelRun(InDirTest):
                            [ 1.83939729],
                            [ 1.83939727]]])
                  
-        ref = np.ndarray((3,6,1), np.float, a_ref)
+        ref = np.ndarray((3,6,1), float, a_ref)
         self.assertTrue(np.allclose(p1(ages), ref,rtol=1e-3))
 
         # test missing start_age_densities
@@ -2489,7 +2489,7 @@ class TestSmoothModelRun(InDirTest):
                            [ 0         ],
                            [ 1.83939727]]])
         
-        ref = np.ndarray((3,6,1), np.float, a_ref)
+        ref = np.ndarray((3,6,1), float, a_ref)
         p1 = smr._age_densities_1()
         res = np.array(p1(ages))
         self.assertTrue(np.allclose(res, ref,rtol=1e-3))
@@ -2535,7 +2535,7 @@ class TestSmoothModelRun(InDirTest):
                   [ 1.83939729,  1.10363837],
                   [ 1.83939727,  1.10363836]]])
 
-        ref = np.ndarray((3,6,2), np.float, a_ref)
+        ref = np.ndarray((3,6,2), float, a_ref)
         self.assertTrue(np.allclose(p1(ages), ref,rtol=1e-3))
 
         # test missing start_age_densities
@@ -2561,7 +2561,7 @@ class TestSmoothModelRun(InDirTest):
                   [ 0         ,  0         ],
                   [ 1.83939727,  1.10363836]]])
 
-        ref = np.ndarray((3,6,2), np.float, a_ref)
+        ref = np.ndarray((3,6,2), float, a_ref)
         p1 = smr._age_densities_1()
         res = np.array(p1(ages))
         self.assertTrue(np.allclose(res, ref,rtol=1e-3))
@@ -2607,7 +2607,7 @@ class TestSmoothModelRun(InDirTest):
                            [ 0. ],
                            [ 0. ]]])
                  
-        ref = np.ndarray((3,6,1), np.float, a_ref)
+        ref = np.ndarray((3,6,1), float, a_ref)
         res_l = [[p2_sv(a, t) for t in times] for a in ages]
         res = np.array(res_l)
         self.assertTrue(np.allclose(res, ref))
@@ -2652,7 +2652,7 @@ class TestSmoothModelRun(InDirTest):
                   [ 0         ,  0         ],
                   [ 0         ,  0         ]]])
 
-        ref = np.ndarray((3,6,2), np.float, a_ref)
+        ref = np.ndarray((3,6,2), float, a_ref)
         res_l = [[p2_sv(a, t) for t in times] for a in ages]
         res = np.array(res_l)
         self.assertTrue(np.allclose(res, ref))
@@ -2698,7 +2698,7 @@ class TestSmoothModelRun(InDirTest):
                            [ 0. ],
                            [ 0. ]]])
                  
-        ref = np.ndarray((3,6,1), np.float, a_ref)
+        ref = np.ndarray((3,6,1), float, a_ref)
         self.assertTrue(np.allclose(p2(ages), ref))
 
         # two-dimensional
@@ -2741,7 +2741,7 @@ class TestSmoothModelRun(InDirTest):
                   [ 0         ,  0         ],
                   [ 0         ,  0         ]]])
 
-        ref = np.ndarray((3,6,2), np.float, a_ref)
+        ref = np.ndarray((3,6,2), float, a_ref)
         self.assertTrue(np.allclose(p2(ages), ref))
 
     

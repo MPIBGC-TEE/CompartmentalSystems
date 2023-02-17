@@ -80,8 +80,8 @@ class TestPhi(InDirTest):
     def test_phi_2d_non_linear(self):
         k_0_val = 1
         k_1_val = 2
-        x0_0 = np.float(0.5)
-        x0_1 = np.float(1.5)
+        x0_0 = float(0.5)
+        x0_1 = float(1.5)
         x_0, x_1, k_0, k_1, t, u = symbols("x_0 x_1 k_0 k_1 t u")
 
         inputs = {
@@ -187,8 +187,8 @@ class TestPhi(InDirTest):
     def test_phi_cache_vals(self):
         k_0_val = 1
         k_1_val = 2
-        x0_0 = np.float(0.5)
-        x0_1 = np.float(1.5)
+        x0_0 = float(0.5)
+        x0_1 = float(1.5)
 
         x_0, x_1, k_0, k_1, t, u = symbols("x_0 x_1 k_0 k_1 t u")
 
@@ -262,9 +262,9 @@ class TestPhi(InDirTest):
 #        # as function of both time arguments
 #        k_0_val = 1
 #        k_1_val = 2
-#        x0_0 = np.float(1)
-#        x0_1 = np.float(1)
-#        delta_t = np.float(1)
+#        x0_0 = float(1)
+#        x0_1 = float(1)
+#        delta_t = float(1)
 #
 #        var(["x_0","x_1","k_0","k_1","t","u"])
 #
