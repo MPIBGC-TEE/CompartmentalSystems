@@ -115,11 +115,12 @@ import numpy as np
 from scipy.linalg import inv, LinAlgError
 from scipy.optimize import root
 from CompartmentalSystems.helpers_reservoir import (
-    jacobian,
+    #jacobian,
     func_subs,
     numerical_function_from_expression,
     warning
 )
+import CompartmentalSystems.helpers_reservoir as hr
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
 from LAPM.linear_autonomous_pool_model import LinearAutonomousPoolModel
 # from testinfrastructure.helpers import pe
@@ -253,6 +254,70 @@ def start_age_distributions_from_steady_state(
         return x_fix*arr
 
     return a_dist_function, x_fix
+
+def start_mean_age_vector_from_steady_state_linear(
+    srm,
+    t0,
+    parameter_dict,
+    func_set,
+    x0=None
+):
+    """
+    Compute the age distribution of the system at equilibrium :math:`x_{fix}`
+    , by means of direct computation according to Rasmussen 2016 
+
+    Args:
+        srm (SmoothReservoirModel) : The (symbolic) model
+        parameter_dict (dict) :
+            The parameter set that transforms the symbolic model into a
+            numeric one. The keys are the sympy symbols, the values are the
+            values used for the simulation.
+        func_set (dict):
+            The keys are the symbolic sympy expressions for external functions,
+            the values are the numeric functions to be used in the simulation
+        t0 (float):
+            The time where the non-autonomous system is frozen.
+
+    Returns:
+        (a_dist_function, x_fix)  (tuple):
+
+        a_dist_function is a vector valued function of age.
+        a_dist_function(a)[i] reflects the mass of age :math:`a`
+        in pool i.
+        :math:`x_{fix}` is a one dimensional vector representing the
+            equilibrium.
+        This is returned since it is very likely needed as start vector in the
+        simulation for which the start distributions has been computed.
+        (The computed distribution assumes the system to be in this state.)
+    """
+    state_vector = srm.state_vector
+    t = srm.time_symbol
+    # We can check that we really got a linear system
+    B_func = hr.numerical_array_func(
+        state_vector=state_vector,
+        time_symbol=t,
+        expr=srm.compartmental_matrix,
+        parameter_dict=parameter_dict,
+        func_dict=func_set,
+    )
+    u_func = hr.numerical_1d_vector_func(
+        state_vector=state_vector,
+        time_symbol=t,
+        expr=srm.external_inputs,
+        parameter_dict=parameter_dict,
+        func_dict=func_set,
+    )
+    X_fix=steady_state_for_linear_systems(srm, t0, parameter_dict, func_set)
+    # For a linear system B_func is not really a function of X,
+    # so we can input something arbitrary of the same shape as
+    # the statevector 
+    X=np.zeros_like(state_vector)
+    M0 = B_func(t0,X_fix)
+    M0_inv = np.linalg.inv(M0)
+    I_0= u_func(t0,X_fix)
+    start_mean_age_vec = -1*(np.ones_like(X_fix) @ M0_inv)
+    from IPython import embed; embed()
+    return X_fix, start_mean_age_vec
 
 
 def start_age_distributions_from_zero_age_initial_content(srm, x0):
@@ -399,6 +464,53 @@ def start_age_moments_from_zero_initial_content(srm, max_order):
     return start_age_moments
 
 
+def steady_state_for_linear_systems(srm,t0,parameter_dict,func_set):
+    # will fail if the system 
+    assert(srm.is_linear)
+    B_sym = srm.compartmental_matrix
+    u_sym = srm.external_inputs
+    if srm.is_state_dependent(u_sym):
+        # in this case we can in principle transform to
+        # a linear Model with constant
+        # input and new B
+        # compute the jacobian of u
+        sv = Matrix(srm.state_vector)
+        M = hr.jacobian(u_sym, sv)
+        u_sym = u_sym - M*sv
+        B_sym = B_sym + M
+
+    t = srm.time_symbol
+    tup = (t,)
+    u_func = numerical_function_from_expression(
+        u_sym,
+        tup,
+        parameter_dict,
+        func_set
+    )
+    B_func = numerical_function_from_expression(
+        B_sym,
+        tup,
+        parameter_dict,
+        func_set
+    )
+    B0 = B_func(t0)
+    u0 = u_func(t0)
+    try:
+        x_fix = (-inv(B0) @ u0).reshape(srm.nr_pools)
+    except LinAlgError as e:
+        print("""
+        B_0=B(t_0) is not invertable
+        If a singular matrix B_0 occurs, then the system would have traps.
+        A steady state could then only occour
+        if the components of u0=u(t0) would be zero for the pools connected
+        to the trap.
+        In this (unlikely) event the startage distribution would
+        be ambigous because the fixedpoint x_{fix} is not uniqe
+        (The content of the trap is a free parameter and so is its age.)
+        """)
+        raise e
+    return x_fix, B0, u0
+
 def lapm_for_steady_state(srm, t0, parameter_dict, func_set, x0=None):
     """
     If a fixedpoint of the frozen system can be found, create a linear
@@ -468,47 +580,8 @@ def lapm_for_steady_state(srm, t0, parameter_dict, func_set, x0=None):
     B_sym = srm.compartmental_matrix
     u_sym = srm.external_inputs
     if srm.is_linear:
-        if srm.is_state_dependent(u_sym):
-            # in this case we can in principle transform to
-            # a linear Model with constant
-            # input and new B
-            # compute the jacobian of u
-            sv = Matrix(srm.state_vector)
-            M = jacobian(u_sym, sv)
-            u_sym = u_sym - M*sv
-            B_sym = B_sym + M
 
-        t = srm.time_symbol
-        tup = (t,)
-        u_func = numerical_function_from_expression(
-            u_sym,
-            tup,
-            parameter_dict,
-            func_set
-        )
-        B_func = numerical_function_from_expression(
-            B_sym,
-            tup,
-            parameter_dict,
-            func_set
-        )
-        B0 = B_func(t0)
-        u0 = u_func(t0)
-        try:
-            x_fix = (-inv(B0) @ u0).reshape(srm.nr_pools)
-#            pe('x_fix',locals())
-        except LinAlgError as e:
-            print("""
-            B_0=B(t_0) is not invertable
-            If a singular matrix B_0 occurs, then the system would have traps.
-            A steady state could then only occour
-            if the components of u0=u(t0) would be zero for the pools connected
-            to the trap.
-            In this (unlikely) event the startage distribution would
-            be ambigous because the fixedpoint x_{fix} is not uniqe
-            (The content of the trap is a free parameter and so is its age.)
-            """)
-            raise e
+        x_fix, B0, u0 = steady_state_for_linear_systems(srm,t0,parameter_dict,func_set)
 
     else:
         if x0 is None:
@@ -535,7 +608,6 @@ def lapm_for_steady_state(srm, t0, parameter_dict, func_set, x0=None):
             parameter_dict,
             func_set
         )
-#        pe('x_fix',locals())
 
         t = srm.time_symbol
         tup = (t,) + tuple(srm.state_vector)
@@ -556,8 +628,6 @@ def lapm_for_steady_state(srm, t0, parameter_dict, func_set, x0=None):
 
     B0_m = Matrix(B0)
     u0_m = Matrix(u0)
-#    pe('B0',locals())
-#    pe('u0',locals())
     lapm = LinearAutonomousPoolModel(u0_m, B0_m, force_numerical=True)
     return lapm, x_fix
 

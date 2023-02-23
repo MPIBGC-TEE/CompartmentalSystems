@@ -127,12 +127,19 @@ class SmoothReservoirModel(object):
 
     @property
     def is_linear(self):
-        """Returns True if we can make SURE that the model is linear by checking that the jacobian is not state dependent.
-        Note that external numerical functions of state variables are represented as sympy.Function f(x_1,x_2,...,t)
-        Sympy will consider the derivative of math:`df/dx_i` with respect to state variable math:`x_i` as function math:`g(x_1, x_2,...)` too, since it can not exclude this possibility if we know f only numerically. 
-        In consequence this method will return False even if the numerical implementation of f IS linear in math:`x_1,x_2,...` . 
-        To avoid this situation you can just reformulate linear external functions math:`f(x_1,x_2,...,t)` as linear combinations
-        of state independent external functions math:`f(x_1,x_2,...,t)=g_1(t)x_1+g_2(t)x_2+...` so that sympy can detect the linearity.
+        """Returns True if we can make SURE that the model is linear by
+        checking that the jacobian is not state dependent.  Note that external
+        numerical functions of state variables are represented as
+        sympy.Function f(x_1,x_2,...,t) Sympy will consider the derivative of
+        math:`df/dx_i` with respect to state variable math:`x_i` as function
+        math:`g(x_1, x_2,...)` too, since it can not exclude this possibility
+        if we know f only numerically.  In consequence this method will return
+        False even if the numerical implementation of f IS linear in
+        math:`x_1,x_2,...` .  To avoid this situation you can just reformulate
+        linear external functions math:`f(x_1,x_2,...,t)` as linear
+        combinations of state independent external functions
+        math:`f(x_1,x_2,...,t)=g_1(t)x_1+g_2(t)x_2+...` so that sympy can
+        detect the linearity.
         
 
         Returns:
