@@ -657,18 +657,24 @@ def numerical_function_from_expression(expr, tup, parameter_dict, func_set):
 
     expr_func = lambdify(tup, expr_par, modules=[cut_func_set, 'numpy'])
 
-    def expr_func_safe_0_over_0(*val):
-        with np.errstate(invalid='raise'):
-            try:
-                res = expr_func(*val)
-            except FloatingPointError as e:
-                if e.args[0] == 'invalid value encountered in double_scalars':
-                    with np.errstate(invalid='ignore'):
-                        res = expr_func(*val)
-                        res = np.nan_to_num(res, copy=False)
-        return res
+    # fixme mm 02-25-2023: 
+    # this causes errors and seems to be not neccessary
+    # any more numpy gives runtime Warnings now as it should.
+    # removing it does not cause any test to fail. so it is temporarily
+    # commented and considered deprecated
+    #def expr_func_safe_0_over_0(*val):
+    #    with np.errstate(invalid='raise'):
+    #        try:
+    #            res = expr_func(*val)
+    #        except FloatingPointError as e:
+    #            if e.args[0] == 'invalid value encountered in double_scalars':
+    #                with np.errstate(invalid='ignore'):
+    #                    res = expr_func(*val)
+    #                    res = np.nan_to_num(res, copy=False)
+    #    return res
 
-    return expr_func_safe_0_over_0
+    #return expr_func_safe_0_over_0
+    return expr_func
 
 
 def numerical_rhs(
