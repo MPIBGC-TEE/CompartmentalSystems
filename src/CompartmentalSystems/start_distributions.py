@@ -291,33 +291,16 @@ def start_mean_age_vector_from_steady_state_linear(
         (The computed distribution assumes the system to be in this state.)
     """
     state_vector = srm.state_vector
-    t = srm.time_symbol
     # We can check that we really got a linear system
-    B_func = hr.numerical_array_func(
-        state_vector=state_vector,
-        time_symbol=t,
-        expr=srm.compartmental_matrix,
-        parameter_dict=parameter_dict,
-        func_dict=func_set,
+    X_fix, B0, u0 = steady_state_for_linear_systems(
+        srm,
+        t0,
+        parameter_dict,
+        func_set
     )
-    u_func = hr.numerical_1d_vector_func(
-        state_vector=state_vector,
-        time_symbol=t,
-        expr=srm.external_inputs,
-        parameter_dict=parameter_dict,
-        func_dict=func_set,
-    )
-    X_fix=steady_state_for_linear_systems(srm, t0, parameter_dict, func_set)
-    # For a linear system B_func is not really a function of X,
-    # so we can input something arbitrary of the same shape as
-    # the statevector 
-    X=np.zeros_like(state_vector)
-    M0 = B_func(t0,X_fix)
-    M0_inv = np.linalg.inv(M0)
-    I_0= u_func(t0,X_fix)
-    start_mean_age_vec = -1*(np.ones_like(X_fix) @ M0_inv)
-    from IPython import embed; embed()
-    return X_fix, start_mean_age_vec
+    B0_inv = np.linalg.inv(B0)
+    start_mean_age_vec = -1*(np.ones_like(X_fix) @ B0_inv)
+    return (X_fix, start_mean_age_vec)
 
 
 def start_age_distributions_from_zero_age_initial_content(srm, x0):
