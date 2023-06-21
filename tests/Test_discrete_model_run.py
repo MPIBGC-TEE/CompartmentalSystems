@@ -744,7 +744,7 @@ class TestDiscreteModelRun(InDirTest):
         #ref_sym = solve(Eq(1/2*(1-exp(-t)), 1 - exp(-a)), a)[0]
         #ref = np.array(
         #    [ref_sym.subs({t: time}) for time in times],
-        #    dtype=np.float
+        #    dtype=float
         #)
         #ref[0] = np.nan
 
@@ -855,12 +855,12 @@ class TestDiscreteModelRun(InDirTest):
         #ref_sym = solve(Eq(1/2*(1-exp(-t)), 1 - exp(-a)), a)[0]
         #ref = np.array(
         #    [ref_sym.subs({t: time}) for time in times[ts]],
-        #    dtype=np.float
+        #    dtype=float
         #)
 
         ref = np.array(
             [-log(0.5) for time in times[ts]],
-            dtype=np.float
+            dtype=float
         )
         print('ref',ref)
         #ref[0] = np.nan

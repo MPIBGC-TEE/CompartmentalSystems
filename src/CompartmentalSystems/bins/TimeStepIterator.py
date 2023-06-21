@@ -65,13 +65,13 @@ def external_input_func_maker(
         receiver_pool_ind: int,
         parameter_dict: Dict[Symbol,Any],
         func_dict: Dict[Symbol,Callable],
-        tss: np.float
+        tss: float
 ) -> Callable[
             [
                 Tuple[TsTpMassField],
-                np.float
+                float
             ],
-            np.float
+            float
         ]:
 
     flux_expr = srm.input_fluxes[receiver_pool_ind]
@@ -79,8 +79,8 @@ def external_input_func_maker(
     significant_pools = expr_par.free_symbols
     def input_flux_func(
         age_dist_list: Tuple[TsTpMassField],
-        t: np.float
-        )-> np.float:
+        t: float
+        )-> float:
         # age_dist_list is like a generalized state vector.
         # In theory the influxes 
         # can depend not only on the receiving pool age distribution
@@ -117,17 +117,17 @@ def external_input_func_maker(
 def input_func_maker_from_net_fluxes(
     net_flux_vals: np.ndarray,
     donor_pool_index: int,
-    tss: np.float
+    tss: float
 ) -> Callable[
     [
         Tuple[TsTpMassField],
-        np.float
+        float
     ],
-    np.float
+    float
 ]:
     def input_func(
         age_dist_list: Tuple[TsTpMassField],
-        t: np.float
+        t: float
     ) -> TsTpDeathRateField:
         index = int(np.floor(t/tss))
         gain = net_flux_vals[index] 
@@ -139,17 +139,17 @@ def well_mixed_death_rate_func_maker_from_net_fluxes(
     net_flux_vals: np.ndarray,
     donor_pool_contents: np.ndarray,
     donor_pool_index: int,
-    tss: np.float
+    tss: float
 ) -> Callable[
     [
         Tuple[TsTpMassField],
-        np.float
+        float
     ],
     TsTpDeathRateField
 ]:
     def death_rate_func(
         age_dist_list: Tuple[TsTpMassField],
-        t: np.float
+        t: float
     ) -> TsTpDeathRateField:
         index = int(np.floor(t/tss))
         loss_factor = net_flux_vals[index] / donor_pool_contents[index]
@@ -168,11 +168,11 @@ def well_mixed_death_rate_func_maker_from_expression(
         donor_pool_ind: int,
         parameter_dict: Dict[Symbol,Any],
         func_dict: Dict[Symbol,Callable],
-        tss: np.float
+        tss: float
 ) -> Callable[
             [
                 Tuple[TsTpMassField],
-                np.float
+                float
             ],
             TsTpDeathRateField
         ]:
@@ -185,7 +185,7 @@ def well_mixed_death_rate_func_maker_from_expression(
 
     def death_rate_func(
         age_dist_list: Tuple[TsTpMassField],
-        t: np.float
+        t: float
     )-> TsTpDeathRateField:
         # age_dist_list is like a generalized state vector.
         # In theory the fluxes (and consequently the deathrates)
@@ -277,9 +277,9 @@ class TimeStepIterator:
         parameter_dict: Dict[Symbol,Any],
         func_dict: Dict[Function,Callable],
         initial_plains: List[TsTpMassField] = None,
-        t_0: np.float = 0,
+        t_0: float = 0,
         number_of_steps: int = 5,
-        tss: np.float =0.5
+        tss: float =0.5
     ) -> 'TimeStepIterator':
         ############################################################
         # get the components ready
@@ -347,9 +347,9 @@ class TimeStepIterator:
         cls,
         smr: SmoothModelRun,
         initial_plains=None,
-        t_0: np.float = 0,
+        t_0: float = 0,
         number_of_steps: int = 5,
-        tss: np.float =0.5
+        tss: float =0.5
     ) -> 'TimeStepIterator':
         if initial_plains is None:
             x, y = 1, 1 # all the mass in one bin

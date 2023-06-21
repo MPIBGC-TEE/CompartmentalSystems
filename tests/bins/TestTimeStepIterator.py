@@ -57,7 +57,7 @@ class TestTimeStepIterator(InDirTest):
         def func_maker(donor_pool_ind):
             def constant_well_mixed_death_rate(
                     age_dist_list: List[TsTpMassField],
-                    t: np.float
+                    t: float
                 ) -> TsTpDeathRateField:
                 # these functions must be able to define a field eta
                 # of the same size as the age distribution of the donor_pool
@@ -132,7 +132,7 @@ class TestTimeStepIterator(InDirTest):
         t_max = nr_t_bins*tss
         t_min = 0
         times = np.linspace(t_min, t_max, nr_t_bins + 1)
-        x0 = np.float(100)
+        x0 = float(100)
         start_values = np.array([x0])
         parameter_dict = { k: .1}
         func_dict = {}
@@ -226,8 +226,8 @@ class TestTimeStepIterator(InDirTest):
         t_max = nr_t_bins*tss
         t_min = 0
         times = np.linspace(t_min, t_max, nr_t_bins + 1)
-        x0 = np.float(100)
-        x1 = np.float(100)
+        x0 = float(100)
+        x1 = float(100)
         start_values = np.array([x0,x1])
         parameter_dict = {
             k: 0.001,

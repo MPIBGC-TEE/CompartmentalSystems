@@ -163,7 +163,7 @@ class PWCModelRun(ModelRun):
                 u = lambda t: (  # noqa: #731
                     np.array(
                         [f(t) for f in input_fluxes],
-                        dtype=np.float
+                        dtype=float
                     )
                     if t_valid(t) else np.zeros((self.nr_pools,))
                 )
