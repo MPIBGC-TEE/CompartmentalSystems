@@ -1254,7 +1254,6 @@ class DiscreteModelRun:
             ai += 1
             mass += p_sv(ai, it)[pools].sum() * self.dt
 
-        print(prev_ai)
         return prev_ai
 
     def fake_start_age_masses(self, nr_time_steps):
@@ -1345,7 +1344,7 @@ class DiscreteModelRun:
 
         return P0
 
-    def pool_age_quantiles(self, q, P0):
+    def pool_age_quantiles(self, q, P0, verbose=False):
         P_sv = self.cumulative_pool_age_masses_single_value(P0)
         soln = self.solve()
 
@@ -1353,8 +1352,10 @@ class DiscreteModelRun:
         for pool_nr in range(self.nr_pools):
             print("Pool:", pool_nr)
             quantile_ai = 0
-            #            for ti in tqdm(range(len(self.times))):
-            for ti in range(len(self.times)):
+            x_ = len(self.times)
+            go_through = trange(x_) if verbose else range(x_)
+            #            for ti in range(len(self.times)):
+            for ti in go_through:
                 quantile_ai = hr.generalized_inverse_CDF(
                     lambda ai: P_sv(int(ai), ti)[pool_nr],
                     q * soln[ti, pool_nr],
@@ -1369,7 +1370,7 @@ class DiscreteModelRun:
 
         return res * self.dt
 
-    def system_age_quantiles(self, q, P0, mask=False):
+    def system_age_quantiles(self, q, P0, mask=False, verbose=False):
         if not isinstance(mask, bool):
             mask_over_time = np.repeat(
                 np.array(mask).reshape(1, -1), len(self.times), axis=0
@@ -1389,8 +1390,10 @@ class DiscreteModelRun:
 
         res = np.nan * np.ones(len(self.times))
         quantile_ai = 0
-        #        for ti in tqdm(range(len(self.times))):
-        for ti in range(len(self.times)):
+        x_ = len(self.times)
+        go_through = trange(x_) if verbose else range(x_)
+        #        for ti in range(len(self.times)):
+        for ti in go_through:
             quantile_ai = hr.generalized_inverse_CDF(
                 lambda ai: P_sys_sv(int(ai), ti), q * soln_sum[ti], x1=quantile_ai
             )
@@ -1419,7 +1422,9 @@ class DiscreteModelRun:
         P_btt_sv = lambda ai, ti: (rho[ti] * P_sv(ai, ti)).sum()
         return P_btt_sv
 
-    def backward_transit_time_quantiles(self, q, P0, times=None, mask=False):
+    def backward_transit_time_quantiles(
+        self, q, P0, times=None, mask=False, verbose=True
+    ):
         if times is None:
             times = self.times[:-1]
 
@@ -1440,8 +1445,10 @@ class DiscreteModelRun:
         res = np.nan * np.ones(len(times[:-1]))
 
         quantile_ai = 0
-        #        for ti in tqdm(range(len(times[:-1]))):
-        for ti in range(len(times[:-1])):
+        x_ = len(times[:-1])
+        go_through = trange(x_) if verbose else range(x_)
+        #        for ti in range(len(times[:-1])):
+        for ti in go_through:
             quantile_ai = hr.generalized_inverse_CDF(
                 lambda ai: P_btt_sv(int(ai), ti), q * R[ti, ...].sum(), x1=quantile_ai
             )
@@ -1497,9 +1504,15 @@ class DiscreteModelRun:
         """Carbon sequestration from ``n0`` to ``N``of the input pulse ``U[n0]``."""
         Phi = self._state_transition_operator_matrix
         U0 = self.net_Us[n0]
-        U0 = np.ma.masked_array(U0, mask)
+        #        U0 = np.ma.masked_array(U0, mask)
 
-        return sum([(Phi(n, n0 + 1) @ U0).sum() for n in range(n0 + 1, N + 1, 1)])
+        res = sum(
+            [
+                np.ma.masked_array(Phi(n, n0 + 1) @ U0, mask=mask).sum()
+                for n in range(n0 + 1, N + 1, 1)
+            ]
+        )
+        return res
 
     def CS_pulse_through_time(self, n0, mask=False):
         return np.array([self.CS_pulse(n0, N, mask) for N in range(len(self.times))])
@@ -1511,6 +1524,7 @@ class DiscreteModelRun:
             mask_over_time = np.repeat(mask.reshape(1, -1), len(Us), axis=0)
         else:
             mask_over_time = mask
+
         Ms = lambda n: sum(
             [
                 np.ma.masked_array((Phi(n, k + 1) @ Us[k]), mask).sum()
