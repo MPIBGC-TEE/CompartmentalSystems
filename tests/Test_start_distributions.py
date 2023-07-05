@@ -11,11 +11,12 @@ from CompartmentalSystems.helpers_reservoir import (
 from CompartmentalSystems.start_distributions import (
     start_age_moments_from_empty_spinup,
     start_age_moments_from_steady_state,
+    start_mean_age_vector_from_steady_state_linear,
     start_age_moments_from_zero_initial_content,
     compute_fixedpoint_numerically,
     start_age_distributions_from_steady_state,
     start_age_distributions_from_empty_spinup,
-    start_age_distributions_from_zero_initial_content
+    start_age_distributions_from_zero_initial_content,
 )
 from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 from CompartmentalSystems.smooth_model_run import SmoothModelRun
@@ -259,9 +260,17 @@ class TestStartDistributions(InDirTest):
         a_dens_function, x_fix = start_age_distributions_from_steady_state(
             srm,
             t0=t0,
-            parameter_dict={},
+            parameter_dict=parameter_dict, 
             func_set=func_set
         )
+        # check the version for linear systems
+        x_fix_lin, start_mean_age_vec_lin = start_mean_age_vector_from_steady_state_linear(
+            srm,
+            t0,
+            parameter_dict,
+            func_set,
+        )
+        self.assertTrue(np.allclose(x_fix_lin,x_fix))
         # create a model run that starts at x_fix and t0
         times = np.linspace(t0, 8*np.pi, 41)
         smr = SmoothModelRun(

@@ -259,8 +259,7 @@ def start_mean_age_vector_from_steady_state_linear(
     srm,
     t0,
     parameter_dict,
-    func_set,
-    x0=None
+    func_set
 ):
     """
     Compute the age distribution of the system at equilibrium :math:`x_{fix}`
@@ -279,28 +278,26 @@ def start_mean_age_vector_from_steady_state_linear(
             The time where the non-autonomous system is frozen.
 
     Returns:
-        (a_dist_function, x_fix)  (tuple):
+        (x_fix,start_mean_age_vec)  (tuple):
 
-        a_dist_function is a vector valued function of age.
-        a_dist_function(a)[i] reflects the mass of age :math:`a`
-        in pool i.
         :math:`x_{fix}` is a one dimensional vector representing the
             equilibrium.
         This is returned since it is very likely needed as start vector in the
-        simulation for which the start distributions has been computed.
+        simulation for which the start_mean_age_vec has been computed.
         (The computed distribution assumes the system to be in this state.)
     """
     state_vector = srm.state_vector
     # We can check that we really got a linear system
-    X_fix, B0, u0 = steady_state_for_linear_systems(
+    x_fix, B0, u0 = steady_state_for_linear_systems(
         srm,
         t0,
         parameter_dict,
         func_set
     )
+    #print("\n\nstart_mean_age_vector_from_steady_state_linear\n\n",x_fix)
     B0_inv = np.linalg.inv(B0)
-    start_mean_age_vec = -1*(np.ones_like(X_fix) @ B0_inv)
-    return (X_fix, start_mean_age_vec)
+    start_mean_age_vec = -1*(np.ones_like(x_fix) @ B0_inv)
+    return (x_fix, start_mean_age_vec)
 
 
 def start_age_distributions_from_zero_age_initial_content(srm, x0):
@@ -480,6 +477,7 @@ def steady_state_for_linear_systems(srm,t0,parameter_dict,func_set):
     u0 = u_func(t0)
     try:
         x_fix = (-inv(B0) @ u0).reshape(srm.nr_pools)
+        print("\n\nsteady_state_for_linear_systems\n",x_fix)
     except LinAlgError as e:
         print("""
         B_0=B(t_0) is not invertable
