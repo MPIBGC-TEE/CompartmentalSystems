@@ -976,6 +976,7 @@ class SmoothModelRun(ModelRun):
             numpy.ndarray: len(times) x nr_pools.
             The ``order`` th pool age moments over the time grid.
         """
+
         n = self.nr_pools
         times = self.times
 

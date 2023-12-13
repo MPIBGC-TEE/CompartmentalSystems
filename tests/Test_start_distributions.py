@@ -3,7 +3,7 @@
 import unittest
 from plotly.offline import plot
 import numpy as np
-from sympy import Symbol, symbols, sin, Function, diag, zeros, ones, sympify
+from sympy import Symbol, symbols, sin, cos, Function, diag, zeros, ones, sympify
 from CompartmentalSystems.helpers_reservoir import (
     numerical_function_from_expression
 )
@@ -473,8 +473,9 @@ class TestStartDistributions(InDirTest):
         state_vector = [C_0, C_1]
         t = Symbol('t')
         input_fluxes = {0: 1*(sin(t)+1), 1: 2}
-        output_fluxes = {0: C_0, 1: C_1}
+        output_fluxes = {0: C_0*(1+cos(t)), 1: C_1}
         internal_fluxes = {(0,1): C_0}
+        t0=1
         srm = SmoothReservoirModel(
             state_vector,
             t,
@@ -484,25 +485,38 @@ class TestStartDistributions(InDirTest):
         )
         age_moment_vector = start_age_moments_from_steady_state(
             srm,
-            t0=0,
+            t0=t0,
             parameter_dict={},
             func_set={},
             max_order=1
         )
         # to produce the reference we use Lemma 1 in Rasmussen 2016
-        M0=srm.compartmental_matrix
+        M0=srm.compartmental_matrix.subs({t:t0})
         n=srm.nr_pools
         t=srm.time_symbol
         I_vec=zeros(n,1)
         for k,v in srm.input_fluxes.items():
-            I_vec[k] = sympify(v).subs({t:0})
-        X_fix = M0.inv() @ I_vec
+            I_vec[k] = sympify(v).subs({t:t0})
+        X_fix = - M0.inv() @ I_vec
         X_fix_mat=diag(X_fix.tolist(),unpack=True)
-        ref = - X_fix_mat.inv() @ M0.inv() @ X_fix_mat @ ones(n,1)
+        ref = X_fix_mat.inv() @ M0.inv() @ - X_fix_mat @ ones(n,1)
+        X_fix2, ref2 = start_mean_age_vector_from_steady_state_linear(
+            srm,
+            t0=t0,
+            parameter_dict={},
+            func_set={}
+        )    
         self.assertTrue(
             np.allclose(
                 age_moment_vector.transpose(),
                 np.array(ref,dtype=np.float64)
+            )
+        )
+        
+        self.assertTrue(
+            np.allclose(
+                age_moment_vector.transpose(),
+                np.array(ref2,dtype=np.float64)
             )
         )
 

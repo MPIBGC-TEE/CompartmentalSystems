@@ -1,0 +1,3 @@
+-e git+https://github.com/MPIBGC-TEE/testinfrastructure.git#egg=testinfrastructure
+-e git+https://github.com/MPIBGC-TEE/LAPM.git#egg=lapm
+

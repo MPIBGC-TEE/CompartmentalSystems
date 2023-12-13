@@ -13,6 +13,8 @@ from sympy import (
     diag,
     symbols,
     sin,
+    cos,
+    var,
     Piecewise,
     DiracDelta,
     Function,
@@ -25,7 +27,6 @@ from CompartmentalSystems.smooth_reservoir_model import SmoothReservoirModel
 
 
 class Test_helpers_reservoir(unittest.TestCase):
-
     def test_compartmental_model_split_and_merge(self):
         sym_list = [
             'C_foliage',

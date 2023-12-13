@@ -296,7 +296,11 @@ def start_mean_age_vector_from_steady_state_linear(
     )
     #print("\n\nstart_mean_age_vector_from_steady_state_linear\n\n",x_fix)
     B0_inv = np.linalg.inv(B0)
+    X_fix_mat=np.diag(x_fix)
+    n=len(x_fix)
     start_mean_age_vec = -1*(np.ones_like(x_fix) @ B0_inv)
+    
+    start_mean_age_vec  = np.linalg.inv(X_fix_mat) @ B0_inv @ - X_fix_mat @ np.ones((n,1))
     return (x_fix, start_mean_age_vec)
 
 
@@ -477,7 +481,7 @@ def steady_state_for_linear_systems(srm,t0,parameter_dict,func_set):
     u0 = u_func(t0)
     try:
         x_fix = (-inv(B0) @ u0).reshape(srm.nr_pools)
-        print("\n\nsteady_state_for_linear_systems\n",x_fix)
+        print("\n\nsteady_state_for_linear_systems\n",x_fix,"\n")
     except LinAlgError as e:
         print("""
         B_0=B(t_0) is not invertable
@@ -618,7 +622,8 @@ def start_age_moments_from_steady_state(
     t0,
     parameter_dict,
     func_set,
-    max_order
+    max_order,
+    x0=None
 ):
     """
     Compute the age moments of the system at equilibrium :math:`x_{fix}`
@@ -654,7 +659,7 @@ def start_age_moments_from_steady_state(
         t0,
         parameter_dict,
         func_set,
-        x0=None
+        x0
     )
     start_age_moments = []
     for n in range(1, max_order+1):

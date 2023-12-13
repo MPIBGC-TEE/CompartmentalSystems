@@ -1,6 +1,6 @@
 # automatically created by  ../../scripts/create_install_scripts.py
 # from setup.py , requirements.conda.extra and  requirements.src
-    conda install -c conda-forge -y sphinx-autodoc-typehints tqdm numpy plotly sympy frozendict scipy python-igraph mpmath matplotlib pip networkx
+    mamba install -y sphinx-autodoc-typehints tqdm numpy plotly sympy frozendict scipy python-igraph mpmath matplotlib pip networkx
     pip show testinfrastructure;ret=$? 
 if [ $ret -eq 0 ]; then
     echo "allredy installed"

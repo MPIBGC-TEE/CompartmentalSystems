@@ -10,7 +10,7 @@ setup(name='CompartmentalSystems',
         #test_suite="example_package.tests",#http://pythonhosted.org/setuptools/setuptools.html#test
         description='Compartmental Systems',
         long_description=readme(),#avoid duplication 
-        author='Holger Metzler, Markus MÃ¼ller',
+        author='Holger Metzler, Markus MÃÂ¼ller',
         author_email='hmetzler@bgc-jena.mpg.de,mamueller@bgc-jena.mpg.de',
         #url='https://projects.bgc-jena.mpg.de/hg/SOIL-R/Code/packageTests/bgc_md',
         packages=find_packages('src'), #find all packages (multifile modules) recursively
@@ -40,7 +40,10 @@ setup(name='CompartmentalSystems',
             "scipy",
             "sympy",
             "tqdm",
-            "frozendict"
+            "frozendict",
+            "networkx",
+            "python-igraph"
+
         ],
         # to hopefully make RTD work
         include_package_data=True,
