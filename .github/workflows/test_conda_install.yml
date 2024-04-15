@@ -13,7 +13,7 @@ jobs:
       matrix:
         os: [ubuntu]
         # , "macos"]
-        script: [install_conda.sh, install_mamba.sh install_pip.sh]
+        script: [install_conda.sh, install_mamba.sh ]
           #include:
           #  - os: ubuntu
           #    script: install_micromamba.sh
