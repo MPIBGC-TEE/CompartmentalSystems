@@ -18,23 +18,24 @@ jobs:
         python-version: [3.9]
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-      - name: Install Operating System dependencies
-        run: |
-          sudo apt install graphviz graphviz-dev python3-pygraphviz python3-wheel libudunits2-dev python3-cairo-dev python3-dev libghc-cairo-dev
-          python -m pip install --upgrade pip
+      - name: Checkout repo
+        uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+        - name: Install Operating System dependencies
+          run: |
+            sudo apt install graphviz graphviz-dev python3-pygraphviz python3-wheel libudunits2-dev python3-cairo-dev python3-dev libghc-cairo-dev
+            python -m pip install --upgrade pip
 
-    - name: Install src dependencies
-      run: |
-        pip install -r requirements.github
-        pip install -r pkg.github
-    - name: Test with unittest
-      run: |
-        #pytest
-        cd tests
-        #python -m unittest discover -t . -p 'Test*'
-        python run_tests_serial.py
+      - name: Install src dependencies
+        run: |
+          pip install -r requirements.github
+          pip install -r pkg.github
+      - name: Test with unittest
+        run: |
+          #pytest
+          cd tests
+          #python -m unittest discover -t . -p 'Test*'
+          python run_tests_serial.py
