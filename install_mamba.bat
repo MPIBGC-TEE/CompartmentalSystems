@@ -3,11 +3,12 @@
 # (for which there are no conda packages}.
 # This leaves conda in control of your environment and avoides confusion.
 # If you do not use conda but only pip, you do not preinstall any requirements since pip will also find and install them from the setup.py file directly.
-call mamba install -y -c conda-forge --file requirements.test --file requirements.doc --file requirements.non_src pip 
+call mamba install -y -c conda-forge --file requirements.test --file requirements.doc --file requirements.non_src --file requirements.conda_extra
 # We install the dependencies that are not on pypy directly from github repos
 # This is not possible with conda (therefore we use pip here)
 # Do not do this (comment the following lines) 
 # if you have checked out these repos and installed the code in developer mode 
+call pip install --upgrade pip
 call pip install git+https://github.com/MPIBGC-TEE/testinfrastructure.git#egg=testinfrastructure
 call pip install git+https://github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
 

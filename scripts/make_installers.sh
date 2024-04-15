@@ -18,7 +18,7 @@ t2=Template("""#If we use conda or one of its derivatives we install as
 # (for which there are no conda packages}.
 # This leaves conda in control of your environment and avoides confusion.
 # If you do not use conda but only pip, you do not preinstall any requirements since pip will also find and install them from the setup.py file directly.
-${command} install -y -c conda-forge --file requirements.test --file requirements.doc --file requirements.non_src pip 
+${command} install -y -c conda-forge --file requirements.test --file requirements.doc --file requirements.non_src --file requirements.conda_extra
 """)
 t3=Template(
 """# We install the dependencies that are not on pypy directly from github repos

@@ -2,6 +2,7 @@
 # This is not possible with conda (therefore we use pip here)
 # Do not do this (comment the following lines) 
 # if you have checked out these repos and installed the code in developer mode 
+pip install --upgrade pip
 pip install git+https://github.com/MPIBGC-TEE/testinfrastructure.git#egg=testinfrastructure
 pip install git+https://github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
 
