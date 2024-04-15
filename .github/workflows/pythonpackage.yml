@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: [3.11]
 
     steps:
       - name: Checkout repo
@@ -28,7 +28,7 @@ jobs:
       
       - name: Install Operating System dependencies
         run: |
-          sudo apt install graphviz graphviz-dev python3-pygraphviz python3-wheel libudunits2-dev python3-cairo-dev python3-dev libghc-cairo-dev pythoni3-cairo
+          sudo apt install graphviz graphviz-dev python3-pygraphviz python3-wheel libudunits2-dev python3-cairo-dev python3-dev libghc-cairo-dev python3-cairo
             python -m pip install --upgrade pip
 
       - name: Install python dependencies
