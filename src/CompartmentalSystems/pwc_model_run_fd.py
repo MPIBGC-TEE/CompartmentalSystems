@@ -291,7 +291,7 @@ class PWCModelRunFD(ModelRun):
         eq_model = self.fake_eq_model(nr_time_steps)
 #        E_a = np.array(eq_model.a_expected_value).reshape(-1)
 #        for i in range(len(E_a)):
-#            print(E_a[i], E_a[i]/365.25, F_atm(np.float(E_a[i])))
+#            print(E_a[i], E_a[i]/365.25, F_atm(float(E_a[i])))
 #        f0_normalized = lambda a: np.array(
 #            eq_model.a_density(a),
 #            dtype=np.float64).reshape((-1,)
@@ -318,7 +318,7 @@ class PWCModelRunFD(ModelRun):
                 np.array([0])
             )
 #            print("c", res.y.reshape(-1)[-1])
-#            print(E_a[pool]/365.25, F_atm(np.float(E_a[pool])))
+#            print(E_a[pool]/365.25, F_atm(float(E_a[pool])))
 
             eq_14C[pool] = res.y.reshape(-1)[-1] * alpha
         

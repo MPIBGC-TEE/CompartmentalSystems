@@ -7,4 +7,5 @@ sympy
 tqdm
 frozendict
 networkx
+pandas
 python-igraph

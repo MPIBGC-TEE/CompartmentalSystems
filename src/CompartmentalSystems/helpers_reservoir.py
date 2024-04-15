@@ -277,7 +277,7 @@ def igraph_plot(
     state_vector: Matrix,
     in_fluxes: frozendict,
     internal_fluxes: frozendict,
-    out_fluxes: frozendict
+    out_fluxes: frozendict,
 ) -> ig.drawing.Plot:
     Gnx = nxgraphs(state_vector, in_fluxes, internal_fluxes, out_fluxes)
    
@@ -300,7 +300,7 @@ def igraph_plot(
     return igraph_func_plot(
         Gnx,
         node_color_func=n_color,
-        edge_color_func=e_color
+        edge_color_func=e_color,
     )
 
 def igraph_part_plot(
@@ -1976,7 +1976,7 @@ def densities_to_distributions(
         nr_pools: int
     )->Callable[[float],np.ndarray]:
         
-        def distributions(A: np.float) ->np.ndarray: 
+        def distributions(A: float )->np.ndarray: 
             return np.array(
                 [
                     quad(

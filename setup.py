@@ -44,4 +44,3 @@ setup(name='CompartmentalSystems',
         "testinfrastructure"
     ] + non_src_requirements()
 )
-
