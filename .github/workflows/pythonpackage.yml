@@ -31,8 +31,9 @@ jobs:
           sudo apt install graphviz graphviz-dev python3-pygraphviz python3-wheel libudunits2-dev python3-cairo-dev python3-dev libghc-cairo-dev
             python -m pip install --upgrade pip
 
-      - name: Install src dependencies
+      - name: Install python dependencies
         run: |
+          pip install -r requirements.non_src
           pip install -r requirements.github
           pip install -r pkg.github
       - name: Test with unittest

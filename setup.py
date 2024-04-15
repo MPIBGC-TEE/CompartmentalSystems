@@ -41,6 +41,7 @@ setup(name='CompartmentalSystems',
     zip_safe=False,
     install_requires=[
         "LAPM",
+        "testinfrastructure"
     ] + non_src_requirements()
 )
 
