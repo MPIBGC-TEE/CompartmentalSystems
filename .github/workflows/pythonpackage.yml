@@ -23,18 +23,15 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+      - name: Install Operating System dependencies
+        run: |
+          sudo apt install graphviz graphviz-dev python3-pygraphviz python3-wheel libudunits2-dev python3-cairo-dev python3-dev libghc-cairo-dev
+          python -m pip install --upgrade pip
+
+    - name: Install src dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install flake8 pytest
-        pip install -r requirements.bleadingEdge
-        pip install .
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        # flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        # flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        pip install -r requirements.github
+        pip install -r pkg.github
     - name: Test with unittest
       run: |
         #pytest

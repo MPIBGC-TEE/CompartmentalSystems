@@ -1,0 +1,10 @@
+matplotlib
+mpmath
+numpy
+plotly
+scipy
+sympy
+tqdm
+frozendict
+networkx
+python-igraph

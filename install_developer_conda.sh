@@ -1,2 +1,0 @@
-export conda_clone="conda"
-source install_developer_conda_like.sh
