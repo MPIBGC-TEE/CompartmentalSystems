@@ -16,7 +16,7 @@ jobs:
         script: [install_conda.sh, install_mamba.sh install_pip.sh]
         include:
           - os: ubuntu
-            script: install_developer_mamba.sh
+            script: install_micromamba.sh
             miniforge-variant: Mambaforge
 
     runs-on: ${{ matrix.os }}-latest
