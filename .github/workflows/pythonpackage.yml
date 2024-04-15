@@ -28,7 +28,7 @@ jobs:
       
       - name: Install Operating System dependencies
         run: |
-          sudo apt install graphviz graphviz-dev python3-pygraphviz python3-wheel libudunits2-dev python3-cairo-dev python3-dev libghc-cairo-dev cairocffi
+          sudo apt install graphviz graphviz-dev python3-pygraphviz python3-wheel libudunits2-dev python3-cairo-dev python3-dev libghc-cairo-dev python-cairo
             python -m pip install --upgrade pip
 
       - name: Install python dependencies
