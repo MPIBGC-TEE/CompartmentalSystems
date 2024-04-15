@@ -51,6 +51,6 @@ jobs:
 
       - name: run test suites
         run: |
-        cd tests
-        #python -m unittest discover -t . -p 'Test*'
-        python run_tests_serial.py
+          cd tests
+          #python -m unittest discover -t . -p 'Test*'
+          python run_tests_serial.py
