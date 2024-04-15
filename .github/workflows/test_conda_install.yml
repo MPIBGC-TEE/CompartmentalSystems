@@ -34,7 +34,7 @@ jobs:
       - name: Set up conda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: bgc_md2
+          activate-environment: cs_test
           miniforge-version: latest
           miniforge-variant: ${{matrix.miniforge-variant}}
       
