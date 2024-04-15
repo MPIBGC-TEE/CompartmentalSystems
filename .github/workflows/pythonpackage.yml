@@ -36,9 +36,9 @@ jobs:
           pip install -r requirements.non_src
           pip install -r requirements.github
           pip install -r pkg.github
+
       - name: Test with unittest
         run: |
-          #pytest
           cd tests
           #python -m unittest discover -t . -p 'Test*'
           python run_tests_serial.py
