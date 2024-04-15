@@ -28,9 +28,7 @@ jobs:
       - name: Checkout repo and submodules
         uses: actions/checkout@v3
         with:
-          submodules: recursive
-          #remote: # optional
-          repository: MPIBGC-TEE/bgc_md2
+          repository: MPIBGC-TEE/CompartmentalSystems
           token: ${{ secrets.ACCESS_TOKEN }}
 
       - name: Set up conda
