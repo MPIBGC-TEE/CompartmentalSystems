@@ -1562,7 +1562,7 @@ class TestSmoothModelRun(InDirTest):
         smr = ESMR.critics()
         smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         fig = plt.figure()
-        smr.plot_mean_ages(fig, np.array([0,0]))
+        smr.plot_mean_ages(fig, np.array([0.0,0.0]))
         fig.savefig("plot.pdf")
         plt.close(fig.number)
 
@@ -1572,7 +1572,7 @@ class TestSmoothModelRun(InDirTest):
         smr.initialize_state_transition_operator_cache(lru_maxsize=None)
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
-        smr.plot_mean_backward_transit_time(ax, np.array([0,0]))
+        smr.plot_mean_backward_transit_time(ax, np.array([0.0,0.0]))
         fig.savefig("plot.pdf")
         plt.close(fig.number)
 
