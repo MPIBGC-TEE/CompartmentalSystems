@@ -1,4 +1,4 @@
-name: test_conda_installation
+#name: test_conda_installation
 on:
   push:
     branches:
