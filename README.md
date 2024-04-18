@@ -1,5 +1,4 @@
 
-[![Python package](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/pythonpackage.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/pythonpackage.yml)
 # CompartmentalSystems: A Python3 package for the analysis of compartmental systems
 
 These systems can be both nonlinear and nonautonomous. Consequently, CompartmentalSystems can be seen
@@ -37,13 +36,14 @@ The way you install the package depends on your usage scenario.
 - The main question is if you just want to install the latest version of the package or if you want to make changes to the src code or even contribute to the development.
   We consider three examplary scenarios:
 	- Install the package and all its dependencies directly from github without checking out any src code.
-	  To this end copy and paste the code of one of the install scripts [](install_conda.sh)  
-
-
-[![test_conda_installation](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_conda_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_conda_install.yml)
-[![test_windows_conda_installations](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_install.yml)
----
-
+	  To this end copy and paste the code of one of the install scripts for
+          - conda
+	    - [install_conda.sh](install_conda.sh)  on linux tested by the workflow [![.github/workflows/test_ubuntu_conda_install.yml](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_conda_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_conda_install.yml) 
+            - [install_conda.bat](install_conda.bat) on windows continuously automatically tested by [![.github/workflows/test_windows_conda_install.yml](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_conda_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_conda_install.yml)          
+  	- or pip  
+	  - [install_pip.sh](install_pip.sh) on linux tested by [![.github/workflows/test_ubuntu_pip_install.yml](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_pip_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_pip_install.yml)
+ 
+      
 Jupyter notebook examples
 -------------------------
 
