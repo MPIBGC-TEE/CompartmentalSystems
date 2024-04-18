@@ -34,20 +34,14 @@ computations of
 [Installation]
 ---
 The way you install the package depends on your usage scenario.
-- In a new (most likely virtual) environment "./install.sh" will install the package with pinned dependencies  and some useful extras to use it (like jupyter). If this succeeds you can use the package afterwards.
-- If you just want to install the package with the versions of some dependencies fixed but do not want it to interfere with your own setup of tools (jupyter) just type 
- ```bash
-pip3 install -requirements.txt -e .
-```
-(This is also one step done by the install.sh script)
-- If you want to develop the package or integrate it into your own library and have the required libraries already installed you can use
- "python3 setup.py develop". This is the least invasive scenario since "setup.py" does not contain package versions (on purpose). This way you can test the package with your own set of library versions (e.g. with a more recent sympy). 
-It will **not** make sure that the versions are compatible with the package (on purpose).
+- The main question is if you just want to install the latest version of the package or if you want to make changes to the src code or even contribute to the development.
+  We consider three examplary scenarios:
+	- Install the package and all its dependencies directly from github without checking out any src code.
+	  To this end copy and paste the code of one of the install scripts [](install_conda.sh)  
 
 
-Be sure to have [LAPM](https://github.com/MPIBGC-TEE/LAPM) installed.
-Further required packages can be found in the install script.
-
+[![test_conda_installation](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_conda_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_conda_install.yml)
+[![test_windows_conda_installations](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_install.yml)
 ---
 
 Jupyter notebook examples
