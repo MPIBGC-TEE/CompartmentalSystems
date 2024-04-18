@@ -2,4 +2,3 @@
 # it only lists those packages that are not extractable from setup.py
 # which are extracted by the installer automatically
 pip
-pycairo
