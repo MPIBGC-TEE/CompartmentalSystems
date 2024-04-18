@@ -1,4 +1,4 @@
-name: test_windows_developer_installation
+name: test_windows_installation
 on:
   push:
     branches:
@@ -43,4 +43,4 @@ jobs:
       - name: run test suites
         run: |
           cd tests
-          python run_test_serial.py
+          python run_tests_serial.py
