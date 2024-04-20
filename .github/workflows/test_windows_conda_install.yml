@@ -13,7 +13,7 @@ jobs:
       matrix:
         os: [windows]
           #script: [install_conda.bat, install_mamba.bat]
-        script: [install_mamba.bat]
+        script: [install_mamba.ps1]
         include:
           - os: windows
             script: install_mamba.bat
