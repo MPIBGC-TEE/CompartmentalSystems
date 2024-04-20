@@ -12,12 +12,7 @@ jobs:
     strategy:
       matrix:
         os: [windows]
-          #script: [install_conda.bat, install_mamba.bat]
-        script: [install_mamba.ps1]
-        include:
-          - os: windows
-            script: install_mamba.bat
-            miniforge-variant: Mambaforge
+        script: [install_conda.ps1, install_mamba.ps1]
 
     runs-on: ${{ matrix.os }}-latest
 

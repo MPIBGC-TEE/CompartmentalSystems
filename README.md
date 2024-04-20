@@ -33,15 +33,23 @@ computations of
 [Installation]
 ---
 The way you install the package depends on your usage scenario.
-- The main question is if you just want to install the latest version of the package or if you want to make changes to the src code or even contribute to the development.
-  We consider three examplary scenarios:
+- The main question is if you just want to install the latest version of the package or if you want to make changes to the src code that you can test immediately without reinstallation. 
+  We consider some examplary scenarios:
 	- Install the package and all its dependencies directly from github without checking out any src code.
-	  To this end copy and paste the code of one of the install scripts for
+	  To this end copy and paste the code of one of the install scripts (or download and execute it) for
           - conda
 	    - [install_conda.sh](install_conda.sh)  on linux tested by the workflow [![.github/workflows/test_ubuntu_conda_install.yml](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_conda_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_conda_install.yml) 
-            - [install_conda.bat](install_conda.bat) on windows continuously automatically tested by [![.github/workflows/test_windows_conda_install.yml](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_conda_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_conda_install.yml)          
-  	- or pip  
-	  - [install_pip.sh](install_pip.sh) on linux tested by [![.github/workflows/test_ubuntu_pip_install.yml](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_pip_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_pip_install.yml)
+            - [install_conda.ps1](install_conda.ps1) on windows continuously automatically tested by [![.github/workflows/test_windows_conda_install.yml](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_conda_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_conda_install.yml)          
+  	  - or pip  
+	    - [install_pip.sh](install_pip.sh) on linux tested by [![.github/workflows/test_ubuntu_pip_install.yml](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_pip_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_pip_install.yml)
+	- Check out the repository and install the package in development mode. 
+          To do this you only have to comment the last command of the installer scripts and uncomment its alternative.
+	  (Explainatory comments in the install scripts)
+	- Contribute to CompartmentalSystems,
+	  Since ComapartmentalSystems is heavily used by [bgc_md2](https://github.com/MPIBGC-TEE/bgc_md2) it would make 
+          sense to have this repository also checked out and installed in develop mode to check if your changes brake something down stream.
+          In this case it makes sense to install [bgc_md2](https://github.com/MPIBGC-TEE/bgc_md2) in develop mode, 
+          which is described in some detail there.
  
       
 Jupyter notebook examples
