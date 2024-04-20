@@ -34,7 +34,7 @@ jobs:
           pwd
           conda --version
           python --version
-          ${{ matrix.script }}
+          powershell.exe -f ${{ matrix.script }}
 
       - name: run test suites
         run: |
