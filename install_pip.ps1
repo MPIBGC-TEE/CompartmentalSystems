@@ -14,27 +14,27 @@
 # scripts automatically by running the command: 
 # $make_installers 
 
-call  pip install --update pip
+ pip install --update pip
 
 
 # We install the dependencies that are not on pypy directly from github repos
 # This is not possible with conda (therefore we use pip here)
 # Do not do this (comment the following lines) 
 # if you have checked out these repos and installed the code in developer mode
-call  pip install  git+https://github.com/MPIBGC-TEE/testinfrastructure.git#egg=testinfrastructure git+https://github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
+ pip install  git+https://github.com/MPIBGC-TEE/testinfrastructure.git#egg=testinfrastructure git+https://github.com/MPIBGC-TEE/LAPM.git#egg=LAPM
 
 
 # To run the tests (which is recommended but not necessary for the package to work) 
 # you need some extra packages which can be installed by uncommenting the following line:
-call  pip install  dask[distributed] jupyterlab jupytext nbformat nbmake notebook pytest zarr
+ pip install  dask[distributed] jupyterlab jupytext nbformat nbmake notebook pytest zarr
 
 
 # If you want to develop the package including the documentation you need some extra tools which can be installed by uncommenting the following line:
-# call  pip install  sphinx sphinx-autodoc-typehints
+#  pip install  sphinx sphinx-autodoc-typehints
 
 # The following line installs the package without checking out the repository directly from github
-call  pip install  git+https://github.com/MPIBGC-TEE/CompartmentalSystems.git@test#egg=CompartmentalSystems
+ pip install  git+https://github.com/MPIBGC-TEE/CompartmentalSystems.git@test#egg=CompartmentalSystems
 
 # if you want to install it in develop mode (after checking out the repo) comment the previous line and
 # execute the following line instead, in the same directory where this file lives. 
-# call  pip install  -e .
+#  pip install  -e .
