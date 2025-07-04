@@ -37,9 +37,9 @@ The way you install the package depends on your usage scenario.
   We consider some examplary scenarios:
 	- Install the package and all its dependencies directly from github without checking out any src code.
 	  To this end copy and paste the code of one of the install scripts (or download and execute it) for
-          - conda
+      - conda
 	    - [install_conda.sh](install_conda.sh)  on linux tested by the workflow [![.github/workflows/test_ubuntu_conda_install.yml](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_conda_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_conda_install.yml) 
-            - [install_conda.ps1](install_conda.ps1) on windows continuously automatically tested by [![.github/workflows/test_windows_conda_install.yml](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_conda_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_conda_install.yml)          
+        - [install_conda.ps1](install_conda.ps1) on windows continuously automatically tested by [![.github/workflows/test_windows_conda_install.yml](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_conda_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_windows_conda_install.yml)          
   	  - or pip  
 	    - [install_pip.sh](install_pip.sh) on linux tested by [![.github/workflows/test_ubuntu_pip_install.yml](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_pip_install.yml/badge.svg)](https://github.com/MPIBGC-TEE/CompartmentalSystems/actions/workflows/test_ubuntu_pip_install.yml)
 	- Check out the repository and install the package in development mode. 
@@ -60,6 +60,13 @@ Jupyter notebook examples
 - [Analysis of a nonlinear global carbon cycle model (ipynb)](notebooks/nonl_gcm_3p/nonl_gcm_3p.ipynb)
 
 ## Information for developers
+
+### Branches
+- Commits should first target the test branch and only merged into master after the tests are green.
+- The binder branch is created automatically by `scripts/make_binder.sh' from which branch is checked out when the script runs.
+  It is only intended to be created automatically (usually from master) and should *never* be used to work on or merged back.
+  Its sole purpose is to provide a minimal lean version of the package without many data files to be installed on platforms that do not need them or do not have enough space,
+  in particular the binder installation.
 
 ### Notebooks
 We have several objectives, with partially contradictory requirements that necessiate a considerate approach. We want 
