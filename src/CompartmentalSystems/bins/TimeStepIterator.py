@@ -101,7 +101,7 @@ def external_input_func_maker(
         # to simulate a (nonlinear) well mixed system we
         # have to sum up the mass in the bins of each pool
         contents = [
-                age_dist_list[i].total_content if srm.state_vector[i] in significant_pools else np.NAN
+                age_dist_list[i].total_content if srm.state_vector[i] in significant_pools else np.nan
                 for i in range(len(age_dist_list))
         ]
 
@@ -207,7 +207,7 @@ def well_mixed_death_rate_func_maker_from_expression(
         # to simulate a (nonlinear) well mixed system we
         # have to sum up the mass in the bins of each pool
         contents = [
-                age_dist_list[i].total_content if state_vector[i] in significant_pools else np.NAN
+                age_dist_list[i].total_content if state_vector[i] in significant_pools else np.nan
                 for i in range(len(age_dist_list))
         ]
 

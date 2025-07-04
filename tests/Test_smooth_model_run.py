@@ -1393,7 +1393,7 @@ class TestSmoothModelRun(InDirTest):
 #            return Phi(54+a, 54, [1]).sum()
 #
 #        from scipy.integrate import quad
-#        print(quad(integrand, 0, np.infty)[0])
+#        print(quad(integrand, 0, np.inf)[0])
 #
 #        #print(B)
 #        #print(np.exp(-np.linspace(0,100,101)))

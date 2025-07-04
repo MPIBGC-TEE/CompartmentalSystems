@@ -354,9 +354,9 @@ class SmoothModelRun(ModelRun):
 
         def kth_moment(k):
             def kth_moment_pool(k, pool):
-                norm = quad(lambda a: densities(a)[pool], 0, np.infty)[0]
+                norm = quad(lambda a: densities(a)[pool], 0, np.inf)[0]
                 if norm == 0: return np.nan
-                return (quad(lambda a: a**k*densities(a)[pool], 0, np.infty)[0] 
+                return (quad(lambda a: a**k*densities(a)[pool], 0, np.inf)[0] 
                             / norm)
 
             return np.array([kth_moment_pool(k,pool) for pool in range(n)])
@@ -1326,11 +1326,11 @@ class SmoothModelRun(ModelRun):
 #                #print(a, Phi(times[ti]+a, times[ti], u), res)
 #                return res
 #            
-#            return quad(integrand, 0, np.infty,epsrel=epsrel)[0]
+#            return quad(integrand, 0, np.inf,epsrel=epsrel)[0]
 #            
 #            # Remark: 
 #            # We want to compute an inproper integral 
-#            # instead of calling res=quad(integrand, 0, np.infty)[0]
+#            # instead of calling res=quad(integrand, 0, np.inf)[0]
 #            # we could apply a variable transformation z=a/(c+a) # with an arbitrary c (possibly c=1 but we can optimize the choice  for better performance) 
 #            # so we have \int_0^\infty f(a) dx= \int_0^z(a=\infty) f(a(z))*da/dz *dz  =\int_0^1  f(a(z)) c/(1-z**2) dz
 #            # to do:

@@ -282,9 +282,9 @@ class PWCModelRun(ModelRun):
 
         def kth_moment(k):
             def kth_moment_pool(k, pool):
-                norm = quad(lambda a: densities(a)[pool], 0, np.infty)[0]
+                norm = quad(lambda a: densities(a)[pool], 0, np.inf)[0]
                 if norm == 0: return np.nan
-                return (quad(lambda a: a**k*densities(a)[pool], 0, np.infty)[0] 
+                return (quad(lambda a: a**k*densities(a)[pool], 0, np.inf)[0] 
                             / norm)
 
             return np.array([kth_moment_pool(k,pool) for pool in range(n)])
