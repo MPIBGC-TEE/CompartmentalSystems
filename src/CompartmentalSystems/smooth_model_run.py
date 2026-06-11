@@ -2884,7 +2884,7 @@ class SmoothModelRun(ModelRun):
         """
         res = []
         for pool in range(self.nr_pools):
-            print('Pool:', pool)
+            print('#################################### Pool:', pool)
             res.append(
                 self.pool_age_distribution_quantiles_pool_by_ode(
                     quantile, 
@@ -3007,7 +3007,7 @@ class SmoothModelRun(ModelRun):
         last_res = -1.0
 
         def rhs(y, t_val):
-            y = float(y)
+            y = y.item() # here we always deal with an array that has only one element
             global last_t, last_res
             
             t_val = min(t_val, t_max)
@@ -3055,6 +3055,7 @@ class SmoothModelRun(ModelRun):
 
         #short_res = odeint(rhs, sv, times, atol=tol, mxstep=10000)
         rhs2 = lambda t_val, y: rhs(y, t_val)
+        rhs2(times[1],np.array([sv]).reshape(1,))
         short_res = solve_ivp_pwc(
             rhss   = (rhs2,),
             y0     = np.array([sv]).reshape(1,),
@@ -3146,6 +3147,17 @@ class SmoothModelRun(ModelRun):
             p0 = start_age_densities
             F0 = lambda a: np.array([quad(lambda s: p0(s)[pool], 0, a)[0] 
                                         for pool in range(n)])
+            #def F0(a): 
+            #    try:
+            #        res_arr=np.array(
+            #            [
+            #                quad(lambda s: p0(s)[pool], 0, a)[0] 
+            #                for pool in range(n)
+            #            ]
+            #        )
+            #    except TypeError:
+            #        from IPython import embed; embed()
+            #    return res_arr
         
         p = self.system_age_density_single_value(start_age_densities)
         u = self.external_input_vector_func()
@@ -3187,7 +3199,7 @@ class SmoothModelRun(ModelRun):
         last_res = -1.0
 
         def rhs(y, t_val):
-            y = float(y)
+            y = y.item() # we know that we deal with a 1x1 array
             global last_t, last_res
             
             t_val = min(t_val, t_max)

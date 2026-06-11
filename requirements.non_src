@@ -8,5 +8,3 @@ tqdm
 frozendict
 networkx
 pandas
-python-igraph
-pycairo

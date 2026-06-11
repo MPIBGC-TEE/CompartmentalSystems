@@ -556,7 +556,7 @@ class PWCModelRunFD(ModelRun):
 #                            map(lambda s: expm((tau-s)*B), tr_sub_times)
 #                        )
 #                    )
-#                    return M @ x0 + np.trapz(xs_sub, tr_sub_times, axis=0) @ gross_u
+#                    return M @ x0 + np.trapezoid(xs_sub, tr_sub_times, axis=0) @ gross_u
 
                     x = solve_ivp(
 #                        lambda s, _: expm((tau-s)*B) @ gross_u,
@@ -569,7 +569,7 @@ class PWCModelRunFD(ModelRun):
     
             x_vals = np.array(list(map(x_of_tau, tr_times)))
             x1 = x_of_tau(tr_times[-1])
-            return np.trapz(x_vals, tr_times, axis=0), x1
+            return np.trapezoid(x_vals, tr_times, axis=0), x1
 
         def x_tau(tau, B):
             if np.abs(np.linalg.det(B)) > 1e-16:
@@ -591,7 +591,7 @@ class PWCModelRunFD(ModelRun):
                 return x_tau(tau, B)
 
 #            xs = np.array(list(map(x, tr_times))), x(tr_times[-1])
-#            int_x np.trapz(xs, tr_times, axis=0)
+#            int_x np.trapezoid(xs, tr_times, axis=0)
 #            int_x = solve_ivp_pwc(
 #                rhss=[rhs],
 #                t_span=(tr_times[0], tr_times[-1]),
