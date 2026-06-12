@@ -1,0 +1,146 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompartmentalSystems.smooth_model_run &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="CompartmentalSystems.start_distributions" href="CompartmentalSystems.start_distributions.html" />
+    <link rel="prev" title="CompartmentalSystems.smooth_reservoir_model" href="CompartmentalSystems.smooth_reservoir_model.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-CompartmentalSystems.smooth_model_run">
+<span id="compartmentalsystems-smooth-model-run"></span><h1>CompartmentalSystems.smooth_model_run<a class="headerlink" href="#module-CompartmentalSystems.smooth_model_run" title="Permalink to this headline">¶</a></h1>
+<p>Module for numerical treatment of piece-wise continuous reservoir models.</p>
+<p>An abstract
+<a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">SmoothReservoirModel</span></code></a> is
+filled with life by giving initial values, a parameter set, a time grid,
+and potentially additional involved functions to it.</p>
+<p>The model can then be run and as long as the model is linear,
+based on the state transition operator age and transit time
+distributions can be computed.</p>
+<p>Nonlinear models can be linearized along a solution trajectory.</p>
+<p>Counting of compartment/pool/reservoir numbers start at zero and the
+total number of pools is <span class="math notranslate nohighlight">\(d\)</span>.</p>
+<p class="rubric">Classes</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.smooth_model_run.SmoothModelRun" title="CompartmentalSystems.smooth_model_run.SmoothModelRun"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SmoothModelRun</span></code></a>(model, parameter_dict, …[, …])</p></td>
+<td><p>Class for a model run based on a <a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel" title="CompartmentalSystems.smooth_reservoir_model.SmoothReservoirModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">SmoothReservoirModel</span></code></a>.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Exceptions</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.smooth_model_run.Error" title="CompartmentalSystems.smooth_model_run.Error"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Error</span></code></a></p></td>
+<td><p>Generic error occurring in this module.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="CompartmentalSystems.smooth_reservoir_model.html">CompartmentalSystems.smooth_reservoir_model</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">CompartmentalSystems.smooth_model_run</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CompartmentalSystems.start_distributions.html">CompartmentalSystems.start_distributions</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="CompartmentalSystems.smooth_reservoir_model.html" title="previous chapter">CompartmentalSystems.smooth_reservoir_model</a></li>
+      <li>Next: <a href="CompartmentalSystems.start_distributions.html" title="next chapter">CompartmentalSystems.start_distributions</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/_autosummary/CompartmentalSystems.smooth_model_run.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

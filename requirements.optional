@@ -1,0 +1,8 @@
+# packages listed here are needed for some of the extended functionality (e.g. plot functions) which is covered by
+# tests/OptionalTests.py but not by the normal testsuite. 
+# These packages are not installed by default since 
+# - they are not necessary for the core functionality
+# - they might cause problems on some platforms because of non-python dependencies
+# 
+python-igraph
+pycairo

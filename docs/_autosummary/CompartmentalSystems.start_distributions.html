@@ -1,0 +1,248 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompartmentalSystems.start_distributions &#8212; CompartmentalSystems 1 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="CompartmentalSystems.smooth_model_run" href="CompartmentalSystems.smooth_model_run.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-CompartmentalSystems.start_distributions">
+<span id="compartmentalsystems-start-distributions"></span><h1>CompartmentalSystems.start_distributions<a class="headerlink" href="#module-CompartmentalSystems.start_distributions" title="Permalink to this headline">¶</a></h1>
+<p>Module for computing age distributions or moments thereof to be used
+as start distributions in subsequent simulations.</p>
+<p>The age distribution at the start <span class="math notranslate nohighlight">\(t_0\)</span> is NOT
+defined by the reservoir model and the initial values.
+In fact EVERY age distribution can be chosen.
+The implemented algorithms will correctly project it
+to any time <span class="math notranslate nohighlight">\(t\)</span>.
+This module provides several ways to generate such a distribution.</p>
+<p>The functions containing the word ‘distributions’ usually return a vector
+valued function of age representing pool wise age distributions that
+are NOT normalized (Integrating of a vector component over all ages
+yields the mass of the corresponding pool.)
+, and in some cases a start vector that should be used in the subsequent
+simulation for which the start age distribution is computed.</p>
+<p>The functions containing the word ‘moments’ usually return an
+array: moments x pools, containing the moments of the
+pool ages .
+representing the initial values needed for the moment systems e.g. the
+mean of a start distribution to be used as initial value for the
+mean age system. The length of the list is determined by the maximum order of
+the moment system to be solved.
+In some cases a consistent start vector is also provided.</p>
+<div class="section" id="zero-start-age-distributions">
+<h2>Zero start age distributions<a class="headerlink" href="#zero-start-age-distributions" title="Permalink to this headline">¶</a></h2>
+<p>The distributions eaisiest to imagine are those that start with zero age:</p>
+<ol class="arabic simple">
+<li><p>The one with all pools empty provided by:
+:py:meth:<a href="#id1"><span class="problematic" id="id2">`</span></a>start_age_distributions_from_zero_initial_content
+and the respective moments by:
+:py:meth:<a href="#id3"><span class="problematic" id="id4">`</span></a>start_age_moments_from_zero_initial_content</p></li>
+<li><p>The one where all initial mass has age zero, provided by:
+:py:meth:<a href="#id5"><span class="problematic" id="id6">`</span></a>start_age_distributions_from_zero_age_initial_content</p></li>
+</ol>
+</div>
+<div class="section" id="established-distributions">
+<h2>Established distributions<a class="headerlink" href="#established-distributions" title="Permalink to this headline">¶</a></h2>
+<p>However for many applications one is interested in the CHANGE of an age
+distribution that has been established over a (possibly infinitely) long period
+of time.</p>
+<ol class="arabic">
+<li><p>Spinup</p>
+<p>If we start the computation with all pools empty at time <span class="math notranslate nohighlight">\(0\)</span>
+and run it till time <span class="math notranslate nohighlight">\(t = a_{max}\)</span>,
+the resulting distribution will be non zero only in the interval
+<span class="math notranslate nohighlight">\([0,a_{max}]\)</span>.
+Such a distribution is provided by:
+<a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_distributions_from_empty_spinup" title="CompartmentalSystems.start_distributions.start_age_distributions_from_empty_spinup"><code class="xref py py-meth docutils literal notranslate"><span class="pre">start_age_distributions_from_empty_spinup()</span></code></a>
+and the moments by:
+:py:meth:<a href="#id7"><span class="problematic" id="id8">`</span></a>start_age_moments_from_empty_spinup</p>
+<p>Note that the finiteness of the spin up time has to be considered in the
+choice of questions that can be asked.
+For instance do not mistake the fact that the percentage
+of material older than <span class="math notranslate nohighlight">\(a_{max}\)</span> will increase over
+time for a property of the system, where it is actually a
+property of the start distribution resulting from the finiteness
+of the spin up time.</p>
+</li>
+<li><p>Distributions induced by steady states of the autonomous system, if those
+exist.</p>
+<p>If the term ‘established’ is taken to the limit of infinity one can look
+for a related system that has persisted unchanged for all  times
+<span class="math notranslate nohighlight">\(t&lt;t_0\)</span> and start with the age distribution created by such a system.
+Such a distribution can only occur if the system has been in a steady
+state. For a general non-autonomous system this is very unlikely that such
+a steady state exist at all.
+However we can consider a related autonomous system resulting from
+‘freezing’ the general non-autonomous system at a time <span class="math notranslate nohighlight">\(t_0\)</span>.
+Even for such an autonomous system it is uncertain if and where equilibria
+exist. This has to be checked before an equilibrium age distribution can be
+computed.
+Actually the following steps have to be performed:</p>
+<ol class="loweralpha simple">
+<li><p>Transform the general nonlinear non-autonomous system
+into a nonlinear autonomous system by freezing it
+at time <span class="math notranslate nohighlight">\(t=t_0\)</span>:</p></li>
+<li><p>Compute <span class="math notranslate nohighlight">\(u_0(x)=u(t_0,x_0)\)</span> and <span class="math notranslate nohighlight">\(B_0(x)=B(t_0,x_0)\)</span></p></li>
+<li><p>Look for an equilibrium <span class="math notranslate nohighlight">\(x_{fix}\)</span> of the frozen system
+such that <span class="math notranslate nohighlight">\(0=B_0(x_{fix})+u_0(x_{fix})\)</span>.
+If the frozen system is linear the we can compute
+the fixed point explicitly : <span class="math notranslate nohighlight">\(x_{fix}=B_0^{-1}u_0\)</span>.
+In general the frozen system will be nonlinear and we will have to
+look for the fixed point numerically.</p></li>
+<li><p>Compute the age distribution of the system at equilibrium
+<span class="math notranslate nohighlight">\(x_{fix}\)</span>.
+This can be done using the formulas for linear
+autonomous pool models. (At the fixed point the nonlinear system
+is identical to a linear one. This is a special case of the general
+idea of linearizing a nonlinear model with respect to a trajectory,
+which in case of a fixed point is constant.)</p></li>
+</ol>
+<p>All these steps are performed by
+<a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_distributions_from_steady_state" title="CompartmentalSystems.start_distributions.start_age_distributions_from_steady_state"><code class="xref py py-meth docutils literal notranslate"><span class="pre">start_age_distributions_from_steady_state()</span></code></a>
+and
+<a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_moments_from_steady_state" title="CompartmentalSystems.start_distributions.start_age_moments_from_steady_state"><code class="xref py py-meth docutils literal notranslate"><span class="pre">start_age_moments_from_steady_state()</span></code></a>.</p>
+<p>Note that <span class="math notranslate nohighlight">\(x_{fix}\)</span> is the compatible start vector that has to be
+used along with this start distributions for the following computation.</p>
+</li>
+</ol>
+<p class="rubric">Functions</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.start_distributions.compute_fixedpoint_numerically" title="CompartmentalSystems.start_distributions.compute_fixedpoint_numerically"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_fixedpoint_numerically</span></code></a>(srm, t0, x0, …)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.start_distributions.lapm_for_steady_state" title="CompartmentalSystems.start_distributions.lapm_for_steady_state"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lapm_for_steady_state</span></code></a>(srm, t0, …[, x0])</p></td>
+<td><p>If a fixedpoint of the frozen system can be found, create a linear autonomous model as an equivalent for the frozen (generally nonlinear) system there.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_distributions_from_empty_spinup" title="CompartmentalSystems.start_distributions.start_age_distributions_from_empty_spinup"><code class="xref py py-obj docutils literal notranslate"><span class="pre">start_age_distributions_from_empty_spinup</span></code></a>(…)</p></td>
+<td><p>Finite age spin up from empty pools</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_distributions_from_steady_state" title="CompartmentalSystems.start_distributions.start_age_distributions_from_steady_state"><code class="xref py py-obj docutils literal notranslate"><span class="pre">start_age_distributions_from_steady_state</span></code></a>(…)</p></td>
+<td><p>Compute the age distribution of the system at equilibrium <span class="math notranslate nohighlight">\(x_{fix}\)</span> , by means of a linear autonomous pool model with identical age distributions.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_distributions_from_zero_age_initial_content" title="CompartmentalSystems.start_distributions.start_age_distributions_from_zero_age_initial_content"><code class="xref py py-obj docutils literal notranslate"><span class="pre">start_age_distributions_from_zero_age_initial_content</span></code></a>(srm, x0)</p></td>
+<td><p>Returns the age distribution (function) for a system into which all initial mass is injected instantaneous at <span class="math notranslate nohighlight">\(t=0\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_distributions_from_zero_initial_content" title="CompartmentalSystems.start_distributions.start_age_distributions_from_zero_initial_content"><code class="xref py py-obj docutils literal notranslate"><span class="pre">start_age_distributions_from_zero_initial_content</span></code></a>(srm)</p></td>
+<td><p>Returns the age distribution (function) for an empty system.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_moments_from_empty_spinup" title="CompartmentalSystems.start_distributions.start_age_moments_from_empty_spinup"><code class="xref py py-obj docutils literal notranslate"><span class="pre">start_age_moments_from_empty_spinup</span></code></a>(srm, …)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_moments_from_steady_state" title="CompartmentalSystems.start_distributions.start_age_moments_from_steady_state"><code class="xref py py-obj docutils literal notranslate"><span class="pre">start_age_moments_from_steady_state</span></code></a>(srm, t0, …)</p></td>
+<td><p>Compute the age moments of the system at equilibrium <span class="math notranslate nohighlight">\(x_{fix}\)</span> , by means of a linear autonomous pool model with identical age distributions.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../CompartmentalSystems.html#CompartmentalSystems.start_distributions.start_age_moments_from_zero_initial_content" title="CompartmentalSystems.start_distributions.start_age_moments_from_zero_initial_content"><code class="xref py py-obj docutils literal notranslate"><span class="pre">start_age_moments_from_zero_initial_content</span></code></a>(…)</p></td>
+<td><p>The function returns an array of shape (max_order, srm.nr_pools)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">CompartmentalSystems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="CompartmentalSystems.smooth_reservoir_model.html">CompartmentalSystems.smooth_reservoir_model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CompartmentalSystems.smooth_model_run.html">CompartmentalSystems.smooth_model_run</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">CompartmentalSystems.start_distributions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#zero-start-age-distributions">Zero start age distributions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#established-distributions">Established distributions</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="CompartmentalSystems.smooth_model_run.html" title="previous chapter">CompartmentalSystems.smooth_model_run</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Holger Metzler, Markus Müller.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/_autosummary/CompartmentalSystems.start_distributions.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,19 @@
+When initializing a SmoothModelRun smr we give a startvector.
+When we use smr to calculate an age density we usually give it a start distribution THAT IS NOT NORMALIZED
+By integrating over all ages of this start distribution the masses in the pools could be inferred, so the information is duplicated.
+One could possibly provide contradictory startvalues and startdistributions.
+To avoid this the function providing startdistributions return a tuple that contains the startvalues belongin to the distribution,( which is silly) 
+
+(Alternative) Proposels to solve this issue.
+1.) If a startdistribution is available allow initialization of a modelRun with the start distribution only.(write an extra constructor)
+    - disadvantage: Inference of the mass (if needed) by integration over the distribution is extremely expensive and potentially sligthly inaccurate
+
+2.) Deal with normalized age distributions only, this does not even need an extension to the SmoothModelRun class 
+    although would be possible to add a startdistribution argument to init.
+    - advantage: The computation of solutions is extremely cheap. To make a distribution from a normalized density costs nothing.
+     even the reverse is true (If we have solved for a real distribution we can divide by the pool contents which are available in the (cheap) trajectories)
+
+
+	
+
+

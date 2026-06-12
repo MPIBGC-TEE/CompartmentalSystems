@@ -1,0 +1,4 @@
+# this requirement file is conda specific
+# it only lists those packages that are not extractable from setup.py
+# which are extracted by the installer automatically
+pip
