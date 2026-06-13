@@ -1,5 +1,6 @@
 #!/bin/bash
-branch_name="binder"
+branch_name="binder_orphan"
+# To avoid unintentional removal of subrepos do this in an extra directory where you have cloned (typically test branch) 
 
 # remove old remote and local versions of the branch  if they exist
 
@@ -21,11 +22,11 @@ else
 fi
 
 # create new branch
-git checkout -b ${branch_name}
+git checkout --orphan ${branch_name}
 # remove the large directories
 git rm -r ../notebooks/nonl_gcm_3p* 
 git rm -r ../notebooks/PNAS/
-git commit -m "automatically created by ${0}  branch ${branch_name} from branch ${parent}. This branch has large directories removed from it and is intended to be checked out by binder in depth 1 which reduces it's size to a few MB. 
+git commit -am "automatically created by ${0}  branch ${branch_name} from branch ${parent}. This branch has large directories removed from it and is intended to be checked out by binder in depth 1 which reduces it's size to a few MB. 
 Never merge it back, since this will remove the files for the PNAS notebooks from the branch it gets merged or rebased to, which will force you to restore them manually."
 git push --set-upstream origin ${branch_name}
 
